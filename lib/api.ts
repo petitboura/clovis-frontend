@@ -1227,7 +1227,7 @@ export async function declasserDocumentEmplacement(type: TypeEmplacementProgramm
 }
 
 // ---------------------------------------------------------------------------
-// Dossiers de la bibliothèque personnelle (22/08, demande Bourama) -- voir
+// Dossiers de la bibliothèque personnelle (22/08, demande Bourama), voir
 // api/dossiers_bibliotheque.py côté backend. Un fichier peut être rangé dans
 // plusieurs dossiers à la fois (fichier_ids ci-dessous est un tableau).
 // Distinct du classement ci-dessus (emplacements du Programme) : deux

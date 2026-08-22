@@ -43,7 +43,7 @@ import { BibliothequePublique } from "./BibliothequePublique";
 // documents pendant une conversation (outil consulter_bibliotheque).
 //
 // Dossiers/sous-dossiers (22/08/2026, demande explicite de Bourama) :
-// couche PAR DESSUS le listing plat existant, jamais un prérequis --
+// couche PAR DESSUS le listing plat existant, jamais un prérequis :
 // un fichier ajouté reste "libre" (aucun dossier) tant qu'on ne le
 // range pas explicitement quelque part, exactement comme avant. Un
 // fichier peut être rangé dans PLUSIEURS dossiers à la fois (voir
@@ -142,7 +142,7 @@ export function EspaceBibliotheque() {
     return m;
   }, [fichiers]);
 
-  // Un fichier est "libre" s'il n'est rangé dans aucun dossier -- il
+  // Un fichier est "libre" s'il n'est rangé dans aucun dossier : il
   // n'apparaît alors qu'à la racine, jamais dans un dossier.
   const idsFichiersRanges = useMemo(() => {
     const s = new Set<string>();
@@ -161,8 +161,8 @@ export function EspaceBibliotheque() {
   }, [dossiers]);
 
   // Un dossier contient un fichier du type filtré s'il en a un
-  // directement, OU si un de ses sous-dossiers (récursivement) en a un
-  // -- sinon il est masqué dans ce sous-onglet (confirmé par Bourama :
+  // directement, OU si un de ses sous-dossiers (récursivement) en a un,
+  // sinon il est masqué dans ce sous-onglet (confirmé par Bourama :
   // jamais affiché vide).
   function dossierContientType(dossierId: string, type: SousOngletBiblio): boolean {
     if (type === "tous") return true;
@@ -545,7 +545,7 @@ export function EspaceBibliotheque() {
       )}
 
       {/* Panneau "ranger dans un dossier" (22/08) : liste tous les
-          dossiers de l'utilisateur avec une case à cocher -- un fichier
+          dossiers de l'utilisateur avec une case à cocher : un fichier
           peut être rattaché à plusieurs dossiers à la fois. */}
       {fichierARanger && (
         <div
