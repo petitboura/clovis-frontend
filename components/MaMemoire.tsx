@@ -96,7 +96,7 @@ export function MaMemoire() {
       )}
 
       {!chargement && (
-        <div className="flex flex-col gap-4 rounded-2xl border border-dj-bordure bg-dj-surface p-6">
+        <div className="flex flex-col gap-4 rounded-cgpt-carte border border-dj-bordure bg-dj-surface p-6">
           <textarea
             value={resume}
             onChange={(e) => setResume(e.target.value)}
