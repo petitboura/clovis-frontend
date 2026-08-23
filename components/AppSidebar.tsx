@@ -26,10 +26,11 @@ import {
   History,
   PanelLeft,
   Settings,
+  Sparkles,
+  GraduationCap,
 } from "lucide-react";
 import { supabase } from "@/lib/supabase";
 import { lireMonProfil } from "@/lib/api";
-import { Logo } from "@/components/Logo";
 import { NoteAgent } from "@/components/NoteAgent";
 import { CommentairesAgent } from "@/components/CommentairesAgent";
 import { BoutonInstaller } from "@/components/BoutonInstaller";
@@ -108,6 +109,23 @@ export const ONGLETS: { id: OngletId; href: string; label: string; Icone: typeof
   // icône Plug ("branchement", demande explicite Bourama) plutôt que le
   // logo Claude, propriété d'Anthropic.
   { id: "claude", href: "/connecter-claude", label: "Utiliser Clovis dans Claude", Icone: Plug },
+];
+
+// Regroupement du rail par similarité d'usage (refonte sidebar,
+// 22/08/2026, demande Bourama : "chaque section n'a pas forcément un
+// bouton dédié, c'est peut-être un bouton qui ouvre une liste de cette
+// catégorie", même esprit que la page Paramètres). Bureau, Bibliothèque
+// et Notes restent en accès direct (usage quotidien). Mes skills, Ma
+// mémoire et Plugins sont regroupés sous "Personnaliser Clovis" (les 3
+// façons de configurer ce que Clovis sait/fait). Mon programme et Audits
+// sont regroupés sous "Scolarité" (les audits analysent justement le
+// programme, déjà couplés dans EspaceAudits.tsx). "Utiliser Clovis dans
+// Claude" est un guide de configuration ponctuel, il descend dans le
+// menu "Plus" plutôt que d'occuper un bouton du rail.
+type Groupe = { id: string; label: string; Icone: typeof Briefcase; ongletIds: OngletId[] };
+const GROUPES: Groupe[] = [
+  { id: "personnaliser", label: "Personnaliser Clovis", Icone: Sparkles, ongletIds: ["comportements", "memoire", "plugins"] },
+  { id: "scolarite", label: "Scolarité", Icone: GraduationCap, ongletIds: ["programme", "audits"] },
 ];
 
 // Rotation des mouvements pour les icônes de nav (Accueil + les 7
@@ -242,6 +260,100 @@ function MenuProfil({
   );
 }
 
+// Bouton de groupe (refonte sidebar, 22/08/2026, demande Bourama) :
+// remplace un bloc de 2-3 boutons de rail dédiés par UN SEUL bouton qui
+// ouvre un petit popup listant les sections du groupe, même principe que
+// MenuProfil juste au-dessus. Contrôlé depuis AppSidebar (via `ouvert` /
+// `onBasculer` / `onFermer`) pour que le conteneur du rail sache quand
+// passer en overflow-visible, exactement comme pour "Historique" et
+// "Plus".
+function MenuGroupe({
+  groupe,
+  mobile = false,
+  ouverte,
+  LibelleRail,
+  pathname,
+  contexteChat,
+  ouvrirFenetre,
+  ouvert,
+  onBasculer,
+  onFermer,
+  onNaviguer,
+}: {
+  groupe: Groupe;
+  mobile?: boolean;
+  ouverte: boolean;
+  LibelleRail: React.ComponentType<{ ouverte: boolean; children: React.ReactNode }>;
+  pathname: string;
+  contexteChat: boolean;
+  ouvrirFenetre: (id: OngletId) => void;
+  ouvert: boolean;
+  onBasculer: () => void;
+  onFermer: () => void;
+  onNaviguer?: () => void;
+}) {
+  const ref = useRef<HTMLDivElement>(null);
+  const membres = ONGLETS.filter((o) => groupe.ongletIds.includes(o.id));
+  const actif = membres.some((o) => pathname === o.href);
+
+  useEffect(() => {
+    if (!ouvert) return;
+    function onClicExterieur(e: MouseEvent) {
+      if (ref.current && !ref.current.contains(e.target as Node)) onFermer();
+    }
+    document.addEventListener("mousedown", onClicExterieur);
+    return () => document.removeEventListener("mousedown", onClicExterieur);
+  }, [ouvert, onFermer]);
+
+  return (
+    <div ref={ref} className={`relative w-full ${mobile ? "" : "mt-2"}`}>
+      <button
+        onClick={onBasculer}
+        className={`group flex w-full items-center gap-2 rounded-xl transition-colors ${
+          actif || ouvert ? "text-dj-accent-1" : "text-dj-texte-muet hover:bg-dj-surface-haute hover:text-dj-texte"
+        } ${mobile ? "px-2 py-2" : ""}`}
+      >
+        <span className="flex h-10 w-10 flex-shrink-0 items-center justify-center">
+          <groupe.Icone size={18} className={`transition-transform duration-200 ${MOUVEMENT_NAV}`} />
+        </span>
+        {mobile ? <span className="text-sm">{groupe.label}</span> : <LibelleRail ouverte={ouverte}>{groupe.label}</LibelleRail>}
+      </button>
+
+      {ouvert && (
+        <div
+          className={`absolute z-50 w-56 animate-dj-fade-in-rapide overflow-hidden rounded-cgpt-carte border border-dj-bordure bg-dj-surface p-1 shadow-[0_8px_30px_rgba(0,0,0,0.35)] ${
+            mobile ? "left-2 top-full mt-1" : "left-0 top-11"
+          }`}
+        >
+          {membres.map((o) => {
+            const estActif = pathname === o.href;
+            return (
+              <Link
+                key={o.href}
+                href={o.href}
+                onClick={(e) => {
+                  onFermer();
+                  onNaviguer?.();
+                  if (contexteChat) {
+                    e.preventDefault();
+                    ouvrirFenetre(o.id);
+                  }
+                }}
+                className={`flex w-full items-center gap-2.5 rounded-lg px-2.5 py-2 text-left text-sm transition-colors ${
+                  estActif ? "text-dj-accent-1" : "text-dj-texte-muet hover:bg-dj-surface-haute hover:text-dj-texte"
+                }`}
+              >
+                <o.Icone size={16} className="flex-shrink-0" />
+                {o.label}
+              </Link>
+            );
+          })}
+        </div>
+      )}
+    </div>
+  );
+}
+
 export function AppSidebar({
   connecte,
   onOuvrirCatalogue,
@@ -287,6 +399,7 @@ export function AppSidebar({
   const { ouvrir: ouvrirFenetre } = useFenetres();
   const [ouverte, setOuverte] = useState(false);
   const [actionsDeplie, setActionsDeplie] = useState(false);
+  const [groupeOuvertId, setGroupeOuvertId] = useState<string | null>(null);
   const [avisDeplie, setAvisDeplie] = useState(false);
   const [copie, setCopie] = useState(false);
   const [historiqueDeplie, setHistoriqueDeplie] = useState(false);
@@ -431,19 +544,20 @@ export function AppSidebar({
     );
   }
 
-  // En contexte chat plein écran : Ma mémoire, Audits, Bureau, Plugins et
-  // Utiliser Clovis dans Claude quittent le rail principal pour le
-  // dropdown Actions (place prise par Nouvelle conversation + Historique,
-  // voir prop contexteChat ci-dessus -- élargi le 22/08/2026, demande
-  // Bourama).
-  const ID_ONGLETS_DANS_ACTIONS: OngletId[] = ["memoire", "audits", "bureau", "plugins", "claude"];
-  const ongletsRail = contexteChat
-    ? ONGLETS.filter((o) => !ID_ONGLETS_DANS_ACTIONS.includes(o.id))
-    : ONGLETS;
-  const ongletsDansActions = contexteChat
-    ? ONGLETS.filter((o) => ID_ONGLETS_DANS_ACTIONS.includes(o.id))
-    : [];
-  const navComplete = [{ href: "/", label: "Accueil", Icone: Home }, ...ongletsRail];
+  // Accès direct sur le rail : Bureau, Bibliothèque, Notes (usage
+  // quotidien). Mes skills, Ma mémoire et Plugins vivent sous le groupe
+  // "Personnaliser Clovis" ; Mon programme et Audits sous "Scolarité"
+  // (voir GROUPES plus haut). "Utiliser Clovis dans Claude" vit dans le
+  // menu "Plus". En contexte chat plein écran, Bureau descend aussi dans
+  // "Plus" (place prise par Nouvelle conversation + Historique, élargi
+  // le 22/08/2026, demande Bourama).
+  const idsDirects: OngletId[] = contexteChat
+    ? ["bibliotheque", "notes"]
+    : ["bureau", "bibliotheque", "notes"];
+  const idsPlusFlat: OngletId[] = contexteChat ? ["bureau", "claude"] : ["claude"];
+  const ongletsDirects = ONGLETS.filter((o) => idsDirects.includes(o.id));
+  const ongletsDansActions = ONGLETS.filter((o) => idsPlusFlat.includes(o.id));
+  const navComplete = [{ href: "/", label: "Accueil", Icone: Home }, ...ongletsDirects];
 
   return (
     <>
@@ -466,7 +580,7 @@ export function AppSidebar({
       <div
         ref={asideRef}
         className={`hidden flex-shrink-0 flex-col border-r border-dj-bordure bg-dj-fond px-2 py-3 transition-[width] duration-300 ease-out md:flex ${
-          actionsDeplie || historiqueDeplie ? "overflow-visible" : "overflow-y-auto overflow-x-hidden"
+          actionsDeplie || historiqueDeplie || groupeOuvertId ? "overflow-visible" : "overflow-y-auto overflow-x-hidden"
         } ${ouverte ? "md:w-72" : "md:w-14"}`}
       >
         <button
@@ -540,6 +654,21 @@ export function AppSidebar({
           <LienOnglet key={o.href} onglet={o} mouvement={MOUVEMENT_NAV} />
         ))}
 
+        {GROUPES.map((g) => (
+          <MenuGroupe
+            key={g.id}
+            groupe={g}
+            ouverte={ouverte}
+            LibelleRail={LibelleRail}
+            pathname={pathname}
+            contexteChat={contexteChat}
+            ouvrirFenetre={ouvrirFenetre}
+            ouvert={groupeOuvertId === g.id}
+            onBasculer={() => setGroupeOuvertId((v) => (v === g.id ? null : g.id))}
+            onFermer={() => setGroupeOuvertId(null)}
+          />
+        ))}
+
         {ouverte && (
           <div className="mt-auto flex justify-center pt-2">
             <BoutonInstaller />
@@ -549,7 +678,7 @@ export function AppSidebar({
         <div ref={actionsRef} className={`relative rounded-xl ${ouverte ? "mt-2" : "mt-auto"}`}>
           <button
             onClick={basculerActions}
-            title="Actions"
+            title="Plus"
             className={`group flex w-full items-center gap-2 rounded-xl transition-colors ${
               actionsDeplie ? "text-dj-accent-1" : "text-dj-texte-muet hover:bg-dj-surface-haute hover:text-dj-texte"
             }`}
@@ -557,13 +686,12 @@ export function AppSidebar({
             <span className="flex h-10 w-10 flex-shrink-0 items-center justify-center">
               <MoreHorizontal size={18} className="transition-transform duration-200 group-hover:-translate-y-0.5" />
             </span>
-            <LibelleRail ouverte={ouverte}>Actions</LibelleRail>
+            <LibelleRail ouverte={ouverte}>Plus</LibelleRail>
           </button>
           {actionsDeplie && (
             <div className="absolute bottom-full left-0 z-50 mb-2 w-64 animate-dj-fade-in-rapide rounded-cgpt-carte border border-dj-bordure bg-dj-surface p-2 shadow-[0_8px_30px_rgba(0,0,0,0.35)]">
               <div className="flex flex-col gap-2">
-                {contexteChat &&
-                  ongletsDansActions.map((o) => {
+                {ongletsDansActions.map((o) => {
                     const actif = pathname === o.href;
                     return (
                       <Link
@@ -571,8 +699,10 @@ export function AppSidebar({
                         href={o.href}
                         onClick={(e) => {
                           setActionsDeplie(false);
-                          e.preventDefault();
-                          ouvrirFenetre(o.id);
+                          if (contexteChat) {
+                            e.preventDefault();
+                            ouvrirFenetre(o.id);
+                          }
                         }}
                         className={`group relative flex w-full items-center gap-2 rounded-lg px-2 py-2 text-left text-sm transition-colors ${
                           actif ? "text-dj-accent-1" : "text-dj-texte-muet hover:bg-dj-surface-haute hover:text-dj-texte"
@@ -629,22 +759,17 @@ export function AppSidebar({
           )}
         </div>
 
-        <ThemeToggle LibelleRail={LibelleRail} ouverte={ouverte} />
-
-        <button
-          onClick={seDeconnecter}
-          className="group mt-2 flex w-full items-center gap-2 rounded-xl text-dj-texte-muet transition-colors hover:bg-dj-surface-haute hover:text-dj-texte"
-        >
-          <span className="flex h-10 w-10 flex-shrink-0 items-center justify-center">
-            {connecte ? (
-              <LogOut size={18} className="transition-transform duration-200 group-hover:translate-x-0.5" />
-            ) : (
-              <LogIn size={18} className="transition-transform duration-200 group-hover:translate-x-0.5" />
-            )}
-          </span>
-          <LibelleRail ouverte={ouverte}>{connecte ? "Se déconnecter" : "Se connecter"}</LibelleRail>
-        </button>
-
+        {/* Thème et Se déconnecter/connecter (refonte sidebar,
+            22/08/2026, demande Bourama : "enlève le bouton se
+            déconnecter, thème"). Avant : ces deux actions apparaissaient
+            en double, une fois ici comme boutons de rail à part entière,
+            une fois dans MenuProfil juste en dessous. Elles restent
+            disponibles (impossible de les supprimer, ce sont des actions
+            essentielles), mais uniquement dans MenuProfil : c'est
+            exactement le principe qu'on applique déjà aux 8 sections
+            (un bouton qui ouvre une liste plutôt qu'un bouton par
+            action). Pour un visiteur non connecté, MenuProfil n'existe
+            pas : on garde un vrai bouton "Se connecter" à la place. */}
         {connecte ? (
           <MenuProfil
             avatarUrl={avatarUrl}
@@ -655,14 +780,15 @@ export function AppSidebar({
             onSeDeconnecter={seDeconnecter}
           />
         ) : (
-          <div className="flex w-full items-center gap-2 rounded-xl text-dj-texte-muet">
+          <button
+            onClick={seDeconnecter}
+            className="group mt-2 flex w-full items-center gap-2 rounded-xl text-dj-texte-muet transition-colors hover:bg-dj-surface-haute hover:text-dj-texte"
+          >
             <span className="flex h-10 w-10 flex-shrink-0 items-center justify-center">
-              <Logo taille={18} />
+              <LogIn size={18} className="transition-transform duration-200 group-hover:translate-x-0.5" />
             </span>
-            <LibelleRail ouverte={ouverte}>
-              <span className="font-display font-bold tracking-tight">Clovis</span>
-            </LibelleRail>
-          </div>
+            <LibelleRail ouverte={ouverte}>Se connecter</LibelleRail>
+          </button>
         )}
       </div>
 
@@ -723,6 +849,23 @@ export function AppSidebar({
             {navComplete.map((o) => (
               <LienOnglet key={o.href} onglet={o} mouvement={MOUVEMENT_NAV} mobile />
             ))}
+
+            {GROUPES.map((g) => (
+              <MenuGroupe
+                key={g.id}
+                groupe={g}
+                mobile
+                ouverte
+                LibelleRail={LibelleRail}
+                pathname={pathname}
+                contexteChat={contexteChat}
+                ouvrirFenetre={ouvrirFenetre}
+                ouvert={groupeOuvertId === g.id}
+                onBasculer={() => setGroupeOuvertId((v) => (v === g.id ? null : g.id))}
+                onFermer={() => setGroupeOuvertId(null)}
+                onNaviguer={() => setOuverte(false)}
+              />
+            ))}
           </div>
 
           <div className="mt-2 flex justify-center">
@@ -737,12 +880,11 @@ export function AppSidebar({
               }`}
             >
               <MoreHorizontal size={18} className="transition-transform duration-200 group-hover:-translate-y-0.5" />
-              Actions
+              Plus
             </button>
             {actionsDeplie && (
               <div className="flex flex-col gap-2 pb-2">
-                {contexteChat &&
-                  ongletsDansActions.map((o) => {
+                {ongletsDansActions.map((o) => {
                     const actif = pathname === o.href;
                     return (
                       <Link
@@ -751,8 +893,10 @@ export function AppSidebar({
                         onClick={(e) => {
                           setActionsDeplie(false);
                           setOuverte(false);
-                          e.preventDefault();
-                          ouvrirFenetre(o.id);
+                          if (contexteChat) {
+                            e.preventDefault();
+                            ouvrirFenetre(o.id);
+                          }
                         }}
                         className={`group relative flex w-full items-center gap-2 rounded-lg px-2 py-2 text-left text-sm transition-colors ${
                           actif ? "text-dj-accent-1" : "text-dj-texte-muet hover:bg-dj-surface-haute hover:text-dj-texte"
@@ -801,43 +945,38 @@ export function AppSidebar({
             )}
           </div>
 
-          <ThemeToggle LibelleRail={LibelleRail} ouverte={ouverte} mobile />
-
-          {connecte && (
-            <Link
-              href="/parametres"
-              onClick={() => setOuverte(false)}
-              className="flex w-full items-center gap-2 rounded-xl px-2 text-dj-texte-muet transition-colors hover:bg-dj-surface-haute hover:text-dj-texte"
-            >
-              <span className="flex h-10 w-10 flex-shrink-0 items-center justify-center">
-                <span className="h-6 w-6 overflow-hidden rounded-full border border-dj-bordure bg-dj-surface-haute">
-                  {avatarUrl ? (
-                    // eslint-disable-next-line @next/next/no-img-element -- avatar_url vient de Supabase Storage, hôte dynamique
-                    <img src={avatarUrl} alt="" className="h-full w-full object-cover" />
-                  ) : (
-                    <span className="flex h-full w-full items-center justify-center text-[10px] font-bold text-dj-texte-muet">
-                      {(nomAffiche || "Mon compte").trim().charAt(0).toUpperCase()}
-                    </span>
-                  )}
+          {/* Thème, profil et Se déconnecter/connecter regroupés dans
+              MenuProfil (refonte sidebar, 22/08/2026, demande Bourama).
+              Avant : 3 lignes séparées ici (Thème, lien profil, Se
+              déconnecter) qui refaisaient à la main ce que MenuProfil
+              fait déjà proprement côté desktop : c'est ce doublon qui
+              faisait déborder le panneau mobile. */}
+          <div className="mt-auto">
+            {connecte ? (
+              <MenuProfil
+                avatarUrl={avatarUrl}
+                nomAffiche={nomAffiche}
+                ouverte
+                LibelleRail={LibelleRail}
+                mobile
+                onNaviguerVersParametres={() => {
+                  setOuverte(false);
+                  router.push("/parametres");
+                }}
+                onSeDeconnecter={seDeconnecter}
+              />
+            ) : (
+              <button
+                onClick={seDeconnecter}
+                className="group flex w-full items-center gap-2 rounded-xl px-2 py-2 text-dj-texte-muet transition-colors hover:bg-dj-surface-haute hover:text-dj-texte"
+              >
+                <span className="flex h-10 w-10 flex-shrink-0 items-center justify-center">
+                  <LogIn size={18} className="transition-transform duration-200 group-hover:translate-x-0.5" />
                 </span>
-              </span>
-              <span className="text-sm">{nomAffiche || "Mon compte"}</span>
-            </Link>
-          )}
-
-          <button
-            onClick={seDeconnecter}
-            className="group mt-auto flex w-full items-center gap-2 rounded-xl px-2 text-dj-texte-muet transition-colors hover:bg-dj-surface-haute hover:text-dj-texte"
-          >
-            <span className="flex h-10 w-10 flex-shrink-0 items-center justify-center">
-              {connecte ? (
-                <LogOut size={18} className="transition-transform duration-200 group-hover:translate-x-0.5" />
-              ) : (
-                <LogIn size={18} className="transition-transform duration-200 group-hover:translate-x-0.5" />
-              )}
-            </span>
-            <span className="text-sm">{connecte ? "Se déconnecter" : "Se connecter"}</span>
-          </button>
+                <span className="text-sm">Se connecter</span>
+              </button>
+            )}
+          </div>
         </div>
       )}
     </>
