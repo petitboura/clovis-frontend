@@ -276,8 +276,9 @@ function MenuGroupe({
   contexteChat,
   ouvrirFenetre,
   ouvert,
-  onBasculer,
+  onOuvrir,
   onFermer,
+  onBasculer,
   onNaviguer,
 }: {
   groupe: Groupe;
@@ -288,13 +289,14 @@ function MenuGroupe({
   contexteChat: boolean;
   ouvrirFenetre: (id: OngletId) => void;
   ouvert: boolean;
-  onBasculer: () => void;
+  onOuvrir: () => void;
   onFermer: () => void;
+  onBasculer: () => void;
   onNaviguer?: () => void;
 }) {
   const ref = useRef<HTMLDivElement>(null);
   const membres = ONGLETS.filter((o) => groupe.ongletIds.includes(o.id));
-  const actif = membres.some((o) => pathname === o.href);
+  const actif = membres.some((o) => pathname === o.href) || pathname === groupe.href;
 
   useEffect(() => {
     if (!ouvert) return;
@@ -306,9 +308,29 @@ function MenuGroupe({
   }, [ouvert, onFermer]);
 
   return (
-    <div ref={ref} className={`relative w-full ${mobile ? "" : "mt-2"}`}>
-      <button
-        onClick={onBasculer}
+    <div
+      ref={ref}
+      className={`relative w-full ${mobile ? "" : "mt-2"}`}
+      onMouseEnter={() => !mobile && onOuvrir()}
+      onMouseLeave={() => !mobile && onFermer()}
+    >
+      {/* Le bouton principal est un vrai lien (22/08/2026, demande
+          Bourama : "les pages c'était quand tu clique sur la section ou
+          la sous-section, le popup reste au survol"). En navigation
+          normale, cliquer navigue vraiment vers la page du groupe. En
+          chat plein écran, il n'y a pas de fenêtre flottante "groupe"
+          à ouvrir : le clic bascule juste le popup, comme avant. */}
+      <Link
+        href={groupe.href}
+        onClick={(e) => {
+          if (contexteChat) {
+            e.preventDefault();
+            onBasculer();
+          } else {
+            onFermer();
+            onNaviguer?.();
+          }
+        }}
         className={`group flex w-full items-center gap-2 rounded-xl transition-colors ${
           actif || ouvert ? "text-dj-accent-1" : "text-dj-texte-muet hover:bg-dj-surface-haute hover:text-dj-texte"
         } ${mobile ? "px-2 py-2" : ""}`}
@@ -317,7 +339,7 @@ function MenuGroupe({
           <groupe.Icone size={18} className={`transition-transform duration-200 ${MOUVEMENT_NAV}`} />
         </span>
         {mobile ? <span className="text-sm">{groupe.label}</span> : <LibelleRail ouverte={ouverte}>{groupe.label}</LibelleRail>}
-      </button>
+      </Link>
 
       {ouvert && (
         <div
@@ -660,29 +682,21 @@ export function AppSidebar({
           <LienOnglet key={o.href} onglet={o} mouvement={MOUVEMENT_NAV} />
         ))}
 
-        {GROUPES.map((g) =>
-          contexteChat ? (
-            <MenuGroupe
-              key={g.id}
-              groupe={g}
-              ouverte={ouverte}
-              LibelleRail={LibelleRail}
-              pathname={pathname}
-              contexteChat={contexteChat}
-              ouvrirFenetre={ouvrirFenetre}
-              ouvert={groupeOuvertId === g.id}
-              onBasculer={() => setGroupeOuvertId((v) => (v === g.id ? null : g.id))}
-              onFermer={() => setGroupeOuvertId(null)}
-            />
-          ) : (
-            <LienOnglet
-              key={g.id}
-              onglet={{ href: g.href, label: g.label, Icone: g.Icone }}
-              mouvement={MOUVEMENT_NAV}
-              actifSupplementaire={g.ongletIds.some((id) => pathname === ONGLETS.find((o) => o.id === id)?.href)}
-            />
-          )
-        )}
+        {GROUPES.map((g) => (
+          <MenuGroupe
+            key={g.id}
+            groupe={g}
+            ouverte={ouverte}
+            LibelleRail={LibelleRail}
+            pathname={pathname}
+            contexteChat={contexteChat}
+            ouvrirFenetre={ouvrirFenetre}
+            ouvert={groupeOuvertId === g.id}
+            onOuvrir={() => setGroupeOuvertId(g.id)}
+            onFermer={() => setGroupeOuvertId((v) => (v === g.id ? null : v))}
+            onBasculer={() => setGroupeOuvertId((v) => (v === g.id ? null : g.id))}
+          />
+        ))}
 
         {ouverte && (
           <div className="mt-auto flex justify-center pt-2">
@@ -877,8 +891,9 @@ export function AppSidebar({
                   contexteChat={contexteChat}
                   ouvrirFenetre={ouvrirFenetre}
                   ouvert={groupeOuvertId === g.id}
+                  onOuvrir={() => setGroupeOuvertId(g.id)}
+                  onFermer={() => setGroupeOuvertId((v) => (v === g.id ? null : v))}
                   onBasculer={() => setGroupeOuvertId((v) => (v === g.id ? null : g.id))}
-                  onFermer={() => setGroupeOuvertId(null)}
                   onNaviguer={() => setOuverte(false)}
                 />
               ) : (
