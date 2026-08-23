@@ -235,7 +235,7 @@ export function ChatFlottant({
             // une demi-hauteur trop bas. Centrage refait ici avec
             // inset-0 + margin:auto (propriétés indépendantes de
             // transform), qui coexiste sans conflit avec l'animation.
-            "fixed bottom-5 right-5 z-40 flex h-[min(70dvh,600px)] w-[min(92vw,380px)] flex-col overflow-hidden rounded-2xl border border-dj-bordure bg-dj-fond shadow-[0_4px_30px_rgba(0,0,0,0.45)] md:inset-0 md:m-auto") +
+            "fixed bottom-5 right-5 z-40 flex h-[min(70dvh,600px)] w-[min(92vw,380px)] flex-col overflow-hidden rounded-cgpt-carte border border-dj-bordure bg-dj-fond shadow-[0_4px_30px_rgba(0,0,0,0.45)] md:inset-0 md:m-auto") +
         // Fondu d'ouverture (mount -- reprend l'animation standard des
         // modals du projet, cgpt-entree-modal) et de fermeture (juste
         // avant le démontage réel, voir fermerAvecFondu) -- demande
@@ -267,7 +267,7 @@ export function ChatFlottant({
             <button
               onClick={nouvelleConversation}
               title="Nouvelle conversation"
-              className="group flex h-8 w-8 items-center justify-center rounded-lg text-dj-texte-muet transition-colors hover:bg-dj-surface-haute hover:text-dj-texte"
+              className="group flex h-8 w-8 items-center justify-center rounded-cgpt-bouton text-dj-texte-muet transition-colors hover:bg-dj-surface-haute hover:text-dj-texte"
             >
               <MessageSquarePlus size={16} className="transition-transform duration-200 group-hover:-translate-y-0.5 group-hover:rotate-6" />
             </button>
@@ -277,19 +277,19 @@ export function ChatFlottant({
               <button
                 onClick={() => setHistoriqueOuvert((v) => !v)}
                 title="Historique"
-                className={`group flex h-8 w-8 items-center justify-center rounded-lg transition-colors ${
+                className={`group flex h-8 w-8 items-center justify-center rounded-cgpt-bouton transition-colors ${
                   historiqueOuvert ? "bg-dj-surface-haute text-dj-accent-1" : "text-dj-texte-muet hover:bg-dj-surface-haute hover:text-dj-texte"
                 }`}
               >
                 <History size={16} className="transition-transform duration-300 group-hover:rotate-45" />
               </button>
               {historiqueOuvert && (
-                <div className="absolute right-0 top-9 z-10 max-h-64 w-56 animate-dj-fade-in-rapide overflow-y-auto rounded-xl border border-dj-bordure bg-dj-surface p-1 shadow-lg">
+                <div className="absolute right-0 top-9 z-10 max-h-64 w-56 animate-dj-fade-in-rapide overflow-y-auto rounded-cgpt-carte border border-dj-bordure bg-dj-surface p-1 shadow-lg">
                   {historique.map((fil) => (
                     <button
                       key={fil.conversation_id ?? "legacy"}
                       onClick={() => selectionnerConversation(fil)}
-                      className="block w-full truncate rounded-lg px-2.5 py-2 text-left text-sm text-dj-texte transition-colors hover:bg-dj-surface-haute"
+                      className="block w-full truncate rounded-xl px-2.5 py-2 text-left text-sm text-dj-texte transition-colors hover:bg-dj-surface-haute"
                     >
                       {fil.titre}
                     </button>
@@ -301,7 +301,7 @@ export function ChatFlottant({
           <button
             onClick={() => setEtat(pleinEcran ? "mini" : "plein_ecran")}
             title={pleinEcran ? "Réduire" : "Plein écran"}
-            className="group flex h-8 w-8 items-center justify-center rounded-lg text-dj-texte-muet transition-colors hover:bg-dj-surface-haute hover:text-dj-texte"
+            className="group flex h-8 w-8 items-center justify-center rounded-cgpt-bouton text-dj-texte-muet transition-colors hover:bg-dj-surface-haute hover:text-dj-texte"
           >
             {pleinEcran ? (
               <Minimize2 size={16} className="transition-transform duration-200 group-hover:scale-90" />
@@ -312,7 +312,7 @@ export function ChatFlottant({
           <button
             onClick={fermerAvecFondu}
             title="Fermer"
-            className="group flex h-8 w-8 items-center justify-center rounded-lg text-dj-texte-muet transition-colors hover:bg-dj-surface-haute hover:text-dj-texte"
+            className="group flex h-8 w-8 items-center justify-center rounded-cgpt-bouton text-dj-texte-muet transition-colors hover:bg-dj-surface-haute hover:text-dj-texte"
           >
             <X size={16} className="transition-transform duration-200 group-hover:rotate-90" />
           </button>
