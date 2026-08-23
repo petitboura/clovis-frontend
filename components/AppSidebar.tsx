@@ -26,7 +26,7 @@ import {
   History,
   PanelLeft,
   Settings,
-  Sparkles,
+  Wand2,
   GraduationCap,
 } from "lucide-react";
 import { supabase } from "@/lib/supabase";
@@ -122,10 +122,10 @@ export const ONGLETS: { id: OngletId; href: string; label: string; Icone: typeof
 // programme, déjà couplés dans EspaceAudits.tsx). "Utiliser Clovis dans
 // Claude" est un guide de configuration ponctuel, il descend dans le
 // menu "Plus" plutôt que d'occuper un bouton du rail.
-type Groupe = { id: string; label: string; Icone: typeof Briefcase; ongletIds: OngletId[] };
+type Groupe = { id: string; href: string; label: string; Icone: typeof Briefcase; ongletIds: OngletId[] };
 const GROUPES: Groupe[] = [
-  { id: "personnaliser", label: "Personnaliser Clovis", Icone: Sparkles, ongletIds: ["comportements", "memoire", "plugins"] },
-  { id: "scolarite", label: "Scolarité", Icone: GraduationCap, ongletIds: ["programme", "audits"] },
+  { id: "personnaliser", href: "/personnaliser", label: "Personnaliser Clovis", Icone: Wand2, ongletIds: ["comportements", "memoire", "plugins"] },
+  { id: "scolarite", href: "/scolarite", label: "Scolarité", Icone: GraduationCap, ongletIds: ["programme", "audits"] },
 ];
 
 // Rotation des mouvements pour les icônes de nav (Accueil + les 7
@@ -491,12 +491,18 @@ export function AppSidebar({
     onglet,
     mouvement,
     mobile = false,
+    actifSupplementaire = false,
   }: {
     onglet: { id?: OngletId; href: string; label: string; Icone: typeof Briefcase };
     mouvement: string;
     mobile?: boolean;
+    /** Pour les liens de groupe (Personnaliser Clovis, Scolarité) : reste
+     * actif tant qu'on est sur une des sections soeurs, pas seulement sur
+     * la page d'atterrissage exacte du groupe (22/08/2026, demande
+     * Bourama). */
+    actifSupplementaire?: boolean;
   }) {
-    const actif = pathname === onglet.href;
+    const actif = pathname === onglet.href || actifSupplementaire;
     return (
       <Link
         href={onglet.href}
@@ -654,20 +660,29 @@ export function AppSidebar({
           <LienOnglet key={o.href} onglet={o} mouvement={MOUVEMENT_NAV} />
         ))}
 
-        {GROUPES.map((g) => (
-          <MenuGroupe
-            key={g.id}
-            groupe={g}
-            ouverte={ouverte}
-            LibelleRail={LibelleRail}
-            pathname={pathname}
-            contexteChat={contexteChat}
-            ouvrirFenetre={ouvrirFenetre}
-            ouvert={groupeOuvertId === g.id}
-            onBasculer={() => setGroupeOuvertId((v) => (v === g.id ? null : g.id))}
-            onFermer={() => setGroupeOuvertId(null)}
-          />
-        ))}
+        {GROUPES.map((g) =>
+          contexteChat ? (
+            <MenuGroupe
+              key={g.id}
+              groupe={g}
+              ouverte={ouverte}
+              LibelleRail={LibelleRail}
+              pathname={pathname}
+              contexteChat={contexteChat}
+              ouvrirFenetre={ouvrirFenetre}
+              ouvert={groupeOuvertId === g.id}
+              onBasculer={() => setGroupeOuvertId((v) => (v === g.id ? null : g.id))}
+              onFermer={() => setGroupeOuvertId(null)}
+            />
+          ) : (
+            <LienOnglet
+              key={g.id}
+              onglet={{ href: g.href, label: g.label, Icone: g.Icone }}
+              mouvement={MOUVEMENT_NAV}
+              actifSupplementaire={g.ongletIds.some((id) => pathname === ONGLETS.find((o) => o.id === id)?.href)}
+            />
+          )
+        )}
 
         {ouverte && (
           <div className="mt-auto flex justify-center pt-2">
@@ -850,22 +865,32 @@ export function AppSidebar({
               <LienOnglet key={o.href} onglet={o} mouvement={MOUVEMENT_NAV} mobile />
             ))}
 
-            {GROUPES.map((g) => (
-              <MenuGroupe
-                key={g.id}
-                groupe={g}
-                mobile
-                ouverte
-                LibelleRail={LibelleRail}
-                pathname={pathname}
-                contexteChat={contexteChat}
-                ouvrirFenetre={ouvrirFenetre}
-                ouvert={groupeOuvertId === g.id}
-                onBasculer={() => setGroupeOuvertId((v) => (v === g.id ? null : g.id))}
-                onFermer={() => setGroupeOuvertId(null)}
-                onNaviguer={() => setOuverte(false)}
-              />
-            ))}
+            {GROUPES.map((g) =>
+              contexteChat ? (
+                <MenuGroupe
+                  key={g.id}
+                  groupe={g}
+                  mobile
+                  ouverte
+                  LibelleRail={LibelleRail}
+                  pathname={pathname}
+                  contexteChat={contexteChat}
+                  ouvrirFenetre={ouvrirFenetre}
+                  ouvert={groupeOuvertId === g.id}
+                  onBasculer={() => setGroupeOuvertId((v) => (v === g.id ? null : g.id))}
+                  onFermer={() => setGroupeOuvertId(null)}
+                  onNaviguer={() => setOuverte(false)}
+                />
+              ) : (
+                <LienOnglet
+                  key={g.id}
+                  onglet={{ href: g.href, label: g.label, Icone: g.Icone }}
+                  mouvement={MOUVEMENT_NAV}
+                  mobile
+                  actifSupplementaire={g.ongletIds.some((id) => pathname === ONGLETS.find((o) => o.id === id)?.href)}
+                />
+              )
+            )}
           </div>
 
           <div className="mt-2 flex justify-center">

@@ -1,5 +1,9 @@
 "use client";
 
+import Link from "next/link";
+import { usePathname } from "next/navigation";
+import { ChevronRight, type LucideIcon } from "lucide-react";
+
 // Conteneur partagé par les sections de l'app (refonte "Mon espace =
 // l'app", 15/08/2026). Remplace le conteneur à onglets d'EspaceClovis.tsx
 // (lien "Retour au chat" et barre d'onglets en state local) -- la
@@ -13,11 +17,70 @@
 // doublon visuel. Un vrai fil d'Ariane garde son sens uniquement là où il
 // y a une vraie profondeur (ex : EspaceProgramme.tsx, programme -> matière
 // -> chapitre) -- pas ajouté ici pour cette raison.
-export function SectionPage({ title, children }: { title: string; children: React.ReactNode }) {
+//
+// Prop `groupe` réintroduite le 22/08/2026 (demande Bourama, sidebar
+// regroupée) : ici la profondeur existe vraiment (Personnaliser Clovis ->
+// Mes skills), donc la même logique justifie cette fois d'afficher le fil
+// d'Ariane, plus une colonne de navigation persistante vers les sections
+// soeurs (comme une vraie page de paramètres avec sidebar, pas un popup
+// qu'on doit rouvrir pour changer de section).
+export function SectionPage({
+  title,
+  children,
+  groupe,
+}: {
+  title: string;
+  children: React.ReactNode;
+  groupe?: {
+    label: string;
+    href: string;
+    soeurs: { href: string; label: string; Icone: LucideIcon }[];
+  };
+}) {
+  const pathname = usePathname();
+
+  if (!groupe) {
+    return (
+      <div className="mx-auto w-full max-w-3xl animate-dj-fade-in space-y-4 px-4 pb-24 pt-6 md:pt-8">
+        <h1 className="font-display text-xl font-bold text-dj-texte">{title}</h1>
+        {children}
+      </div>
+    );
+  }
+
   return (
-    <div className="mx-auto w-full max-w-2xl animate-dj-fade-in space-y-4 px-4 pb-24 pt-6 md:pt-8">
-      <h1 className="font-display text-xl font-bold text-dj-texte">{title}</h1>
-      {children}
+    <div className="mx-auto w-full max-w-5xl animate-dj-fade-in px-4 pb-24 pt-6 md:pt-8">
+      <div className="mb-1 flex items-center gap-1.5 text-sm text-dj-texte-muet">
+        <Link href={groupe.href} className="transition-colors hover:text-dj-texte">
+          {groupe.label}
+        </Link>
+        <ChevronRight size={14} className="flex-shrink-0" />
+        <span className="text-dj-texte">{title}</span>
+      </div>
+      <h1 className="mb-4 font-display text-xl font-bold text-dj-texte">{title}</h1>
+
+      <div className="flex flex-col gap-6 md:flex-row md:items-start">
+        <nav className="hidden w-48 flex-shrink-0 flex-col gap-1 md:flex">
+          {groupe.soeurs.map((s) => {
+            const actif = pathname === s.href;
+            return (
+              <Link
+                key={s.href}
+                href={s.href}
+                className={`flex items-center gap-2.5 rounded-xl px-3 py-2 text-sm transition-colors ${
+                  actif
+                    ? "bg-dj-surface-haute font-medium text-dj-texte"
+                    : "text-dj-texte-muet hover:bg-dj-surface-haute hover:text-dj-texte"
+                }`}
+              >
+                <s.Icone size={16} className="flex-shrink-0" />
+                {s.label}
+              </Link>
+            );
+          })}
+        </nav>
+        <div className="min-w-0 flex-1 space-y-4">{children}</div>
+      </div>
     </div>
   );
 }
