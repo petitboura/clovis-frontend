@@ -26,7 +26,7 @@ export function ProgrammesRecus() {
   if (!rattachements || recus.length === 0) return null;
 
   return (
-    <div className="mb-4 animate-dj-fade-in-rapide space-y-2 rounded-2xl border border-dj-bordure bg-dj-surface p-4">
+    <div className="mb-4 animate-dj-fade-in-rapide space-y-2 rounded-cgpt-carte border border-dj-bordure bg-dj-surface p-4">
       <p className="text-xs font-semibold text-dj-texte-muet">Programmes reçus (via un code)</p>
       {recus.map((r) => (
         <div key={r.rattachement_id} className="flex items-center gap-2 rounded-lg border border-dj-bordure/60 bg-dj-surface-haute px-3 py-2 text-sm">

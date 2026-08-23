@@ -841,7 +841,7 @@ function SectionExamensDuProgramme({
   useEffect(() => ecouterDonneesModifiees("programme", charger), [programme.id, matieres.map((m) => m.id).join(",")]);
 
   if (chapitres === null) {
-    return <Skeleton className="h-24 rounded-2xl border border-dj-bordure" />;
+    return <Skeleton className="h-24 rounded-cgpt-carte border border-dj-bordure" />;
   }
 
   return <VueProgrammeContenu programmeId={programme.id} chapitres={chapitres} />;

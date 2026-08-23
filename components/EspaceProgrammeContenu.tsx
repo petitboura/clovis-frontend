@@ -133,7 +133,7 @@ function SectionDocuments({ chapitreId }: { chapitreId: string }) {
           Ajouter un lien ou un texte à la main
         </button>
       ) : (
-        <div className="flex flex-col gap-2 rounded-2xl border border-dj-bordure bg-dj-surface p-4 sm:flex-row sm:items-center">
+        <div className="flex flex-col gap-2 rounded-cgpt-carte border border-dj-bordure bg-dj-surface p-4 sm:flex-row sm:items-center">
           <input
             value={titre}
             onChange={(e) => setTitre(e.target.value)}
@@ -391,7 +391,7 @@ function SectionExercices({ chapitreId }: { chapitreId: string }) {
         </div>
       )}
 
-      <div className="flex items-center gap-2 rounded-2xl border border-dj-bordure bg-dj-surface p-3">
+      <div className="flex items-center gap-2 rounded-cgpt-carte border border-dj-bordure bg-dj-surface p-3">
         <label
           title="Créer un exercice à partir d'un fichier"
           className="flex flex-1 cursor-pointer items-center justify-center gap-2 rounded-cgpt-bouton bg-dj-accent-1 py-2.5 text-sm font-bold text-[#1A0D02] transition-colors hover:bg-dj-accent-2 aria-disabled:cursor-not-allowed aria-disabled:opacity-50"
@@ -422,7 +422,7 @@ function SectionExercices({ chapitreId }: { chapitreId: string }) {
           Ou taper un énoncé à la main
         </button>
       ) : (
-        <div className="flex items-center gap-2 rounded-2xl border border-dj-bordure bg-dj-surface p-3">
+        <div className="flex items-center gap-2 rounded-cgpt-carte border border-dj-bordure bg-dj-surface p-3">
           <textarea
             autoFocus
             value={nouvelEnonce}
@@ -609,7 +609,7 @@ function SectionExamens({
       </div>
 
       {formulaireOuvert && (
-        <div className="flex animate-dj-fade-in-rapide flex-col gap-3 rounded-2xl border border-dj-bordure bg-dj-surface p-4">
+        <div className="flex animate-dj-fade-in-rapide flex-col gap-3 rounded-cgpt-carte border border-dj-bordure bg-dj-surface p-4">
           <div className="flex flex-col gap-2 sm:flex-row">
             <input
               value={titre}
@@ -766,7 +766,7 @@ function SectionPublierPlugin({ programmeId }: { programmeId: string }) {
   }
 
   return (
-    <div className="flex flex-col gap-3 rounded-2xl border border-dj-bordure bg-dj-surface p-4">
+    <div className="flex flex-col gap-3 rounded-cgpt-carte border border-dj-bordure bg-dj-surface p-4">
       <div className="flex items-center gap-2">
         <Rocket size={16} className="text-dj-accent-1" />
         <h3 className="text-sm font-semibold text-dj-texte">Publier comme plugin</h3>
