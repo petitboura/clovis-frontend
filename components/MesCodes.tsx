@@ -125,7 +125,7 @@ export function MesCodes() {
 
   if (codes === undefined) {
     return (
-      <section className="rounded-2xl border border-dj-bordure bg-dj-surface p-5">
+      <section className="rounded-cgpt-carte border border-dj-bordure bg-dj-surface p-5">
         <Skeleton className="h-6 w-32 rounded" />
         <Skeleton className="mt-3 h-14 rounded-xl" />
       </section>
@@ -133,7 +133,7 @@ export function MesCodes() {
   }
 
   return (
-    <section className="rounded-2xl border border-dj-bordure bg-dj-surface p-5">
+    <section className="rounded-cgpt-carte border border-dj-bordure bg-dj-surface p-5">
       <div className="flex items-center justify-between">
         <div>
           <h2 className="font-display text-base font-semibold text-dj-texte">Mes codes</h2>

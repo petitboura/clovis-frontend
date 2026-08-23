@@ -86,7 +86,7 @@ export function EspaceEntrerCode() {
   }
 
   return (
-    <section className="rounded-2xl border border-dj-bordure bg-dj-surface p-5">
+    <section className="rounded-cgpt-carte border border-dj-bordure bg-dj-surface p-5">
       <h2 className="font-display text-base font-semibold text-dj-texte">Entrer un code</h2>
       <p className="mt-1 text-xs text-dj-texte-muet">
         Quelqu&apos;un t&apos;a donné un code ? Entre-le ici pour recevoir tout ce qu&apos;il partage.
