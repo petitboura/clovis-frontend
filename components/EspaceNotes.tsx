@@ -306,7 +306,7 @@ function ModaleRecherche({ onFermer, onNaviguer }: { onFermer: () => void; onNav
 
   return (
     <div className="fixed inset-0 z-50 flex items-start justify-center bg-black/50 pt-24" onClick={onFermer}>
-      <div onClick={(e) => e.stopPropagation()} className="w-full max-w-md rounded-lg border border-dj-bordure bg-dj-surface shadow-xl">
+      <div onClick={(e) => e.stopPropagation()} className="w-full max-w-md rounded-cgpt-carte border border-dj-bordure bg-dj-surface shadow-xl">
         <div className="flex items-center gap-2 border-b border-dj-bordure px-3">
           <Search size={14} className="shrink-0 text-dj-texte-muet" />
           <input
@@ -531,7 +531,7 @@ function SelecteurIcone({ icone, onChoisir }: { icone: string | null; onChoisir:
         {icone || <FileText size={22} className="text-dj-texte-muet" />}
       </button>
       {ouvert && (
-        <div className="absolute left-0 top-full z-20 mt-1 w-56 rounded-lg border border-dj-bordure bg-dj-surface p-2 shadow-lg">
+        <div className="absolute left-0 top-full z-20 mt-1 w-56 rounded-cgpt-carte border border-dj-bordure bg-dj-surface p-2 shadow-lg">
           <div className="grid grid-cols-8 gap-0.5">
             {EMOJIS_COURANTS.map((e) => (
               <button
@@ -588,7 +588,7 @@ function MenuAjouterBloc({
   onSousPage?: () => void;
 }) {
   return (
-    <div className="absolute left-0 top-full z-10 mt-1 w-56 space-y-0.5 rounded-lg border border-dj-bordure bg-dj-surface p-1.5 shadow-lg">
+    <div className="absolute left-0 top-full z-10 mt-1 w-56 space-y-0.5 rounded-cgpt-carte border border-dj-bordure bg-dj-surface p-1.5 shadow-lg">
       {TYPES_BLOCS.map((t) => (
         <button
           key={t.id}
@@ -1473,7 +1473,7 @@ function LigneBloc({
                 className="w-full resize-none bg-transparent outline-none"
               />
               {menuSlash && (
-                <div className="absolute left-0 top-full z-10 mt-1 w-56 space-y-0.5 rounded-lg border border-dj-bordure bg-dj-surface p-1.5 shadow-lg">
+                <div className="absolute left-0 top-full z-10 mt-1 w-56 space-y-0.5 rounded-cgpt-carte border border-dj-bordure bg-dj-surface p-1.5 shadow-lg">
                   {TYPES_BLOCS.filter((t) => t.label.toLowerCase().includes(requeteSlash.toLowerCase())).map((t) => (
                     <button
                       key={t.id}
@@ -1490,7 +1490,7 @@ function LigneBloc({
                 </div>
               )}
               {lienTrigger && (
-                <div className="absolute left-0 top-full z-10 mt-1 max-h-56 w-64 space-y-0.5 overflow-y-auto rounded-lg border border-dj-bordure bg-dj-surface p-1.5 shadow-lg">
+                <div className="absolute left-0 top-full z-10 mt-1 max-h-56 w-64 space-y-0.5 overflow-y-auto rounded-cgpt-carte border border-dj-bordure bg-dj-surface p-1.5 shadow-lg">
                   {resultatsLien.length === 0 ? (
                     <p className="px-2 py-1 text-xs text-dj-texte-muet">
                       {lienTrigger.requete ? "Aucune page ne correspond." : "Tape le nom d'une page…"}
@@ -2035,7 +2035,7 @@ function PanneauAjoutPropriete({
   }
 
   return (
-    <div className="w-64 space-y-1.5 rounded-lg border border-dj-bordure bg-dj-surface p-2 text-xs">
+    <div className="w-64 space-y-1.5 rounded-cgpt-carte border border-dj-bordure bg-dj-surface p-2 text-xs">
       <input
         value={nom}
         onChange={(e) => setNom(e.target.value)}
@@ -2358,7 +2358,7 @@ function PanneauRevision() {
       <p className="text-xs text-dj-texte-muet">
         {index + 1} / {dus.length}
       </p>
-      <div className="rounded-xl border border-dj-bordure bg-dj-surface-haute p-6">
+      <div className="rounded-cgpt-carte border border-dj-bordure bg-dj-surface-haute p-6">
         <p className="text-sm text-dj-texte-muet">Élément id {dus[index].element_id.slice(0, 8)}…</p>
         <p className="mt-2 text-xs text-dj-texte-muet">Ouvre la base correspondante pour revoir le détail, puis évalue-toi.</p>
       </div>
