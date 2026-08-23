@@ -7,9 +7,9 @@ import { ErreurApi, messageErreur } from "@/lib/erreurs";
 import { Skeleton } from "./Skeleton";
 
 // Traitement des signalements (bibliothèque publique + documents
-// publics de programme) -- 22/08, chantier "rendre la bibliothèque plus
+// publics de programme). 22/08, chantier "rendre la bibliothèque plus
 // sérieuse". Réservé aux admins (_est_admin côté backend, voir
-// api/signalements.py) -- aucune vérification client-side du rôle ici
+// api/signalements.py), aucune vérification client-side du rôle ici
 // volontairement (pas de mécanisme de rôle exposé côté Clovis, voir
 // lib/api.ts) : le 403 renvoyé par l'API est la seule porte, affiché
 // tel quel si l'utilisateur courant n'est pas admin.

@@ -6,11 +6,11 @@ import { creerSignalement, type TypeSignalement } from "@/lib/api";
 import { messageErreur } from "@/lib/erreurs";
 
 // Formulaire de signalement (22/08, chantier "rendre la bibliothèque
-// plus sérieuse" -- voir guide Notion "Guide pour droit d'auteur",
+// plus sérieuse", voir guide Notion "Guide pour droit d'auteur",
 // Phase 1). Réutilisé pour les deux surfaces publiques : une entrée de
 // la bibliothèque publique (BibliothequePublique.tsx) et un document
 // classé dans un emplacement de programme couvert par un plugin
-// contribution_libre (SectionDocumentsBibliotheque.tsx) -- distingué
+// contribution_libre (SectionDocumentsBibliotheque.tsx), distingué
 // par `typeSignalement` + les identifiants de cible correspondants.
 //
 // Accessible sans compte (utilisateur_optionnel côté backend) : un

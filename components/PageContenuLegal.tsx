@@ -8,7 +8,7 @@ import { Logo } from "@/components/Logo";
 import { Skeleton } from "@/components/Skeleton";
 
 // Pages publiques /cgu et /copyright (22/08, chantier "rendre la
-// bibliothèque plus sérieuse" -- guide Notion "Guide pour droit
+// bibliothèque plus sérieuse", guide Notion "Guide pour droit
 // d'auteur"). Hors du groupe (app) volontairement : accessibles sans
 // compte ni chrome applicatif, un ayant droit externe qui consulte la
 // politique de copyright n'a aucune raison d'être connecté.

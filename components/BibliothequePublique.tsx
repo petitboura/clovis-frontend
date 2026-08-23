@@ -35,7 +35,7 @@ function iconePourType(typeMime: string | null) {
 //
 // Passée d'une fonctionnalité légère à un composant à part entière le
 // 22/08 (demande Bourama : "rendre la section bibliothèque plus
-// sérieuse, notamment la version publique") -- ajout du signalement
+// sérieuse, notamment la version publique"), ajout du signalement
 // par contenu (SignalerContenuModal, voir aussi le guide Notion "Guide
 // pour droit d'auteur") et des liens vers les CGU/politique de
 // copyright (api/contenu_legal.py, pages /cgu et /copyright).
@@ -113,8 +113,8 @@ export function BibliothequePublique() {
     <div className="flex animate-dj-fade-in-rapide flex-col gap-4">
       <p className="text-sm text-dj-texte-muet">
         Un catalogue de documents partagé par tout le monde : uploade un fichier avec un nom et une description
-        pour que les autres le retrouvent facilement. En publiant, tu garantis détenir les droits sur ce contenu
-        -- voir les{" "}
+        pour que les autres le retrouvent facilement. En publiant, tu garantis détenir les droits sur ce contenu,
+        voir les{" "}
         <Link href="/cgu" className="text-dj-accent-1 hover:underline">
           CGU
         </Link>{" "}

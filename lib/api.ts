@@ -1277,7 +1277,7 @@ export async function retirerFichierDuDossier(dossierId: string, fichierId: stri
 }
 
 // Signalements (bibliothèque publique + documents publics de programme)
-// et contenu légal (CGU / copyright) -- 22/08, chantier "rendre la
+// et contenu légal (CGU / copyright), 22/08, chantier "rendre la
 // bibliothèque plus sérieuse" (guide Notion "Guide pour droit d'auteur").
 
 export type TypeSignalement = "bibliotheque_publique" | "document_programme";
