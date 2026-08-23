@@ -63,7 +63,7 @@ export function PanneauAjoutPluginPublic({
   }, [matiereChoisie]);
 
   return (
-    <div className="rounded-xl border border-dj-bordure bg-dj-surface p-4">
+    <div className="rounded-cgpt-carte border border-dj-bordure bg-dj-surface p-4">
       <div className="mb-3 flex items-center justify-between gap-2">
         <p className="truncate text-sm font-medium text-dj-texte">Ajouter un document · {nomPlugin}</p>
         <button
