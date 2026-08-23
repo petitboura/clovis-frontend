@@ -39,13 +39,13 @@ export function CarteMessage({ code }: { code: string }) {
   if (!lieu) {
     if (erreur) {
       return (
-        <div className="my-3 flex h-20 items-center gap-2 rounded-xl border border-dj-bordure bg-dj-surface px-4 text-xs text-dj-texte-muet">
+        <div className="my-3 flex h-20 items-center gap-2 rounded-cgpt-carte border border-dj-bordure bg-dj-surface px-4 text-xs text-dj-texte-muet">
           <span className="text-[var(--dj-erreur)]">Carte invalide :</span> format JSON non reconnu.
         </div>
       );
     }
     return (
-      <div className="my-3 flex h-20 items-center gap-2 rounded-xl border border-dj-bordure bg-dj-surface px-4 text-xs text-dj-texte-muet">
+      <div className="my-3 flex h-20 items-center gap-2 rounded-cgpt-carte border border-dj-bordure bg-dj-surface px-4 text-xs text-dj-texte-muet">
         <span className="h-2 w-2 animate-dj-glow rounded-full bg-dj-accent-1" />
         Localisation du lieu...
       </div>
@@ -54,7 +54,7 @@ export function CarteMessage({ code }: { code: string }) {
 
   if (typeof lieu.lat !== "number" || typeof lieu.lng !== "number") {
     return (
-      <div className="my-3 rounded-xl border border-dj-bordure bg-dj-surface p-4 text-xs text-dj-texte-muet">
+      <div className="my-3 rounded-cgpt-carte border border-dj-bordure bg-dj-surface p-4 text-xs text-dj-texte-muet">
         Coordonnées invalides.
       </div>
     );
@@ -67,7 +67,7 @@ export function CarteMessage({ code }: { code: string }) {
       href={urlMaps}
       target="_blank"
       rel="noopener noreferrer"
-      className="my-3 flex animate-dj-fade-in items-center gap-3 rounded-xl border border-dj-bordure bg-dj-surface p-4 transition-colors hover:border-dj-bordure-forte"
+      className="my-3 flex animate-dj-fade-in items-center gap-3 rounded-cgpt-carte border border-dj-bordure bg-dj-surface p-4 transition-colors hover:border-dj-bordure-forte"
     >
       <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-dj-accent-1 text-[#1A0D02]">
         <MapPin size={18} />

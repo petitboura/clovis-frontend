@@ -366,7 +366,7 @@ function BulleMessageInterne({
 
   if (enEdition) {
     return (
-      <div className="ml-auto max-w-[80%] rounded-2xl bg-dj-surface-haute p-3">
+      <div className="ml-auto max-w-[80%] rounded-cgpt-carte bg-dj-surface-haute p-3">
         <textarea
           value={texteEdition}
           onChange={(e) => setTexteEdition(e.target.value)}
@@ -410,7 +410,7 @@ function BulleMessageInterne({
       <div
         className={
           estUtilisateur
-            ? "max-w-[80%] break-words rounded-2xl bg-dj-surface-haute px-4 py-2.5 text-[15px] text-dj-texte"
+            ? "max-w-[80%] break-words rounded-cgpt-carte bg-dj-surface-haute px-4 py-2.5 text-[15px] text-dj-texte"
             : "max-w-[80%] break-words px-1 py-1 font-lecture text-[16px] leading-relaxed text-dj-texte"
         }
       >
