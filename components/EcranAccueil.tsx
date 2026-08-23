@@ -34,10 +34,10 @@ type ActiviteItem = {
 // Un seul mouvement de survol, appliqué à toutes les cartes (refonte
 // accueil/sidebar, 22/08/2026, demande Bourama : "corrige tout, même la
 // logique d'affichage si besoin"). Remplace les 7 mouvements différents
-// d'origine (16/08) -- chacun était raisonnable pris isolément, mais
-// juxtaposés sur la même grille ça se lisait comme 7 décisions séparées
-// plutôt qu'une navigation pensée comme un tout. Un léger soulèvement,
-// cohérent avec le "lift" déjà utilisé sur les boutons de la sidebar.
+// d'origine (16/08), chacun raisonnable pris isolément, mais juxtaposés
+// sur la même grille ça se lisait comme 7 décisions séparées plutôt
+// qu'une navigation pensée comme un tout. Un léger soulèvement, cohérent
+// avec le "lift" déjà utilisé sur les boutons de la sidebar.
 const MOUVEMENT_CARTE = "group-hover:-translate-y-1";
 
 export function EcranAccueil() {
@@ -162,13 +162,13 @@ export function EcranAccueil() {
 
   return (
     <div className="mx-auto w-full max-w-3xl animate-dj-fade-in space-y-10 px-4 pb-24 pt-8 md:pt-12">
-      {/* Bienvenue -- vrai moment d'entrée (refonte 22/08/2026, demande
+      {/* Bienvenue : vrai moment d'entrée (refonte 22/08/2026, demande
           Bourama : "faut une vraie hiérarchie, pas 8 cartes à plat").
           Avant : logo/titre/bouton empilés au même niveau visuel que le
           reste de la page, aucun repère ne disait "tu es à l'entrée de
           l'appli". dj-hero-glow existait déjà dans le système de tokens
           (utilisé ailleurs, ex. Logo/GraphiqueDonnees) mais n'était
-          jamais posé ici -- un seul repère lumineux, discret, pas une
+          jamais posé ici : un seul repère lumineux, discret, pas une
           bannière décorative. */}
       <div className="relative overflow-hidden pb-2 pt-2">
         <div className="pointer-events-none absolute inset-0 -z-10 bg-dj-hero-glow" aria-hidden="true" />
@@ -190,7 +190,7 @@ export function EcranAccueil() {
         </div>
       </div>
 
-      {/* Raccourcis vers chaque section -- utilise désormais le composant
+      {/* Raccourcis vers chaque section : utilise désormais le composant
           Carte partagé (rayon signature cgpt-carte, easing cgpt-doux,
           bordure qui se renforce au survol) au lieu de div ad hoc en
           rounded-xl : c'était la seule zone de l'app à ne pas suivre ce

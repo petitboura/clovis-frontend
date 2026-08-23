@@ -57,14 +57,14 @@ import { BoutonInstaller } from "@/components/BoutonInstaller";
 // accueil/sidebar, 22/08/2026, demande Bourama : "corrige tout, même la
 // logique d'affichage si besoin"). Remplace les 9 mouvements différents
 // d'origine (16/08, "d'autres bougent même, d'autres se penchent sur le
-// côté") -- avec 9 sections dans le rail, 9 gestes différents ne se
-// lisaient plus comme de la personnalité mais comme du bruit : l'oeil ne
+// côté") : avec 9 sections dans le rail, 9 gestes différents ne se
+// lisaient plus comme de la personnalité mais comme du bruit, l'oeil ne
 // peut pas retenir "quelle icône fait quel mouvement", donc l'effet
 // perçu était juste de l'agitation. Un seul geste cohérent laisse le
 // trait signature (TraitSignature, sous l'onglet actif) faire le travail
-// de repère distinctif -- lui seul mérite d'être unique. Les icônes
+// de repère distinctif, lui seul mérite d'être unique. Les icônes
 // contextuelles avec un sens propre (chevrons, boussole "Pourquoi
-// Clovis ?") gardent leur mouvement dédié, gardé tel quel plus bas --
+// Clovis ?") gardent leur mouvement dédié, gardé tel quel plus bas :
 // seule la nav principale (accueil + 8 onglets) est uniformisée ici.
 
 const AGENT_ID = "clovis";
