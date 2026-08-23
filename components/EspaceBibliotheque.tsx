@@ -330,7 +330,7 @@ export function EspaceBibliotheque() {
         pendant une conversation.
       </p>
 
-      <div className="flex flex-col gap-3 rounded-2xl border border-dj-bordure bg-dj-surface p-4">
+      <div className="flex flex-col gap-3 rounded-cgpt-carte border border-dj-bordure bg-dj-surface p-4">
         <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
           <input
             type="text"
@@ -554,7 +554,7 @@ export function EspaceBibliotheque() {
         >
           <div
             onClick={(e) => e.stopPropagation()}
-            className="flex w-full max-w-sm flex-col gap-3 rounded-2xl border border-dj-bordure bg-dj-surface p-4"
+            className="flex w-full max-w-sm flex-col gap-3 rounded-cgpt-carte border border-dj-bordure bg-dj-surface p-4"
           >
             <div className="flex items-center justify-between">
               <p className="text-sm font-semibold text-dj-texte">

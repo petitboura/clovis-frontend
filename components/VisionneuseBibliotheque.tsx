@@ -112,7 +112,7 @@ export function VisionneuseBibliotheque({
               <button
                 onClick={() => telecharger(fichier.url_publique, fichier.nom_fichier)}
                 aria-label="Télécharger"
-                className="flex h-8 w-8 items-center justify-center rounded-lg text-dj-texte-muet transition-colors hover:text-dj-texte"
+                className="flex h-8 w-8 items-center justify-center rounded-cgpt-bouton text-dj-texte-muet transition-colors hover:text-dj-texte"
               >
                 <Download size={16} />
               </button>
@@ -120,7 +120,7 @@ export function VisionneuseBibliotheque({
             <button
               onClick={onFermer}
               aria-label="Fermer"
-              className="flex h-8 w-8 items-center justify-center rounded-lg text-dj-texte-muet transition-colors hover:text-dj-texte"
+              className="flex h-8 w-8 items-center justify-center rounded-cgpt-bouton text-dj-texte-muet transition-colors hover:text-dj-texte"
             >
               <X size={16} />
             </button>

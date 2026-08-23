@@ -138,12 +138,12 @@ export function BibliothequePublique() {
       {!formulaireOuvert ? (
         <button
           onClick={() => setFormulaireOuvert(true)}
-          className="flex items-center justify-center gap-2 rounded-2xl border border-dj-bordure bg-dj-surface px-4 py-3 text-sm font-semibold text-dj-texte transition-colors hover:border-dj-bordure-forte hover:bg-dj-surface-haute"
+          className="flex items-center justify-center gap-2 rounded-cgpt-carte border border-dj-bordure bg-dj-surface px-4 py-3 text-sm font-semibold text-dj-texte transition-colors hover:border-dj-bordure-forte hover:bg-dj-surface-haute"
         >
           <Plus size={16} /> Ajouter un document
         </button>
       ) : (
-        <div className="flex flex-col gap-2 rounded-2xl border border-dj-bordure bg-dj-surface p-4">
+        <div className="flex flex-col gap-2 rounded-cgpt-carte border border-dj-bordure bg-dj-surface p-4">
           <input
             ref={inputFichierRef}
             type="file"
