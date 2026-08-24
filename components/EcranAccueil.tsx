@@ -205,11 +205,10 @@ export function EcranAccueil() {
           {ONGLETS.map((o) => (
             <Link key={o.id} href={o.href} className="group">
               <Carte className="flex h-full flex-col items-start gap-3 !p-4 hover:bg-dj-surface-haute">
-                <span
-                  className={`flex h-9 w-9 items-center justify-center rounded-cgpt-bouton bg-dj-surface-haute text-dj-texte transition-transform duration-200 ${MOUVEMENT_CARTE}`}
-                >
-                  <o.Icone size={18} />
-                </span>
+                <o.Icone
+                  size={20}
+                  className={`flex-shrink-0 text-dj-texte transition-transform duration-200 ${MOUVEMENT_CARTE}`}
+                />
                 <span className="text-sm font-semibold text-dj-texte">{o.label}</span>
               </Carte>
             </Link>
