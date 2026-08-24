@@ -68,8 +68,27 @@ const sourceSerif = Source_Serif_4({
 export const metadata: Metadata = {
   metadataBase: new URL(process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000"),
   title: "Clovis",
-  description: "Clovis",
+  description: "Ton compagnon d'études pour la classe.",
   appleWebApp: { capable: true, statusBarStyle: "black-translucent", title: "Clovis" },
+  // Aperçu de lien (WhatsApp, Messenger, iMessage, etc.) -- ajouté le 24/08
+  // (demande Bourama : le lien de l'appli n'affichait aucun aperçu, faute de
+  // ces métadonnées). L'image elle-même vient de app/opengraph-image.png,
+  // convention native du App Router (Next.js génère automatiquement les
+  // balises <meta property="og:image">/<meta name="twitter:image"> à partir
+  // de ce fichier, URL absolue calculée via metadataBase ci-dessus -- aucune
+  // URL en dur ici).
+  openGraph: {
+    title: "Clovis",
+    description: "Ton compagnon d'études pour la classe.",
+    siteName: "Clovis",
+    locale: "fr_FR",
+    type: "website",
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "Clovis",
+    description: "Ton compagnon d'études pour la classe.",
+  },
   // Icône d'onglet (favicon) et icône iOS "ajouter à l'écran d'accueil"
   // (12/08) : désormais générées automatiquement par Next.js depuis
   // app/icon.png et app/apple-icon.png (convention native du App
