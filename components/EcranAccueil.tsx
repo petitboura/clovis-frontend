@@ -172,7 +172,7 @@ export function EcranAccueil() {
           bannière décorative. */}
       <div className="relative overflow-hidden pb-2 pt-2">
         <div className="pointer-events-none absolute inset-0 -z-10 bg-dj-hero-glow" aria-hidden="true" />
-        <div className="flex flex-col items-start gap-5">
+        <div className="flex flex-col items-center gap-5 text-center">
           <Logo taille={52} />
           <div>
             <h1 className="font-display text-3xl font-bold tracking-tight text-dj-texte md:text-4xl">
@@ -206,7 +206,7 @@ export function EcranAccueil() {
             <Link key={o.id} href={o.href} className="group">
               <Carte className="flex h-full flex-col items-start gap-3 !p-4 hover:bg-dj-surface-haute">
                 <span
-                  className={`flex h-9 w-9 items-center justify-center rounded-full bg-dj-surface-haute text-dj-texte transition-transform duration-200 ${MOUVEMENT_CARTE}`}
+                  className={`flex h-9 w-9 items-center justify-center rounded-cgpt-carte bg-dj-surface-haute text-dj-texte transition-transform duration-200 ${MOUVEMENT_CARTE}`}
                 >
                   <o.Icone size={18} />
                 </span>
