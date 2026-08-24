@@ -8,7 +8,8 @@ import type { LucideProps } from "lucide-react";
 //
 // stroke="currentColor" par défaut, jamais une couleur de marque figée
 // (noir Notion) -- le trait hérite donc de la couleur du bouton qui
-// l'entoure (text-dj-accent-1 quand connecté, text-dj-texte-muet sinon),
+// l'entoure (text-dj-texte quand connecté, text-dj-texte-muet sinon,
+// 24/08 : plus de couleur accent ici, réservée aux actions principales),
 // exactement comme <Github /> juste à côté dans BarreDeSaisie.tsx. Même
 // interface de props qu'un composant lucide (size, color, strokeWidth...)
 // pour rester interchangeable avec `Icone: typeof Github` dans

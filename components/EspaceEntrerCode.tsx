@@ -110,7 +110,7 @@ export function EspaceEntrerCode() {
         </button>
       </div>
 
-      {messageOk && <p className="mt-3 animate-dj-fade-in-rapide text-sm text-dj-accent-1">{messageOk}</p>}
+      {messageOk && <p className="mt-3 animate-dj-fade-in-rapide text-sm text-dj-succes">{messageOk}</p>}
       {erreur && <p className="mt-3 animate-dj-fade-in-rapide text-sm text-[var(--dj-erreur)]">{erreur}</p>}
 
       {chargement && <Skeleton className="mt-4 h-14 rounded-xl border border-dj-bordure" />}

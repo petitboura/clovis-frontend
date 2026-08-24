@@ -518,7 +518,7 @@ function BulleMessageInterne({
               // contexte pour un langage sur un fragment isolé).
               code({ children }) {
                 return (
-                  <code className="rounded bg-dj-surface-haute px-1.5 py-0.5 font-mono text-[13px] text-dj-accent-1">
+                  <code className="rounded bg-dj-surface-haute px-1.5 py-0.5 font-mono text-[13px] text-dj-texte">
                     {children}
                   </code>
                 );
@@ -557,7 +557,7 @@ function BulleMessageInterne({
                     href={href}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="text-dj-accent-1 underline hover:text-dj-accent-2"
+                    className="text-dj-texte-muet underline hover:text-dj-texte"
                   >
                     {children}
                   </a>

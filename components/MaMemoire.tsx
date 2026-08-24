@@ -102,7 +102,7 @@ export function MaMemoire() {
             onChange={(e) => setResume(e.target.value)}
             rows={10}
             placeholder="Rien d'enregistré pour l'instant, ça se remplit tout seul au fil de tes conversations."
-            className="w-full resize-y rounded-lg border border-dj-bordure bg-dj-surface-haute px-3 py-2 text-sm text-dj-texte outline-none focus:border-dj-accent-1"
+            className="w-full resize-y rounded-lg border border-dj-bordure bg-dj-surface-haute px-3 py-2 text-sm text-dj-texte outline-none focus:border-dj-bordure-forte"
           />
           <div className="flex flex-wrap items-center gap-3">
             <button

@@ -13,7 +13,7 @@ const classesParVariante: Record<string, string> = {
   primaire:
     "bg-dj-accent-1 text-[#1a0f06] hover:bg-dj-accent-2 active:scale-[.98]",
   secondaire:
-    "bg-dj-surface-haute text-dj-accent-2 border border-dj-accent-2 hover:bg-dj-accent-2/10",
+    "bg-dj-surface-haute text-dj-texte border border-dj-bordure hover:bg-dj-surface hover:border-dj-bordure-forte",
   fantome:
     "bg-transparent text-dj-texte-muet hover:text-dj-texte hover:bg-dj-surface",
 };

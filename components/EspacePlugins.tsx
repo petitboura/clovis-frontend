@@ -181,13 +181,13 @@ function LignePlugin({ plugin, rang }: { plugin: Plugin; rang: number }) {
       >
         <div className="flex min-w-0 flex-1 items-center gap-3">
           <span className="flex w-6 flex-shrink-0 items-center justify-center text-sm font-bold text-dj-texte-muet">
-            {rang === 0 ? <Trophy size={16} className="text-dj-accent-1" /> : `#${rang + 1}`}
+            {rang === 0 ? <Trophy size={16} className="text-dj-texte-muet" /> : `#${rang + 1}`}
           </span>
           <div className="min-w-0 flex-1">
             <div className="flex flex-wrap items-center gap-2">
               <p className="truncate text-sm text-dj-texte">{plugin.nom}</p>
               {plugin.contribution_libre && (
-                <span className="flex flex-shrink-0 items-center gap-1 rounded-full bg-dj-accent-1/10 px-2 py-0.5 text-[10px] font-medium text-dj-accent-1">
+                <span className="flex flex-shrink-0 items-center gap-1 rounded-full bg-dj-surface-haute px-2 py-0.5 text-[10px] font-medium text-dj-texte-muet">
                   <Users size={10} /> Bibliothèque publique
                 </span>
               )}
@@ -292,7 +292,7 @@ function LignePlugin({ plugin, rang }: { plugin: Plugin; rang: number }) {
               {apercu.matieres.map((matiere) => (
                 <div key={matiere.id} className="flex flex-col gap-2">
                   <div className="flex items-center gap-2">
-                    <BookOpen size={15} className="flex-shrink-0 text-dj-accent-1" />
+                    <BookOpen size={15} className="flex-shrink-0 text-dj-texte-muet" />
                     <h4 className="text-sm font-semibold text-dj-texte">{matiere.nom}</h4>
                   </div>
                   {matiere.chapitres.length === 0 ? (

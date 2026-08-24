@@ -412,7 +412,7 @@ export function EspaceBibliotheque() {
         ))}
         <button
           onClick={() => setCreationDossierOuverte((v) => !v)}
-          className="ml-auto flex items-center gap-1 rounded-cgpt-bouton px-2 py-1 font-semibold text-dj-accent-1 transition-colors hover:text-dj-accent-2"
+          className="ml-auto flex items-center gap-1 rounded-cgpt-bouton px-2 py-1 font-semibold text-dj-texte-muet transition-colors hover:text-dj-texte"
         >
           <FolderPlus size={14} />
           Nouveau dossier
@@ -474,9 +474,9 @@ export function EspaceBibliotheque() {
               ) : (
                 <button
                   onClick={() => setPileDossiers((p) => [...p, { id: d.id, nom: d.nom }])}
-                  className="flex min-w-0 items-center gap-2 text-sm text-dj-texte hover:text-dj-accent-1"
+                  className="flex min-w-0 items-center gap-2 text-sm text-dj-texte hover:text-dj-texte"
                 >
-                  <IconDossier size={16} className="flex-shrink-0 text-dj-accent-1" />
+                  <IconDossier size={16} className="flex-shrink-0 text-dj-texte-muet" />
                   <span className="truncate font-medium">{d.nom}</span>
                 </button>
               )}
@@ -518,7 +518,7 @@ export function EspaceBibliotheque() {
               >
                 <button
                   onClick={() => setFichierOuvert(f)}
-                  className="flex min-w-0 items-center gap-2 text-sm text-dj-accent-1 hover:text-dj-accent-2"
+                  className="flex min-w-0 items-center gap-2 text-sm text-dj-texte hover:underline"
                 >
                   <Icone size={14} className="flex-shrink-0" />
                   <span className="truncate">{f.description || f.nom_fichier}</span>
@@ -580,7 +580,7 @@ export function EspaceBibliotheque() {
                       checked={dejaRange}
                       onChange={() => basculerRangement(d.id, dejaRange)}
                     />
-                    <IconDossier size={14} className="text-dj-accent-1" />
+                    <IconDossier size={14} className="text-dj-texte-muet" />
                     {d.nom}
                   </label>
                 );

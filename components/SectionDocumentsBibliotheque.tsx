@@ -186,7 +186,7 @@ export function SectionDocumentsBibliotheque({
                 onClick={() => setFichierOuvert(d)}
                 className="flex cursor-pointer items-center justify-between gap-3 rounded-xl border border-dj-bordure bg-dj-surface px-4 py-3 transition-colors hover:border-dj-bordure-forte"
               >
-                <span className="flex min-w-0 items-center gap-2 text-left text-sm text-dj-accent-1">
+                <span className="flex min-w-0 items-center gap-2 text-left text-sm text-dj-texte">
                   <Icone size={14} className="flex-shrink-0" />
                   <span className="truncate">{d.description || d.nom_fichier}</span>
                 </span>
@@ -260,7 +260,7 @@ export function SectionDocumentsBibliotheque({
                       onClick={() => choisirDepuisBibliotheque(f.id)}
                       className="flex items-center gap-2 rounded-xl border border-dj-bordure bg-dj-surface-haute px-3 py-2 text-left text-sm text-dj-texte transition-colors hover:border-dj-bordure-forte"
                     >
-                      <Icone size={14} className="flex-shrink-0 text-dj-accent-1" />
+                      <Icone size={14} className="flex-shrink-0 text-dj-texte-muet" />
                       <span className="truncate">{f.description || f.nom_fichier}</span>
                     </button>
                   );

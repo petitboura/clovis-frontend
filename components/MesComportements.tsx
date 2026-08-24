@@ -117,7 +117,7 @@ function ChipComportement({
       }`}
     >
       <div className="flex min-w-0 items-center gap-2">
-        <ScrollText size={14} className="flex-shrink-0 text-dj-accent-1" />
+        <ScrollText size={14} className="flex-shrink-0 text-dj-texte-muet" />
         <span className="min-w-0 flex-1 truncate text-sm text-dj-texte">{c.nom || c.description}</span>
         <span
           role="button"
@@ -691,7 +691,7 @@ export function MesComportements({ agentId }: { agentId: string }) {
                   onChange={(e) => setNomOuvert(e.target.value)}
                   disabled={nomAuto}
                   placeholder={nomAuto ? "Nom généré automatiquement" : "Ex : Réponses en langage simple"}
-                  className="flex-1 rounded-cgpt-carte border border-dj-bordure bg-dj-surface-haute px-3 py-1.5 text-sm text-dj-texte outline-none focus:border-dj-accent-1 disabled:opacity-50"
+                  className="flex-1 rounded-cgpt-carte border border-dj-bordure bg-dj-surface-haute px-3 py-1.5 text-sm text-dj-texte outline-none focus:border-dj-bordure-forte disabled:opacity-50"
                 />
                 <label className="flex flex-shrink-0 items-center gap-1.5 text-xs text-dj-texte-muet">
                   <input
@@ -717,7 +717,7 @@ export function MesComportements({ agentId }: { agentId: string }) {
                 onChange={(e) => setTexteOuvert(e.target.value)}
                 placeholder="Ex : réponds-moi toujours en langage simple"
                 rows={16}
-                className="w-full flex-1 resize-none rounded-cgpt-carte border border-dj-bordure bg-dj-surface-haute px-4 py-3 text-base text-dj-texte outline-none focus:border-dj-accent-1"
+                className="w-full flex-1 resize-none rounded-cgpt-carte border border-dj-bordure bg-dj-surface-haute px-4 py-3 text-base text-dj-texte outline-none focus:border-dj-bordure-forte"
               />
 
               <div className="flex w-full flex-col gap-2 pt-4 sm:flex-row sm:items-center sm:justify-between">
@@ -793,7 +793,7 @@ export function MesComportements({ agentId }: { agentId: string }) {
                   onChange={(e) => setSkillOuvert(e.target.value)}
                   rows={16}
                   spellCheck={false}
-                  className="w-full flex-1 resize-none rounded-cgpt-carte border border-dj-bordure bg-dj-surface-haute px-4 py-3 font-mono text-sm text-dj-texte outline-none focus:border-dj-accent-1"
+                  className="w-full flex-1 resize-none rounded-cgpt-carte border border-dj-bordure bg-dj-surface-haute px-4 py-3 font-mono text-sm text-dj-texte outline-none focus:border-dj-bordure-forte"
                 />
               ) : (
                 <div className="w-full flex-1 overflow-y-auto rounded-xl border border-dj-bordure bg-dj-surface-haute px-5 py-4">

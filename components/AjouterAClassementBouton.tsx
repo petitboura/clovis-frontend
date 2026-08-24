@@ -140,7 +140,7 @@ export function AjouterAClassementBouton({
                 value={nouveauLabel}
                 onChange={(e) => setNouveauLabel(e.target.value)}
                 placeholder="Ex : Révisions bac"
-                className="min-w-0 flex-1 rounded-lg border border-dj-bordure bg-dj-surface-haute px-2 py-1.5 text-dj-texte outline-none focus:border-dj-accent-1"
+                className="min-w-0 flex-1 rounded-lg border border-dj-bordure bg-dj-surface-haute px-2 py-1.5 text-dj-texte outline-none focus:border-dj-bordure-forte"
               />
             </div>
           )}

@@ -144,7 +144,7 @@ export function SectionComportementsEmplacement({
               key={c.id}
               className="flex max-w-[240px] items-center gap-1.5 rounded-full border border-dj-bordure bg-dj-surface px-3 py-1.5 text-xs text-dj-texte"
             >
-              <ScrollText size={12} className="flex-shrink-0 text-dj-accent-1" />
+              <ScrollText size={12} className="flex-shrink-0 text-dj-texte-muet" />
               <span className="min-w-0 truncate">{libelleCourt(c)}</span>
               <button
                 onClick={() => detacher(c.id)}
@@ -190,7 +190,7 @@ export function SectionComportementsEmplacement({
               onChange={(e) => setTexte(e.target.value)}
               placeholder="Ex : insiste sur la méthode avant le résultat pour ce chapitre"
               rows={3}
-              className="w-full resize-none rounded-lg border border-dj-bordure bg-dj-surface px-3 py-2 text-sm text-dj-texte outline-none focus:border-dj-accent-1"
+              className="w-full resize-none rounded-lg border border-dj-bordure bg-dj-surface px-3 py-2 text-sm text-dj-texte outline-none focus:border-dj-bordure-forte"
             />
           ) : existants === null ? (
             <Skeleton className="h-9 w-full rounded-lg" />

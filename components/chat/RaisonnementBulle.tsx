@@ -43,7 +43,7 @@ export function RaisonnementBulle({
         onClick={() => setOuvertManuel(!ouvert)}
         className="flex items-center gap-1.5 text-[13px] text-dj-texte-muet transition-colors hover:text-dj-texte"
       >
-        <BrainCog size={13} className={enCours ? "animate-pulse text-dj-accent-1" : ""} />
+        <BrainCog size={13} className={enCours ? "animate-pulse text-dj-texte-muet" : ""} />
         <span
           className={
             enCours

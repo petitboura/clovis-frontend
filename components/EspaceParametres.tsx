@@ -365,7 +365,7 @@ export function EspaceParametres() {
               type="button"
               onClick={() => inputFichierRef.current?.click()}
               disabled={uploadEnCours}
-              className="text-sm font-medium text-dj-accent-1 hover:text-dj-accent-2 disabled:opacity-50"
+              className="text-sm font-medium text-dj-texte-muet hover:text-dj-texte hover:underline disabled:opacity-50"
             >
               {uploadEnCours ? "Envoi…" : "Changer la photo"}
             </button>
@@ -382,7 +382,7 @@ export function EspaceParametres() {
               value={nomAffiche}
               onChange={(e) => setNomAffiche(e.target.value)}
               placeholder="Ton nom"
-              className="w-full rounded-lg border border-dj-bordure bg-dj-surface-haute px-3 py-2 text-sm text-dj-texte outline-none focus:border-dj-accent-1"
+              className="w-full rounded-lg border border-dj-bordure bg-dj-surface-haute px-3 py-2 text-sm text-dj-texte outline-none focus:border-dj-bordure-forte"
             />
           </div>
 
@@ -396,7 +396,7 @@ export function EspaceParametres() {
               onChange={(e) => setBio(e.target.value)}
               rows={3}
               placeholder="Quelques mots sur toi (optionnel)."
-              className="w-full resize-y rounded-lg border border-dj-bordure bg-dj-surface-haute px-3 py-2 text-sm text-dj-texte outline-none focus:border-dj-accent-1"
+              className="w-full resize-y rounded-lg border border-dj-bordure bg-dj-surface-haute px-3 py-2 text-sm text-dj-texte outline-none focus:border-dj-bordure-forte"
             />
           </div>
 
@@ -497,7 +497,7 @@ export function EspaceParametres() {
               autoComplete="new-password"
               value={motDePasse}
               onChange={(e) => setMotDePasse(e.target.value)}
-              className="w-full rounded-lg border border-dj-bordure bg-dj-surface-haute px-3 py-2 text-sm text-dj-texte outline-none focus:border-dj-accent-1"
+              className="w-full rounded-lg border border-dj-bordure bg-dj-surface-haute px-3 py-2 text-sm text-dj-texte outline-none focus:border-dj-bordure-forte"
             />
           </div>
           <div className="flex flex-col gap-1.5">
@@ -510,7 +510,7 @@ export function EspaceParametres() {
               autoComplete="new-password"
               value={confirmationMotDePasse}
               onChange={(e) => setConfirmationMotDePasse(e.target.value)}
-              className="w-full rounded-lg border border-dj-bordure bg-dj-surface-haute px-3 py-2 text-sm text-dj-texte outline-none focus:border-dj-accent-1"
+              className="w-full rounded-lg border border-dj-bordure bg-dj-surface-haute px-3 py-2 text-sm text-dj-texte outline-none focus:border-dj-bordure-forte"
             />
           </div>
           <div className="flex flex-wrap items-center gap-3">
@@ -555,13 +555,13 @@ export function EspaceParametres() {
         <span className="text-dj-texte">Clovis</span>
         <button
           onClick={() => router.push("/cgu")}
-          className="w-fit text-dj-accent-1 hover:text-dj-accent-2"
+          className="w-fit text-dj-texte-muet hover:text-dj-texte hover:underline"
         >
           Conditions générales d&apos;utilisation
         </button>
         <button
           onClick={() => router.push("/copyright")}
-          className="w-fit text-dj-accent-1 hover:text-dj-accent-2"
+          className="w-fit text-dj-texte-muet hover:text-dj-texte hover:underline"
         >
           Droit d&apos;auteur
         </button>

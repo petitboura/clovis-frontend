@@ -77,7 +77,7 @@ export function Mermaid({ definition }: { definition: string }) {
             background: v("--dj-surface"),
             primaryColor: v("--dj-surface-haute"),
             primaryTextColor: v("--dj-texte"),
-            primaryBorderColor: v("--dj-accent-1"),
+            primaryBorderColor: v("--dj-bordure-forte"),
             lineColor: v("--dj-texte-muet"),
             secondaryColor: v("--dj-surface"),
             tertiaryColor: v("--dj-fond"),
@@ -125,7 +125,7 @@ export function Mermaid({ definition }: { definition: string }) {
           </p>
           <button
             onClick={() => setSourceAffichee((v) => !v)}
-            className="text-[11px] text-dj-accent-1 hover:text-dj-accent-2"
+            className="text-[11px] text-dj-texte-muet hover:text-dj-texte hover:underline"
           >
             {sourceAffichee ? "Masquer" : "Voir"} le code source
           </button>
@@ -137,7 +137,7 @@ export function Mermaid({ definition }: { definition: string }) {
         </div>
       ) : (
         <div className="flex items-center gap-2 text-xs text-dj-texte-muet">
-          <span className="h-2 w-2 animate-dj-glow rounded-full bg-dj-accent-1" />
+          <span className="h-2 w-2 animate-dj-glow rounded-full bg-dj-texte-muet" />
           Rendu du diagramme...
         </div>
       )}

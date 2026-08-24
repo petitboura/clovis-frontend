@@ -484,13 +484,13 @@ function ListeProgrammes({ onOuvrir }: { onOuvrir: (p: Programme) => void }) {
                   value={edition.niveau}
                   onChange={(e) => setEdition({ ...edition, niveau: e.target.value })}
                   placeholder="Niveau / classe"
-                  className="rounded-lg border border-dj-bordure bg-dj-fond px-3 py-1.5 text-sm text-dj-texte outline-none focus:border-dj-accent-1"
+                  className="rounded-lg border border-dj-bordure bg-dj-fond px-3 py-1.5 text-sm text-dj-texte outline-none focus:border-dj-bordure-forte"
                 />
                 <input
                   value={edition.nom}
                   onChange={(e) => setEdition({ ...edition, nom: e.target.value })}
                   placeholder="Nom (optionnel)"
-                  className="rounded-lg border border-dj-bordure bg-dj-fond px-3 py-1.5 text-sm text-dj-texte outline-none focus:border-dj-accent-1"
+                  className="rounded-lg border border-dj-bordure bg-dj-fond px-3 py-1.5 text-sm text-dj-texte outline-none focus:border-dj-bordure-forte"
                 />
                 <div className="flex items-center justify-end gap-2">
                   <button
@@ -555,13 +555,13 @@ function ListeProgrammes({ onOuvrir }: { onOuvrir: (p: Programme) => void }) {
             value={niveauNouveau}
             onChange={(e) => setNiveauNouveau(e.target.value)}
             placeholder="Niveau / classe (ex : MPSI)"
-            className="rounded-lg border border-dj-bordure bg-dj-fond px-3 py-1.5 text-sm text-dj-texte outline-none focus:border-dj-accent-1"
+            className="rounded-lg border border-dj-bordure bg-dj-fond px-3 py-1.5 text-sm text-dj-texte outline-none focus:border-dj-bordure-forte"
           />
           <input
             value={nomNouveau}
             onChange={(e) => setNomNouveau(e.target.value)}
             placeholder="Nom (optionnel)"
-            className="rounded-lg border border-dj-bordure bg-dj-fond px-3 py-1.5 text-sm text-dj-texte outline-none focus:border-dj-accent-1"
+            className="rounded-lg border border-dj-bordure bg-dj-fond px-3 py-1.5 text-sm text-dj-texte outline-none focus:border-dj-bordure-forte"
           />
           {erreur && <p className="text-xs text-[var(--dj-erreur)]">{erreur}</p>}
           <div className="flex items-center justify-end gap-2">
@@ -700,7 +700,7 @@ function ListeMatieres({
                   value={edition.nom}
                   onChange={(e) => setEdition({ ...edition, nom: e.target.value })}
                   placeholder="Nom de la matière"
-                  className="rounded-lg border border-dj-bordure bg-dj-fond px-3 py-1.5 text-sm text-dj-texte outline-none focus:border-dj-accent-1"
+                  className="rounded-lg border border-dj-bordure bg-dj-fond px-3 py-1.5 text-sm text-dj-texte outline-none focus:border-dj-bordure-forte"
                 />
                 <ChampLimites valeur={edition.limites} onChange={(v) => setEdition({ ...edition, limites: v })} />
                 <SectionComportementsEmplacement typeCible="matiere" cibleId={m.id} titre="Skills" />
@@ -762,7 +762,7 @@ function ListeMatieres({
             value={nomNouveau}
             onChange={(e) => setNomNouveau(e.target.value)}
             placeholder="Nom de la matière (ex : Mathématiques)"
-            className="rounded-lg border border-dj-bordure bg-dj-fond px-3 py-1.5 text-sm text-dj-texte outline-none focus:border-dj-accent-1"
+            className="rounded-lg border border-dj-bordure bg-dj-fond px-3 py-1.5 text-sm text-dj-texte outline-none focus:border-dj-bordure-forte"
           />
           <ChampLimites valeur={limitesNouvelles} onChange={setLimitesNouvelles} />
           {erreur && <p className="text-xs text-[var(--dj-erreur)]">{erreur}</p>}
@@ -980,7 +980,7 @@ function ListeChapitres({
                   value={edition.nom}
                   onChange={(e) => setEdition({ ...edition, nom: e.target.value })}
                   placeholder="Nom du chapitre"
-                  className="rounded-lg border border-dj-bordure bg-dj-fond px-3 py-1.5 text-sm text-dj-texte outline-none focus:border-dj-accent-1"
+                  className="rounded-lg border border-dj-bordure bg-dj-fond px-3 py-1.5 text-sm text-dj-texte outline-none focus:border-dj-bordure-forte"
                 />
                 <ChampLimites valeur={edition.limites} onChange={(v) => setEdition({ ...edition, limites: v })} />
                 <div className="flex items-center justify-end gap-2">
@@ -1061,7 +1061,7 @@ function ListeChapitres({
             value={nomNouveau}
             onChange={(e) => setNomNouveau(e.target.value)}
             placeholder="Nom du chapitre"
-            className="rounded-lg border border-dj-bordure bg-dj-fond px-3 py-1.5 text-sm text-dj-texte outline-none focus:border-dj-accent-1"
+            className="rounded-lg border border-dj-bordure bg-dj-fond px-3 py-1.5 text-sm text-dj-texte outline-none focus:border-dj-bordure-forte"
           />
           <ChampLimites valeur={limitesNouvelles} onChange={setLimitesNouvelles} />
           {erreur && <p className="text-xs text-[var(--dj-erreur)]">{erreur}</p>}

@@ -278,7 +278,7 @@ export function ChatFlottant({
                 onClick={() => setHistoriqueOuvert((v) => !v)}
                 title="Historique"
                 className={`group flex h-8 w-8 items-center justify-center rounded-cgpt-bouton transition-colors ${
-                  historiqueOuvert ? "bg-dj-surface-haute text-dj-accent-1" : "text-dj-texte-muet hover:bg-dj-surface-haute hover:text-dj-texte"
+                  historiqueOuvert ? "bg-dj-surface-haute text-dj-texte" : "text-dj-texte-muet hover:bg-dj-surface-haute hover:text-dj-texte"
                 }`}
               >
                 <History size={16} className="transition-transform duration-300 group-hover:rotate-45" />
@@ -336,7 +336,7 @@ export function ChatFlottant({
         <div onMouseDownCapture={fermerFenetresAuClic} className="min-h-0 flex-1">
           {chargement === "chargement" && (
             <div className="flex h-full items-center justify-center">
-              <div className="h-6 w-6 animate-spin rounded-full border-2 border-dj-bordure border-t-dj-accent-1" />
+              <div className="h-6 w-6 animate-spin rounded-full border-2 border-dj-bordure border-t-dj-texte-muet" />
             </div>
           )}
 

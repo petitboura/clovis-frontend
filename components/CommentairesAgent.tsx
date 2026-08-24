@@ -86,7 +86,7 @@ export function CommentairesAgent({ agentId }: { agentId: string }) {
           >
             Publier
           </button>
-          {erreur && <p className="text-xs text-dj-accent-2">{erreur}</p>}
+          {erreur && <p className="text-xs text-[var(--dj-erreur)]">{erreur}</p>}
         </div>
       </form>
 

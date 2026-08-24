@@ -107,7 +107,7 @@ export function LinkPreview({ href, texteLien, compact }: { href: string; texteL
   // a échoué -- jamais de carte vide affichée.
   if (echec || (charge && !apercu)) {
     return (
-      <a href={href} target="_blank" rel="noopener noreferrer" className="text-dj-accent-1 underline hover:text-dj-accent-2">
+      <a href={href} target="_blank" rel="noopener noreferrer" className="text-dj-texte-muet underline hover:text-dj-texte">
         {texteLien}
       </a>
     );

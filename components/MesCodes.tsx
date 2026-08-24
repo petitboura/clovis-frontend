@@ -234,7 +234,7 @@ function ChampNom({ c, onSauver }: { c: CodePartage; onSauver: (v: string) => vo
           value={valeur}
           onChange={(e) => setValeur(e.target.value)}
           placeholder="Ex : Mes CM2"
-          className="flex-1 rounded-lg border border-dj-bordure bg-dj-surface px-2.5 py-1.5 text-sm text-dj-texte outline-none focus:border-dj-accent-1"
+          className="flex-1 rounded-lg border border-dj-bordure bg-dj-surface px-2.5 py-1.5 text-sm text-dj-texte outline-none focus:border-dj-bordure-forte"
         />
         {valeur !== (c.nom || "") && (
           <button onClick={() => onSauver(valeur)} className="rounded-lg bg-dj-accent-1 px-2.5 text-[#1A0D02]">
@@ -344,7 +344,7 @@ function ChampTexteLibre({ c, onSauver }: { c: CodePartage; onSauver: (v: string
           onChange={(e) => setValeur(e.target.value)}
           placeholder="Ex : le contrôle est reporté à vendredi"
           rows={2}
-          className="flex-1 resize-none rounded-lg border border-dj-bordure bg-dj-surface px-2.5 py-1.5 text-sm text-dj-texte outline-none focus:border-dj-accent-1"
+          className="flex-1 resize-none rounded-lg border border-dj-bordure bg-dj-surface px-2.5 py-1.5 text-sm text-dj-texte outline-none focus:border-dj-bordure-forte"
         />
         {valeur !== (c.texte_libre || "") && (
           <button onClick={() => onSauver(valeur)} className="self-start rounded-lg bg-dj-accent-1 px-2.5 py-1.5 text-[#1A0D02]">

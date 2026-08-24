@@ -132,7 +132,7 @@ export function CatalogueClovis({ onFerme }: { onFerme: () => void }) {
             {FONCTIONNALITES.map(({ Icone, titre, description }) => (
               <div key={titre} className="flex flex-col gap-1.5 rounded-cgpt-bouton border border-dj-bordure bg-dj-surface-haute p-3.5">
                 <div className="flex items-center gap-2">
-                  <Icone size={16} className="flex-shrink-0 text-dj-accent-1" />
+                  <Icone size={16} className="flex-shrink-0 text-dj-texte-muet" />
                   <span className="text-sm font-semibold text-dj-texte">{titre}</span>
                 </div>
                 <p className="text-xs leading-relaxed text-dj-texte-muet">{description}</p>

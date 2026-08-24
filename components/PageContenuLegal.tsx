@@ -47,7 +47,7 @@ export function PageContenuLegal({ cle }: { cle: "cgu" | "copyright" }) {
                   ol: ({ children }) => <ol className="list-decimal pl-5">{children}</ol>,
                   li: ({ children }) => <li>{children}</li>,
                   a: ({ href, children }) => (
-                    <Link href={href || "#"} className="text-dj-accent-1 hover:underline">
+                    <Link href={href || "#"} className="text-dj-texte-muet hover:text-dj-texte hover:underline">
                       {children}
                     </Link>
                   ),

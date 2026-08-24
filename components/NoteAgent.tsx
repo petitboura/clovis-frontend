@@ -75,7 +75,7 @@ export function NoteAgent({ agentId }: { agentId: string }) {
           {agrege?.moyenne != null ? `${agrege.moyenne} / 5 (${agrege.total} avis)` : "Pas encore noté"}
         </span>
       </div>
-      {erreur && <p className="text-xs text-dj-accent-2">{erreur}</p>}
+      {erreur && <p className="text-xs text-[var(--dj-erreur)]">{erreur}</p>}
       {compteRequis && (
         <CompteRequisModal
           texte="Crée un compte pour noter Clovis."

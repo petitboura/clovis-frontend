@@ -104,7 +104,7 @@ export function PopupFeedback({
                 : "Dans quelle mesure cette réponse était-elle insatisfaisante ?"
             }
             rows={3}
-            className="w-full resize-none rounded-lg border border-dj-bordure bg-dj-fond px-3 py-2 text-sm text-dj-texte outline-none focus:border-dj-accent-1"
+            className="w-full resize-none rounded-lg border border-dj-bordure bg-dj-fond px-3 py-2 text-sm text-dj-texte outline-none focus:border-dj-bordure-forte"
           />
         </div>
 

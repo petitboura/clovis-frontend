@@ -123,7 +123,7 @@ function FormulaireConnexion() {
                   autoComplete="email"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
-                  className="mt-1 w-full rounded-lg border border-dj-bordure bg-dj-surface-haute px-3 py-2 text-dj-texte outline-none focus:border-dj-accent-1"
+                  className="mt-1 w-full rounded-lg border border-dj-bordure bg-dj-surface-haute px-3 py-2 text-dj-texte outline-none focus:border-dj-bordure-forte"
                 />
               </div>
             ) : (
@@ -142,7 +142,7 @@ function FormulaireConnexion() {
 
         <p className="mt-5 text-center text-sm text-dj-texte-muet">
           Pas encore de compte ?{" "}
-          <Link href="/inscription" className="text-dj-accent-1 hover:underline">
+          <Link href="/inscription" className="text-dj-texte-muet hover:text-dj-texte hover:underline">
             S&apos;inscrire
           </Link>
         </p>

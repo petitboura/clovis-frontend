@@ -59,8 +59,8 @@ type Schema = {
   elements: Element[];
 };
 
-const COULEUR_TRAIT = "var(--dj-accent-1)";
-const COULEUR_TRAIT_2 = "var(--dj-accent-2)";
+const COULEUR_TRAIT = "var(--dj-texte)";
+const COULEUR_TRAIT_2 = "var(--dj-texte-muet)";
 // CORRECTIF (17/08, v2) -- toutes ces couleurs suivent désormais les
 // variables CSS double-thème. Avant (thème sombre unique), COULEUR_TEXTE
 // et COULEUR_GRILLE/AXE étaient calibrées en dur pour un fond TOUJOURS
@@ -106,7 +106,7 @@ export function SchemaGeometrique({ code }: { code: string }) {
     }
     return (
       <div className="my-3 flex h-40 items-center justify-center rounded-xl border border-dj-bordure bg-dj-surface text-xs text-dj-texte-muet">
-        <span className="h-2 w-2 animate-dj-glow rounded-full bg-dj-accent-1" />
+        <span className="h-2 w-2 animate-dj-glow rounded-full bg-dj-texte-muet" />
         <span className="ml-2">Construction du schéma...</span>
       </div>
     );

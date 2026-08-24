@@ -53,7 +53,7 @@ export function SourcesBulle({ sources }: { sources?: { titre: string; url: stri
         >
           <Favicon url={source.url} />
           <span className="truncate">{source.titre}</span>
-          <sup className="shrink-0 font-semibold text-dj-accent-1">{index + 1}</sup>
+          <sup className="shrink-0 font-semibold text-dj-texte-muet">{index + 1}</sup>
         </a>
       ))}
     </div>

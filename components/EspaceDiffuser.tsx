@@ -133,7 +133,7 @@ export function EspaceDiffuser() {
                 value={descriptionFichier}
                 onChange={(e) => setDescriptionFichier(e.target.value)}
                 placeholder="Description (pour que Clovis sache le retrouver)"
-                className="mt-2 w-full rounded-lg border border-dj-bordure bg-dj-surface-haute px-3 py-2 text-sm text-dj-texte outline-none focus:border-dj-accent-1"
+                className="mt-2 w-full rounded-lg border border-dj-bordure bg-dj-surface-haute px-3 py-2 text-sm text-dj-texte outline-none focus:border-dj-bordure-forte"
               />
             </div>
           )}
@@ -144,20 +144,20 @@ export function EspaceDiffuser() {
                 value={url}
                 onChange={(e) => setUrl(e.target.value)}
                 placeholder="https://…"
-                className="w-full rounded-lg border border-dj-bordure bg-dj-surface-haute px-3 py-2 text-sm text-dj-texte outline-none focus:border-dj-accent-1"
+                className="w-full rounded-lg border border-dj-bordure bg-dj-surface-haute px-3 py-2 text-sm text-dj-texte outline-none focus:border-dj-bordure-forte"
               />
               <input
                 value={descriptionLien}
                 onChange={(e) => setDescriptionLien(e.target.value)}
                 placeholder="Description (pour que Clovis sache le retrouver)"
-                className="mt-2 w-full rounded-lg border border-dj-bordure bg-dj-surface-haute px-3 py-2 text-sm text-dj-texte outline-none focus:border-dj-accent-1"
+                className="mt-2 w-full rounded-lg border border-dj-bordure bg-dj-surface-haute px-3 py-2 text-sm text-dj-texte outline-none focus:border-dj-bordure-forte"
               />
             </div>
           )}
 
           {erreur && <p className="mt-2 animate-dj-fade-in-rapide text-sm text-[var(--dj-erreur)]">{erreur}</p>}
           {resultat && (
-            <p className="mt-2 animate-dj-fade-in-rapide text-sm text-dj-accent-1">
+            <p className="mt-2 animate-dj-fade-in-rapide text-sm text-dj-succes">
               Diffusé à {resultat.diffuse_a}/{resultat.total_receveurs} personnes.
               {resultat.echecs.length > 0 && <> Échec pour {resultat.echecs.length} d'entre elles.</>}
             </p>

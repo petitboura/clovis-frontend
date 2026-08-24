@@ -115,11 +115,11 @@ export function BibliothequePublique() {
         Un catalogue de documents partagé par tout le monde : uploade un fichier avec un nom et une description
         pour que les autres le retrouvent facilement. En publiant, tu garantis détenir les droits sur ce contenu,
         voir les{" "}
-        <Link href="/cgu" className="text-dj-accent-1 hover:underline">
+        <Link href="/cgu" className="text-dj-texte-muet hover:text-dj-texte hover:underline">
           CGU
         </Link>{" "}
         et la{" "}
-        <Link href="/copyright" className="text-dj-accent-1 hover:underline">
+        <Link href="/copyright" className="text-dj-texte-muet hover:text-dj-texte hover:underline">
           politique de copyright
         </Link>
         .
@@ -131,7 +131,7 @@ export function BibliothequePublique() {
           value={recherche}
           onChange={(e) => setRecherche(e.target.value)}
           placeholder="Rechercher dans la bibliothèque publique..."
-          className="w-full rounded-cgpt-bouton border border-dj-bordure bg-dj-surface py-2 pl-9 pr-3 text-sm text-dj-texte outline-none focus:border-dj-accent-1"
+          className="w-full rounded-cgpt-bouton border border-dj-bordure bg-dj-surface py-2 pl-9 pr-3 text-sm text-dj-texte outline-none focus:border-dj-bordure-forte"
         />
       </div>
 
@@ -213,7 +213,7 @@ export function BibliothequePublique() {
                 className="flex items-center justify-between gap-3 rounded-xl border border-dj-bordure bg-dj-surface px-4 py-3"
               >
                 <div className="flex min-w-0 flex-1 items-center gap-3">
-                  <Icone size={16} className="flex-shrink-0 text-dj-accent-1" />
+                  <Icone size={16} className="flex-shrink-0 text-dj-texte-muet" />
                   <div className="min-w-0">
                     <p className="truncate text-sm text-dj-texte">{entree.nom}</p>
                     {entree.description && (
@@ -228,7 +228,7 @@ export function BibliothequePublique() {
                       target="_blank"
                       rel="noopener noreferrer"
                       title="Ouvrir / télécharger"
-                      className="text-dj-texte-muet transition-colors hover:text-dj-accent-1"
+                      className="text-dj-texte-muet transition-colors hover:text-dj-texte"
                     >
                       <Download size={15} />
                     </a>

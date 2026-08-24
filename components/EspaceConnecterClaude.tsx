@@ -139,7 +139,7 @@ function EtapeGuide({
   return (
     <div className="flex gap-3 animate-dj-fade-in-rapide" style={{ animationDelay: `${(numero - 1) * 60}ms` }}>
       <div className="flex flex-shrink-0 flex-col items-center">
-        <span className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full bg-dj-accent-1 text-sm font-bold text-[#1A0D02]">
+        <span className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full bg-dj-surface-haute text-sm font-bold text-dj-texte">
           {numero}
         </span>
         {!dernier && <span className="mt-1 w-px flex-1 bg-dj-bordure" />}

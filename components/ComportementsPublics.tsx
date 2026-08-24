@@ -73,7 +73,7 @@ export function ComportementsPublics({ onActive }: { onActive: () => void }) {
           value={recherche}
           onChange={(e) => setRecherche(e.target.value)}
           placeholder="Rechercher un skill public..."
-          className="w-full rounded-cgpt-bouton border border-dj-bordure bg-dj-surface py-2 pl-9 pr-3 text-sm text-dj-texte outline-none focus:border-dj-accent-1"
+          className="w-full rounded-cgpt-bouton border border-dj-bordure bg-dj-surface py-2 pl-9 pr-3 text-sm text-dj-texte outline-none focus:border-dj-bordure-forte"
         />
       </div>
 
@@ -102,7 +102,7 @@ export function ComportementsPublics({ onActive }: { onActive: () => void }) {
                 className="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-dj-bordure bg-dj-surface px-4 py-3"
               >
                 <div className="flex min-w-0 flex-1 items-center gap-3">
-                  <ScrollText size={16} className="flex-shrink-0 text-dj-accent-1" />
+                  <ScrollText size={16} className="flex-shrink-0 text-dj-texte-muet" />
                   <div className="min-w-0">
                     <p className="truncate text-sm text-dj-texte">{c.nom}</p>
                     <p className="truncate text-xs text-dj-texte-muet">

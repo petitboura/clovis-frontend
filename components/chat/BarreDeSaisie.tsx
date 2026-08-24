@@ -1335,7 +1335,7 @@ export function BarreDeSaisie({
                     disabled={extractionFormuleEnCours}
                     aria-label="Extraire la formule de cette image"
                     title="Extraire la formule"
-                    className="absolute -bottom-1.5 -left-1.5 flex h-5 w-5 items-center justify-center rounded-full bg-dj-accent-1 text-white disabled:opacity-60"
+                    className="absolute -bottom-1.5 -left-1.5 flex h-5 w-5 items-center justify-center rounded-full bg-dj-surface-haute text-dj-texte disabled:opacity-60"
                   >
                     <Sigma size={11} className={extractionFormuleEnCours ? "animate-pulse" : ""} />
                   </button>
@@ -1459,8 +1459,9 @@ export function BarreDeSaisie({
           {/* Calque de couleur -- lecture seule, non interactif
               (pointer-events-none), affiche EXACTEMENT le même texte que
               le textarea réel juste au-dessus dans le DOM (même police/
-              taille/interligne/césure), avec les liens en dj-accent-1
-              souligné. Le vrai texte du textarea est rendu invisible
+              taille/interligne/césure), avec les liens en gris souligné
+              (dj-texte-muet, 24/08 : plus de couleur accent ici, réservée
+              aux actions principales). Le vrai texte du textarea est rendu invisible
               (text-transparent, voir plus bas) -- c'est ce calque qui
               porte toute la couleur visible. */}
           <div
@@ -1471,7 +1472,7 @@ export function BarreDeSaisie({
             {texte
               ? segmenterTexteAvecLiens(texte).map((s, i) =>
                   s.lien ? (
-                    <span key={i} className="text-dj-accent-1 underline">
+                    <span key={i} className="text-dj-texte-muet underline">
                       {s.texte}
                     </span>
                   ) : (
@@ -1608,7 +1609,7 @@ export function BarreDeSaisie({
                   title={githubConnecte ? "Choisir un dépôt GitHub" : "Connecter GitHub"}
                   className={
                     githubConnecte
-                      ? "relative text-dj-accent-1 transition-colors"
+                      ? "relative text-dj-texte transition-colors"
                       : "relative text-dj-texte-muet transition-colors hover:text-dj-texte disabled:opacity-60"
                   }
                 >
@@ -1670,7 +1671,7 @@ export function BarreDeSaisie({
                   title={notionConnecte ? "Choisir une page Notion" : "Connecter Notion"}
                   className={
                     notionConnecte
-                      ? "relative text-dj-accent-1 transition-colors"
+                      ? "relative text-dj-texte transition-colors"
                       : "relative text-dj-texte-muet transition-colors hover:text-dj-texte disabled:opacity-60"
                   }
                 >
@@ -1811,7 +1812,7 @@ export function BarreDeSaisie({
                 title="Choisir une application"
                 className={
                   "relative rounded-cgpt-bouton p-1 transition-colors " +
-                  (menuAppliOuvert ? "bg-dj-accent-1/10 text-dj-accent-1" : "text-dj-texte-muet hover:text-dj-texte")
+                  (menuAppliOuvert ? "bg-dj-surface-haute text-dj-texte" : "text-dj-texte-muet hover:text-dj-texte")
                 }
               >
                 <LayoutGrid size={18} />
@@ -1879,7 +1880,7 @@ export function BarreDeSaisie({
                   aria-label="Choisir le modèle"
                   className={
                     "flex items-center gap-0.5 rounded-md px-1 py-0.5 text-xs transition-colors " +
-                    (menuModeleOuvert ? "text-dj-accent-1" : "text-dj-texte-muet hover:text-dj-texte")
+                    (menuModeleOuvert ? "text-dj-texte" : "text-dj-texte-muet hover:text-dj-texte")
                   }
                 >
                   {modelesDisponibles.find((m) => m.modele_id === modeleSelectionne)?.label ?? "Auto"}
@@ -1953,7 +1954,7 @@ export function BarreDeSaisie({
                 aria-label="Choisir la longueur de réponse"
                 className={
                   "flex items-center gap-0.5 rounded-md px-1 py-0.5 text-xs transition-colors " +
-                  (menuLongueurOuvert ? "text-dj-accent-1" : "text-dj-texte-muet hover:text-dj-texte")
+                  (menuLongueurOuvert ? "text-dj-texte" : "text-dj-texte-muet hover:text-dj-texte")
                 }
               >
                 {LABELS_LONGUEUR[longueur]}
@@ -2106,7 +2107,7 @@ export function BarreDeSaisie({
             className={
               "flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-cgpt-bouton transition-colors " +
               (menuPlusOuvert
-                ? "bg-dj-surface text-dj-accent-1"
+                ? "bg-dj-surface text-dj-texte"
                 : "text-dj-texte-muet hover:bg-dj-surface hover:text-dj-texte")
             }
           >
@@ -2595,7 +2596,7 @@ export function BarreDeSaisie({
               {texte
                 ? segmenterTexteAvecLiens(texte).map((s, i) =>
                     s.lien ? (
-                      <span key={i} className="text-dj-accent-1 underline">
+                      <span key={i} className="text-dj-texte-muet underline">
                         {s.texte}
                       </span>
                     ) : (

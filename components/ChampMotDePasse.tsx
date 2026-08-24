@@ -30,7 +30,7 @@ export function ChampMotDePasse({
           autoComplete={autoComplete}
           value={value}
           onChange={(e) => onChange(e.target.value)}
-          className="w-full rounded-lg border border-dj-bordure bg-dj-surface-haute px-3 py-2 pr-10 text-dj-texte outline-none focus:border-dj-accent-1"
+          className="w-full rounded-lg border border-dj-bordure bg-dj-surface-haute px-3 py-2 pr-10 text-dj-texte outline-none focus:border-dj-bordure-forte"
         />
         <button
           type="button"

@@ -46,7 +46,7 @@ export function CarteMessage({ code }: { code: string }) {
     }
     return (
       <div className="my-3 flex h-20 items-center gap-2 rounded-cgpt-carte border border-dj-bordure bg-dj-surface px-4 text-xs text-dj-texte-muet">
-        <span className="h-2 w-2 animate-dj-glow rounded-full bg-dj-accent-1" />
+        <span className="h-2 w-2 animate-dj-glow rounded-full bg-dj-texte-muet" />
         Localisation du lieu...
       </div>
     );
@@ -69,7 +69,7 @@ export function CarteMessage({ code }: { code: string }) {
       rel="noopener noreferrer"
       className="my-3 flex animate-dj-fade-in items-center gap-3 rounded-cgpt-carte border border-dj-bordure bg-dj-surface p-4 transition-colors hover:border-dj-bordure-forte"
     >
-      <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-dj-accent-1 text-[#1A0D02]">
+      <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-dj-surface-haute text-dj-texte">
         <MapPin size={18} />
       </span>
       <span className="flex-1">

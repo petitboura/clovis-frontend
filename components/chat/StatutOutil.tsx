@@ -19,7 +19,7 @@ export type EtatStatut = "en_cours" | "termine" | "annule";
 export function StatutOutil({ texte, etat }: { texte: string; etat: EtatStatut }) {
   return (
     <div className="my-1.5 flex animate-dj-fade-in items-center gap-2 text-[13px] text-dj-texte-muet transition-all duration-300">
-      {etat === "en_cours" && <Loader2 size={14} className="animate-spin text-dj-accent-1" />}
+      {etat === "en_cours" && <Loader2 size={14} className="animate-spin text-dj-texte-muet" />}
       {etat === "termine" && <CheckCircle2 size={14} className="text-dj-succes" />}
       {etat === "annule" && <XCircle size={14} className="text-dj-inactif" />}
       <span>{texte}</span>

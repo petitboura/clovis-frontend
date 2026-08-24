@@ -178,8 +178,8 @@ function SectionDocuments({ chapitreId }: { chapitreId: string }) {
                 className="flex cursor-pointer flex-wrap items-center justify-between gap-2 rounded-xl border border-dj-bordure bg-dj-surface px-4 py-3 transition-colors hover:border-dj-bordure-forte"
               >
                 <div className="flex min-w-0 flex-1 items-center gap-2">
-                  <Icone size={14} className="flex-shrink-0 text-dj-accent-1" />
-                  <span className={`truncate text-left text-sm ${estLien ? "text-dj-accent-1" : "text-dj-texte"}`}>
+                  <Icone size={14} className="flex-shrink-0 text-dj-texte-muet" />
+                  <span className={`truncate text-left text-sm ${estLien ? "text-dj-texte hover:underline" : "text-dj-texte"}`}>
                     {d.titre}
                   </span>
                 </div>
@@ -466,7 +466,7 @@ function SectionExercices({ chapitreId }: { chapitreId: string }) {
             value={texteOuvert}
             onChange={(e) => setTexteOuvert(e.target.value)}
             rows={8}
-            className="w-full flex-1 resize-none rounded-xl border border-dj-bordure bg-dj-surface-haute px-4 py-3 text-base text-dj-texte outline-none focus:border-dj-accent-1"
+            className="w-full flex-1 resize-none rounded-xl border border-dj-bordure bg-dj-surface-haute px-4 py-3 text-base text-dj-texte outline-none focus:border-dj-bordure-forte"
           />
 
           <div className="w-full pt-4">
@@ -768,7 +768,7 @@ function SectionPublierPlugin({ programmeId }: { programmeId: string }) {
   return (
     <div className="flex flex-col gap-3 rounded-cgpt-carte border border-dj-bordure bg-dj-surface p-4">
       <div className="flex items-center gap-2">
-        <Rocket size={16} className="text-dj-accent-1" />
+        <Rocket size={16} className="text-dj-texte-muet" />
         <h3 className="text-sm font-semibold text-dj-texte">Publier comme plugin</h3>
       </div>
       <p className="text-xs text-dj-texte-muet">

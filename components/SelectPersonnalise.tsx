@@ -49,7 +49,7 @@ export function SelectPersonnalise({
       <button
         type="button"
         onClick={() => setOuvert((v) => !v)}
-        className="flex w-full items-center justify-between gap-2 rounded-lg border border-dj-bordure bg-dj-surface px-3 py-2 text-left text-sm text-dj-texte outline-none focus:border-dj-accent-1"
+        className="flex w-full items-center justify-between gap-2 rounded-lg border border-dj-bordure bg-dj-surface px-3 py-2 text-left text-sm text-dj-texte outline-none focus:border-dj-bordure-forte"
       >
         <span className="min-w-0 truncate">{choisi ? tronquer(choisi.label) : placeholder}</span>
         <ChevronDown size={14} className="flex-shrink-0 text-dj-texte-muet" />

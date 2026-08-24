@@ -101,7 +101,7 @@ function ListeProgrammesAudits({
         <button
           key={p.id}
           onClick={() => onOuvrir(p)}
-          className="flex items-center gap-3 rounded-xl border border-dj-bordure p-4 text-left transition-colors hover:border-dj-accent-1"
+          className="flex items-center gap-3 rounded-xl border border-dj-bordure p-4 text-left transition-colors hover:border-dj-bordure-forte"
         >
           <BookOpen size={18} className="flex-shrink-0 text-dj-texte-muet" />
           <div>

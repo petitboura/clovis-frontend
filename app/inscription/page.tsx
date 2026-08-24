@@ -93,7 +93,7 @@ export default function PageInscription() {
   if (verificationSession) {
     return (
       <main className="flex min-h-screen items-center justify-center px-4">
-        <div className="h-8 w-8 animate-spin rounded-full border-2 border-dj-bordure border-t-dj-accent-1" />
+        <div className="h-8 w-8 animate-spin rounded-full border-2 border-dj-bordure border-t-dj-texte-muet" />
       </main>
     );
   }
@@ -148,7 +148,7 @@ export default function PageInscription() {
                 autoComplete="name"
                 value={nom}
                 onChange={(e) => setNom(e.target.value)}
-                className="mt-1 w-full rounded-lg border border-dj-bordure bg-dj-surface-haute px-3 py-2 text-dj-texte outline-none focus:border-dj-accent-1"
+                className="mt-1 w-full rounded-lg border border-dj-bordure bg-dj-surface-haute px-3 py-2 text-dj-texte outline-none focus:border-dj-bordure-forte"
               />
             </div>
 
@@ -164,7 +164,7 @@ export default function PageInscription() {
                   autoComplete="email"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
-                  className="mt-1 w-full rounded-lg border border-dj-bordure bg-dj-surface-haute px-3 py-2 text-dj-texte outline-none focus:border-dj-accent-1"
+                  className="mt-1 w-full rounded-lg border border-dj-bordure bg-dj-surface-haute px-3 py-2 text-dj-texte outline-none focus:border-dj-bordure-forte"
                 />
               </div>
             ) : (
@@ -188,7 +188,7 @@ export default function PageInscription() {
 
         <p className="mt-5 text-center text-sm text-dj-texte-muet">
           Déjà un compte ?{" "}
-          <Link href="/connexion" className="text-dj-accent-1 hover:underline">
+          <Link href="/connexion" className="text-dj-texte-muet hover:text-dj-texte hover:underline">
             Se connecter
           </Link>
         </p>

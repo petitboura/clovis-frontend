@@ -105,7 +105,7 @@ export function BlocExpansible({
         onClick={basculerOuvert}
         className="my-2 flex w-full max-w-sm animate-dj-fade-in items-center gap-3 rounded-xl border border-dj-bordure bg-dj-surface-haute p-3 text-left transition-colors hover:border-dj-bordure-forte"
       >
-        <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-dj-accent-1 text-[#1A0D02]">
+        <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-dj-surface text-dj-texte">
           <Icone size={16} />
         </span>
         <span className="min-w-0 flex-1">

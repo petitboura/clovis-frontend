@@ -419,7 +419,7 @@ function SidebarArbre({
 
       <button
         onClick={onCreerRacine}
-        className="mt-2 flex items-center gap-2 rounded-md px-2 py-1.5 text-xs text-dj-texte-muet hover:bg-dj-surface-haute hover:text-dj-accent-2"
+        className="mt-2 flex items-center gap-2 rounded-md px-2 py-1.5 text-xs text-dj-texte-muet hover:bg-dj-surface-haute hover:text-dj-texte"
       >
         <Plus size={13} /> Nouvelle page
       </button>
@@ -601,7 +601,7 @@ function MenuAjouterBloc({
       {onSousPage && (
         <button
           onClick={onSousPage}
-          className="mt-0.5 block w-full rounded-md border-t border-dj-bordure px-2 py-1.5 pt-2 text-left text-xs text-dj-accent-2 hover:bg-dj-surface-haute"
+          className="mt-0.5 block w-full rounded-md border-t border-dj-bordure px-2 py-1.5 pt-2 text-left text-xs text-dj-texte hover:bg-dj-surface-haute"
         >
           + Sous-page
         </button>
@@ -1011,7 +1011,7 @@ function RenduTexteFormatte({ texte, onNaviguer }: { texte: string; onNaviguer?:
                 e.stopPropagation();
                 if (id && onNaviguer) onNaviguer(id);
               }}
-              className="rounded bg-dj-accent-1/15 px-1 py-0.5 text-dj-accent-2 hover:underline"
+              className="rounded bg-dj-surface-haute px-1 py-0.5 text-dj-texte hover:underline"
             >
               📄 {titre}
             </button>
@@ -1364,7 +1364,7 @@ function LigneBloc({
           href={String(bloc.contenu?.url ?? "")}
           target="_blank"
           rel="noreferrer"
-          className="flex min-w-0 items-center gap-2 text-sm text-dj-accent-2 hover:underline"
+          className="flex min-w-0 items-center gap-2 text-sm text-dj-texte hover:underline"
         >
           <IconFichier size={15} className="shrink-0" />
           <span className="truncate">{String(bloc.contenu?.nom ?? "Fichier")}</span>
@@ -1409,7 +1409,7 @@ function LigneBloc({
           <iframe src={url} className="h-96 w-full rounded-md border border-dj-bordure" />
         )}
         <div className="mt-1 flex items-center justify-between">
-          <a href={url} target="_blank" rel="noreferrer" className="text-xs text-dj-texte-muet hover:text-dj-accent-2 hover:underline">
+          <a href={url} target="_blank" rel="noreferrer" className="text-xs text-dj-texte-muet hover:text-dj-texte hover:underline">
             Ouvrir dans un nouvel onglet
           </a>
           <button onClick={supprimer} className="hidden text-dj-texte-muet hover:text-red-500 group-hover:block">
@@ -1424,7 +1424,7 @@ function LigneBloc({
     titre: "font-display text-xl font-bold",
     liste_puces: "before:content-['•_'] before:text-dj-texte-muet",
     liste_numerotee: "before:content-['–_'] before:text-dj-texte-muet",
-    citation: "border-l-2 border-dj-accent-2 pl-3 italic text-dj-texte-muet",
+    citation: "border-l-2 border-dj-inactif pl-3 italic text-dj-texte-muet",
   };
 
   return (
@@ -1456,7 +1456,7 @@ function LigneBloc({
               onBlur={enregistrer}
               onKeyDown={surTouche}
               placeholder="ex : x^2 + y^2 = r^2"
-              className="w-full rounded-md border border-dj-accent-2 bg-dj-surface px-2 py-1 font-mono text-sm outline-none"
+              className="w-full rounded-md border border-dj-bordure-forte bg-dj-surface px-2 py-1 font-mono text-sm outline-none"
             />
           ) : (
             <>
@@ -1549,8 +1549,8 @@ function PanneauCarrefour({ pageId }: { pageId: string }) {
   if (!refs) return <Skeleton className="h-10 w-full rounded-md" />;
 
   return (
-    <div className="space-y-1.5 rounded-lg border border-dj-accent-2/30 bg-dj-accent-1/5 p-3">
-      <p className="flex items-center gap-1.5 text-xs font-semibold text-dj-accent-2">
+    <div className="space-y-1.5 rounded-lg border border-dj-bordure bg-dj-surface-haute p-3">
+      <p className="flex items-center gap-1.5 text-xs font-semibold text-dj-texte">
         <IconLien size={13} /> Page carrefour
       </p>
       {refs.length === 0 ? (
@@ -1781,7 +1781,7 @@ function VueBaseDonnees({
       {triProprieteId && (
         <button
           onClick={() => setTriDesc((v) => !v)}
-          className="rounded border border-dj-bordure px-1 py-0.5 text-dj-texte-muet hover:border-dj-accent-2"
+          className="rounded border border-dj-bordure px-1 py-0.5 text-dj-texte-muet hover:border-dj-bordure-forte hover:text-dj-texte"
         >
           {triDesc ? "↓" : "↑"}
         </button>
@@ -1846,7 +1846,7 @@ function VueBaseDonnees({
             </tbody>
           </table>
           <div className="mt-1 flex items-center gap-3">
-            <button onClick={ajouterElement} className="text-xs text-dj-texte-muet hover:text-dj-accent-2">
+            <button onClick={ajouterElement} className="text-xs text-dj-texte-muet hover:text-dj-texte">
               + Ajouter une ligne
             </button>
             {panneauPropriete}
@@ -1886,7 +1886,7 @@ function VueBaseDonnees({
             </div>
           ))}
           <div className="flex items-center gap-3">
-            <button onClick={ajouterElement} className="text-xs text-dj-texte-muet hover:text-dj-accent-2">
+            <button onClick={ajouterElement} className="text-xs text-dj-texte-muet hover:text-dj-texte">
               + Ajouter
             </button>
             {panneauPropriete}
@@ -1919,7 +1919,7 @@ function VueBaseDonnees({
             </div>
           ))}
           <div className="flex shrink-0 flex-col gap-1 self-start">
-            <button onClick={ajouterElement} className="text-xs text-dj-texte-muet hover:text-dj-accent-2">
+            <button onClick={ajouterElement} className="text-xs text-dj-texte-muet hover:text-dj-texte">
               + Ajouter
             </button>
             {panneauPropriete}
@@ -2028,7 +2028,7 @@ function PanneauAjoutPropriete({
 
   if (!ouvert) {
     return (
-      <button onClick={() => setOuvert(true)} className="flex items-center gap-1 text-xs text-dj-texte-muet hover:text-dj-accent-2">
+      <button onClick={() => setOuvert(true)} className="flex items-center gap-1 text-xs text-dj-texte-muet hover:text-dj-texte">
         <Plus size={12} /> Propriété
       </button>
     );
@@ -2199,7 +2199,7 @@ function VueCalendrier({
               <>
                 <p className="text-dj-texte-muet">{jour}</p>
                 {(parJour.get(jour) ?? []).slice(0, 3).map((el) => (
-                  <p key={el.id} className="mt-0.5 truncate rounded bg-dj-accent-1/15 px-1 text-dj-accent-2">
+                  <p key={el.id} className="mt-0.5 truncate rounded bg-dj-surface-haute px-1 text-dj-texte">
                     {String(valeurDe(el.id, base.proprietes[0].id) ?? "—")}
                   </p>
                 ))}
@@ -2208,7 +2208,7 @@ function VueCalendrier({
           </div>
         ))}
       </div>
-      <button onClick={ajouterElement} className="mt-1.5 text-xs text-dj-texte-muet hover:text-dj-accent-2">
+      <button onClick={ajouterElement} className="mt-1.5 text-xs text-dj-texte-muet hover:text-dj-texte">
         + Ajouter
       </button>
     </div>
@@ -2245,7 +2245,7 @@ function CelluleValeur({
     return (
       <div className="flex flex-wrap items-center gap-1">
         {idsLies.map((id) => (
-          <span key={id} className="flex items-center gap-1 rounded bg-dj-accent-1/15 px-1.5 py-0.5 text-dj-accent-2">
+          <span key={id} className="flex items-center gap-1 rounded bg-dj-surface-haute px-1.5 py-0.5 text-dj-texte">
             {libelleDe(id)}
             <button onClick={() => onChange(idsLies.filter((x) => x !== id))} className="hover:text-red-500">
               ×
@@ -2382,7 +2382,7 @@ function PanneauRevision() {
             <button
               key={id}
               onClick={() => repondre(id)}
-              className="rounded-lg border border-dj-bordure px-3 py-1.5 text-xs hover:border-dj-accent-2 hover:text-dj-accent-2"
+              className="rounded-lg border border-dj-bordure px-3 py-1.5 text-xs hover:border-dj-bordure-forte hover:text-dj-texte"
             >
               {label}
             </button>
