@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { ChevronRight, type LucideIcon } from "lucide-react";
+import { ChevronRight } from "lucide-react";
 
 // Conteneur partagé par les sections de l'app (refonte "Mon espace =
 // l'app", 15/08/2026). Remplace le conteneur à onglets d'EspaceClovis.tsx
@@ -24,6 +24,16 @@ import { ChevronRight, type LucideIcon } from "lucide-react";
 // d'Ariane, plus une colonne de navigation persistante vers les sections
 // soeurs (comme une vraie page de paramètres avec sidebar, pas un popup
 // qu'on doit rouvrir pour changer de section).
+//
+// `soeurs[].icone` reçoit un élément déjà rendu (ex: <ScrollText
+// size={16} />), PAS un composant (ex: ScrollText) -- correctif 24/08 :
+// chaque page qui appelle SectionPage est un Server Component, et
+// SectionPage est un Client Component ("use client" ci-dessus, requis
+// pour usePathname). Passer une RÉFÉRENCE de composant (une fonction) à
+// travers cette frontière Server -> Client fait planter Next.js
+// ("Functions cannot be passed directly to Client Components"), invisible
+// en dev mais fatal à la génération statique en production -- un élément
+// JSX déjà construit, lui, est sérialisable normalement.
 export function SectionPage({
   title,
   children,
@@ -34,7 +44,7 @@ export function SectionPage({
   groupe?: {
     label: string;
     href: string;
-    soeurs: { href: string; label: string; Icone: LucideIcon }[];
+    soeurs: { href: string; label: string; icone: React.ReactNode }[];
   };
 }) {
   const pathname = usePathname();
@@ -73,7 +83,7 @@ export function SectionPage({
                     : "text-dj-texte-muet hover:bg-dj-surface-haute hover:text-dj-texte"
                 }`}
               >
-                <s.Icone size={16} className="flex-shrink-0" />
+                {s.icone}
                 {s.label}
               </Link>
             );

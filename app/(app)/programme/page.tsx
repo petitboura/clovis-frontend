@@ -4,8 +4,8 @@ import { EspaceProgramme } from "@/components/EspaceProgramme";
 import { BookOpen, ScanSearch } from "lucide-react";
 
 const SOEURS = [
-  { href: "/programme", label: "Mon programme", Icone: BookOpen },
-  { href: "/audits", label: "Audits", Icone: ScanSearch },
+  { href: "/programme", label: "Mon programme", icone: <BookOpen size={16} className="flex-shrink-0" /> },
+  { href: "/audits", label: "Audits", icone: <ScanSearch size={16} className="flex-shrink-0" /> },
 ];
 
 export default function PageProgramme() {
