@@ -158,6 +158,9 @@ function MenuProfil({
   ouverte,
   LibelleRail,
   mobile = false,
+  menuOuvert,
+  onBasculerMenu,
+  onFermerMenu,
   onNaviguerVersParametres,
   onSeDeconnecter,
 }: {
@@ -166,21 +169,30 @@ function MenuProfil({
   ouverte: boolean;
   LibelleRail: React.ComponentType<{ ouverte: boolean; children: React.ReactNode }>;
   mobile?: boolean;
+  // État du popup remonté à AppSidebar (24/08/2026, correctif demande
+  // Bourama : le popup s'affichait masqué/coupé) -- avant, ce menu
+  // gérait son ouverture tout seul en interne (useState local), donc
+  // AppSidebar ne savait jamais qu'il fallait repasser le rail en
+  // overflow-visible pendant que ce popup est ouvert. Même mécanique
+  // que le menu "Actions" un peu plus haut dans ce fichier, qui avait
+  // eu exactement ce problème le 20/08.
+  menuOuvert: boolean;
+  onBasculerMenu: () => void;
+  onFermerMenu: () => void;
   onNaviguerVersParametres: () => void;
   onSeDeconnecter: () => void;
 }) {
-  const [deplie, setDeplie] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
   const libelle = nomAffiche || "Mon compte";
 
   useEffect(() => {
-    if (!deplie) return;
+    if (!menuOuvert) return;
     function onClicExterieur(e: MouseEvent) {
-      if (ref.current && !ref.current.contains(e.target as Node)) setDeplie(false);
+      if (ref.current && !ref.current.contains(e.target as Node)) onFermerMenu();
     }
     document.addEventListener("mousedown", onClicExterieur);
     return () => document.removeEventListener("mousedown", onClicExterieur);
-  }, [deplie]);
+  }, [menuOuvert, onFermerMenu]);
 
   const Avatar = (
     <span className="h-6 w-6 flex-shrink-0 overflow-hidden rounded-full border border-dj-bordure bg-dj-surface-haute">
@@ -198,7 +210,7 @@ function MenuProfil({
   return (
     <div ref={ref} className={`relative w-full ${mobile ? "" : "mt-2"}`}>
       <button
-        onClick={() => setDeplie((v) => !v)}
+        onClick={onBasculerMenu}
         className={`group flex w-full items-center gap-2 rounded-xl text-dj-texte-muet transition-colors hover:bg-dj-surface-haute hover:text-dj-texte ${
           mobile ? "px-2" : ""
         }`}
@@ -207,7 +219,7 @@ function MenuProfil({
         {mobile ? <span className="text-sm">{libelle}</span> : <LibelleRail ouverte={ouverte}>{libelle}</LibelleRail>}
       </button>
 
-      {deplie && (
+      {menuOuvert && (
         <div
           className={`absolute bottom-full z-50 mb-2 w-56 animate-dj-fade-in-rapide overflow-hidden rounded-cgpt-carte border border-dj-bordure bg-dj-surface shadow-[0_8px_30px_rgba(0,0,0,0.35)] ${
             mobile ? "left-2" : "left-0"
@@ -215,7 +227,7 @@ function MenuProfil({
         >
           <button
             onClick={() => {
-              setDeplie(false);
+              onFermerMenu();
               onNaviguerVersParametres();
             }}
             className="flex w-full items-center gap-2.5 px-3 py-2.5 text-left transition-colors hover:bg-dj-surface-haute"
@@ -231,7 +243,7 @@ function MenuProfil({
 
           <button
             onClick={() => {
-              setDeplie(false);
+              onFermerMenu();
               onNaviguerVersParametres();
             }}
             className="flex w-full items-center gap-2.5 px-3 py-2 text-left text-sm text-dj-texte transition-colors hover:bg-dj-surface-haute"
@@ -246,7 +258,7 @@ function MenuProfil({
 
           <button
             onClick={() => {
-              setDeplie(false);
+              onFermerMenu();
               onSeDeconnecter();
             }}
             className="flex w-full items-center gap-2.5 px-3 py-2 text-left text-sm text-[var(--dj-erreur)] transition-colors hover:bg-dj-surface-haute"
@@ -425,6 +437,10 @@ export function AppSidebar({
   const [avisDeplie, setAvisDeplie] = useState(false);
   const [copie, setCopie] = useState(false);
   const [historiqueDeplie, setHistoriqueDeplie] = useState(false);
+  // Popup du menu profil (24/08/2026, correctif demande Bourama : voir
+  // commentaire dans MenuProfil plus haut). Remonté ici pour piloter le
+  // overflow-visible du rail, comme actionsDeplie/historiqueDeplie/groupeOuvertId.
+  const [profilDeplie, setProfilDeplie] = useState(false);
   const asideRef = useRef<HTMLDivElement>(null);
   const actionsRef = useRef<HTMLDivElement>(null);
 
@@ -608,7 +624,7 @@ export function AppSidebar({
       <div
         ref={asideRef}
         className={`hidden flex-shrink-0 flex-col border-r border-dj-bordure bg-dj-fond px-2 py-3 transition-[width] duration-300 ease-out md:flex ${
-          actionsDeplie || historiqueDeplie || groupeOuvertId ? "overflow-visible" : "overflow-y-auto overflow-x-hidden"
+          actionsDeplie || historiqueDeplie || groupeOuvertId || profilDeplie ? "overflow-visible" : "overflow-y-auto overflow-x-hidden"
         } ${ouverte ? "md:w-72" : "md:w-14"}`}
       >
         <button
@@ -805,6 +821,9 @@ export function AppSidebar({
             nomAffiche={nomAffiche}
             ouverte={ouverte}
             LibelleRail={LibelleRail}
+            menuOuvert={profilDeplie}
+            onBasculerMenu={() => setProfilDeplie((v) => !v)}
+            onFermerMenu={() => setProfilDeplie(false)}
             onNaviguerVersParametres={() => router.push("/parametres")}
             onSeDeconnecter={seDeconnecter}
           />
@@ -823,7 +842,11 @@ export function AppSidebar({
 
       {/* Panneau plein écran mobile, même logique que desktop. */}
       {ouverte && (
-        <div className="fixed inset-y-0 left-0 z-40 flex w-72 flex-col overflow-y-auto overflow-x-hidden border-r border-dj-bordure bg-dj-fond px-2 py-3 md:hidden">
+        <div
+          className={`fixed inset-y-0 left-0 z-40 flex w-72 flex-col border-r border-dj-bordure bg-dj-fond px-2 py-3 md:hidden ${
+            profilDeplie ? "overflow-visible" : "overflow-y-auto overflow-x-hidden"
+          }`}
+        >
           <div className="mt-8">
             {contexteChat && (
               <>
@@ -999,7 +1022,11 @@ export function AppSidebar({
                 ouverte
                 LibelleRail={LibelleRail}
                 mobile
+                menuOuvert={profilDeplie}
+                onBasculerMenu={() => setProfilDeplie((v) => !v)}
+                onFermerMenu={() => setProfilDeplie(false)}
                 onNaviguerVersParametres={() => {
+                  setProfilDeplie(false);
                   setOuverte(false);
                   router.push("/parametres");
                 }}
