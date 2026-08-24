@@ -206,7 +206,7 @@ export function EcranAccueil() {
             <Link key={o.id} href={o.href} className="group">
               <Carte className="flex h-full flex-col items-start gap-3 !p-4 hover:bg-dj-surface-haute">
                 <span
-                  className={`flex h-9 w-9 items-center justify-center rounded-cgpt-carte bg-dj-surface-haute text-dj-texte transition-transform duration-200 ${MOUVEMENT_CARTE}`}
+                  className={`flex h-9 w-9 items-center justify-center rounded-cgpt-bouton bg-dj-surface-haute text-dj-texte transition-transform duration-200 ${MOUVEMENT_CARTE}`}
                 >
                   <o.Icone size={18} />
                 </span>
