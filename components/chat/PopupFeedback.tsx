@@ -37,6 +37,16 @@ export function PopupFeedback({
   const [questionPartagee, setQuestionPartagee] = useState(false);
   const [envoiEnCours, setEnvoiEnCours] = useState(false);
 
+  // Fermeture au clavier (audit 25/08/2026 : aucune popup du chat ne
+  // gérait Echap jusqu'ici).
+  useEffect(() => {
+    function surTouche(e: KeyboardEvent) {
+      if (e.key === "Escape") onFerme();
+    }
+    window.addEventListener("keydown", surTouche);
+    return () => window.removeEventListener("keydown", surTouche);
+  }, [onFerme]);
+
   useEffect(() => {
     if (type === "negatif") {
       appelerApi("/api/feedback/categories")

@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { X } from "lucide-react";
 import { Bouton } from "@/components/Bouton";
@@ -14,15 +15,32 @@ import { Bouton } from "@/components/Bouton";
 export function CompteRequisModal({
   texte = "Crée un compte pour continuer.",
   onFerme,
+  // z-[100] par défaut (usages historiques : NoteAgent.tsx,
+  // CommentairesAgent.tsx, CTACompteRequis.tsx). ChatFlottant.tsx passe
+  // explicitement z-[120] (audit 25/08/2026, voir correctif dans ce
+  // fichier) car son chat plein écran est en z-[110] -- z-[100] plaçait
+  // ce popup derrière, invisible.
+  zIndex = "z-[100]",
 }: {
   texte?: string;
   onFerme: () => void;
+  zIndex?: string;
 }) {
   const router = useRouter();
 
+  // Fermeture au clavier (audit 25/08/2026, aucune popup du chat ne
+  // gérait Echap jusqu'ici).
+  useEffect(() => {
+    function surTouche(e: KeyboardEvent) {
+      if (e.key === "Escape") onFerme();
+    }
+    window.addEventListener("keydown", surTouche);
+    return () => window.removeEventListener("keydown", surTouche);
+  }, [onFerme]);
+
   return (
     <div
-      className="fixed inset-0 z-[100] flex animate-dj-fade-in-rapide items-end justify-center bg-black/50 p-4 sm:items-center"
+      className={`fixed inset-0 ${zIndex} flex animate-dj-fade-in-rapide items-end justify-center bg-black/50 p-4 sm:items-center`}
       onClick={onFerme}
     >
       <div

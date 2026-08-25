@@ -375,7 +375,17 @@ export function ChatFlottant({
       </div>
 
       {compteRequis && (
-        <CompteRequisModal texte="Crée un compte pour continuer." onFerme={() => setCompteRequis(false)} />
+        // CORRECTIF (audit 25/08/2026) : z-[100] par défaut du composant
+        // passait DERRIÈRE le chat plein écran (z-[110] plus haut dans ce
+        // même fichier) -- le popup "compte requis" devenait invisible,
+        // présent dans le DOM mais inaccessible, si déclenché pendant que
+        // le chat est en plein écran. z-[120] pour rester au-dessus dans
+        // les deux états (mini z-40 et plein écran z-[110]).
+        <CompteRequisModal
+          texte="Crée un compte pour continuer."
+          onFerme={() => setCompteRequis(false)}
+          zIndex="z-[120]"
+        />
       )}
     </div>
   );

@@ -1,8 +1,9 @@
 "use client";
 
 import { useState } from "react";
-import { FileText, FileSpreadsheet, Presentation, FileArchive, FileJson, FileCode, Image as IconeImage, Box, File, Download, X, ImageOff } from "lucide-react";
+import { FileText, FileSpreadsheet, Presentation, FileArchive, FileJson, FileCode, Image as IconeImage, Box, File, Download, ImageOff } from "lucide-react";
 import { BlocExpansible } from "./BlocExpansible";
+import { VisionneuseImage } from "./VisionneuseImage";
 
 const EXTENSIONS_FICHIER: Record<string, { icone: typeof File; libelle: string }> = {
   pdf: { icone: FileText, libelle: "PDF" },
@@ -140,26 +141,14 @@ function ImageGenereeChip({ href, nom }: { href: string; nom: string }) {
       </button>
 
       {ouverte && (
-        <div
-          className="fixed inset-0 z-50 flex animate-dj-fade-in items-center justify-center bg-black/85 p-6"
-          onClick={() => setOuverte(false)}
-        >
-          <button
-            aria-label="Télécharger"
-            onClick={(e) => {
-              e.stopPropagation();
-              telechargerFichier(href, nom);
-            }}
-            className="absolute right-16 top-5 text-dj-texte-muet hover:text-dj-texte"
-          >
-            <Download size={22} />
-          </button>
-          <button aria-label="Fermer" className="absolute right-5 top-5 text-dj-texte-muet hover:text-dj-texte">
-            <X size={22} />
-          </button>
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src={href} alt={nom} className="max-h-[90vh] max-w-[90vw] rounded-xl object-contain" />
-        </div>
+        // Consolidé (audit 25/08/2026) dans VisionneuseImage.tsx -- corrige
+        // au passage le bouton "Fermer" qui n'avait aucun onClick propre.
+        <VisionneuseImage
+          src={href}
+          alt={nom}
+          onFermer={() => setOuverte(false)}
+          onTelecharger={() => telechargerFichier(href, nom)}
+        />
       )}
     </>
   );

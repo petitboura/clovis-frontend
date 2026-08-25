@@ -7,6 +7,7 @@ import { APPLIS_DISPONIBLES, useOutilsRegistre } from "@/lib/outils";
 import { IconeNotion } from "@/components/icons/IconeNotion";
 import { LecteurMedia } from "./LecteurMedia";
 import { CanvasDessin } from "./CanvasDessin";
+import { VisionneuseImage } from "./VisionneuseImage";
 import dynamic from "next/dynamic";
 import { BlocCode } from "./BlocCode";
 import hljs from "@/lib/coloration";
@@ -2510,20 +2511,12 @@ export function BarreDeSaisie({
       )}
 
       {imageAgrandieId && fichiers.find((f) => f.id === imageAgrandieId)?.apercu && (
-        <div
-          className="fixed inset-0 z-50 flex animate-dj-fade-in items-center justify-center bg-black/85 p-6"
-          onClick={() => setImageAgrandieId(null)}
-        >
-          <button aria-label="Fermer" className="absolute right-5 top-5 text-dj-texte-muet hover:text-dj-texte">
-            <X size={22} />
-          </button>
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img
-            src={fichiers.find((f) => f.id === imageAgrandieId)?.apercu ?? ""}
-            alt=""
-            className="max-h-[90vh] max-w-[90vw] rounded-xl object-contain"
-          />
-        </div>
+        // Consolidé (audit 25/08/2026) dans VisionneuseImage.tsx -- corrige
+        // au passage le bouton "Fermer" qui n'avait aucun onClick propre.
+        <VisionneuseImage
+          src={fichiers.find((f) => f.id === imageAgrandieId)?.apercu ?? ""}
+          onFermer={() => setImageAgrandieId(null)}
+        />
       )}
 
       {canvasOuvert && (

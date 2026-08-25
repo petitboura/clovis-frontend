@@ -1,6 +1,6 @@
 "use client";
 
-import { ReactNode } from "react";
+import { ReactNode, useEffect } from "react";
 
 // Panneau flottant (20/08/2026, demande Bourama : "il y a plein de plein
 // écran qui sont comme ça, des carrés, des trucs plats -- change") :
@@ -41,6 +41,18 @@ export function PanneauFlottant({
   pleine?: boolean;
   enSortie?: boolean;
 }) {
+  // Fermeture au clavier (audit 25/08/2026 : aucune popup du chat ne
+  // gérait Echap jusqu'ici). Couvre en un seul endroit les 8 composants
+  // qui passent par ce wrapper.
+  useEffect(() => {
+    if (!onFerme) return;
+    function surTouche(e: KeyboardEvent) {
+      if (e.key === "Escape") onFerme?.();
+    }
+    window.addEventListener("keydown", surTouche);
+    return () => window.removeEventListener("keydown", surTouche);
+  }, [onFerme]);
+
   return (
     <div
       className={`fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-3 backdrop-blur-sm sm:p-6 ${

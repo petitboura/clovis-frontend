@@ -8,7 +8,7 @@ import remarkMath from "remark-math";
 import rehypeRaw from "rehype-raw";
 import rehypeSanitize, { defaultSchema } from "rehype-sanitize";
 import rehypeKatex from "rehype-katex";
-import { Copy, RotateCw, Pencil, Volume2, ThumbsUp, ThumbsDown, Check, MessageSquareQuote, FileText, X, AlertTriangle, ChevronDown, ChevronRight } from "lucide-react";
+import { Copy, RotateCw, Pencil, Volume2, ThumbsUp, ThumbsDown, Check, MessageSquareQuote, FileText, AlertTriangle, ChevronDown, ChevronRight } from "lucide-react";
 import { formaterHeure } from "@/lib/formatageHeure";
 import dynamic from "next/dynamic";
 import { BlocCode } from "./BlocCode";
@@ -18,6 +18,7 @@ import { IndicateurReflexion } from "@/components/IndicateurReflexion";
 import { SchemaGeometrique } from "./SchemaGeometrique";
 import { WidgetSandbox } from "./WidgetSandbox";
 import { ImageMessage } from "./ImageMessage";
+import { VisionneuseImage } from "./VisionneuseImage";
 import { TableauMessage } from "./TableauMessage";
 import { FichierChip, extensionFichier } from "./FichierChip";
 import { FichierCode, extensionCode } from "./FichierCode";
@@ -705,16 +706,12 @@ function BulleMessageInterne({
       )}
 
       {pieceJointeOuverteIndex !== null && message.piecesJointes?.[pieceJointeOuverteIndex]?.previewUrl && (
-        <div
-          className="fixed inset-0 z-50 flex animate-dj-fade-in items-center justify-center bg-black/85 p-6"
-          onClick={() => setPieceJointeOuverteIndex(null)}
-        >
-          <button aria-label="Fermer" className="absolute right-5 top-5 text-dj-texte-muet hover:text-dj-texte">
-            <X size={22} />
-          </button>
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src={message.piecesJointes[pieceJointeOuverteIndex].previewUrl} alt="" className="max-h-[90vh] max-w-[90vw] rounded-xl object-contain" />
-        </div>
+        // Consolidé (audit 25/08/2026) dans VisionneuseImage.tsx -- corrige
+        // au passage le bouton "Fermer" qui n'avait aucun onClick propre.
+        <VisionneuseImage
+          src={message.piecesJointes[pieceJointeOuverteIndex].previewUrl!}
+          onFermer={() => setPieceJointeOuverteIndex(null)}
+        />
       )}
     </div>
   );
