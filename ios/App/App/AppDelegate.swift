@@ -1,14 +1,56 @@
 import UIKit
 import Capacitor
 
+// Cree le 25/08/2026, Bourama : Lot 3B Partie 3 mobile (fusion Capacitor), iOS.
+// Fusionne AppDelegate genere par Capacitor avec ClovisAppDelegate.swift
+// (clovis-mobile/ios-legacy-natif, Lot 3, notifications & rappels) : les
+// callbacks APNs (didRegisterForRemoteNotificationsWithDeviceToken) n'ont
+// pas d'equivalent Capacitor natif, ils restent geres ici directement.
+import UIKit
+import Capacitor
+import UserNotifications
+
 @UIApplicationMain
-class AppDelegate: UIResponder, UIApplicationDelegate {
+class AppDelegate: UIResponder, UIApplicationDelegate, UNUserNotificationCenterDelegate {
 
     var window: UIWindow?
 
     func application(_ application: UIApplication, didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]?) -> Bool {
-        // Override point for customization after application launch.
+        UNUserNotificationCenter.current().delegate = self
         return true
+    }
+
+    // Porte tel quel depuis ClovisAppDelegate.swift, Lot 3.
+    func application(
+        _ application: UIApplication,
+        didRegisterForRemoteNotificationsWithDeviceToken deviceToken: Data
+    ) {
+        let token = deviceToken.map { String(format: "%02.2hhx", $0) }.joined()
+        Task {
+            do {
+                try await ClovisApiClient.enregistrerPushToken(TokenPush(plateforme: "ios", token: token))
+            } catch {
+                // Pas grave : PontNatifPlugin.rattraperActionsEnAttente rattrape
+                // au prochain lancement de l'app, meme logique qu'Android.
+            }
+        }
+    }
+
+    func application(
+        _ application: UIApplication,
+        didFailToRegisterForRemoteNotificationsWithError error: Error
+    ) {
+        // Simulateur (pas de vrai token APNs) ou reseau indisponible :
+        // pas fatal, l'app continue de fonctionner sans push natif.
+    }
+
+    /// Affiche la notification meme si l'app est au premier plan (comportement
+    /// par defaut d'iOS : rien n'apparait sans ceci quand l'app est ouverte).
+    func userNotificationCenter(
+        _ center: UNUserNotificationCenter,
+        willPresent notification: UNNotification
+    ) async -> UNNotificationPresentationOptions {
+        [.banner, .sound, .list]
     }
 
     func applicationWillResignActive(_ application: UIApplication) {

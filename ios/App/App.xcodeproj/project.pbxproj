@@ -16,6 +16,17 @@
 		504EC3121FED79650016851F /* LaunchScreen.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = 504EC3101FED79650016851F /* LaunchScreen.storyboard */; };
 		50B271D11FEDC1A000F3C39B /* public in Resources */ = {isa = PBXBuildFile; fileRef = 50B271D01FEDC1A000F3C39B /* public */; };
 		9582B6832FE993A70072D4E8 /* SceneDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9582B6822FE993A50072D4E8 /* SceneDelegate.swift */; };
+		71DE86D72BA5D0844B37F5C4 /* StockageToken.swift in Sources */ = {isa = PBXBuildFile; fileRef = 482ECF0F8C6569441BA547DF /* StockageToken.swift */; };
+		5AF0B6E772A9DA52EEA294EC /* ClovisApiClient.swift in Sources */ = {isa = PBXBuildFile; fileRef = E100D37070CDF015C637941C /* ClovisApiClient.swift */; };
+		0F9A61F09285450368D690A4 /* ActionsAppareilExecuteur.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0F72E003E059976E118B1E80 /* ActionsAppareilExecuteur.swift */; };
+		26883A398AC42B04A92654A2 /* PontNatifPlugin.swift in Sources */ = {isa = PBXBuildFile; fileRef = 120C12FA2454C551249BC438 /* PontNatifPlugin.swift */; };
+		74D0F957F76671D0F013E4E1 /* DossiersDesignesRepository.swift in Sources */ = {isa = PBXBuildFile; fileRef = FF9DF23394DCAD8559477C0E /* DossiersDesignesRepository.swift */; };
+		DDE5D19B37686B4211F5FD9C /* DossiersPlugin.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4B161AE6F05DE4F9F6FF268A /* DossiersPlugin.swift */; };
+		A668D3E80F148CEC0367469A /* ControleSessionPlugin.swift in Sources */ = {isa = PBXBuildFile; fileRef = 131E2A1CDB5EF068167766D1 /* ControleSessionPlugin.swift */; };
+		910C73A629072A591561159C /* ConnecteursPlugin.swift in Sources */ = {isa = PBXBuildFile; fileRef = AB3A1D8ED39FE0F58949D10E /* ConnecteursPlugin.swift */; };
+		07D0CC68A988E3E7EE9B2029 /* NotificationsNatives.swift in Sources */ = {isa = PBXBuildFile; fileRef = DE8CABD7A6F406E8DA57BE55 /* NotificationsNatives.swift */; };
+		F300E113D36D717D2E4FFB1D /* RappelsNatifs.swift in Sources */ = {isa = PBXBuildFile; fileRef = 86EFCD2B90BCE9F47626E222 /* RappelsNatifs.swift */; };
+		2016C3A9712C6006B93E7CDB /* NotificationsPlugin.swift in Sources */ = {isa = PBXBuildFile; fileRef = F7AE67314A2AE92530608AD9 /* NotificationsPlugin.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -30,6 +41,18 @@
 		50B271D01FEDC1A000F3C39B /* public */ = {isa = PBXFileReference; lastKnownFileType = folder; path = public; sourceTree = "<group>"; };
 		9582B6822FE993A50072D4E8 /* SceneDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SceneDelegate.swift; sourceTree = "<group>"; };
 		958DCC722DB07C7200EA8C5F /* debug.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; name = debug.xcconfig; path = ../debug.xcconfig; sourceTree = SOURCE_ROOT; };
+		482ECF0F8C6569441BA547DF /* StockageToken.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StockageToken.swift; sourceTree = "<group>"; };
+		E100D37070CDF015C637941C /* ClovisApiClient.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ClovisApiClient.swift; sourceTree = "<group>"; };
+		0F72E003E059976E118B1E80 /* ActionsAppareilExecuteur.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ActionsAppareilExecuteur.swift; sourceTree = "<group>"; };
+		120C12FA2454C551249BC438 /* PontNatifPlugin.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PontNatifPlugin.swift; sourceTree = "<group>"; };
+		FF9DF23394DCAD8559477C0E /* DossiersDesignesRepository.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DossiersDesignesRepository.swift; sourceTree = "<group>"; };
+		4B161AE6F05DE4F9F6FF268A /* DossiersPlugin.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DossiersPlugin.swift; sourceTree = "<group>"; };
+		131E2A1CDB5EF068167766D1 /* ControleSessionPlugin.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ControleSessionPlugin.swift; sourceTree = "<group>"; };
+		AB3A1D8ED39FE0F58949D10E /* ConnecteursPlugin.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ConnecteursPlugin.swift; sourceTree = "<group>"; };
+		DE8CABD7A6F406E8DA57BE55 /* NotificationsNatives.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NotificationsNatives.swift; sourceTree = "<group>"; };
+		86EFCD2B90BCE9F47626E222 /* RappelsNatifs.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RappelsNatifs.swift; sourceTree = "<group>"; };
+		F7AE67314A2AE92530608AD9 /* NotificationsPlugin.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NotificationsPlugin.swift; sourceTree = "<group>"; };
+		C40606A39CCBAFA8EEA342D9 /* App.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = App.entitlements; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -73,8 +96,60 @@
 				504EC3131FED79650016851F /* Info.plist */,
 				2FAD9762203C412B000D30F8 /* config.xml */,
 				50B271D01FEDC1A000F3C39B /* public */,
+				C40606A39CCBAFA8EEA342D9 /* App.entitlements */,
+				063F4F6007F19936F697153B /* pont */,
+				097A8281369B0788AC32EAC3 /* dossiers */,
+				AE82B816B4B56A2ECE8C9877 /* controlesession */,
+				E38830A906DCE0661A38663B /* connecteurs */,
+				C2121E03D8790B0C74E9CCEF /* notifications */,
 			);
 			path = App;
+			sourceTree = "<group>";
+		};
+		063F4F6007F19936F697153B /* pont */ = {
+			isa = PBXGroup;
+			children = (
+				482ECF0F8C6569441BA547DF /* StockageToken.swift */,
+				E100D37070CDF015C637941C /* ClovisApiClient.swift */,
+				0F72E003E059976E118B1E80 /* ActionsAppareilExecuteur.swift */,
+				120C12FA2454C551249BC438 /* PontNatifPlugin.swift */,
+			);
+			path = pont;
+			sourceTree = "<group>";
+		};
+		097A8281369B0788AC32EAC3 /* dossiers */ = {
+			isa = PBXGroup;
+			children = (
+				FF9DF23394DCAD8559477C0E /* DossiersDesignesRepository.swift */,
+				4B161AE6F05DE4F9F6FF268A /* DossiersPlugin.swift */,
+			);
+			path = dossiers;
+			sourceTree = "<group>";
+		};
+		AE82B816B4B56A2ECE8C9877 /* controlesession */ = {
+			isa = PBXGroup;
+			children = (
+				131E2A1CDB5EF068167766D1 /* ControleSessionPlugin.swift */,
+			);
+			path = controlesession;
+			sourceTree = "<group>";
+		};
+		E38830A906DCE0661A38663B /* connecteurs */ = {
+			isa = PBXGroup;
+			children = (
+				AB3A1D8ED39FE0F58949D10E /* ConnecteursPlugin.swift */,
+			);
+			path = connecteurs;
+			sourceTree = "<group>";
+		};
+		C2121E03D8790B0C74E9CCEF /* notifications */ = {
+			isa = PBXGroup;
+			children = (
+				DE8CABD7A6F406E8DA57BE55 /* NotificationsNatives.swift */,
+				86EFCD2B90BCE9F47626E222 /* RappelsNatifs.swift */,
+				F7AE67314A2AE92530608AD9 /* NotificationsPlugin.swift */,
+			);
+			path = notifications;
 			sourceTree = "<group>";
 		};
 /* End PBXGroup section */
@@ -160,6 +235,17 @@
 			files = (
 				504EC3081FED79650016851F /* AppDelegate.swift in Sources */,
 				9582B6832FE993A70072D4E8 /* SceneDelegate.swift in Sources */,
+				71DE86D72BA5D0844B37F5C4 /* StockageToken.swift in Sources */,
+				5AF0B6E772A9DA52EEA294EC /* ClovisApiClient.swift in Sources */,
+				0F9A61F09285450368D690A4 /* ActionsAppareilExecuteur.swift in Sources */,
+				26883A398AC42B04A92654A2 /* PontNatifPlugin.swift in Sources */,
+				74D0F957F76671D0F013E4E1 /* DossiersDesignesRepository.swift in Sources */,
+				DDE5D19B37686B4211F5FD9C /* DossiersPlugin.swift in Sources */,
+				A668D3E80F148CEC0367469A /* ControleSessionPlugin.swift in Sources */,
+				910C73A629072A591561159C /* ConnecteursPlugin.swift in Sources */,
+				07D0CC68A988E3E7EE9B2029 /* NotificationsNatives.swift in Sources */,
+				F300E113D36D717D2E4FFB1D /* RappelsNatifs.swift in Sources */,
+				2016C3A9712C6006B93E7CDB /* NotificationsPlugin.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -301,6 +387,7 @@
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
+				CODE_SIGN_ENTITLEMENTS = App/App.entitlements;
 				INFOPLIST_FILE = App/Info.plist;
 				IPHONEOS_DEPLOYMENT_TARGET = 15.0;
 				LD_RUNPATH_SEARCH_PATHS = (
@@ -323,6 +410,7 @@
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
+				CODE_SIGN_ENTITLEMENTS = App/App.entitlements;
 				INFOPLIST_FILE = App/Info.plist;
 				IPHONEOS_DEPLOYMENT_TARGET = 15.0;
 				LD_RUNPATH_SEARCH_PATHS = (

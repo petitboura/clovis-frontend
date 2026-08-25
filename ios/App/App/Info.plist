@@ -66,5 +66,22 @@
 	</array>
 	<key>UIViewControllerBasedStatusBarAppearance</key>
 	<true/>
+	<!-- Lot 3B (25/08/2026), porte depuis clovis-mobile/ios-legacy-natif/ClovisMobile/Info.plist :
+	     exigee des qu'EventKit/EventKitUI est lie au projet (NotificationsPlugin.swift),
+	     meme si EKEventEditViewController gere lui-meme sa propre demande d'autorisation. -->
+	<key>NSCalendarsUsageDescription</key>
+	<string>Clovis peut t'aider à ajouter des événements à ton calendrier quand tu le lui demandes.</string>
+	<!-- Reveil en arriere-plan pour la reception push APNs (voir AppDelegate.swift). -->
+	<key>UIBackgroundModes</key>
+	<array>
+		<string>remote-notification</string>
+	</array>
+	<!-- Schemas d'URL d'apps tierces que Clovis doit pouvoir ouvrir (voir
+	     RappelsNatifs.ouvrirApp). VIDE pour l'instant, meme etat que cote
+	     clovis-mobile : a completer schema par schema le jour ou Bourama
+	     fournit une liste d'apps a supporter. -->
+	<key>LSApplicationQueriesSchemes</key>
+	<array>
+	</array>
 </dict>
 </plist>

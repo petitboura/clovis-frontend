@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <!--
+        Porte le 25/08/2026 depuis clovis-mobile/ios-legacy-natif/ClovisMobile.entitlements
+        (Lot 3) : necessaire pour qu'APNs accepte d'enregistrer l'app
+        (AppDelegate.swift, didRegisterForRemoteNotificationsWithDeviceToken).
+        A cocher aussi depuis Xcode (Signing and Capabilities > + Push
+        Notifications), qui gere le profil de provisionnement associe :
+        necessite un compte Apple Developer Program actif. "development"
+        ici ; Xcode bascule sur "production" a l'archivage pour l'App Store.
+
+        Entitlement Family Controls (Screen Time) volontairement PAS repris
+        ici : hors perimetre du Lot 3B (dossiers/notifications/session/
+        connecteurs/accessibilite/mise a jour), concerne le Lot 1 (usage),
+        deja documente comme non porte cote iOS, voir README.md legacy.
+    -->
+    <key>aps-environment</key>
+    <string>development</string>
+</dict>
+</plist>

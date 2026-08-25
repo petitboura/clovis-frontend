@@ -71,7 +71,7 @@
     <uses-permission android:name="android.permission.INTERNET" />
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
     <!-- Lot 4 (porte 25/08/2026) : DND + volume sonnerie/notifications pendant
-         une session -- permission speciale, pas de popup standard, redirection
+         une session : permission speciale, pas de popup standard, redirection
          vers Reglages geree par ControleSessionRepository.kt. -->
     <uses-permission android:name="android.permission.ACCESS_NOTIFICATION_POLICY" />
 </manifest>
