@@ -264,3 +264,52 @@ select:focus-visible {
    prefers-reduced-motion existant plus haut couvre déjà globalement les
    nouveaux keyframes cgpt-* (animation-duration devient quasi nulle),
    pas besoin d'un second bloc redondant ici. */
+
+/* Écran d'ouverture (25/08, voir components/SplashOuverture.tsx). Ces
+   keyframes sont écrits ici en CSS brut plutôt que dans
+   tailwind.config.ts : elles sont référencées via la syntaxe Tailwind
+   "animate-[nomDuKeyframe_durée_...]" (valeur arbitraire), qui a besoin
+   que le @keyframes existe quelque part dans la feuille de style compilée
+   -- pas de garantie que Tailwind générerait un @keyframes du thème pour
+   un nom qui n'est jamais utilisé via un utilitaire "animate-*" nommé
+   classique. Le bloc prefers-reduced-motion tout en haut de ce fichier
+   couvre déjà ces animations (durée quasi nulle), pas besoin d'un
+   traitement séparé ici.
+   #clovis-splash.clovis-splash-sortie : classe ajoutée par le script
+   inline dans app/layout.tsx quand l'appli signale qu'elle est prête (ou
+   au bout de 4s en filet de sécurité) -- fondu de sortie avant retrait du
+   DOM. */
+#clovis-splash {
+  transition: opacity 0.5s ease;
+}
+#clovis-splash.clovis-splash-sortie {
+  opacity: 0;
+  pointer-events: none;
+}
+@keyframes cv-trait {
+  to {
+    stroke-dashoffset: 0;
+  }
+}
+@keyframes cv-remplir {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+@keyframes cv-goutte {
+  0% {
+    opacity: 0;
+    transform: scale(0);
+  }
+  60% {
+    opacity: 1;
+    transform: scale(1.3);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+}

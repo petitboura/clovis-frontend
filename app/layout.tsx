@@ -10,6 +10,8 @@ import "katex/dist/katex.min.css";
 import "mathlive/fonts.css";
 import { ServiceWorkerRegistration } from "@/components/ServiceWorkerRegistration";
 import { ReveilBackend } from "@/components/ReveilBackend";
+import { SplashOuverture } from "@/components/SplashOuverture";
+import { SplashPret } from "@/components/SplashPret";
 
 // CORRECTIF (17/08) -- Bourama a demandé de sortir de la charte
 // Djiguignè (jugée trop générique "IA" -- palette + paire de polices
@@ -135,9 +137,26 @@ export default function RacineLayout({
         />
       </head>
       <body className="min-h-screen bg-dj-fond font-sans text-dj-texte antialiased">
+        {/* Écran d'ouverture (25/08, demande Bourama) -- voir
+            SplashOuverture.tsx pour le pourquoi du composant serveur.
+            Le script qui suit fait disparaître #clovis-splash quand
+            l'app signale qu'elle est prête (événement "clovis:pret",
+            déclenché par SplashPret.tsx plus bas une fois React monté),
+            ou au bout de 4s en filet de sécurité si ce signal tarde
+            (connexion lente) -- ne doit jamais bloquer indéfiniment
+            l'accès à l'appli (standards-dev #9). Doit rester APRÈS le
+            <div id="clovis-splash"> dans le HTML pour le trouver dans
+            le DOM au moment où il s'exécute. */}
+        <SplashOuverture />
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `(function(){try{var el=document.getElementById("clovis-splash");if(!el)return;var parti=false;function partir(){if(parti)return;parti=true;el.classList.add("clovis-splash-sortie");el.addEventListener("transitionend",function(){if(el.parentNode)el.parentNode.removeChild(el);},{once:true});}document.addEventListener("clovis:pret",partir,{once:true});setTimeout(partir,4000);}catch(e){}})();`,
+          }}
+        />
         <ServiceWorkerRegistration />
         <ReveilBackend />
         {children}
+        <SplashPret />
       </body>
     </html>
   );
