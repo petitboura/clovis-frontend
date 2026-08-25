@@ -1,5 +1,8 @@
 node_modules
 .next
+# Export statique (branche capacitor-export, Lot 3A mobile) : genere a
+# chaque build, ne doit jamais etre committe.
+out
 .env.local
 .env*.local
 *.log
