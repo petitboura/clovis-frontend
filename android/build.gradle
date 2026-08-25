@@ -5,6 +5,10 @@ buildscript {
     repositories {
         google()
         mavenCentral()
+        // Ajoute le 25/08/2026, Bourama : Lot 3B, necessaire pour resoudre
+        // le plugin compose ci-dessous (publie uniquement sur le Gradle
+        // Plugin Portal, pas sur google()/mavenCentral()).
+        gradlePluginPortal()
     }
     dependencies {
         classpath 'com.android.tools.build:gradle:8.13.0'
@@ -16,6 +20,14 @@ buildscript {
         // rester alignes si les deux projets doivent un jour repartager du
         // code source.
         classpath 'org.jetbrains.kotlin:kotlin-gradle-plugin:2.4.0'
+        // Ajoute le 25/08/2026, Bourama : ces deux plugins sont appliques
+        // dans app/build.gradle (apply plugin: '...') mais leur classpath
+        // n'avait jamais ete declare ici, ce qui faisait echouer le sync
+        // ("Plugin with id 'org.jetbrains.kotlin.plugin.compose' not
+        // found"). Coordonnees confirmees sur plugins.gradle.org, memes
+        // versions (2.4.0) que les autres plugins Kotlin de ce fichier.
+        classpath 'org.jetbrains.kotlin.plugin.compose:org.jetbrains.kotlin.plugin.compose.gradle.plugin:2.4.0'
+        classpath 'org.jetbrains.kotlin:kotlin-serialization:2.4.0'
 
         // NOTE: Do not place your application dependencies here; they belong
         // in the individual module build.gradle files
