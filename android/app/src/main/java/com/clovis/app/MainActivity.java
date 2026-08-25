@@ -2,6 +2,7 @@ package com.clovis.app;
 
 import android.os.Bundle;
 import com.clovis.app.pont.PontNatifPlugin;
+import com.clovis.app.dossiers.DossiersPlugin;
 import com.getcapacitor.BridgeActivity;
 
 // Modifie le 25/08/2026, Bourama : Lot 3B (fusion Capacitor). registerPlugin
@@ -12,6 +13,7 @@ public class MainActivity extends BridgeActivity {
     @Override
     public void onCreate(Bundle savedInstanceState) {
         registerPlugin(PontNatifPlugin.class);
+        registerPlugin(DossiersPlugin.class);
         super.onCreate(savedInstanceState);
     }
 }

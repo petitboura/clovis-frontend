@@ -128,6 +128,11 @@ dependencies {
     implementation platform("androidx.compose:compose-bom:2026.06.01")
     implementation "androidx.compose.ui:ui"
     implementation "androidx.compose.material3:material3"
+
+    // dossiers/DossiersDesignesRepository.kt : SAF (Storage Access Framework),
+    // Lot 2 porte le 25/08/2026. Meme version exacte que
+    // clovis-mobile/android-legacy-natif/app/build.gradle.kts.
+    implementation "androidx.documentfile:documentfile:1.0.1"
 }
 
 apply from: 'capacitor.build.gradle'
