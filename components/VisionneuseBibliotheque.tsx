@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { X, Download, ExternalLink, Loader2, File as IconFichier, Copy, Check } from "lucide-react";
+import { X, Download, ExternalLink, Loader2, File as IconFichier, Copy, Check, FolderOpen } from "lucide-react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import { LinkPreview } from "./chat/LinkPreview";
@@ -285,9 +285,15 @@ function ContenuNonPrevisualisable({ href, nom }: { href: string; nom: string })
 export function VisionneuseBibliotheque({
   fichier,
   onFermer,
+  onRanger,
 }: {
   fichier: FichierBiblio | null;
   onFermer: () => void;
+  // 25/08/2026, demande Bourama : "le bouton [ranger dans un dossier]
+  // aussi dans l'aperçu" -- optionnel, fourni seulement par
+  // EspaceBibliotheque.tsx (bibliothèque personnelle, seule à avoir des
+  // dossiers ; BibliothequePublique.tsx n'en passe pas).
+  onRanger?: () => void;
 }) {
   if (!fichier) return null;
 
@@ -315,6 +321,16 @@ export function VisionneuseBibliotheque({
         <div className="flex items-center justify-between gap-2 border-b border-dj-bordure px-4 py-3">
           <span className="min-w-0 truncate text-sm font-medium text-dj-texte">{titre}</span>
           <div className="flex shrink-0 items-center gap-1.5">
+            {onRanger && (
+              <button
+                onClick={onRanger}
+                aria-label="Ranger dans un dossier"
+                title="Ranger dans un dossier"
+                className="flex h-8 w-8 items-center justify-center rounded-cgpt-bouton text-dj-texte-muet transition-colors hover:text-dj-texte"
+              >
+                <FolderOpen size={16} />
+              </button>
+            )}
             {!estLien && (
               <button
                 onClick={() => telecharger(fichier.url_publique, fichier.nom_fichier)}

@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import {
   Link as IconLien,
   FileText,
+  Search,
   Paperclip,
   Image as IconImage,
   AudioLines as IconAudio,
@@ -123,6 +124,10 @@ export function EspaceBibliotheque() {
   // lieu d'un fichier, plusieurs dossiers.
   const [pickerFichiersOuvert, setPickerFichiersOuvert] = useState(false);
   const [uploadDansPickerEnCours, setUploadDansPickerEnCours] = useState(false);
+  // 25/08/2026, demande Bourama : "pour les fichiers existants recherche
+  // qui sait il peut en voir plusieurs" -- filtre simple par nom, la
+  // liste pouvant vite devenir longue au fur et à mesure des uploads.
+  const [rechercheFichiersExistants, setRechercheFichiersExistants] = useState("");
 
   useEffect(() => {
     chargerFichiers();
@@ -657,7 +662,16 @@ async function ajouter() {
         </div>
       )}
 
-      <VisionneuseBibliotheque fichier={fichierOuvert} onFermer={() => setFichierOuvert(null)} />
+      <VisionneuseBibliotheque
+        fichier={fichierOuvert}
+        onFermer={() => setFichierOuvert(null)}
+        onRanger={() => {
+          if (fichierOuvert) {
+            setFichierARanger(fichierOuvert);
+            setFichierOuvert(null); // ferme l'aperçu (z-index sous la modale ranger sinon)
+          }
+        }}
+      />
 
       {/* 25/08/2026, demande Bourama : picker inverse de la modale
           "ranger" ci-dessus -- ici on choisit, DEPUIS un dossier ouvert,
@@ -713,11 +727,24 @@ async function ajouter() {
               ou choisir un fichier existant
               <div className="h-px flex-1 bg-dj-bordure" />
             </div>
+            <div className="relative">
+              <Search size={14} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-dj-texte-muet" />
+              <input
+                value={rechercheFichiersExistants}
+                onChange={(e) => setRechercheFichiersExistants(e.target.value)}
+                placeholder="Rechercher un fichier..."
+                className="w-full rounded-cgpt-bouton border border-dj-bordure bg-dj-fond py-1.5 pl-8 pr-3 text-sm text-dj-texte outline-none focus:border-dj-bordure-forte"
+              />
+            </div>
             {(fichiers ?? []).length === 0 && (
               <p className="text-xs text-dj-texte-muet">Aucun fichier dans ta bibliothèque pour l&apos;instant.</p>
             )}
             <div className="flex max-h-72 flex-col gap-1 overflow-y-auto">
-              {(fichiers ?? []).map((f) => {
+              {(fichiers ?? [])
+                .filter((f) =>
+                  (f.description || f.nom_fichier).toLowerCase().includes(rechercheFichiersExistants.trim().toLowerCase())
+                )
+                .map((f) => {
                 const dossierActuel = (dossiers ?? []).find((d) => d.id === dossierCourantId);
                 const dejaDedans = dossierActuel?.fichier_ids.includes(f.id) ?? false;
                 return (
