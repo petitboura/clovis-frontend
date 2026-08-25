@@ -1,8 +1,8 @@
 // Cree le 25/08/2026, Bourama : Lot 3B Partie 3 mobile (fusion Capacitor).
 // Porte depuis clovis-mobile/android/.../data/ClovisApiClient.kt (Lot 1,
-// etendu Lot 1A/3/5) -- MEME BASE_URL, meme contrat de routes cote
+// etendu Lot 1A/3/5) : MEME BASE_URL, meme contrat de routes cote
 // clovis-backend, seule la source du token change (StockageToken, pas
-// SupabaseAuthClient natif -- voir ce fichier pour le pourquoi).
+// SupabaseAuthClient natif ; voir ce fichier pour le pourquoi).
 package com.clovis.app.pont
 
 import android.content.Context

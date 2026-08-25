@@ -2,7 +2,7 @@
 //
 // Choix d'architecture : contrairement au socle natif clovis-mobile (qui
 // avait sa PROPRE auth Supabase native, voir SupabaseAuthClient.kt), ce
-// plugin n'authentifie plus rien lui-meme -- l'utilisateur est deja
+// plugin n'authentifie plus rien lui-meme ; l'utilisateur est deja
 // connecte cote WEB (clovis-frontend, dans la WebView Capacitor, via le
 // SDK Supabase JS existant). Dupliquer une deuxieme session native aurait
 // recree exactement le probleme de compte separe deja rencontre
@@ -10,7 +10,7 @@
 //
 // Le pont recoit donc le token d'acces directement du JS (voir
 // PontNatifPlugin.enregistrerToken, appele par clovis-frontend apres
-// connexion/rafraichissement Supabase) et le garde en local chiffre --
+// connexion/rafraichissement Supabase) et le garde en local chiffre,
 // necessaire pour que le service FCM puisse appeler clovis-backend meme
 // quand l'app est reveillee en tache de fond, WebView fermee.
 package com.clovis.app.pont

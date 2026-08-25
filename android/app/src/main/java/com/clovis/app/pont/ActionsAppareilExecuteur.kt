@@ -1,7 +1,7 @@
 // Cree le 24/08/2026 (Lot 1B, clovis-mobile), porte tel quel le 25/08/2026
 // dans le plugin Capacitor (Lot 3B). Voir clovis-backend/core/actions_appareil_mobile.py
 // pour ce qui n'est PAS encore branche (aucun type_action reel emis par
-// l'agent -- ce fichier reste le point d'extension unique, inchange).
+// l'agent ; ce fichier reste le point d'extension unique, inchange).
 package com.clovis.app.pont
 
 import android.content.Context

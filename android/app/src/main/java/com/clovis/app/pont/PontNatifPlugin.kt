@@ -4,8 +4,8 @@
 //   import { registerPlugin } from '@capacitor/core';
 //   const PontNatif = registerPlugin<any>('PontNatif');
 //   await PontNatif.enregistrerToken({ token: session.access_token });
-// -- une fois apres connexion Supabase ET a chaque rafraichissement de
-// token (onAuthStateChange), pour que StockageToken reste a jour et que
+// A appeler une fois apres connexion Supabase ET a chaque rafraichissement
+// de token (onAuthStateChange), pour que StockageToken reste a jour et que
 // le service FCM puisse appeler clovis-backend meme WebView fermee.
 package com.clovis.app.pont
 

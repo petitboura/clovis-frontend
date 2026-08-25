@@ -1,5 +1,5 @@
 // Cree le 23/08/2026 (Lot 3, clovis-mobile), porte tel quel le 25/08/2026
-// dans le plugin Capacitor (Lot 3B) -- meme mecanique, memes placeholders
+// dans le plugin Capacitor (Lot 3B), meme mecanique, memes placeholders
 // tant que Bourama n'a pas cree le projet Firebase (voir TODO ci-dessous,
 // inchange par rapport a clovis-mobile).
 package com.clovis.app.notifications

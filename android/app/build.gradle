@@ -1,5 +1,5 @@
 apply plugin: 'com.android.application'
-// Ajoute le 25/08/2026, Bourama : Lot 3B (fusion Capacitor) -- voir
+// Ajoute le 25/08/2026, Bourama : Lot 3B (fusion Capacitor), voir
 // android/build.gradle pour le classpath correspondant.
 apply plugin: 'org.jetbrains.kotlin.android'
 apply plugin: 'org.jetbrains.kotlin.plugin.compose'
@@ -50,7 +50,7 @@ dependencies {
     androidTestImplementation "androidx.test.espresso:espresso-core:$androidxEspressoCoreVersion"
     implementation project(':capacitor-cordova-android-plugins')
 
-    // --- Ajoute le 25/08/2026, Bourama : Lot 3B (fusion Capacitor) ---
+    // Ajoute le 25/08/2026, Bourama : Lot 3B (fusion Capacitor).
     // Migre depuis clovis-mobile/android/app/build.gradle.kts, memes
     // versions exactes (deja verifiees/corrigees la-bas les 23-24/08).
 
@@ -64,7 +64,7 @@ dependencies {
     implementation "androidx.security:security-crypto:1.1.0"
 
     // notifications/*.kt : FCM (cles Firebase pas encore configurees,
-    // voir ClovisFirebaseApp.kt -- ne bloque pas la compilation).
+    // voir ClovisFirebaseApp.kt ; ne bloque pas la compilation).
     implementation "com.google.firebase:firebase-messaging:25.1.2"
     implementation "org.jetbrains.kotlinx:kotlinx-coroutines-play-services:1.8.1"
 

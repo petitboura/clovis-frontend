@@ -9,8 +9,8 @@ buildscript {
     dependencies {
         classpath 'com.android.tools.build:gradle:8.13.0'
         classpath 'com.google.gms:google-services:4.4.4'
-        // Ajoute le 25/08/2026, Bourama : Lot 3B (fusion Capacitor) --
-        // le template Capacitor par defaut est pur Java, tout le code migre
+        // Ajoute le 25/08/2026, Bourama : Lot 3B (fusion Capacitor).
+        // Le template Capacitor par defaut est pur Java, tout le code migre
         // depuis clovis-mobile (pont, notifications) est en Kotlin. Meme
         // version 2.4.0 que clovis-mobile/android/build.gradle.kts, pour
         // rester alignes si les deux projets doivent un jour repartager du

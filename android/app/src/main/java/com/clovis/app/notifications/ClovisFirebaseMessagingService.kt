@@ -1,5 +1,5 @@
 // Cree le 23/08/2026 (Lot 3, clovis-mobile), etendu 24/08 (Lot 1A/1B),
-// porte le 25/08/2026 dans le plugin Capacitor (Lot 3B) -- meme logique,
+// porte le 25/08/2026 dans le plugin Capacitor (Lot 3B), meme logique,
 // seul le package du dispatcher change (com.clovis.app.pont au lieu de
 // com.clovis.app.data).
 package com.clovis.app.notifications

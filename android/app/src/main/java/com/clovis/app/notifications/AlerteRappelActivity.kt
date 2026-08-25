@@ -3,7 +3,7 @@
 //
 // ADAPTE (pas identique) : l'original utilise ClovisTheme (theme Compose
 // "Nuit d'etude" custom du depot clovis-mobile). Ce theme n'existe pas
-// encore dans ce nouveau projet Capacitor -- le porter proprement (couleurs,
+// encore dans ce nouveau projet Capacitor ; le porter proprement (couleurs,
 // typographie Space Grotesk/Work Sans) est un travail a part, volontairement
 // pas devine/reconstruit a la va-vite ici. Repli sur MaterialTheme() par
 // defaut : fonctionnel, mais pas encore l'identite visuelle Clovis. A

@@ -17,7 +17,7 @@ object NotificationsNatives {
 
     /**
      * true si Android autorise reellement l'alerte plein ecran pour Clovis
-     * (API 34+ seulement -- avant cette API, la permission etait accordee
+     * (API 34+ seulement ; avant cette API, la permission etait accordee
      * d'office a l'installation, pas de verification possible autrement
      * qu'en essayant). Voir CanalNotifications.kt pour le contexte complet.
      */
@@ -39,7 +39,7 @@ object NotificationsNatives {
      * `prioritaire` correspond a l'alerte plein ecran demandee par
      * 03-notifications-rappels.md. Si Android ne l'autorise pas
      * effectivement (voir pleinEcranAutorise), repli automatique sur une
-     * notification heads-up classique -- jamais d'echec silencieux total.
+     * notification heads-up classique ; jamais d'echec silencieux total.
      */
     fun afficherRappel(context: Context, titre: String, corps: String, prioritaire: Boolean = false) {
         if (!permissionNotificationsAccordee(context)) return
