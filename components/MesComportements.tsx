@@ -1,9 +1,9 @@
 "use client";
 
-import { useEffect, useState, type MouseEvent } from "react";
+import { useEffect, useState, useRef, type MouseEvent } from "react";
 import {
   Trash2, Plus, X, Check, ScrollText, FileCode2, Loader2, Link2, Unlink, Eye, Code2, Upload, ToggleLeft, ToggleRight,
-  Download, ClipboardCheck, Sparkles, ChevronDown, ChevronRight,
+  Download, ClipboardCheck, Sparkles, ChevronDown, ChevronRight, FileUp,
 } from "lucide-react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
@@ -11,6 +11,7 @@ import rehypeSanitize, { defaultSchema } from "rehype-sanitize";
 import {
   lireMesComportements,
   ajouterComportement,
+  importerComportementDepuisFichier,
   modifierComportement,
   attacherComportement,
   supprimerComportement,
@@ -23,6 +24,7 @@ import {
 import { ecouterDonneesModifiees } from "@/lib/evenementsDonnees";
 import { messageErreur, ErreurApi } from "@/lib/erreurs";
 import { useFermetureAnimee } from "@/lib/useFermetureAnimee";
+import { telechargerTexte, nomFichierDepuis } from "@/lib/telechargerTexte";
 import { CTACompteRequis } from "@/components/CTACompteRequis";
 import { ComportementsRecus } from "@/components/ComportementsRecus";
 import { ComportementsPublics } from "@/components/ComportementsPublics";
@@ -241,6 +243,18 @@ export function MesComportements({ agentId }: { agentId: string }) {
   // aussi, depuis ce même panneau).
   const [detachementEnCours, setDetachementEnCours] = useState(false);
 
+  // 25/08/2026, demande Bourama ("on peut y téléverser comme ici dans la
+  // bibliothèque") : import direct d'un fichier .md dans "Mes
+  // comportements", gardé tel quel (pas de régénération IA, voir
+  // importerComportementDepuisFichier). Uniquement disponible à la
+  // CRÉATION (importer un skill déjà rédigé n'a pas de sens en édition,
+  // où il faudrait remplacer texte ET skill d'un coup -- l'édition
+  // directe du skill existant, onglet "Voir le skill généré", couvre
+  // déjà ce besoin).
+  const [importEnCours, setImportEnCours] = useState(false);
+  const [erreurImport, setErreurImport] = useState<string | null>(null);
+  const inputImportRef = useRef<HTMLInputElement>(null);
+
   // 18/08/2026, voir lib/useFermetureAnimee.ts : anime la fermeture du
   // panneau au lieu de le démonter d'un coup.
   const { enSortie, demarrerFermeture } = useFermetureAnimee();
@@ -347,6 +361,40 @@ export function MesComportements({ agentId }: { agentId: string }) {
 
   function fermer() {
     setPanneau(null);
+  }
+
+  // 25/08/2026, demande Bourama : import direct d'un .md à la création,
+  // gardé tel quel côté backend (importer_comportement_depuis_skill_md,
+  // pas de passage par _generer_skill). Le nom pré-rempli suit la même
+  // logique que choisirFichier dans BibliothequePublique.tsx (nom du
+  // fichier sans extension, modifiable par le champ Nom existant si
+  // nomAuto est décoché).
+  async function importerFichier(f: File) {
+    if (!panneau || panneau.type !== "creation") return;
+    setImportEnCours(true);
+    setErreurImport(null);
+    const nomDepuisFichier = f.name.replace(/\.md$/i, "");
+    try {
+      const cree = await importerComportementDepuisFichier(agentId, f, nomAuto ? nomDepuisFichier : nomOuvert.trim() || nomDepuisFichier);
+      setListe((prec) => [...(prec || []), cree]);
+      demarrerFermeture(fermer);
+    } catch (e) {
+      if (e instanceof ErreurApi && e.statusCode === 401) {
+        setSansCompte(true);
+      } else {
+        setErreurImport(messageErreur(e));
+      }
+    } finally {
+      setImportEnCours(false);
+    }
+  }
+
+  // 25/08/2026, demande Bourama ("les skills soient téléchargeables en
+  // fichier MD") : contenu déjà en mémoire (skillOuvert, chargé via
+  // chargerSkill/ouvrirOngletSkill), aucun appel réseau nécessaire.
+  function telechargerSkillActuel() {
+    if (!panneau || panneau.type !== "edition" || !skillOuvert) return;
+    telechargerTexte(nomFichierDepuis(panneau.c.nom || "skill", "md"), skillOuvert);
   }
 
   async function detacher() {
@@ -711,6 +759,28 @@ export function MesComportements({ agentId }: { agentId: string }) {
                 </p>
               )}
 
+              {panneau.type === "creation" && (
+                <div className="mb-3 flex items-center justify-between gap-2 rounded-lg border border-dashed border-dj-bordure px-3 py-2">
+                  <span className="text-xs text-dj-texte-muet">Déjà un skill rédigé ? Importe-le tel quel.</span>
+                  <input
+                    ref={inputImportRef}
+                    type="file"
+                    accept=".md"
+                    className="hidden"
+                    onChange={(e) => e.target.files?.[0] && importerFichier(e.target.files[0])}
+                  />
+                  <button
+                    onClick={() => inputImportRef.current?.click()}
+                    disabled={importEnCours}
+                    className="flex flex-shrink-0 items-center gap-1.5 rounded-lg border border-dj-bordure px-2.5 py-1.5 text-xs text-dj-texte transition-colors hover:border-dj-bordure-forte disabled:opacity-50"
+                  >
+                    {importEnCours ? <Loader2 size={13} className="animate-spin" /> : <FileUp size={13} />}
+                    {importEnCours ? "Import…" : "Uploader un .md"}
+                  </button>
+                </div>
+              )}
+              {erreurImport && <p className="pb-3 text-xs text-[var(--dj-erreur)]">{erreurImport}</p>}
+
               <textarea
                 autoFocus
                 value={texteOuvert}
@@ -811,6 +881,14 @@ export function MesComportements({ agentId }: { agentId: string }) {
                   <span className="hidden sm:block" />
                 )}
                 <div className="flex flex-wrap items-center gap-2">
+                  <button
+                    onClick={telechargerSkillActuel}
+                    disabled={skillChargement || !skillOuvert.trim()}
+                    title="Télécharger ce skill en .md"
+                    className="flex items-center gap-1.5 rounded-lg border border-dj-bordure px-3 py-2 text-sm text-dj-texte-muet transition-colors hover:border-dj-bordure-forte hover:text-dj-texte disabled:opacity-50"
+                  >
+                    <Download size={14} /> Télécharger
+                  </button>
                   <button
                     onClick={publier}
                     disabled={publicationEnCours || skillEnregistrementEnCours || skillChargement}

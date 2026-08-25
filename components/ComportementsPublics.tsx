@@ -1,10 +1,16 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { Search, ScrollText, Download, Check } from "lucide-react";
-import { rechercherComportementsPublics, activerComportementPublic, type ComportementPublic } from "@/lib/api";
+import { useEffect, useRef, useState } from "react";
+import { Search, ScrollText, Download, Check, Upload, Plus, Loader2 } from "lucide-react";
+import {
+  rechercherComportementsPublics,
+  activerComportementPublic,
+  uploaderSkillPublic,
+  type ComportementPublic,
+} from "@/lib/api";
 import { messageErreur, ErreurApi } from "@/lib/erreurs";
 import { CTACompteRequis } from "@/components/CTACompteRequis";
+import { telechargerTexte, nomFichierDepuis } from "@/lib/telechargerTexte";
 import { Skeleton } from "./Skeleton";
 
 // Catalogue public des comportements (21/08/2026, demande Bourama : "les
@@ -20,6 +26,13 @@ export function ComportementsPublics({ onActive }: { onActive: () => void }) {
   const [actives, setActives] = useState<Set<string>>(new Set());
   const [sansCompte, setSansCompte] = useState(false);
   const [erreur, setErreur] = useState<string | null>(null);
+  const [formulaireOuvert, setFormulaireOuvert] = useState(false);
+  const [fichierUpload, setFichierUpload] = useState<File | null>(null);
+  const [nomUpload, setNomUpload] = useState("");
+  const [descriptionUpload, setDescriptionUpload] = useState("");
+  const [envoiUpload, setEnvoiUpload] = useState(false);
+  const [erreurUpload, setErreurUpload] = useState<string | null>(null);
+  const inputFichierRef = useRef<HTMLInputElement>(null);
 
   function charger(q?: string) {
     rechercherComportementsPublics(q)
@@ -56,6 +69,44 @@ export function ComportementsPublics({ onActive }: { onActive: () => void }) {
     }
   }
 
+  // 25/08/2026, demande Bourama ("les skills soient téléchargeables en
+  // fichier MD") : le contenu est déjà en mémoire (skill_md dans la
+  // liste chargée), pas besoin d'appel réseau -- juste un Blob local.
+  function telechargerSkill(c: ComportementPublic) {
+    telechargerTexte(nomFichierDepuis(c.nom, "md"), c.skill_md);
+  }
+
+  function choisirFichierUpload(f: File) {
+    setFichierUpload(f);
+    if (!nomUpload.trim()) setNomUpload(f.name.replace(/\.md$/i, ""));
+  }
+
+  // 25/08/2026, demande Bourama ("on peut y téléverser... depuis la
+  // section skill publique") : uploadé ici, un skill est publié
+  // IMMÉDIATEMENT pour tout le monde (confirmé par Bourama), contrairement
+  // à "Mes comportements" où publier reste une action séparée.
+  async function uploaderSkill() {
+    if (!fichierUpload || !nomUpload.trim()) return;
+    setEnvoiUpload(true);
+    setErreurUpload(null);
+    try {
+      const cree = await uploaderSkillPublic(fichierUpload, nomUpload, descriptionUpload);
+      setListe((prec) => [cree, ...(prec || [])]);
+      setFichierUpload(null);
+      setNomUpload("");
+      setDescriptionUpload("");
+      setFormulaireOuvert(false);
+    } catch (e) {
+      if (e instanceof ErreurApi && e.statusCode === 401) {
+        setSansCompte(true);
+      } else {
+        setErreurUpload(messageErreur(e));
+      }
+    } finally {
+      setEnvoiUpload(false);
+    }
+  }
+
   if (sansCompte) {
     return <CTACompteRequis texte="Crée un compte pour activer un skill publié par la communauté." />;
   }
@@ -76,6 +127,65 @@ export function ComportementsPublics({ onActive }: { onActive: () => void }) {
           className="w-full rounded-cgpt-bouton border border-dj-bordure bg-dj-surface py-2 pl-9 pr-3 text-sm text-dj-texte outline-none focus:border-dj-bordure-forte"
         />
       </div>
+
+      {!formulaireOuvert ? (
+        <button
+          onClick={() => setFormulaireOuvert(true)}
+          className="flex items-center justify-center gap-2 rounded-cgpt-carte border border-dj-bordure bg-dj-surface px-4 py-3 text-sm font-semibold text-dj-texte transition-colors hover:border-dj-bordure-forte hover:bg-dj-surface-haute"
+        >
+          <Plus size={16} /> Uploader un skill (.md)
+        </button>
+      ) : (
+        <div className="flex flex-col gap-2 rounded-cgpt-carte border border-dj-bordure bg-dj-surface p-4">
+          <input
+            ref={inputFichierRef}
+            type="file"
+            accept=".md"
+            className="hidden"
+            onChange={(e) => e.target.files?.[0] && choisirFichierUpload(e.target.files[0])}
+          />
+          <button
+            onClick={() => inputFichierRef.current?.click()}
+            className="flex items-center gap-2 rounded-cgpt-bouton border border-dashed border-dj-bordure px-4 py-3 text-sm text-dj-texte-muet transition-colors hover:border-dj-bordure-forte hover:text-dj-texte"
+          >
+            <Upload size={15} />
+            {fichierUpload ? fichierUpload.name : "Choisir un fichier .md..."}
+          </button>
+          <input
+            value={nomUpload}
+            onChange={(e) => setNomUpload(e.target.value)}
+            placeholder="Nom du skill"
+            className="rounded-cgpt-bouton border border-dj-bordure bg-dj-fond px-4 py-2 text-sm text-dj-texte outline-none focus:border-dj-bordure-forte"
+          />
+          <textarea
+            value={descriptionUpload}
+            onChange={(e) => setDescriptionUpload(e.target.value)}
+            placeholder="Décris-le en quelques mots"
+            rows={3}
+            className="resize-none rounded-xl border border-dj-bordure bg-dj-fond px-4 py-2 text-sm text-dj-texte outline-none focus:border-dj-bordure-forte"
+          />
+          <p className="text-xs text-dj-texte-muet">Publié immédiatement, visible par tout le monde.</p>
+          {erreurUpload && <p className="text-xs text-[var(--dj-erreur)]">{erreurUpload}</p>}
+          <div className="flex justify-end gap-2 pt-1">
+            <button
+              onClick={() => {
+                setFormulaireOuvert(false);
+                setFichierUpload(null);
+              }}
+              className="rounded-cgpt-bouton border border-dj-bordure px-3 py-1.5 text-xs text-dj-texte-muet hover:text-dj-texte"
+            >
+              Annuler
+            </button>
+            <button
+              onClick={uploaderSkill}
+              disabled={!fichierUpload || !nomUpload.trim() || envoiUpload}
+              className="rounded-cgpt-bouton bg-dj-accent-1 px-4 py-1.5 text-xs font-bold text-[#1A0D02] transition-colors hover:bg-dj-accent-2 disabled:opacity-50"
+            >
+              {envoiUpload ? "Envoi…" : "Publier"}
+            </button>
+          </div>
+        </div>
+      )}
 
       {erreur && <p className="text-sm text-[var(--dj-erreur)]">{erreur}</p>}
 
@@ -121,9 +231,16 @@ export function ComportementsPublics({ onActive }: { onActive: () => void }) {
                     </>
                   ) : (
                     <>
-                      <Download size={13} /> {activationEnCours === c.id ? "Activation…" : "Activer"}
+                      <Plus size={13} /> {activationEnCours === c.id ? "Activation…" : "Activer"}
                     </>
                   )}
+                </button>
+                <button
+                  onClick={() => telechargerSkill(c)}
+                  title="Télécharger en .md"
+                  className="flex flex-shrink-0 items-center gap-1.5 rounded-cgpt-bouton border border-dj-bordure px-3 py-1.5 text-xs text-dj-texte-muet transition-colors hover:border-dj-bordure-forte hover:text-dj-texte"
+                >
+                  <Download size={13} />
                 </button>
               </div>
             );
