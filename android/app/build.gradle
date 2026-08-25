@@ -1,4 +1,9 @@
 apply plugin: 'com.android.application'
+// Ajoute le 25/08/2026, Bourama : Lot 3B (fusion Capacitor) -- voir
+// android/build.gradle pour le classpath correspondant.
+apply plugin: 'org.jetbrains.kotlin.android'
+apply plugin: 'org.jetbrains.kotlin.plugin.compose'
+apply plugin: 'org.jetbrains.kotlin.plugin.serialization'
 
 android {
     namespace = "com.clovis.app"
@@ -22,6 +27,10 @@ android {
             proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
         }
     }
+    // Ajoute le 25/08/2026 : requis par le plugin Compose (AlerteRappelActivity).
+    buildFeatures {
+        compose true
+    }
 }
 
 repositories {
@@ -40,6 +49,31 @@ dependencies {
     androidTestImplementation "androidx.test.ext:junit:$androidxJunitVersion"
     androidTestImplementation "androidx.test.espresso:espresso-core:$androidxEspressoCoreVersion"
     implementation project(':capacitor-cordova-android-plugins')
+
+    // --- Ajoute le 25/08/2026, Bourama : Lot 3B (fusion Capacitor) ---
+    // Migre depuis clovis-mobile/android/app/build.gradle.kts, memes
+    // versions exactes (deja verifiees/corrigees la-bas les 23-24/08).
+
+    // pont/ClovisApiClient.kt : client HTTP vers clovis-backend. Memes
+    // versions exactes que clovis-mobile/android/app/build.gradle.kts.
+    implementation "io.ktor:ktor-client-android:3.4.0"
+    implementation "io.ktor:ktor-client-content-negotiation:3.4.0"
+    implementation "io.ktor:ktor-serialization-kotlinx-json:3.4.0"
+
+    // pont/StockageToken.kt : stockage chiffre du token recu du JS.
+    implementation "androidx.security:security-crypto:1.1.0"
+
+    // notifications/*.kt : FCM (cles Firebase pas encore configurees,
+    // voir ClovisFirebaseApp.kt -- ne bloque pas la compilation).
+    implementation "com.google.firebase:firebase-messaging:25.1.2"
+    implementation "org.jetbrains.kotlinx:kotlinx-coroutines-play-services:1.8.1"
+
+    // notifications/AlerteRappelActivity.kt : ecran Compose plein ecran.
+    // Memes versions exactes que clovis-mobile/android/app/build.gradle.kts.
+    implementation "androidx.activity:activity-compose:1.12.1"
+    implementation platform("androidx.compose:compose-bom:2026.06.01")
+    implementation "androidx.compose.ui:ui"
+    implementation "androidx.compose.material3:material3"
 }
 
 apply from: 'capacitor.build.gradle'

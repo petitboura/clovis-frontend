@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    Cree le 23/08/2026, Lot 3. Android impose une icone de notification en
+    silhouette blanche/transparente uniquement (toute couleur est ignoree
+    et remplacee par une teinte systeme dans la barre de statut) : ne
+    JAMAIS reutiliser ic_launcher_foreground.xml ici (multicolore, rendu
+    incorrect). Meme forme simplifiee (anneau) que le logo provisoire, en
+    silhouette pleine cette fois.
+-->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="24dp"
+    android:height="24dp"
+    android:viewportWidth="24"
+    android:viewportHeight="24"
+    android:tint="#FFFFFF">
+    <path
+        android:fillColor="#FF000000"
+        android:fillType="evenOdd"
+        android:pathData="M12,2 A10,10 0 1 1 11.9,2 Z M12,6 A6,6 0 1 0 12.1,6 Z" />
+    <path
+        android:fillColor="#FF000000"
+        android:pathData="M12,9 m-3,0 a3,3 0 1 0 6,0 a3,3 0 1 0 -6,0" />
+</vector>

@@ -17,3 +17,32 @@ if (!url || !cleAnon) {
 // chaque appel et garde la session (stockée par supabase-js) cohérente
 // entre les pages.
 export const supabase = createClient(url, cleAnon);
+
+// Ajouté le 25/08/2026, Bourama : Lot 3B (fusion Capacitor) -- transmet le
+// token d'accès au plugin natif PontNatif à chaque connexion/déconnexion/
+// rafraîchissement, pour que le service FCM côté Android puisse appeler
+// clovis-backend même app fermée (voir android/app/.../pont/StockageToken.kt
+// pour le pourquoi : pas de deuxième auth native séparée, uniquement ce
+// pont). Capacitor.isNativePlatform() : ce code ne fait rien sur le
+// déploiement web normal (Vercel), où le plugin n'existe pas.
+if (typeof window !== "undefined") {
+  import("@capacitor/core").then(({ Capacitor, registerPlugin }) => {
+    if (!Capacitor.isNativePlatform()) return;
+
+    const PontNatif = registerPlugin<{
+      enregistrerToken(options: { token: string }): Promise<void>;
+      deconnexion(): Promise<void>;
+    }>("PontNatif");
+
+    supabase.auth.onAuthStateChange((event, session) => {
+      if (session?.access_token) {
+        PontNatif.enregistrerToken({ token: session.access_token }).catch(() => {
+          // Pas grave : le pont retentera au prochain changement d'état
+          // (refresh de token automatique par supabase-js, ~1h).
+        });
+      } else if (event === "SIGNED_OUT") {
+        PontNatif.deconnexion().catch(() => {});
+      }
+    });
+  });
+}
