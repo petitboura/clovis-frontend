@@ -5,7 +5,7 @@
 // quelles a cote de ce fichier), l'ecran Compose est retire.
 //
 // Flavor "externe" UNIQUEMENT (voir 00-commun.md, isolation au niveau des
-// sources compilees) -- ce fichier n'existe pas dans le flavor "play", voir
+// sources compilees), ce fichier n'existe pas dans le flavor "play", voir
 // src/play/.../accessibilite/AccessibilitePlugin.kt (stub).
 //
 // Cote JS :

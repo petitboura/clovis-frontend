@@ -3,7 +3,7 @@
 // Portee (voir 07-actions-pilotees.md) :
 // - Actions a partir de l'arbre d'UI (pas de gestes tactiles bruts)
 // - Verifie systematiquement l'autorisation de l'app active (AppsAutorisees)
-//   AVANT toute recherche/action -- aucune exception, aucune app par defaut
+//   AVANT toute recherche/action, aucune exception, aucune app par defaut
 // - Un seul essai par appel : jamais de boucle de reessai a l'aveugle (regle
 //   "ne jamais deviner" du document commun, appliquee au comportement de
 //   l'agent). Si l'element est introuvable ou l'action refusee, on retourne
@@ -67,7 +67,7 @@ object ExecuteurActions {
             return echouer(
                 paquetActif,
                 texteCible,
-                "\"$paquetActif\" n'est pas dans la liste des apps autorisées -- action refusée."
+                "\"$paquetActif\" n'est pas dans la liste des apps autorisées, action refusée."
             )
         }
 
@@ -75,7 +75,7 @@ object ExecuteurActions {
             ?: return echouer(
                 paquetActif,
                 texteCible,
-                "Élément \"$texteCible\" introuvable à l'écran -- l'app a peut-être changé d'interface."
+                "Élément \"$texteCible\" introuvable à l'écran, l'app a peut-être changé d'interface."
             )
 
         val resultat = action(noeud)
@@ -93,7 +93,7 @@ object ExecuteurActions {
     /**
      * Un seul parcours, profondeur plafonnee (meme limite que compterNoeuds
      * au Lot 6). Ne recycle jamais un noeud qui fait partie du chemin
-     * retourne -- recycler un ancetre du noeud trouve invaliderait la
+     * retourne, recycler un ancetre du noeud trouve invaliderait la
      * reference qu'on renvoie.
      */
     private fun chercherNoeud(

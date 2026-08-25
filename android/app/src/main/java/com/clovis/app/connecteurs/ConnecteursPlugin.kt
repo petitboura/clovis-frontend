@@ -10,7 +10,7 @@
 //   await Connecteurs.rechercherNotion({ requete });
 //   Connecteurs.addListener('retourOAuth', ({ code, state }) => { ... }) // apres finaliserConnexionNotion cote backend
 // L'app doit appeler finaliserConnexionNotion() elle-meme (pas ce plugin) une
-// fois code/state recus, comme le faisait ConnecteursScreen.kt -- ce plugin
+// fois code/state recus, comme le faisait ConnecteursScreen.kt, ce plugin
 // se contente de relayer l'evenement OAuth, pas de decider la logique.
 package com.clovis.app.connecteurs
 

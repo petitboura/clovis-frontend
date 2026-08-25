@@ -3,7 +3,7 @@
 // Journalisation/tracabilite de ce que le service observe (portee du Lot 6,
 // voir 06-service-accessibilite.md). Pour l'instant : en memoire seulement,
 // affiche dans l'onglet Accessibilite pour audit/debug. Pas encore envoye au
-// backend -- rien dans le Lot 6 ne le demande, a voir si un lot ulterieur en
+// backend, rien dans le Lot 6 ne le demande, a voir si un lot ulterieur en
 // a besoin.
 package com.clovis.app.accessibilite
 

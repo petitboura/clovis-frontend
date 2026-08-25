@@ -2,7 +2,7 @@
 // Porte depuis clovis-mobile/android-legacy-natif (Lot 2, DossiersScreen.kt
 // + DossiersDesignesRepository.kt) : meme logique SAF, l'UI (liste/navigation/
 // dialogues) est retiree ici, a construire cote clovis-frontend (web) qui
-// appelle ce plugin -- voir echange avec Bourama (25/08, Lot 3B).
+// appelle ce plugin, voir echange avec Bourama (25/08, Lot 3B).
 //
 // Cote JS :
 //   import { registerPlugin } from '@capacitor/core';

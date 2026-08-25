@@ -4,7 +4,7 @@
 // quelle a cote de ce fichier), la banniere UI est retiree (a construire
 // cote clovis-frontend web qui appelle ce plugin).
 //
-// Flavor "externe" UNIQUEMENT -- voir src/play/.../MiseAJourPlugin.kt (stub).
+// Flavor "externe" UNIQUEMENT, voir src/play/.../MiseAJourPlugin.kt (stub).
 //
 // Cote JS :
 //   const MiseAJour = registerPlugin<any>('MiseAJour');

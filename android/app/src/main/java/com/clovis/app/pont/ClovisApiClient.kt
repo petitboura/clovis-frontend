@@ -39,7 +39,7 @@ data class ResultatAction(val succes: Boolean, val resultat: String = "")
 @Serializable
 data class CorpsTokenPush(val plateforme: String, val token: String)
 
-// --- Lot 5 : connecteurs tiers (Notion), porte le 25/08/2026 ---
+// : Lot 5 : connecteurs tiers (Notion), porte le 25/08/2026 
 @Serializable
 data class UrlAutorisationNotion(val url_autorisation: String)
 @Serializable
@@ -95,7 +95,7 @@ class ClovisApiClient(private val context: Context) {
         }
     }
 
-    // --- Lot 5 : connecteurs tiers (Notion), porte le 25/08/2026 ---
+    // : Lot 5 : connecteurs tiers (Notion), porte le 25/08/2026 
 
     suspend fun demarrerConnexionNotion(): UrlAutorisationNotion {
         val reponse: HttpResponse = http.post("$BASE_URL/api/appareils-mobiles/connecteurs/notion/demarrer") {

@@ -1,7 +1,7 @@
 // Cree le 23/08/2026, Bourama : Lot 7 (actions pilotees), flavor externe uniquement.
 //
 // Journal distinct de JournalAccessibilite.kt (Lot 6, lecture passive) :
-// ici on trace des tentatives d'ACTION avec leur resultat (succes/echec) --
+// ici on trace des tentatives d'ACTION avec leur resultat (succes/echec) :
 // necessaire pour le critere de fin du lot ("comportement de repli verifie
 // en cassant volontairement le scenario").
 package com.clovis.app.accessibilite

@@ -2,7 +2,7 @@
 //
 // Le flavor "play" se met a jour automatiquement via le Play Store, ce
 // plugin n'a pas de raison d'exister ici. Stub pour garder MainActivity.java
-// (src/main, commun) compilable -- meme principe que AccessibilitePlugin.
+// (src/main, commun) compilable, meme principe que AccessibilitePlugin.
 package com.clovis.app.miseajour
 
 import com.getcapacitor.JSObject

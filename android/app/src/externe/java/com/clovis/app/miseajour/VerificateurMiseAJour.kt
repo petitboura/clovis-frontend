@@ -2,7 +2,7 @@
 // plugin Capacitor (Lot 3B, 25/08/2026). Logique inchangee.
 //
 // Puisque "externe" n'est jamais sur le Play Store, pas de mise a jour
-// automatique -- ce module la remplace. Interroge l'API PUBLIQUE de GitHub
+// automatique, ce module la remplace. Interroge l'API PUBLIQUE de GitHub
 // Releases (pas besoin de token, le depot est public), compare a la version
 // installee, et si plus recent, propose d'ouvrir le lien de telechargement.
 //

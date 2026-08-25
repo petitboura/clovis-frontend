@@ -23,7 +23,7 @@ class ControleSessionPlugin : Plugin() {
     private val repo by lazy { ControleSessionRepository(context) }
 
     // Etat de la session en cours, garde en memoire le temps que l'app tourne
-    // (equivalent du remember { } cote Compose) -- une session ne survit pas
+    // (equivalent du remember { } cote Compose), une session ne survit pas
     // a un kill de process, meme limite deja documentee dans le README.
     private var etatInitial: EtatInitialSession? = null
 

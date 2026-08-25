@@ -1,7 +1,7 @@
 // Cree le 25/08/2026, Bourama : flavor play.
 //
 // Le service d'accessibilite (lots 6-8) n'existe PAS dans cette variante,
-// volontairement -- voir 00-commun.md. Ce stub garde MainActivity.java
+// volontairement, voir 00-commun.md. Ce stub garde MainActivity.java
 // (src/main, commun) compilable pour "play" sans jamais inclure la moindre
 // ligne de code d'accessibilite dans l'APK Play Store : aucune classe
 // AccessibilityService, aucun accessibility_service_config.xml, rien.
@@ -22,7 +22,7 @@ class AccessibilitePlugin : Plugin() {
     }
 
     // Toute autre methode appelee sur ce flavor est un bug cote JS (devrait
-    // toujours verifier disponible() avant) -- rejet explicite plutot que
+    // toujours verifier disponible() avant), rejet explicite plutot que
     // silencieux, pour que l'erreur soit visible tout de suite.
     @PluginMethod
     fun serviceActif(call: PluginCall) = refuser(call)

@@ -5,7 +5,7 @@
 // Storage Access Framework (SAF). L'etudiant designe un dossier une seule
 // fois via le selecteur systeme (ACTION_OPEN_DOCUMENT_TREE) ; on prend une
 // permission URI PERSISTANTE (takePersistableUriPermission) pour ne plus
-// jamais avoir a la redemander -- voir 02-fichiers-dossiers.md, "Objectif".
+// jamais avoir a la redemander, voir 02-fichiers-dossiers.md, "Objectif".
 //
 // Liste des dossiers designes stockee en local (SharedPreferences, Set<String>
 // d'URI serialisees) : pas besoin de synchro serveur pour ca, c'est propre a
@@ -48,7 +48,7 @@ class DossiersDesignesRepository(private val context: Context) {
             if (doc != null && doc.exists()) {
                 DossierDesigne(uri, doc.name ?: uri.lastPathSegment ?: "Dossier")
             } else {
-                null // dossier devenu inaccessible (supprime/deplace hors de l'app) -- ignore silencieusement ici, nettoye au prochain ajout/retrait
+                null // dossier devenu inaccessible (supprime/deplace hors de l'app), ignore silencieusement ici, nettoye au prochain ajout/retrait
             }
         }
     }
@@ -76,7 +76,7 @@ class DossiersDesignesRepository(private val context: Context) {
                 Intent.FLAG_GRANT_READ_URI_PERMISSION or Intent.FLAG_GRANT_WRITE_URI_PERMISSION
             )
         } catch (e: SecurityException) {
-            // Permission deja perdue (dossier supprime cote systeme) -- rien a liberer.
+            // Permission deja perdue (dossier supprime cote systeme), rien a liberer.
         }
         val actuels = (prefs.getStringSet(CLE_URIS, emptySet()) ?: emptySet()).toMutableSet()
         actuels.remove(uri.toString())

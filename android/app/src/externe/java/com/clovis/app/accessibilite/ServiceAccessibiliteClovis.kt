@@ -2,7 +2,7 @@
 // Modifie 23/08/2026, Lot 7 : le service expose maintenant son instance active
 // (companion object) pour qu'ExecuteurActions.kt puisse lire rootInActiveWindow
 // et y executer des actions. Portee des actions elle-meme geree entierement
-// dans ExecuteurActions.kt, pas ici -- ce fichier reste la lecture/le cycle
+// dans ExecuteurActions.kt, pas ici, ce fichier reste la lecture/le cycle
 // de vie du service, rien de plus.
 package com.clovis.app.accessibilite
 

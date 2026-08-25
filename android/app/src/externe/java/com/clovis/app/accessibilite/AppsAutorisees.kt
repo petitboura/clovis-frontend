@@ -1,13 +1,13 @@
 // Cree le 23/08/2026, Bourama : Lot 7 (actions pilotees), flavor externe uniquement.
 //
 // Portee du Lot 7 : "uniquement celles explicitement autorisees par
-// l'utilisateur, une par une -- pas d'action generique sur n'importe quelle
+// l'utilisateur, une par une, pas d'action generique sur n'importe quelle
 // app" (voir 07-actions-pilotees.md). Cette liste est le point de controle
 // unique verifie par ExecuteurActions.kt avant toute action : aucune action
 // n'est tentee si le paquet actif n'y figure pas.
 //
 // Persistee via SharedPreferences (pas de base de donnees necessaire pour
-// une liste de noms de paquets) -- survit au redemarrage de l'app.
+// une liste de noms de paquets), survit au redemarrage de l'app.
 package com.clovis.app.accessibilite
 
 import android.content.Context
