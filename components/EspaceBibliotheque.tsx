@@ -14,6 +14,8 @@ import {
   FolderX,
   ChevronRight,
   Pencil,
+  Upload,
+  Loader2,
   X,
 } from "lucide-react";
 import {
@@ -120,6 +122,7 @@ export function EspaceBibliotheque() {
   // juste vue depuis l'autre sens (un dossier, plusieurs fichiers) au
   // lieu d'un fichier, plusieurs dossiers.
   const [pickerFichiersOuvert, setPickerFichiersOuvert] = useState(false);
+  const [uploadDansPickerEnCours, setUploadDansPickerEnCours] = useState(false);
 
   useEffect(() => {
     chargerFichiers();
@@ -322,6 +325,32 @@ async function ajouter() {
       chargerDossiers();
     } catch (e) {
       window.alert(messageErreur(e));
+    }
+  }
+
+  // 25/08/2026, demande Bourama : "ajouter des fichiers ici doit aussi
+  // avoir upload direct, pas obligatoirement choisir" -- le picker
+  // n'offrait jusque-là que des fichiers DÉJÀ existants ailleurs dans la
+  // bibliothèque. Upload direct depuis ce même panneau, rangé
+  // immédiatement dans le dossier ouvert (identique à ajouter() plus
+  // haut quand on est dans un dossier), sans fermer le picker pour
+  // pouvoir enchaîner plusieurs fichiers.
+  async function uploaderDirectementDansDossier(fichiersChoisis: FileList | File[]) {
+    if (dossierCourantId === null) return;
+    setUploadDansPickerEnCours(true);
+    try {
+      for (const fichier of Array.from(fichiersChoisis)) {
+        try {
+          const ligne = await ajouterFichierBibliothequePersonnelle(fichier, "", "");
+          if (ligne?.id) await rangerFichierDansDossier(dossierCourantId, ligne.id);
+        } catch (e) {
+          window.alert(`${fichier.name} : ${messageErreur(e)}`);
+        }
+      }
+      chargerFichiers();
+      chargerDossiers();
+    } finally {
+      setUploadDansPickerEnCours(false);
     }
   }
 
@@ -658,6 +687,31 @@ async function ajouter() {
               >
                 <X size={16} />
               </button>
+            </div>
+
+            <input
+              id="upload-direct-dossier"
+              type="file"
+              multiple
+              className="hidden"
+              onChange={(e) => e.target.files && uploaderDirectementDansDossier(e.target.files)}
+            />
+            <label
+              htmlFor="upload-direct-dossier"
+              className="flex cursor-pointer items-center justify-center gap-2 rounded-cgpt-bouton border border-dashed border-dj-bordure px-4 py-2.5 text-sm text-dj-texte-muet transition-colors hover:border-dj-bordure-forte hover:text-dj-texte"
+            >
+              {uploadDansPickerEnCours ? (
+                <Loader2 size={15} className="animate-spin" />
+              ) : (
+                <Upload size={15} />
+              )}
+              {uploadDansPickerEnCours ? "Envoi…" : "Uploader un nouveau fichier ici"}
+            </label>
+
+            <div className="flex items-center gap-2 text-xs text-dj-texte-muet">
+              <div className="h-px flex-1 bg-dj-bordure" />
+              ou choisir un fichier existant
+              <div className="h-px flex-1 bg-dj-bordure" />
             </div>
             {(fichiers ?? []).length === 0 && (
               <p className="text-xs text-dj-texte-muet">Aucun fichier dans ta bibliothèque pour l&apos;instant.</p>
