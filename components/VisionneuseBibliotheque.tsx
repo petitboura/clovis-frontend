@@ -2,6 +2,8 @@
 
 import { useEffect, useState } from "react";
 import { X, Download, ExternalLink, Loader2, File as IconFichier } from "lucide-react";
+import ReactMarkdown from "react-markdown";
+import remarkGfm from "remark-gfm";
 import { LinkPreview } from "./chat/LinkPreview";
 
 // Types Word/Excel/PowerPoint (anciens .doc/.xls/.ppt + .docx/.xlsx/.pptx)
@@ -20,6 +22,32 @@ const TYPES_MIME_OFFICE = new Set([
   "application/vnd.ms-powerpoint",
   "application/vnd.openxmlformats-officedocument.presentationml.presentation",
 ]);
+
+// Types texte "supplémentaires" -- 25/08, Bourama : "les autres cas tu ne
+// devrais pas les oublier". Plutôt qu'une liste fermée d'extensions
+// (CSV, JSON, code...), tout type_mime qui commence par "text/" (le
+// navigateur le fait déjà pour la plupart des fichiers texte/code) est
+// traité comme du texte lisible -- + une poignée de types "application/"
+// qui sont du texte en pratique malgré leur préfixe.
+const TYPES_MIME_TEXTE_SUPPLEMENTAIRES = new Set([
+  "application/json",
+  "application/xml",
+  "application/x-yaml",
+  "application/yaml",
+]);
+
+function estTypeTexteLisible(typeMime: string) {
+  return typeMime.startsWith("text/") || TYPES_MIME_TEXTE_SUPPLEMENTAIRES.has(typeMime);
+}
+
+// Détection markdown volontairement basée sur l'EXTENSION du nom de
+// fichier en priorité, pas seulement le type_mime : selon le navigateur/
+// OS qui a fait l'upload, un ".md" arrive parfois avec type_mime vide ou
+// "application/octet-stream" (le type "text/markdown" n'est pas garanti
+// comme il l'est pour "image/png" par exemple).
+function estFichierMarkdown(nomFichier: string, typeMime: string) {
+  return /\.mdx?$/i.test(nomFichier) || typeMime === "text/markdown" || typeMime === "text/x-markdown";
+}
 
 // Fenêtre par-dessus la page (modal) qui remplace le "lien qui ouvre un
 // nouvel onglet" de EspaceBibliotheque.tsx (Bourama 17/08 : "rien pour
@@ -96,6 +124,90 @@ function ContenuTexte({ href }: { href: string }) {
   return <pre className="whitespace-pre-wrap break-words p-5 font-sans text-sm text-dj-texte">{texte}</pre>;
 }
 
+function ContenuMarkdown({ href }: { href: string }) {
+  const [texte, setTexte] = useState<string | null>(null);
+  const [enErreur, setEnErreur] = useState(false);
+  const [vueBrute, setVueBrute] = useState(false);
+
+  useEffect(() => {
+    let annule = false;
+    fetch(href)
+      .then((r) => (r.ok ? r.text() : Promise.reject()))
+      .then((t) => !annule && setTexte(t))
+      .catch(() => !annule && setEnErreur(true));
+    return () => {
+      annule = true;
+    };
+  }, [href]);
+
+  if (enErreur) {
+    return <p className="p-6 text-sm text-dj-texte-muet">Impossible de charger ce fichier.</p>;
+  }
+  if (texte === null) {
+    return (
+      <div className="flex items-center justify-center p-10">
+        <Loader2 size={20} className="animate-spin text-dj-texte-muet" />
+      </div>
+    );
+  }
+
+  return (
+    <div className="flex flex-col">
+      <div className="flex justify-end gap-1 border-b border-dj-bordure px-3 py-2">
+        <button
+          onClick={() => setVueBrute(false)}
+          className={`rounded-md px-2.5 py-1 text-xs transition-colors ${
+            !vueBrute ? "bg-dj-surface-haute text-dj-texte" : "text-dj-texte-muet hover:text-dj-texte"
+          }`}
+        >
+          Formaté
+        </button>
+        <button
+          onClick={() => setVueBrute(true)}
+          className={`rounded-md px-2.5 py-1 text-xs transition-colors ${
+            vueBrute ? "bg-dj-surface-haute text-dj-texte" : "text-dj-texte-muet hover:text-dj-texte"
+          }`}
+        >
+          Brut
+        </button>
+      </div>
+      {vueBrute ? (
+        <pre className="whitespace-pre-wrap break-words p-5 font-sans text-sm text-dj-texte">{texte}</pre>
+      ) : (
+        <div className="flex flex-col gap-3 p-5 text-sm leading-relaxed text-dj-texte">
+          <ReactMarkdown
+            remarkPlugins={[remarkGfm]}
+            components={{
+              h1: ({ children }) => <h1 className="text-lg font-semibold text-dj-texte">{children}</h1>,
+              h2: ({ children }) => <h2 className="mt-2 text-base font-semibold text-dj-texte">{children}</h2>,
+              h3: ({ children }) => <h3 className="mt-1 text-sm font-semibold text-dj-texte">{children}</h3>,
+              p: ({ children }) => <p>{children}</p>,
+              ul: ({ children }) => <ul className="list-disc pl-5">{children}</ul>,
+              ol: ({ children }) => <ol className="list-decimal pl-5">{children}</ol>,
+              li: ({ children }) => <li>{children}</li>,
+              a: ({ href: hrefLien, children }) => (
+                <a
+                  href={hrefLien}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-dj-texte-muet hover:text-dj-texte hover:underline"
+                >
+                  {children}
+                </a>
+              ),
+              code: ({ children }) => (
+                <code className="rounded bg-dj-surface-haute px-1 py-0.5 text-xs">{children}</code>
+              ),
+            }}
+          >
+            {texte}
+          </ReactMarkdown>
+        </div>
+      )}
+    </div>
+  );
+}
+
 function ContenuOffice({ href, titre }: { href: string; titre: string }) {
   const [charge, setCharge] = useState(false);
   const urlVisionneuse = `https://view.officeapps.live.com/op/embed.aspx?src=${encodeURIComponent(href)}`;
@@ -145,10 +257,12 @@ export function VisionneuseBibliotheque({
   const estAudio = fichier.type_mime.startsWith("audio/");
   const estVideo = fichier.type_mime.startsWith("video/");
   const estPdf = fichier.type_mime === "application/pdf";
-  const estTexte = fichier.type_mime === "text/plain";
   const estLien = fichier.type_mime === "text/uri-list";
+  const estMarkdown = !estLien && estFichierMarkdown(fichier.nom_fichier, fichier.type_mime);
   const estOffice = TYPES_MIME_OFFICE.has(fichier.type_mime);
-  const estAutre = !estPdf && !estImage && !estAudio && !estVideo && !estTexte && !estLien && !estOffice;
+  const estTexte = !estLien && !estMarkdown && estTypeTexteLisible(fichier.type_mime);
+  const estAutre =
+    !estPdf && !estImage && !estAudio && !estVideo && !estTexte && !estMarkdown && !estLien && !estOffice;
   const titre = fichier.description || fichier.nom_fichier;
 
   return (
@@ -201,6 +315,8 @@ export function VisionneuseBibliotheque({
           )}
 
           {estTexte && <ContenuTexte href={fichier.url_publique} />}
+
+          {estMarkdown && <ContenuMarkdown href={fichier.url_publique} />}
 
           {estOffice && <ContenuOffice href={fichier.url_publique} titre={titre} />}
 
