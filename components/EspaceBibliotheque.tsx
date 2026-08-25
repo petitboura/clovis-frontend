@@ -18,7 +18,7 @@ import {
 } from "lucide-react";
 import {
   appelerApi,
-  ajouterFichiersBibliothequePersonnelle,
+  ajouterFichierBibliothequePersonnelle,
   ajouterLienBibliothequePersonnelle,
   ajouterTexteBibliothequePersonnelle,
   listerDossiersBibliotheque,
@@ -113,6 +113,13 @@ export function EspaceBibliotheque() {
   const [creationDossierOuverte, setCreationDossierOuverte] = useState(false);
   const [dossierEnRenommage, setDossierEnRenommage] = useState<string | null>(null);
   const [fichierARanger, setFichierARanger] = useState<FichierBiblio | null>(null);
+  // 25/08/2026, demande Bourama : depuis l'INTÉRIEUR d'un dossier
+  // (jusque-là aucune action possible une fois dedans), pouvoir y faire
+  // entrer directement des fichiers déjà existants ailleurs dans la
+  // bibliothèque -- même mécanique many-to-many que fichierARanger,
+  // juste vue depuis l'autre sens (un dossier, plusieurs fichiers) au
+  // lieu d'un fichier, plusieurs dossiers.
+  const [pickerFichiersOuvert, setPickerFichiersOuvert] = useState(false);
 
   useEffect(() => {
     chargerFichiers();
@@ -197,21 +204,42 @@ export function EspaceBibliotheque() {
     return base.filter((f) => typeDe(f) === sousOnglet);
   }, [fichiers, dossiers, dossierCourantId, idsFichiersRanges, sousOnglet]);
 
-  async function ajouter() {
+  // 25/08/2026, demande Bourama ("le dossier est juste là et point") :
+// tant qu'on est DANS un dossier, un ajout (fichier, texte, lien) doit y
+// atterrir directement -- avant ce correctif, ajouter() ignorait
+// totalement dossierCourantId, tout finissait "libre" à la racine, et il
+// fallait sortir du dossier pour aller "ranger" le fichier après coup.
+// 25/08/2026, demande Bourama ("le dossier est juste là et point") :
+// tant qu'on est DANS un dossier, un ajout (fichier, texte, lien) doit y
+// atterrir directement -- avant ce correctif, ajouter() ignorait
+// totalement dossierCourantId, tout finissait "libre" à la racine, et il
+// fallait sortir du dossier pour aller "ranger" le fichier après coup.
+async function ajouter() {
     const texte = texteOuLien.trim();
     if (nouveauxFichiers.length === 0 && !texte) return;
 
     setEnvoi(true);
     setErreursEnvoi([]);
+    const erreurs: { nom: string; erreur: string }[] = [];
     try {
-      const erreurs = nouveauxFichiers.length > 0 ? await ajouterFichiersBibliothequePersonnelle(nouveauxFichiers) : [];
+      for (const fichier of nouveauxFichiers) {
+        try {
+          const ligne = await ajouterFichierBibliothequePersonnelle(fichier, "", "");
+          if (dossierCourantId && ligne?.id) {
+            await rangerFichierDansDossier(dossierCourantId, ligne.id);
+          }
+        } catch (e) {
+          erreurs.push({ nom: fichier.name, erreur: messageErreur(e) });
+        }
+      }
 
       if (texte) {
         try {
-          if (URL_REGEX.test(texte)) {
-            await ajouterLienBibliothequePersonnelle(texte);
-          } else {
-            await ajouterTexteBibliothequePersonnelle(texte);
+          const ligne = URL_REGEX.test(texte)
+            ? await ajouterLienBibliothequePersonnelle(texte)
+            : await ajouterTexteBibliothequePersonnelle(texte);
+          if (dossierCourantId && ligne?.id) {
+            await rangerFichierDansDossier(dossierCourantId, ligne.id);
           }
         } catch (e) {
           erreurs.push({ nom: texte, erreur: messageErreur(e) });
@@ -222,6 +250,7 @@ export function EspaceBibliotheque() {
       setNouveauxFichiers([]);
       setTexteOuLien("");
       chargerFichiers();
+      chargerDossiers();
     } finally {
       setEnvoi(false);
     }
@@ -417,6 +446,15 @@ export function EspaceBibliotheque() {
           <FolderPlus size={14} />
           Nouveau dossier
         </button>
+        {dossierCourantId !== null && (
+          <button
+            onClick={() => setPickerFichiersOuvert(true)}
+            className="flex items-center gap-1 rounded-cgpt-bouton px-2 py-1 font-semibold text-dj-texte-muet transition-colors hover:text-dj-texte"
+          >
+            <IconDossierOuvert size={14} />
+            Ajouter des fichiers ici
+          </button>
+        )}
       </div>
 
       {creationDossierOuverte && (
@@ -591,6 +629,72 @@ export function EspaceBibliotheque() {
       )}
 
       <VisionneuseBibliotheque fichier={fichierOuvert} onFermer={() => setFichierOuvert(null)} />
+
+      {/* 25/08/2026, demande Bourama : picker inverse de la modale
+          "ranger" ci-dessus -- ici on choisit, DEPUIS un dossier ouvert,
+          quels fichiers (de partout dans la bibliothèque) y ajouter.
+          Couvre à la fois "copier" (le fichier reste aussi dans son
+          autre dossier / à la racine, many-to-many déjà en place) et
+          "déplacer" (décocher la case ailleurs après coup, ou
+          directement ici si le fichier apparaît déjà ranged -- la case
+          reflète l'état réel, cocher/décocher suffit dans les deux
+          cas). */}
+      {pickerFichiersOuvert && dossierCourantId !== null && (
+        <div
+          className="fixed inset-0 z-50 flex items-end justify-center bg-black/40 p-4 animate-dj-fade-in-rapide sm:items-center"
+          onClick={() => setPickerFichiersOuvert(false)}
+        >
+          <div
+            onClick={(e) => e.stopPropagation()}
+            className="flex w-full max-w-sm flex-col gap-3 rounded-cgpt-carte border border-dj-bordure bg-dj-surface p-4"
+          >
+            <div className="flex items-center justify-between">
+              <p className="text-sm font-semibold text-dj-texte">
+                Ajouter à « {pileDossiers[pileDossiers.length - 1]?.nom} »
+              </p>
+              <button
+                onClick={() => setPickerFichiersOuvert(false)}
+                className="text-dj-texte-muet hover:text-dj-texte"
+              >
+                <X size={16} />
+              </button>
+            </div>
+            {(fichiers ?? []).length === 0 && (
+              <p className="text-xs text-dj-texte-muet">Aucun fichier dans ta bibliothèque pour l&apos;instant.</p>
+            )}
+            <div className="flex max-h-72 flex-col gap-1 overflow-y-auto">
+              {(fichiers ?? []).map((f) => {
+                const dossierActuel = (dossiers ?? []).find((d) => d.id === dossierCourantId);
+                const dejaDedans = dossierActuel?.fichier_ids.includes(f.id) ?? false;
+                return (
+                  <label
+                    key={f.id}
+                    className="flex cursor-pointer items-center gap-2 rounded-cgpt-bouton px-2 py-1.5 text-sm text-dj-texte hover:bg-dj-surface-haute"
+                  >
+                    <input
+                      type="checkbox"
+                      checked={dejaDedans}
+                      onChange={async () => {
+                        try {
+                          if (dejaDedans) {
+                            await retirerFichierDuDossier(dossierCourantId, f.id);
+                          } else {
+                            await rangerFichierDansDossier(dossierCourantId, f.id);
+                          }
+                          chargerDossiers();
+                        } catch (e) {
+                          window.alert(messageErreur(e));
+                        }
+                      }}
+                    />
+                    <span className="truncate">{f.description || f.nom_fichier}</span>
+                  </label>
+                );
+              })}
+            </div>
+          </div>
+        </div>
+      )}
         </>
       )}
     </div>
