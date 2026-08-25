@@ -1,13 +1,25 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!--
-    Lot 3C (Phase 3, fusion Capacitor) : flavor "externe" (distribution hors
-    Play Store). Volontairement vide pour l'instant : le service
-    d'accessibilite existant (voir
-    clovis-mobile/android-legacy-natif/app/src/externe/accessibilite/ServiceAccessibiliteClovis.kt
-    et son manifest
-    clovis-mobile/android-legacy-natif/app/src/externe/AndroidManifest.xml)
-    n'est pas encore migre en plugin Capacitor. Ce fichier est le point
-    d'ancrage prevu pour cette declaration une fois le plugin migre : jamais
-    dans src/main ni src/play, exactement comme deja acte cote natif.
+    Cree le 25/08/2026, Bourama : flavor "externe" (distribution hors Play
+    Store). Point d'ancrage pose au Lot 3C (fusion Capacitor, initialement
+    vide en attendant la migration du service d'accessibilite), rempli au
+    Lot 3B (lots 6-7 portes depuis clovis-mobile/android-legacy-natif) avec
+    la declaration reelle du service d'accessibilite, sans changement de
+    logique (voir ServiceAccessibiliteClovis.kt).
 -->
-<manifest xmlns:android="http://schemas.android.com/apk/res/android" />
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+    <application>
+        <service
+            android:name=".accessibilite.ServiceAccessibiliteClovis"
+            android:permission="android.permission.BIND_ACCESSIBILITY_SERVICE"
+            android:exported="false"
+            android:label="Clovis, lecture d'écran">
+            <intent-filter>
+                <action android:name="android.accessibilityservice.AccessibilityService" />
+            </intent-filter>
+            <meta-data
+                android:name="android.accessibilityservice"
+                android:resource="@xml/accessibility_service_config" />
+        </service>
+    </application>
+</manifest>

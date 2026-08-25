@@ -8,3 +8,8 @@ next-env.d.ts
 tsconfig.tsbuildinfo
 out/
 android/app/src/main/assets/public/
+
+# Lot 8 (Partie 3 mobile, porte 25/08/2026) : cle de signature locale, jamais committee.
+android/keystore.properties
+*.keystore
+*.jks

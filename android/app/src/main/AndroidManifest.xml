@@ -30,6 +30,23 @@
             android:exported="false"
             android:excludeFromRecents="true" />
 
+        <!-- Lot 5 (porte 25/08/2026) : recoit la redirection OAuth (Notion,
+             puis autres connecteurs) sur clovismobile://oauth-callback, ouvert
+             via Custom Tabs depuis ConnecteursPlugin.kt. singleTask pour ne
+             pas empiler une nouvelle instance par-dessus MainActivity. -->
+        <activity
+            android:name=".connecteurs.OAuthCallbackActivity"
+            android:exported="true"
+            android:launchMode="singleTask"
+            android:theme="@android:style/Theme.Translucent.NoTitleBar">
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data android:scheme="clovismobile" android:host="oauth-callback" />
+            </intent-filter>
+        </activity>
+
         <service
             android:name=".notifications.ClovisFirebaseMessagingService"
             android:exported="false">
@@ -53,4 +70,8 @@
 
     <uses-permission android:name="android.permission.INTERNET" />
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+    <!-- Lot 4 (porte 25/08/2026) : DND + volume sonnerie/notifications pendant
+         une session -- permission speciale, pas de popup standard, redirection
+         vers Reglages geree par ControleSessionRepository.kt. -->
+    <uses-permission android:name="android.permission.ACCESS_NOTIFICATION_POLICY" />
 </manifest>

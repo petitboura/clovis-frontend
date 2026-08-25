@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    Cree le 23/08/2026, Bourama : Lot 6, flavor externe uniquement.
+    Modifie 23/08/2026, Lot 7 : capacite d'action ajoutee (ExecuteurActions.kt,
+    ACTION_CLICK / ACTION_SET_TEXT via AccessibilityNodeInfo.performAction).
+    Aucun flag supplementaire necessaire ici pour ca : canRetrieveWindowContent
+    suffit pour les actions basees sur l'arbre de noeuds. canPerformGestures
+    resterait a ajouter seulement si un geste tactile brut (dispatchGesture)
+    devenait necessaire, pas le cas pour ce lot.
+-->
+<accessibility-service xmlns:android="http://schemas.android.com/apk/res/android"
+    android:accessibilityEventTypes="typeWindowStateChanged|typeWindowContentChanged"
+    android:accessibilityFeedbackType="feedbackGeneric"
+    android:accessibilityFlags="flagRetrieveInteractiveWindows|flagReportViewIds"
+    android:canRetrieveWindowContent="true"
+    android:notificationTimeout="200"
+    android:description="@string/description_service_accessibilite" />

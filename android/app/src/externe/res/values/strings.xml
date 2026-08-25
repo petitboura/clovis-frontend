@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Cree le 23/08/2026, Bourama : Lot 6, flavor externe uniquement. -->
+<resources>
+    <string name="description_service_accessibilite">Permet à Clovis de lire ce qui s\'affiche à l\'écran dans tes autres applications, pour pouvoir t\'aider directement dedans. Clovis ne clique sur rien et ne modifie rien pour l\'instant, il lit seulement.</string>
+</resources>

@@ -12,9 +12,9 @@ apply plugin: 'org.jetbrains.kotlin.plugin.serialization'
 // l'identique pour ce conteneur Capacitor, qui est desormais le seul socle
 // (clovis-mobile/android abandonne, voir android/keystore.properties.example
 // pour la suite). Isolation au niveau du build, pas d'un simple interrupteur
-// en code : "externe" reste le seul flavor pouvant embarquer le service
-// d'accessibilite, une fois celui-ci migre en plugin Capacitor (pas encore
-// fait ici, seule l'isolation du build est posee par ce lot).
+// en code : "externe" est le flavor qui embarque le service d'accessibilite
+// (lots 6-7) et la mise a jour hors-store (lot 8), tous deux migres en
+// plugins Capacitor depuis (voir app/src/externe/java/com/clovis/app/).
 def fichierKeystore = rootProject.file('keystore.properties')
 def proprietesKeystore = new Properties()
 if (fichierKeystore.exists()) {
@@ -44,47 +44,52 @@ android {
         }
     }
     // Ajoute le 25/08/2026 : requis par le plugin Compose (AlerteRappelActivity).
+    // buildConfig true : requis par VerificateurMiseAJour.kt (Lot 8, flavor
+    // externe uniquement) qui lit BuildConfig.VERSION_NAME.
     buildFeatures {
         compose true
+        buildConfig true
     }
 
-    // Ajoute le 25/08/2026, Bourama : Lot 3C (fusion Capacitor). Signature
-    // manuelle du flavor "externe", lue depuis un fichier LOCAL jamais
-    // committe (voir android/README-SIGNATURE.md). Absent -> pas de
-    // signingConfig applique ; le flavor "play" (signe par Google Play App
-    // Signing) n'en a de toute facon pas besoin.
+    // Ajoute le 25/08/2026, Lot 6-7 portes : deux flavors comme
+    // clovis-mobile/android-legacy-natif (voir 00-commun.md, "isolation au
+    // niveau du build, pas d'un simple interrupteur en code"). "play" =
+    // publiable Play Store (lots 1-5 seulement, aucun code accessibilite
+    // compile dedans). "externe" = ajoute l'accessibilite + mise a jour
+    // hors-store (lots 6-8), jamais soumis au Play Store.
+    // Signature du flavor externe : lit android/keystore.properties (local,
+    // jamais committe, gitignore) -- voir android/README-SIGNATURE.md pour
+    // generer la cle dans CE projet. Sans ce fichier, "externe" compile quand
+    // meme mais n'est pas signe (comme cote clovis-mobile).
     signingConfigs {
         if (fichierKeystore.exists()) {
             externe {
-                storeFile file(proprietesKeystore.getProperty('storeFile'))
-                storePassword proprietesKeystore.getProperty('storePassword')
-                keyAlias proprietesKeystore.getProperty('keyAlias')
-                keyPassword proprietesKeystore.getProperty('keyPassword')
+                storeFile file(proprietesKeystore.getProperty("storeFile"))
+                storePassword proprietesKeystore.getProperty("storePassword")
+                keyAlias proprietesKeystore.getProperty("keyAlias")
+                keyPassword proprietesKeystore.getProperty("keyPassword")
             }
         }
     }
 
-    flavorDimensions "distribution"
+    flavorDimensions = ["distribution"]
     productFlavors {
         play {
             dimension "distribution"
-            // Aucun applicationIdSuffix : c'est l'id publie sur le Play
-            // Store (com.clovis.app, deja reutilise tel quel du socle
-            // natif). Signature geree automatiquement par Google Play App
-            // Signing, rien a configurer ici.
         }
         externe {
             dimension "distribution"
-            // Suffixe distinct : jamais le meme id que la version Play
-            // Store, pour eviter tout conflit d'installation cote-a-cote et
-            // bien marquer qu'il s'agit d'une distribution differente.
             applicationIdSuffix ".externe"
             versionNameSuffix "-externe"
+            // Lot 8 : signature manuelle, TOUJOURS la meme cle d'une version
+            // a l'autre (voir README-SIGNATURE.md), sinon aucune mise a jour
+            // ne pourra s'installer par-dessus l'app existante.
             if (fichierKeystore.exists()) {
                 signingConfig signingConfigs.externe
             }
         }
     }
+
 }
 
 repositories {
@@ -133,6 +138,14 @@ dependencies {
     // Lot 2 porte le 25/08/2026. Meme version exacte que
     // clovis-mobile/android-legacy-natif/app/build.gradle.kts.
     implementation "androidx.documentfile:documentfile:1.0.1"
+
+    // connecteurs/ConnecteursPlugin.kt : Custom Tabs pour l'OAuth Notion,
+    // Lot 5 porte le 25/08/2026. Meme version que clovis-mobile -- A VERIFIER
+    // par Bourama dans Android Studio : clovis-mobile a du monter cette lib a
+    // 1.10.0 a cause de auth-kt (Supabase natif), absent ici (le token vient
+    // du JS, pas de supabase-kt natif) -- 1.8.0 devrait donc suffire, mais
+    // pas verifie avec compileSdk 36 dans CE projet precis.
+    implementation "androidx.browser:browser:1.8.0"
 }
 
 apply from: 'capacitor.build.gradle'

@@ -39,6 +39,20 @@ data class ResultatAction(val succes: Boolean, val resultat: String = "")
 @Serializable
 data class CorpsTokenPush(val plateforme: String, val token: String)
 
+// --- Lot 5 : connecteurs tiers (Notion), porte le 25/08/2026 ---
+@Serializable
+data class UrlAutorisationNotion(val url_autorisation: String)
+@Serializable
+data class FinalisationNotion(val code: String, val state: String)
+@Serializable
+data class ReponseFinalisationNotion(val connecte: Boolean, val espace: String? = null)
+@Serializable
+data class StatutNotion(val connecte: Boolean)
+@Serializable
+data class ResultatNotion(val id: String, val type: String, val url: String? = null)
+@Serializable
+data class ReponseRechercheNotion(val resultats: List<ResultatNotion>)
+
 class ClovisApiClient(private val context: Context) {
 
     private val http = HttpClient(Android) {
@@ -79,5 +93,37 @@ class ClovisApiClient(private val context: Context) {
             contentType(ContentType.Application.Json)
             setBody(resultat)
         }
+    }
+
+    // --- Lot 5 : connecteurs tiers (Notion), porte le 25/08/2026 ---
+
+    suspend fun demarrerConnexionNotion(): UrlAutorisationNotion {
+        val reponse: HttpResponse = http.post("$BASE_URL/api/appareils-mobiles/connecteurs/notion/demarrer") {
+            avecAuth(this)
+        }
+        return reponse.body()
+    }
+
+    suspend fun finaliserConnexionNotion(code: String, state: String): ReponseFinalisationNotion {
+        val reponse: HttpResponse = http.post("$BASE_URL/api/appareils-mobiles/connecteurs/notion/finaliser") {
+            avecAuth(this)
+            contentType(ContentType.Application.Json)
+            setBody(FinalisationNotion(code, state))
+        }
+        return reponse.body()
+    }
+
+    suspend fun statutNotion(): StatutNotion {
+        val reponse: HttpResponse = http.get("$BASE_URL/api/appareils-mobiles/connecteurs/notion/statut") {
+            avecAuth(this)
+        }
+        return reponse.body()
+    }
+
+    suspend fun rechercherNotion(requete: String): ReponseRechercheNotion {
+        val reponse: HttpResponse = http.get("$BASE_URL/api/appareils-mobiles/connecteurs/notion/rechercher?q=$requete") {
+            avecAuth(this)
+        }
+        return reponse.body()
     }
 }
