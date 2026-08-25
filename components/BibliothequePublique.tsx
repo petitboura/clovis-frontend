@@ -2,18 +2,22 @@
 
 import { useEffect, useRef, useState } from "react";
 import {
-  Search, Plus, Trash2, Paperclip, FileText, Image as IconImage, Music as IconAudio, Video as IconVideo, Download, Flag,
+  Search, Plus, Trash2, Paperclip, FileText, Image as IconImage, Music as IconAudio, Video as IconVideo, Download,
+  Flag, FolderPlus, Check,
 } from "lucide-react";
 import Link from "next/link";
 import {
   listerBibliothequePublique,
   ajouterABibliothequePublique,
   supprimerDeBibliothequePublique,
+  copierVersBibliothequePersonnelle,
   type EntreeBibliothequePublique,
 } from "@/lib/api";
 import { messageErreur, ErreurApi } from "@/lib/erreurs";
 import { CTACompteRequis } from "@/components/CTACompteRequis";
+import { CompteRequisModal } from "@/components/CompteRequisModal";
 import { SignalerContenuModal } from "@/components/SignalerContenuModal";
+import { VisionneuseBibliotheque } from "@/components/VisionneuseBibliotheque";
 import { Skeleton } from "./Skeleton";
 
 function iconePourType(typeMime: string | null) {
@@ -50,6 +54,10 @@ export function BibliothequePublique() {
   const [erreur, setErreur] = useState<string | null>(null);
   const [sansCompte, setSansCompte] = useState(false);
   const [entreeSignalee, setEntreeSignalee] = useState<EntreeBibliothequePublique | null>(null);
+  const [entreeOuverte, setEntreeOuverte] = useState<EntreeBibliothequePublique | null>(null);
+  const [copieEnCours, setCopieEnCours] = useState<string | null>(null);
+  const [copieReussie, setCopieReussie] = useState<string | null>(null);
+  const [compteRequisPourCopie, setCompteRequisPourCopie] = useState(false);
   const inputFichierRef = useRef<HTMLInputElement>(null);
 
   function charger(q?: string) {
@@ -92,6 +100,28 @@ export function BibliothequePublique() {
       }
     } finally {
       setEnvoi(false);
+    }
+  }
+
+  // 25/08, Bourama : "rendre les fichiers de la bibliothèque publique
+  // uploadables/copiables vers ta bibliothèque privée". copieReussie
+  // affiche brièvement une coche à la place de l'icône (transition
+  // douce, cohérent avec la règle "jamais d'affichage brut") avant de
+  // revenir à l'icône copier.
+  async function copierVersBiblioPerso(entree: EntreeBibliothequePublique) {
+    setCopieEnCours(entree.id);
+    try {
+      await copierVersBibliothequePersonnelle(entree.id);
+      setCopieReussie(entree.id);
+      setTimeout(() => setCopieReussie((id) => (id === entree.id ? null : id)), 2000);
+    } catch (e) {
+      if (e instanceof ErreurApi && e.statusCode === 401) {
+        setCompteRequisPourCopie(true);
+      } else {
+        window.alert(messageErreur(e));
+      }
+    } finally {
+      setCopieEnCours(null);
     }
   }
 
@@ -212,26 +242,33 @@ export function BibliothequePublique() {
                 key={entree.id}
                 className="flex items-center justify-between gap-3 rounded-xl border border-dj-bordure bg-dj-surface px-4 py-3"
               >
-                <div className="flex min-w-0 flex-1 items-center gap-3">
+                <button
+                  onClick={() => entree.url_publique && setEntreeOuverte(entree)}
+                  disabled={!entree.url_publique}
+                  className="group flex min-w-0 flex-1 items-center gap-3 text-left disabled:cursor-default"
+                >
                   <Icone size={16} className="flex-shrink-0 text-dj-texte-muet" />
                   <div className="min-w-0">
-                    <p className="truncate text-sm text-dj-texte">{entree.nom}</p>
+                    <p className="truncate text-sm text-dj-texte group-hover:underline">{entree.nom}</p>
                     {entree.description && (
                       <p className="truncate text-xs text-dj-texte-muet">{entree.description}</p>
                     )}
                   </div>
-                </div>
+                </button>
                 <div className="flex flex-shrink-0 items-center gap-3">
                   {entree.url_publique && (
-                    <a
-                      href={entree.url_publique}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      title="Ouvrir / télécharger"
-                      className="text-dj-texte-muet transition-colors hover:text-dj-texte"
+                    <button
+                      onClick={() => copierVersBiblioPerso(entree)}
+                      disabled={copieEnCours === entree.id}
+                      title="Copier dans ma bibliothèque"
+                      className="text-dj-texte-muet transition-colors hover:text-dj-texte disabled:opacity-50"
                     >
-                      <Download size={15} />
-                    </a>
+                      {copieReussie === entree.id ? (
+                        <Check size={15} className="text-dj-accent-1" />
+                      ) : (
+                        <FolderPlus size={15} />
+                      )}
+                    </button>
                   )}
                   <button
                     onClick={() => setEntreeSignalee(entree)}
@@ -262,6 +299,29 @@ export function BibliothequePublique() {
             libelle: entreeSignalee.nom,
           }}
           onFermer={() => setEntreeSignalee(null)}
+        />
+      )}
+
+      <VisionneuseBibliotheque
+        fichier={
+          entreeOuverte && entreeOuverte.url_publique
+            ? {
+                id: entreeOuverte.id,
+                nom_fichier: entreeOuverte.nom_fichier || entreeOuverte.nom,
+                type_mime: entreeOuverte.type_mime || "application/octet-stream",
+                description: entreeOuverte.description || entreeOuverte.nom,
+                url_publique: entreeOuverte.url_publique,
+                created_at: entreeOuverte.created_at,
+              }
+            : null
+        }
+        onFermer={() => setEntreeOuverte(null)}
+      />
+
+      {compteRequisPourCopie && (
+        <CompteRequisModal
+          texte="Crée un compte pour copier ce document dans ta bibliothèque."
+          onFerme={() => setCompteRequisPourCopie(false)}
         />
       )}
     </div>

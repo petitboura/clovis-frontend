@@ -1,8 +1,25 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { X, Download, ExternalLink, Loader2 } from "lucide-react";
+import { X, Download, ExternalLink, Loader2, File as IconFichier } from "lucide-react";
 import { LinkPreview } from "./chat/LinkPreview";
+
+// Types Word/Excel/PowerPoint (anciens .doc/.xls/.ppt + .docx/.xlsx/.pptx)
+// -- 25/08, Bourama : "plusieurs types de fichier n'ont pas d'aperçu".
+// Pas de conversion propre (CloudConvert, déjà utilisé pour le chat, est
+// limité à 10 conversions/jour tous utilisateurs confondus -- inadapté
+// à un aperçu rouvert à volonté) : on affiche le fichier via la
+// visionneuse Microsoft Office (gratuite, sans limite, lit directement
+// une URL publique), dans une iframe qui reste À L'INTÉRIEUR de cette
+// fenêtre -- rien ne fait sortir l'utilisateur de l'app.
+const TYPES_MIME_OFFICE = new Set([
+  "application/msword",
+  "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+  "application/vnd.ms-excel",
+  "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+  "application/vnd.ms-powerpoint",
+  "application/vnd.openxmlformats-officedocument.presentationml.presentation",
+]);
 
 // Fenêtre par-dessus la page (modal) qui remplace le "lien qui ouvre un
 // nouvel onglet" de EspaceBibliotheque.tsx (Bourama 17/08 : "rien pour
@@ -79,6 +96,42 @@ function ContenuTexte({ href }: { href: string }) {
   return <pre className="whitespace-pre-wrap break-words p-5 font-sans text-sm text-dj-texte">{texte}</pre>;
 }
 
+function ContenuOffice({ href, titre }: { href: string; titre: string }) {
+  const [charge, setCharge] = useState(false);
+  const urlVisionneuse = `https://view.officeapps.live.com/op/embed.aspx?src=${encodeURIComponent(href)}`;
+
+  return (
+    <div className="relative h-[75vh] w-full">
+      {!charge && (
+        <div className="absolute inset-0 flex items-center justify-center">
+          <Loader2 size={20} className="animate-spin text-dj-texte-muet" />
+        </div>
+      )}
+      <iframe
+        src={urlVisionneuse}
+        title={titre}
+        onLoad={() => setCharge(true)}
+        className={`h-full w-full border-0 transition-opacity duration-300 ${charge ? "opacity-100" : "opacity-0"}`}
+      />
+    </div>
+  );
+}
+
+function ContenuNonPrevisualisable({ href, nom }: { href: string; nom: string }) {
+  return (
+    <div className="flex flex-col items-center gap-3 p-10 text-center">
+      <IconFichier size={28} className="text-dj-texte-muet" />
+      <p className="text-sm text-dj-texte-muet">Aperçu non disponible pour ce type de fichier.</p>
+      <button
+        onClick={() => telecharger(href, nom)}
+        className="flex items-center gap-1.5 rounded-lg border border-dj-bordure px-3 py-1.5 text-xs text-dj-texte-muet transition-colors hover:border-dj-bordure-forte hover:text-dj-texte"
+      >
+        <Download size={13} /> Télécharger
+      </button>
+    </div>
+  );
+}
+
 export function VisionneuseBibliotheque({
   fichier,
   onFermer,
@@ -94,6 +147,8 @@ export function VisionneuseBibliotheque({
   const estPdf = fichier.type_mime === "application/pdf";
   const estTexte = fichier.type_mime === "text/plain";
   const estLien = fichier.type_mime === "text/uri-list";
+  const estOffice = TYPES_MIME_OFFICE.has(fichier.type_mime);
+  const estAutre = !estPdf && !estImage && !estAudio && !estVideo && !estTexte && !estLien && !estOffice;
   const titre = fichier.description || fichier.nom_fichier;
 
   return (
@@ -146,6 +201,10 @@ export function VisionneuseBibliotheque({
           )}
 
           {estTexte && <ContenuTexte href={fichier.url_publique} />}
+
+          {estOffice && <ContenuOffice href={fichier.url_publique} titre={titre} />}
+
+          {estAutre && <ContenuNonPrevisualisable href={fichier.url_publique} nom={fichier.nom_fichier} />}
 
           {estLien && (
             <div className="p-5">

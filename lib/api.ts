@@ -379,6 +379,14 @@ export async function supprimerDeBibliothequePublique(entreeId: string) {
   return appelerApi(`/api/bibliotheque-publique/${entreeId}`, { method: "DELETE" });
 }
 
+// Copie un fichier de la bibliothèque publique vers la bibliothèque
+// personnelle de l'utilisateur connecté (25/08, demande Bourama).
+// appelerApi lève déjà une ErreurApi (statusCode 401) si pas connecté --
+// même pattern de gestion que ajouterABibliothequePublique.
+export async function copierVersBibliothequePersonnelle(entreeId: string) {
+  return appelerApi(`/api/bibliotheque/copier-depuis-publique/${entreeId}`, { method: "POST" });
+}
+
 /**
  * Upload de PLUSIEURS fichiers d'un coup vers la bibliothèque personnelle
  * (2026-08-01, demande Bourama : "plusieurs upload à la fois") -- simple
