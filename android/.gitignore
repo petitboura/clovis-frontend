@@ -53,9 +53,13 @@ captures/
 .idea/navEditor.xml
 
 # Keystore files
-# Uncomment the following lines if you do not want to check your keystore files in.
-#*.jks
-#*.keystore
+*.jks
+*.keystore
+
+# Ajoute le 25/08/2026, Bourama : Lot 3C (fusion Capacitor). Fichier local
+# de signature du flavor "externe" (voir android/keystore.properties.example
+# et android/README-SIGNATURE.md), ne doit jamais etre committe.
+keystore.properties
 
 # External native build folder generated in Android Studio 2.2 and later
 .externalNativeBuild

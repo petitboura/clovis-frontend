@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    Lot 3C (Phase 3, fusion Capacitor) : flavor "play" (publiable Play
+    Store). Volontairement vide, comme deja acte cote natif (voir
+    clovis-mobile/android-legacy-natif/app/src/play/AndroidManifest.xml) :
+    aucune permission ni service propre a ce flavor. Fusionne automatiquement
+    avec src/main lors du build (Gradle merge les manifestes par nom de
+    flavor). Ce fichier existe des maintenant pour garantir l'etancheite
+    structurelle avec "externe" des le depart.
+-->
+<manifest xmlns:android="http://schemas.android.com/apk/res/android" />

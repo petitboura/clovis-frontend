@@ -5,6 +5,22 @@ apply plugin: 'org.jetbrains.kotlin.android'
 apply plugin: 'org.jetbrains.kotlin.plugin.compose'
 apply plugin: 'org.jetbrains.kotlin.plugin.serialization'
 
+// Ajoute le 25/08/2026, Bourama : Lot 3C (Phase 3, fusion Capacitor).
+// Isolation play/externe deja actee et deja implementee cote natif (voir
+// clovis-mobile/android-legacy-natif/app/build.gradle.kts et
+// clovis-mobile/android-legacy-natif/README-SIGNATURE.md), reprise ici a
+// l'identique pour ce conteneur Capacitor, qui est desormais le seul socle
+// (clovis-mobile/android abandonne, voir android/keystore.properties.example
+// pour la suite). Isolation au niveau du build, pas d'un simple interrupteur
+// en code : "externe" reste le seul flavor pouvant embarquer le service
+// d'accessibilite, une fois celui-ci migre en plugin Capacitor (pas encore
+// fait ici, seule l'isolation du build est posee par ce lot).
+def fichierKeystore = rootProject.file('keystore.properties')
+def proprietesKeystore = new Properties()
+if (fichierKeystore.exists()) {
+    fichierKeystore.withInputStream { proprietesKeystore.load(it) }
+}
+
 android {
     namespace = "com.clovis.app"
     compileSdk = rootProject.ext.compileSdkVersion
@@ -30,6 +46,44 @@ android {
     // Ajoute le 25/08/2026 : requis par le plugin Compose (AlerteRappelActivity).
     buildFeatures {
         compose true
+    }
+
+    // Ajoute le 25/08/2026, Bourama : Lot 3C (fusion Capacitor). Signature
+    // manuelle du flavor "externe", lue depuis un fichier LOCAL jamais
+    // committe (voir android/README-SIGNATURE.md). Absent -> pas de
+    // signingConfig applique ; le flavor "play" (signe par Google Play App
+    // Signing) n'en a de toute facon pas besoin.
+    signingConfigs {
+        if (fichierKeystore.exists()) {
+            externe {
+                storeFile file(proprietesKeystore.getProperty('storeFile'))
+                storePassword proprietesKeystore.getProperty('storePassword')
+                keyAlias proprietesKeystore.getProperty('keyAlias')
+                keyPassword proprietesKeystore.getProperty('keyPassword')
+            }
+        }
+    }
+
+    flavorDimensions "distribution"
+    productFlavors {
+        play {
+            dimension "distribution"
+            // Aucun applicationIdSuffix : c'est l'id publie sur le Play
+            // Store (com.clovis.app, deja reutilise tel quel du socle
+            // natif). Signature geree automatiquement par Google Play App
+            // Signing, rien a configurer ici.
+        }
+        externe {
+            dimension "distribution"
+            // Suffixe distinct : jamais le meme id que la version Play
+            // Store, pour eviter tout conflit d'installation cote-a-cote et
+            // bien marquer qu'il s'agit d'une distribution differente.
+            applicationIdSuffix ".externe"
+            versionNameSuffix "-externe"
+            if (fichierKeystore.exists()) {
+                signingConfig signingConfigs.externe
+            }
+        }
     }
 }
 

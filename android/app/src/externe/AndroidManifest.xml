@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    Lot 3C (Phase 3, fusion Capacitor) : flavor "externe" (distribution hors
+    Play Store). Volontairement vide pour l'instant : le service
+    d'accessibilite existant (voir
+    clovis-mobile/android-legacy-natif/app/src/externe/accessibilite/ServiceAccessibiliteClovis.kt
+    et son manifest
+    clovis-mobile/android-legacy-natif/app/src/externe/AndroidManifest.xml)
+    n'est pas encore migre en plugin Capacitor. Ce fichier est le point
+    d'ancrage prevu pour cette declaration une fois le plugin migre : jamais
+    dans src/main ni src/play, exactement comme deja acte cote natif.
+-->
+<manifest xmlns:android="http://schemas.android.com/apk/res/android" />
