@@ -128,6 +128,23 @@ export function EspaceBibliotheque() {
   // qui sait il peut en voir plusieurs" -- filtre simple par nom, la
   // liste pouvant vite devenir longue au fur et à mesure des uploads.
   const [rechercheFichiersExistants, setRechercheFichiersExistants] = useState("");
+  // 25/08/2026, demande Bourama : "pourquoi on peut glisser pousser dans
+  // un dossier aussi" -- glisser-déposer un fichier directement sur la
+  // carte d'un dossier pour l'y ranger, en plus de l'icône dossier déjà
+  // sur chaque ligne (qui reste l'équivalent tactile/clavier, le
+  // drag-and-drop étant inutilisable au doigt sur mobile). dossierSurvole
+  // pilote juste le style de survol pendant le glisser.
+  const [dossierSurvole, setDossierSurvole] = useState<string | null>(null);
+
+  async function deposerFichierDansDossier(dossierId: string, fichierId: string) {
+    setDossierSurvole(null);
+    try {
+      await rangerFichierDansDossier(dossierId, fichierId);
+      chargerDossiers();
+    } catch (e) {
+      window.alert(messageErreur(e));
+    }
+  }
 
   useEffect(() => {
     chargerFichiers();
@@ -532,7 +549,19 @@ async function ajouter() {
           {sousDossiersAffiches.map((d) => (
             <div
               key={d.id}
-              className="flex items-center justify-between gap-3 rounded-xl border border-dj-bordure bg-dj-surface px-4 py-3"
+              onDragOver={(e) => {
+                e.preventDefault();
+                if (dossierSurvole !== d.id) setDossierSurvole(d.id);
+              }}
+              onDragLeave={() => setDossierSurvole((id) => (id === d.id ? null : id))}
+              onDrop={(e) => {
+                e.preventDefault();
+                const fichierId = e.dataTransfer.getData("text/fichier-bibliotheque-id");
+                if (fichierId) deposerFichierDansDossier(d.id, fichierId);
+              }}
+              className={`flex items-center justify-between gap-3 rounded-xl border px-4 py-3 transition-colors ${
+                dossierSurvole === d.id ? "border-dj-accent-1 bg-dj-surface-haute" : "border-dj-bordure bg-dj-surface"
+              }`}
             >
               {dossierEnRenommage === d.id ? (
                 <input
@@ -586,7 +615,9 @@ async function ajouter() {
             return (
               <div
                 key={f.id}
-                className="flex items-center justify-between gap-3 rounded-xl border border-dj-bordure bg-dj-surface px-4 py-3"
+                draggable
+                onDragStart={(e) => e.dataTransfer.setData("text/fichier-bibliotheque-id", f.id)}
+                className="flex items-center justify-between gap-3 rounded-xl border border-dj-bordure bg-dj-surface px-4 py-3 cursor-grab active:cursor-grabbing"
               >
                 <button
                   onClick={() => setFichierOuvert(f)}
