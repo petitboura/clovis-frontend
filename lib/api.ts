@@ -690,6 +690,7 @@ export type ComportementPublic = {
   nom: string;
   description: string;
   texte: string;
+  skill_md: string;
   activations_count: number;
 };
 
@@ -702,6 +703,38 @@ export async function rechercherComportementsPublics(q?: string) {
 export async function activerComportementPublic(comportementPublicId: string) {
   const resultat = await appelerApi(`/api/comportements-publics/${comportementPublicId}/activer`, { method: "POST" });
   return resultat as Comportement;
+}
+
+// 25/08/2026, demande Bourama : uploader directement un fichier .md dans
+// le catalogue public, publié immédiatement pour tout le monde (pas de
+// passage par "Mes comportements"). Même pattern fetch manuel que
+// ajouterABibliothequePublique (appelerApi force le JSON, inadapté à un
+// FormData).
+export async function uploaderSkillPublic(fichier: File, nom: string, description?: string) {
+  const {
+    data: { session },
+  } = await supabase.auth.getSession();
+
+  if (!session?.access_token) {
+    throw new Error("Connecte-toi pour envoyer un skill.");
+  }
+
+  const corps = new FormData();
+  corps.append("fichier", fichier);
+  corps.append("nom", nom.trim());
+  corps.append("description", description || "");
+
+  const reponse = await fetch(`${API_URL}/api/comportements-publics/uploader`, {
+    method: "POST",
+    headers: { Authorization: `Bearer ${session.access_token}` },
+    body: corps,
+  });
+
+  if (!reponse.ok) {
+    throw await construireErreurApi(reponse, "/api/comportements-publics/uploader");
+  }
+
+  return (await reponse.json()) as ComportementPublic;
 }
 
 // nom = null/undefined -> mode "auto" (nom généré côté serveur avec le
@@ -720,6 +753,36 @@ export async function ajouterComportement(
     body: JSON.stringify({ texte, nom: nom || null, lien_type: lienType || null, lien_id: lienId || null }),
   });
   return resultat as Comportement;
+}
+
+// 25/08/2026, demande Bourama : uploader un fichier .md directement dans
+// "Mes comportements", gardé TEL QUEL (pas de passage par l'IA -- voir
+// importer_comportement_depuis_skill_md côté backend). Même pattern
+// fetch manuel que uploaderSkillPublic ci-dessus.
+export async function importerComportementDepuisFichier(agentId: string, fichier: File, nom: string) {
+  const {
+    data: { session },
+  } = await supabase.auth.getSession();
+
+  if (!session?.access_token) {
+    throw new Error("Connecte-toi pour importer un skill.");
+  }
+
+  const corps = new FormData();
+  corps.append("fichier", fichier);
+  corps.append("nom", nom.trim());
+
+  const reponse = await fetch(`${API_URL}/api/agents/${agentId}/mes-comportements/importer`, {
+    method: "POST",
+    headers: { Authorization: `Bearer ${session.access_token}` },
+    body: corps,
+  });
+
+  if (!reponse.ok) {
+    throw await construireErreurApi(reponse, `/api/agents/${agentId}/mes-comportements/importer`);
+  }
+
+  return (await reponse.json()) as Comportement;
 }
 
 // Attache (lienType+lienId fournis) ou détache (les deux null) un

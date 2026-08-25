@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { X, Download, ExternalLink, Loader2, File as IconFichier } from "lucide-react";
+import { X, Download, ExternalLink, Loader2, File as IconFichier, Copy, Check } from "lucide-react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import { LinkPreview } from "./chat/LinkPreview";
@@ -96,6 +96,34 @@ async function telecharger(href: string, nom: string) {
   }
 }
 
+// 25/08/2026, demande Bourama : "les truc comme du texte ou autre
+// doivent avoir un bouton copier" -- réutilisé par ContenuTexte et
+// ContenuMarkdown (formaté + brut) ci-dessous.
+function BoutonCopier({ texte }: { texte: string }) {
+  const [copie, setCopie] = useState(false);
+
+  async function copier() {
+    try {
+      await navigator.clipboard.writeText(texte);
+      setCopie(true);
+      setTimeout(() => setCopie(false), 1500);
+    } catch {
+      // Silencieux -- action secondaire, une erreur de presse-papier ne
+      // doit rien casser dans la visionneuse.
+    }
+  }
+
+  return (
+    <button
+      onClick={copier}
+      className="flex items-center gap-1.5 rounded-md px-2.5 py-1 text-xs text-dj-texte-muet transition-colors hover:text-dj-texte"
+    >
+      {copie ? <Check size={13} /> : <Copy size={13} />}
+      {copie ? "Copié" : "Copier"}
+    </button>
+  );
+}
+
 function ContenuTexte({ href }: { href: string }) {
   const [texte, setTexte] = useState<string | null>(null);
   const [enErreur, setEnErreur] = useState(false);
@@ -121,7 +149,14 @@ function ContenuTexte({ href }: { href: string }) {
       </div>
     );
   }
-  return <pre className="whitespace-pre-wrap break-words p-5 font-sans text-sm text-dj-texte">{texte}</pre>;
+  return (
+    <div className="flex flex-col">
+      <div className="flex justify-end border-b border-dj-bordure px-3 py-2">
+        <BoutonCopier texte={texte} />
+      </div>
+      <pre className="whitespace-pre-wrap break-words p-5 font-sans text-sm text-dj-texte">{texte}</pre>
+    </div>
+  );
 }
 
 function ContenuMarkdown({ href }: { href: string }) {
@@ -153,23 +188,26 @@ function ContenuMarkdown({ href }: { href: string }) {
 
   return (
     <div className="flex flex-col">
-      <div className="flex justify-end gap-1 border-b border-dj-bordure px-3 py-2">
-        <button
-          onClick={() => setVueBrute(false)}
-          className={`rounded-md px-2.5 py-1 text-xs transition-colors ${
-            !vueBrute ? "bg-dj-surface-haute text-dj-texte" : "text-dj-texte-muet hover:text-dj-texte"
-          }`}
-        >
-          Formaté
-        </button>
-        <button
-          onClick={() => setVueBrute(true)}
-          className={`rounded-md px-2.5 py-1 text-xs transition-colors ${
-            vueBrute ? "bg-dj-surface-haute text-dj-texte" : "text-dj-texte-muet hover:text-dj-texte"
-          }`}
-        >
-          Brut
-        </button>
+      <div className="flex justify-between gap-1 border-b border-dj-bordure px-3 py-2">
+        <div className="flex gap-1">
+          <button
+            onClick={() => setVueBrute(false)}
+            className={`rounded-md px-2.5 py-1 text-xs transition-colors ${
+              !vueBrute ? "bg-dj-surface-haute text-dj-texte" : "text-dj-texte-muet hover:text-dj-texte"
+            }`}
+          >
+            Formaté
+          </button>
+          <button
+            onClick={() => setVueBrute(true)}
+            className={`rounded-md px-2.5 py-1 text-xs transition-colors ${
+              vueBrute ? "bg-dj-surface-haute text-dj-texte" : "text-dj-texte-muet hover:text-dj-texte"
+            }`}
+          >
+            Brut
+          </button>
+        </div>
+        <BoutonCopier texte={texte} />
       </div>
       {vueBrute ? (
         <pre className="whitespace-pre-wrap break-words p-5 font-sans text-sm text-dj-texte">{texte}</pre>
