@@ -197,8 +197,16 @@ export function EcranAccueil() {
           standard déjà en place partout ailleurs. Icône dans une puce
           teintée pour donner du poids visuel à chaque raccourci plutôt
           qu'une icône flottant seule dans la carte. */}
+      {/* Hiérarchie du texte (26/08/2026, demande Bourama : le gris
+          discret dj-texte-muet était réutilisé partout de façon uniforme,
+          sur les titres de section comme sur les icônes et labels de
+          l'activité récente, ce qui écrasait toute hiérarchie. Il ne
+          reste réservé qu'aux dates, vraiment secondaires ; titres,
+          icônes et labels passent en dj-texte pour redevenir lisibles.
+          Les icônes des raccourcis "Mon espace" ne sont volontairement
+          pas touchées ici. */}
       <div>
-        <h2 className="mb-3 font-display text-sm font-bold uppercase tracking-wide text-dj-texte-muet">
+        <h2 className="mb-3 font-display text-sm font-bold uppercase tracking-wide text-dj-texte">
           Mon espace
         </h2>
         <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
@@ -218,7 +226,7 @@ export function EcranAccueil() {
 
       {/* Activité récente */}
       <div>
-        <h2 className="mb-3 font-display text-sm font-bold uppercase tracking-wide text-dj-texte-muet">
+        <h2 className="mb-3 font-display text-sm font-bold uppercase tracking-wide text-dj-texte">
           Activité récente
         </h2>
 
@@ -243,7 +251,7 @@ export function EcranAccueil() {
                   onClick={ouvrirChat}
                   className="group flex items-center gap-3 rounded-xl px-3 py-2.5 text-left transition-colors hover:bg-dj-surface"
                 >
-                  <item.Icone size={16} className="flex-shrink-0 text-dj-texte-muet transition-transform group-hover:scale-110" />
+                  <item.Icone size={16} className="flex-shrink-0 text-dj-texte transition-transform group-hover:scale-110" />
                   <span className="min-w-0 flex-1 truncate text-sm text-dj-texte">{item.label}</span>
                   <span className="flex-shrink-0 text-xs text-dj-texte-muet">{dateRelative(item.date)}</span>
                 </button>
@@ -253,7 +261,7 @@ export function EcranAccueil() {
                   href={item.href}
                   className="group flex items-center gap-3 rounded-xl px-3 py-2.5 transition-colors hover:bg-dj-surface"
                 >
-                  <item.Icone size={16} className="flex-shrink-0 text-dj-texte-muet transition-transform group-hover:scale-110" />
+                  <item.Icone size={16} className="flex-shrink-0 text-dj-texte transition-transform group-hover:scale-110" />
                   <span className="min-w-0 flex-1 truncate text-sm text-dj-texte">{item.label}</span>
                   <span className="flex-shrink-0 text-xs text-dj-texte-muet">{dateRelative(item.date)}</span>
                 </Link>
