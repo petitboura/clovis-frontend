@@ -38,9 +38,13 @@ const PORTEE_PAR_OUTIL: Record<string, PorteeDonnees[]> = {
   ajouter_examen: ["programme"],
   modifier_examen: ["programme"],
   supprimer_examen: ["programme"],
-  ajouter_comportement: ["comportements"],
-  modifier_comportement: ["comportements"],
-  supprimer_comportement: ["comportements"],
+  // gerer_comportement (consolidé le 26/08, ex ajouter/modifier/
+  // supprimer_comportement fusionnés en un seul outil avec un paramètre
+  // `action`), se déclenche aussi sur les actions "lister"/"consulter"
+  // (lecture seule), coût négligeable comme pour annuler_derniere_modification
+  // juste en dessous : un rechargement en trop sur une lecture ne coûte
+  // qu'un petit GET, uniquement si la section est déjà montée.
+  gerer_comportement: ["comportements"],
   // annule potentiellement l'une ou l'autre selon ce qui a été annulé --
   // on rafraîchit les deux par sécurité, le coût est négligeable (une
   // poignée de petits GET, uniquement si la section est déjà montée).
