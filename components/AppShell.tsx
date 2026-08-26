@@ -78,7 +78,19 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           />
           {/* Marges via les variables CSS du plugin (voir "CSS insets" de
               la doc @capgo/capacitor-native-navigation) : valent 0px sur le
-              web, donc ce padding est un no-op hors de l'appli native. */}
+              web, donc ce padding est un no-op hors de l'appli native.
+              Correctif (26/08/2026) : hors appli native, rien ne
+              réservait l'espace de l'encoche/île dynamique/barre de
+              statut en haut d'écran, alors que viewportFit:"cover" +
+              display:"standalone" du manifest (voir app/layout.tsx et
+              app/manifest.ts) font tourner le site edge-to-edge dès
+              qu'il est ouvert en PWA installée -- le contenu du tout
+              haut de chaque page se retrouvait sous l'encoche sur
+              téléphone à encoche/île dynamique. env(safe-area-inset-top)
+              vaut 0px sur desktop/appareil sans encoche, donc sans effet
+              là où ce n'est pas nécessaire -- même logique que le
+              padding-bottom déjà posé sur la barre de saisie
+              (ChatIA.tsx). */}
           <main
             className="flex-1 overflow-y-auto"
             style={
@@ -87,7 +99,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                     paddingTop: "var(--cap-native-navigation-top, 0px)",
                     paddingBottom: "var(--cap-native-navigation-bottom, 0px)",
                   }
-                : undefined
+                : { paddingTop: "env(safe-area-inset-top)" }
             }
           >
             {children}

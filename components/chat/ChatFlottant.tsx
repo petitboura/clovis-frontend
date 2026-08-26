@@ -257,7 +257,18 @@ export function ChatFlottant({
           AppSidebar, jamais dupliqués dans l'en-tête du chat. */}
       <div
         onMouseDownCapture={fermerFenetresAuClic}
-        className="flex flex-shrink-0 items-center gap-2 border-b border-dj-bordure px-3 py-2.5"
+        // Correctif (26/08/2026) : en mode plein écran (fixed inset-0),
+        // cet en-tête touche littéralement le tout haut du viewport --
+        // sous encoche/île dynamique en PWA installée (display:standalone
+        // + viewportFit:"cover", voir app/layout.tsx/manifest.ts), le
+        // logo/titre se retrouvait coincé sous la barre de statut. Ajout
+        // sur le py-2.5 existant, pas un remplacement (0px sur desktop/
+        // appareil sans encoche, donc sans effet là où ce n'est pas
+        // nécessaire) -- pas de concernement en mode mini (jamais ancré
+        // en haut d'écran, voir bottom-5 right-5 ci-dessus).
+        className={`flex flex-shrink-0 items-center gap-2 border-b border-dj-bordure px-3 pb-2.5 ${
+          pleinEcran ? "pt-[calc(0.625rem+env(safe-area-inset-top))]" : "pt-2.5"
+        }`}
       >
         <Logo taille={20} />
         <span className="font-display text-sm font-bold text-dj-texte">Clovis</span>
