@@ -42,7 +42,7 @@ public class DossiersPlugin: CAPPlugin, CAPBridgedPlugin, UIDocumentPickerDelega
 
     // Ajoute le 26/08/2026 : miroir cote backend (voir
     // clovis-backend/core/dossiers_designes_mobile.py), meme role que cote
-    // Android -- appele a l'ouverture de l'app (load()) et apres CHAQUE
+    // Android, appele a l'ouverture de l'app (load()) et apres CHAQUE
     // changement, jamais bloquant (echec silencieux, log seulement).
     public override func load() {
         super.load()

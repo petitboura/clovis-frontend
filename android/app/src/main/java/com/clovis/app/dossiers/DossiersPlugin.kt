@@ -21,7 +21,7 @@
 // de l'app (load()) declenchent maintenant automatiquement une
 // synchronisation silencieuse avec le backend (miroir des NOMS de
 // dossiers designes, voir clovis-backend/core/dossiers_designes_mobile.py)
-// -- aucun appel JS supplementaire requis pour ca, c'est transparent.
+// (android/ et ios/ là-bas), c'est transparent.
 package com.clovis.app.dossiers
 
 import android.content.Intent
@@ -47,7 +47,7 @@ class DossiersPlugin : Plugin() {
     // Ajoute le 26/08/2026 : miroir cote backend (voir
     // clovis-backend/core/dossiers_designes_mobile.py) pour que l'agent
     // sache quels noms de dossiers cibler. Appele a l'ouverture de l'app
-    // (load()) et apres CHAQUE changement (ajout/retrait) -- jamais
+    // (load()) et apres CHAQUE changement (ajout/retrait), jamais
     // bloquant pour l'utilisateur : echec silencieux (log seulement), la
     // prochaine synchronisation (ouverture suivante ou prochain
     // changement) rattrapera l'etat.

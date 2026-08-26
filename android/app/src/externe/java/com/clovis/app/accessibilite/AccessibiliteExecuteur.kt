@@ -2,7 +2,7 @@
 // (suite Lot 7). Adaptateur plat (pas un Plugin Capacitor, pas de
 // PluginCall) pour qu'ActionsAppareilExecuteur.kt (src/main, COMMUN aux
 // deux flavors) puisse appeler l'accessibilite sans jamais referencer
-// ExecuteurActions/ServiceAccessibiliteClovis directement -- meme nom de
+// ExecuteurActions/ServiceAccessibiliteClovis directement, meme nom de
 // classe/package que la version "play" ci-dessous (stub), c'est ce qui
 // rend l'appel depuis le code commun possible sans rompre la compilation
 // du flavor play (voir 00-commun.md, isolation au niveau des sources).

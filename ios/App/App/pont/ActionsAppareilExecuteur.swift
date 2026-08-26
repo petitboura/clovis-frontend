@@ -1,10 +1,10 @@
 // Cree le 24/08/2026 (Lot 1B, clovis-mobile), porte le 25/08/2026 dans le
 // plugin Capacitor (Lot 3B), iOS. Etendu le 26/08/2026 : brancher le
-// cerveau -- voir clovis-backend/core/serveur_mcp_generation.py::
+// cerveau, voir clovis-backend/core/serveur_mcp_generation.py::
 // executer_action_mobile pour la liste exacte des type_action et la
 // forme de `parametres` attendue par l'agent. CE FICHIER DOIT RESTER EN
 // MIROIR EXACT de TYPES_ACTION_MOBILE_VALIDES cote backend (a l'exception
-// des "accessibilite_*", qui n'ont AUCUN equivalent sur iOS -- Apple
+// des "accessibilite_*", qui n'ont AUCUN equivalent sur iOS, Apple
 // n'autorise pas l'automatisation arbitraire d'UI tierce comme
 // l'AccessibilityService Android, ce n'est pas un oubli).
 import Foundation

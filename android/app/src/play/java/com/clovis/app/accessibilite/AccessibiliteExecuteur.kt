@@ -3,7 +3,7 @@
 // Stub miroir de AccessibiliteExecuteur (flavor externe) : meme
 // package/nom de classe pour qu'ActionsAppareilExecuteur.kt (src/main,
 // commun) compile sur les deux flavors sans jamais inclure la moindre
-// ligne de code d'accessibilite dans l'APK Play Store -- meme principe
+// ligne de code d'accessibilite dans l'APK Play Store, meme principe
 // que AccessibilitePlugin.kt (flavor play) pour le cote Capacitor/JS.
 package com.clovis.app.accessibilite
 

@@ -40,7 +40,7 @@ data class ResultatAction(val succes: Boolean, val resultat: String = "")
 data class CorpsTokenPush(val plateforme: String, val token: String)
 
 // Lot 2 (suite, 26/08/2026) : miroir des dossiers designes cote backend,
-// voir clovis-backend/core/dossiers_designes_mobile.py -- uniquement les
+// voir clovis-backend/core/dossiers_designes_mobile.py, uniquement les
 // NOMS, jamais l'URI (propre a l'appareil, sans sens cote serveur).
 @Serializable
 data class CorpsSynchronisationDossiers(val plateforme: String, val noms: List<String>)

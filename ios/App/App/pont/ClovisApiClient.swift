@@ -78,10 +78,10 @@ struct SynchronisationDossiers: Codable {
 struct ActionAppareil: Codable {
     let id: String
     let type_action: String
-    // Ajoute le 26/08/2026 : brancher le cerveau -- toutes les valeurs de
+    // Ajoute le 26/08/2026 : brancher le cerveau, toutes les valeurs de
     // parametres sont des chaines pour les type_action actuels (dossier_*,
     // accessibilite_*, voir clovis-backend/core/serveur_mcp_generation.py::
-    // executer_action_mobile) -- si un futur type_action envoie une valeur
+    // executer_action_mobile). Si un futur type_action envoie une valeur
     // non-chaine, il faudra remplacer ce type par un decodage JSON generique.
     var parametres: [String: String] = [:]
 
@@ -176,7 +176,7 @@ enum ClovisApiClient {
     }
 
     // Ajoute le 26/08/2026 : miroir cote backend des dossiers designes,
-    // voir clovis-backend/core/dossiers_designes_mobile.py -- uniquement
+    // voir clovis-backend/core/dossiers_designes_mobile.py, uniquement
     // les noms, jamais le bookmark reel.
     static func synchroniserDossiers(_ noms: [String]) async throws {
         let url = URL(string: "\(baseURL)/api/appareils-mobiles/dossiers")!

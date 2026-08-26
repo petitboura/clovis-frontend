@@ -36,7 +36,7 @@ if (typeof window !== "undefined") {
     }>("PontNatif");
 
     // Ajouté le 26/08/2026 : filet de secours pour les actions dont le
-    // push (FCM/APNs) n'est jamais arrivé (app tuée, hors ligne...) --
+    // push (FCM/APNs) n'est jamais arrivé (app tuée, hors ligne...),
     // voir PontNatifPlugin.kt/.swift, jamais appelé nulle part avant ce
     // correctif. Une seule fois par ouverture d'app (ce module ne se
     // recharge qu'au relancement complet de la WebView), pas à chaque
