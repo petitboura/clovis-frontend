@@ -93,13 +93,13 @@ function FenetreSection({
   // doigt sur mobile (au mieux un mousedown synthétique isolé, sans les
   // mousemove qui suivent pendant le geste). Remplacé par les Pointer
   // Events (onPointerDown/pointermove/pointerup), qui unifient souris,
-  // doigt et stylet -- même logique de calcul, juste la source de
+  // doigt et stylet, même logique de calcul, juste la source de
   // l'événement qui change. setPointerCapture garde tous les événements
   // suivants rattachés à cet élément même si le doigt glisse hors de sa
   // zone d'origine (comportement natif du drag, pas garanti sans ça sur
   // mobile).
   function demarrerGlissement(e: React.PointerEvent) {
-    // Bouton gauche uniquement -- laisse clic droit/milieu tranquilles
+    // Bouton gauche uniquement : laisse clic droit/milieu tranquilles
     // (le doigt/stylet rapporte toujours button 0, donc jamais bloqué ici).
     if (e.button !== 0) return;
     monterAuPremierPlan(cle);
@@ -172,7 +172,7 @@ function FenetreSection({
     >
       <div
         onPointerDown={demarrerGlissement}
-        // touch-action: none (26/08/2026, même correctif) -- sans ça, le
+        // touch-action: none (26/08/2026, même correctif) : sans ça, le
         // navigateur mobile capte le geste comme un scroll de page avant
         // même que le glissement de la fenêtre ne démarre.
         style={{ touchAction: "none" }}

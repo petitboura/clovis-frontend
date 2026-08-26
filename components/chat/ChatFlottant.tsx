@@ -59,6 +59,7 @@ export function ChatFlottant({
   setEtat,
   onOuvrirCatalogue,
   nouvelleConversationRef,
+  natif = false,
 }: {
   connecte: boolean;
   etat: EtatChat;
@@ -72,6 +73,13 @@ export function ChatFlottant({
   // AppShell.tsx, pas un enfant, donc il ne peut pas appeler directement
   // nouvelleConversation() ci-dessous. Voir l'effet plus bas.
   nouvelleConversationRef?: React.MutableRefObject<(() => void) | null>;
+  // Ajouté le 26/08/2026 (correctif "boutons qui s'ajoutent par-dessus") :
+  // en app native, BarreOngletsNative.tsx expose déjà un onglet "Chat"
+  // dans la vraie barre système : la bulle flottante ronde faisait
+  // doublon par-dessus elle (voir plus bas, bouton "fermee" masqué dans
+  // ce cas). N'affecte que la bulle fermée : une fois le chat ouvert
+  // (mini/plein écran), rien ne change.
+  natif?: boolean;
 }) {
   const [chargement, setChargement] = useState<"chargement" | "pret" | "erreur">("chargement");
   const [erreur, setErreur] = useState<string | null>(null);
@@ -187,8 +195,11 @@ export function ChatFlottant({
   }
 
   // Bulle fermée : toujours affichée (sauf pendant le tout premier
-  // chargement, pour ne jamais montrer un bouton qui échouerait au clic).
+  // chargement, pour ne jamais montrer un bouton qui échouerait au clic),
+  // sauf en app native où l'onglet "Chat" de la barre système fait déjà
+  // ce rôle (voir prop `natif` ci-dessus).
   if (etat === "fermee") {
+    if (natif) return null;
     return (
       <button
         onClick={() => setEtat("mini")}
@@ -258,13 +269,13 @@ export function ChatFlottant({
       <div
         onMouseDownCapture={fermerFenetresAuClic}
         // Correctif (26/08/2026) : en mode plein écran (fixed inset-0),
-        // cet en-tête touche littéralement le tout haut du viewport --
+        // cet en-tête touche littéralement le tout haut du viewport,
         // sous encoche/île dynamique en PWA installée (display:standalone
         // + viewportFit:"cover", voir app/layout.tsx/manifest.ts), le
         // logo/titre se retrouvait coincé sous la barre de statut. Ajout
         // sur le py-2.5 existant, pas un remplacement (0px sur desktop/
         // appareil sans encoche, donc sans effet là où ce n'est pas
-        // nécessaire) -- pas de concernement en mode mini (jamais ancré
+        // nécessaire), pas de concernement en mode mini (jamais ancré
         // en haut d'écran, voir bottom-5 right-5 ci-dessus).
         className={`flex flex-shrink-0 items-center gap-2 border-b border-dj-bordure px-3 pb-2.5 ${
           pleinEcran ? "pt-[calc(0.625rem+env(safe-area-inset-top))]" : "pt-2.5"

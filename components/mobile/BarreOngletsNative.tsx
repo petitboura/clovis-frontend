@@ -3,6 +3,7 @@
 import { useEffect, useRef } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import { useOuvrirChat } from "@/lib/contexteChat";
+import { useTheme } from "@/lib/useTheme";
 
 // Cree le 26/08/2026, Bourama : refonte navigation mobile (chantier
 // "vraie appli mobile", suite Lot 3A/3B fusion Capacitor).
@@ -55,6 +56,24 @@ const ONGLETS_NATIFS = [
   { id: "plus", titre: "Plus", route: "/plus", icone: ICONES_SVG.plus },
 ] as const;
 
+// Correctif (26/08/2026, retour "couleurs et icônes qui n'ont rien à voir
+// avec le notre") : setTabbar/configure n'imposaient aucune couleur,
+// le plugin retombe alors sur les teintes système par défaut (bleu
+// Material sur Android), qui n'ont jamais correspondu à l'identité
+// "Nuit d'étude" de Clovis. Valeurs reprises À L'IDENTIQUE des variables
+// CSS déjà en place (voir app/globals.css, --dj-fond/--dj-accent-1/
+// --dj-texte-muet, thèmes clair et sombre), pas de nouvelle couleur
+// inventée, juste la même palette appliquée à la barre native.
+const COULEURS_THEME: Record<"clair" | "sombre", { fond: string; accent: string; muet: string }> = {
+  clair: { fond: "#f5f5f2", accent: "#b8860b", muet: "#6b675e" },
+  sombre: { fond: "#0f0d0b", accent: "#e8bf60", muet: "#9a9184" },
+};
+
+function couleursTabbar(resolu: "clair" | "sombre") {
+  const c = COULEURS_THEME[resolu];
+  return { background: c.fond, tint: c.accent, inactiveTint: c.muet };
+}
+
 function definitionOnglets() {
   return ONGLETS_NATIFS.map((o) => ({ id: o.id, title: o.titre, icon: { svg: o.icone } }));
 }
@@ -63,11 +82,16 @@ export function BarreOngletsNative() {
   const router = useRouter();
   const pathname = usePathname();
   const ouvrirChat = useOuvrirChat();
+  const { resolu } = useTheme();
   // Ref pour eviter de reconfigurer le plugin a chaque changement de route
   // (montage unique) tout en gardant acces a la derniere version de
   // router/ouvrirChat dans le listener 'tabSelect'.
   const gestionnaireRef = useRef({ router, ouvrirChat });
   gestionnaireRef.current = { router, ouvrirChat };
+  // Meme logique pour resolu (theme) : lu par l'effet de synchronisation
+  // de couleurs ci-dessous (pathname), pas par l'effet de montage.
+  const resoluRef = useRef(resolu);
+  resoluRef.current = resolu;
 
   useEffect(() => {
     let annule = false;
@@ -78,11 +102,12 @@ export function BarreOngletsNative() {
 
       const { NativeNavigation } = await import("@capgo/capacitor-native-navigation");
 
-      await NativeNavigation.configure({ contentInsetMode: "css" });
+      await NativeNavigation.configure({ contentInsetMode: "css", colors: couleursTabbar(resoluRef.current) });
       await NativeNavigation.setTabbar({
         selectedId: "bibliotheque",
         labelVisibilityMode: "labeled",
         icons: true,
+        colors: couleursTabbar(resoluRef.current),
         tabs: definitionOnglets(),
       });
 
@@ -109,7 +134,10 @@ export function BarreOngletsNative() {
   // Synchronise l'onglet visuellement actif avec la route affichee (ex :
   // ouvrir Bibliotheque depuis "Plus" doit aussi mettre a jour la barre).
   // Pas de methode dediee cote plugin : on rappelle setTabbar avec le
-  // meme tableau de tabs, juste un nouveau selectedId.
+  // meme tableau de tabs, juste un nouveau selectedId. Depend aussi de
+  // `resolu` (26/08/2026, correctif couleurs) : bascule clair/sombre
+  // (bouton ThemeToggle ou changement système) doit recolorer la barre
+  // native en direct, pas seulement au prochain changement de route.
   useEffect(() => {
     import("@capacitor/core").then(async ({ Capacitor }) => {
       if (!Capacitor.isNativePlatform()) return;
@@ -120,11 +148,12 @@ export function BarreOngletsNative() {
           selectedId: actif.id,
           labelVisibilityMode: "labeled",
           icons: true,
+          colors: couleursTabbar(resolu),
           tabs: definitionOnglets(),
         });
       }
     });
-  }, [pathname]);
+  }, [pathname, resolu]);
 
   return null;
 }

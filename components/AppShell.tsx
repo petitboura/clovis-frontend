@@ -84,11 +84,11 @@ export function AppShell({ children }: { children: React.ReactNode }) {
               statut en haut d'écran, alors que viewportFit:"cover" +
               display:"standalone" du manifest (voir app/layout.tsx et
               app/manifest.ts) font tourner le site edge-to-edge dès
-              qu'il est ouvert en PWA installée -- le contenu du tout
+              qu'il est ouvert en PWA installée : le contenu du tout
               haut de chaque page se retrouvait sous l'encoche sur
               téléphone à encoche/île dynamique. env(safe-area-inset-top)
               vaut 0px sur desktop/appareil sans encoche, donc sans effet
-              là où ce n'est pas nécessaire -- même logique que le
+              là où ce n'est pas nécessaire, même logique que le
               padding-bottom déjà posé sur la barre de saisie
               (ChatIA.tsx). */}
           <main
@@ -110,6 +110,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
             setEtat={setEtatChat}
             onOuvrirCatalogue={() => setCatalogueOuvert(true)}
             nouvelleConversationRef={nouvelleConversationRef}
+            natif={natif}
           />
           <FenetresSections />
           <PaletteCommandes
