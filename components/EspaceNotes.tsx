@@ -589,7 +589,7 @@ function MenuAjouterBloc({
 }) {
   return (
     <div className="absolute left-0 top-full z-10 mt-1 w-56 space-y-0.5 rounded-cgpt-carte border border-dj-bordure bg-dj-surface p-1.5 shadow-lg">
-      {TYPES_BLOCS.map((t) => (
+      {TYPES_BLOCS.filter((t) => t.id !== "texte").map((t) => (
         <button
           key={t.id}
           onClick={() => onChoisir(t.id)}
@@ -821,6 +821,22 @@ function PanneauPage({
           onSupprimerEtReculer={supprimerEtReculer}
           activation={activation}
           onActivationConsommee={() => setActivation(null)}
+        />
+        {/* Clic n'importe où sous le dernier bloc = comme s'il n'y avait
+            qu'un seul bloc texte : on va à sa fin s'il est déjà de type
+            texte, sinon on en crée un nouveau à la fin -- jamais besoin
+            de passer par "+ Ajouter" pour écrire du texte. */}
+        <div
+          className="min-h-[2.5rem] w-full cursor-text"
+          onClick={() => {
+            const racines = page.blocs.filter((b) => !b.parent_bloc_id).sort((a, b) => a.ordre - b.ordre);
+            const dernier = racines[racines.length - 1];
+            if (dernier && dernier.type === "texte") {
+              setActivation({ id: dernier.id, position: "fin" });
+            } else {
+              inserterBlocA(racines.length, "texte", null);
+            }
+          }}
         />
       </div>
 
