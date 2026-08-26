@@ -9,6 +9,7 @@ import { CatalogueClovis } from "@/components/CatalogueClovis";
 import { PaletteCommandes } from "@/components/PaletteCommandes";
 import { ContexteChat, type EtatChat } from "@/lib/contexteChat";
 import { ContexteFenetres, useFournirFenetres } from "@/lib/contexteFenetres";
+import { BarreOngletsNative } from "@/components/mobile/BarreOngletsNative";
 
 // Coquille de l'app entière (refonte "Mon espace = l'app", 15/08/2026).
 // Monte UNE SEULE FOIS, au niveau du layout (voir app/(app)/layout.tsx) :
@@ -22,6 +23,11 @@ import { ContexteFenetres, useFournirFenetres } from "@/lib/contexteFenetres";
 export function AppShell({ children }: { children: React.ReactNode }) {
   const [connecte, setConnecte] = useState(false);
   const [catalogueOuvert, setCatalogueOuvert] = useState(false);
+  // Ajouté le 26/08/2026, Bourama : refonte navigation mobile native.
+  // false par défaut (donc web/desktop inchangés) tant que le check
+  // Capacitor.isNativePlatform() n'a pas répondu -- évite un flash du
+  // hamburger web au tout premier rendu dans l'appli native.
+  const [natif, setNatif] = useState(false);
   // Remonté ici depuis ChatFlottant.tsx (16/08/2026) pour pouvoir être
   // ouvert depuis d'autres écrans -- voir lib/contexteChat.tsx et le
   // bouton "Ouvrir le chat" de l'écran d'accueil.
@@ -50,12 +56,42 @@ export function AppShell({ children }: { children: React.ReactNode }) {
     setCatalogueOuvert(true);
   }, []);
 
+  useEffect(() => {
+    let annule = false;
+    import("@capacitor/core").then(({ Capacitor }) => {
+      if (!annule) setNatif(Capacitor.isNativePlatform());
+    });
+    return () => {
+      annule = true;
+    };
+  }, []);
+
   return (
     <ContexteChat.Provider value={{ etat: etatChat, setEtat: setEtatChat }}>
       <ContexteFenetres.Provider value={fenetres}>
         <div className="flex h-dvh">
-          <AppSidebar connecte={connecte} onOuvrirCatalogue={() => setCatalogueOuvert(true)} />
-          <main className="flex-1 overflow-y-auto">{children}</main>
+          {natif && <BarreOngletsNative />}
+          <AppSidebar
+            connecte={connecte}
+            onOuvrirCatalogue={() => setCatalogueOuvert(true)}
+            masquerChromeMobile={natif}
+          />
+          {/* Marges via les variables CSS du plugin (voir "CSS insets" de
+              la doc @capgo/capacitor-native-navigation) : valent 0px sur le
+              web, donc ce padding est un no-op hors de l'appli native. */}
+          <main
+            className="flex-1 overflow-y-auto"
+            style={
+              natif
+                ? {
+                    paddingTop: "var(--cap-native-navigation-top, 0px)",
+                    paddingBottom: "var(--cap-native-navigation-bottom, 0px)",
+                  }
+                : undefined
+            }
+          >
+            {children}
+          </main>
           <ChatFlottant
             connecte={connecte}
             etat={etatChat}

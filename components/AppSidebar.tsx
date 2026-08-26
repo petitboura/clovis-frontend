@@ -397,8 +397,18 @@ export function AppSidebar({
   aDesMessages = false,
   onNouvelleConversation,
   onSelectionnerConversation,
+  masquerChromeMobile = false,
 }: {
   connecte: boolean;
+  // Ajouté le 26/08/2026, Bourama : refonte navigation mobile native
+  // (@capgo/capacitor-native-navigation, voir components/mobile/
+  // BarreOngletsNative.tsx). Sur l'appli Capacitor, le hamburger + tiroir
+  // ci-dessous (pensés pour un site responsive) sont remplacés par la
+  // vraie barre d'onglets système -- les afficher en plus créerait une
+  // double navigation. Ne change RIEN au rail desktop (md:flex), qui
+  // reste géré uniquement par la largeur d'écran comme avant. false par
+  // défaut : le web garde exactement le même comportement qu'avant.
+  masquerChromeMobile?: boolean;
   // "Pourquoi Clovis ?" -- géré au niveau du layout (AppShell.tsx), pas
   // ici, pour pouvoir s'ouvrir aussi automatiquement à la première
   // visite (même logique que l'ancien app/page.tsx, 14/08).
@@ -605,7 +615,7 @@ export function AppSidebar({
 
   return (
     <>
-      {ouverte && (
+      {ouverte && !masquerChromeMobile && (
         <div
           className="fixed inset-0 z-30 bg-black/50 md:hidden"
           onClick={() => setOuverte(false)}
@@ -613,13 +623,15 @@ export function AppSidebar({
         />
       )}
 
-      <button
-        onClick={() => setOuverte((v) => !v)}
-        aria-label={ouverte ? "Replier le panneau" : "Déplier le panneau"}
-        className="group fixed left-2 top-2 z-40 flex h-8 w-8 items-center justify-center rounded-md bg-black/35 text-white hover:bg-black/50 md:hidden"
-      >
-        <PanelLeft size={16} className="transition-transform duration-200 group-hover:scale-95" />
-      </button>
+      {!masquerChromeMobile && (
+        <button
+          onClick={() => setOuverte((v) => !v)}
+          aria-label={ouverte ? "Replier le panneau" : "Déplier le panneau"}
+          className="group fixed left-2 top-2 z-40 flex h-8 w-8 items-center justify-center rounded-md bg-black/35 text-white hover:bg-black/50 md:hidden"
+        >
+          <PanelLeft size={16} className="transition-transform duration-200 group-hover:scale-95" />
+        </button>
+      )}
 
       <div
         ref={asideRef}
@@ -840,8 +852,9 @@ export function AppSidebar({
         )}
       </div>
 
-      {/* Panneau plein écran mobile, même logique que desktop. */}
-      {ouverte && (
+      {/* Panneau plein écran mobile, même logique que desktop -- masqué
+          dans l'appli native, remplacé par BarreOngletsNative.tsx. */}
+      {ouverte && !masquerChromeMobile && (
         <div
           className={`fixed inset-y-0 left-0 z-40 flex w-72 flex-col border-r border-dj-bordure bg-dj-fond px-2 py-3 md:hidden ${
             profilDeplie ? "overflow-visible" : "overflow-y-auto overflow-x-hidden"
