@@ -15,6 +15,8 @@ import {
   Sun,
   Moon,
   MessageCircle,
+  Smartphone,
+  Accessibility,
   type LucideIcon,
 } from "lucide-react";
 import { supabase } from "@/lib/supabase";
@@ -23,6 +25,9 @@ import { messageErreur, ErreurApi } from "@/lib/erreurs";
 import { useTheme, type ChoixTheme } from "@/lib/useTheme";
 import { Skeleton } from "./Skeleton";
 import { CTACompteRequis } from "./CTACompteRequis";
+import { ConnecteurNotionCarte } from "./ConnecteurNotionCarte";
+import { MiseAJourCarte } from "./MiseAJourCarte";
+import { EspaceAccessibilite } from "./EspaceAccessibilite";
 
 /**
  * Page Paramètres (22/08/2026, demande Bourama).
@@ -53,7 +58,7 @@ import { CTACompteRequis } from "./CTACompteRequis";
  * et EspacePlugins.tsx) -- textes en dur en français.
  */
 
-type Vue = "liste" | "profil" | "preferences" | "confidentialite" | "aide" | "a-propos";
+type Vue = "liste" | "profil" | "preferences" | "confidentialite" | "aide" | "a-propos" | "capacites-telephone" | "accessibilite";
 
 type ProfilMoi = {
   user_id: string;
@@ -310,6 +315,18 @@ export function EspaceParametres() {
           <LigneListe icone={Info} titre="À propos" onClick={() => setVue("a-propos")} />
         </Liste>
 
+        {/* Groupe "Capacités du téléphone" + Accessibilité (26/08/2026,
+            décision Bourama, voir /areas/clovis.md) -- plugins natifs
+            Capacitor sans écran jusqu'ici. Chaque carte/écran gère déjà
+            son propre état "disponible seulement sur mobile"
+            (usePluginNatif), donc rien à faire ici pour le web : ces
+            deux lignes restent visibles mais mènent à un contenu qui
+            explique lui-même l'indisponibilité sur le site. */}
+        <Liste>
+          <LigneListe icone={Smartphone} titre="Capacités du téléphone" sousTitre="Connecteurs, mise à jour" onClick={() => setVue("capacites-telephone")} />
+          <LigneListe icone={Accessibility} titre="Accessibilité" onClick={() => setVue("accessibilite")} />
+        </Liste>
+
         <Liste>
           <LigneListe
             icone={Trash2}
@@ -319,6 +336,27 @@ export function EspaceParametres() {
           />
         </Liste>
         {erreurSuppression && <p className="text-sm text-[var(--dj-erreur)]">{erreurSuppression}</p>}
+      </div>
+    );
+  }
+
+  // --- Capacités du téléphone ------------------------------------------------
+  if (vue === "capacites-telephone") {
+    return (
+      <div className="flex flex-col gap-4">
+        <EnTete titre="Capacités du téléphone" onRetour={() => setVue("liste")} />
+        <ConnecteurNotionCarte />
+        <MiseAJourCarte />
+      </div>
+    );
+  }
+
+  // --- Accessibilité -----------------------------------------------------
+  if (vue === "accessibilite") {
+    return (
+      <div className="flex flex-col gap-4">
+        <EnTete titre="Accessibilité" onRetour={() => setVue("liste")} />
+        <EspaceAccessibilite />
       </div>
     );
   }

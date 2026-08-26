@@ -37,6 +37,7 @@ import { Skeleton } from "./Skeleton";
 import { CTACompteRequis } from "./CTACompteRequis";
 import { VisionneuseBibliotheque } from "./VisionneuseBibliotheque";
 import { BibliothequePublique } from "./BibliothequePublique";
+import { EspaceDossiers } from "./EspaceDossiers";
 
 // Onglet "Bibliothèque" de Mon espace, porté de
 // djiguigne-frontend/app/dashboard/espace/page.tsx (même logique,
@@ -93,7 +94,7 @@ export function EspaceBibliotheque() {
   // section bibliothèque" -- bascule entre la bibliothèque perso
   // (comportement par défaut, inchangé ci-dessous) et le catalogue
   // public (nouveau composant BibliothequePublique.tsx).
-  const [vue, setVue] = useState<"perso" | "publique">("perso");
+  const [vue, setVue] = useState<"perso" | "publique" | "dossiers">("perso");
   const [sousOnglet, setSousOnglet] = useState<SousOngletBiblio>("tous");
   const [fichiers, setFichiers] = useState<FichierBiblio[] | null>(null);
   const [dossiers, setDossiers] = useState<DossierBibliotheque[] | null>(null);
@@ -399,10 +400,27 @@ async function ajouter() {
         >
           Publique
         </button>
+        {/* Fusion Dossiers du téléphone (26/08/2026, décision Bourama) --
+            même plugin natif que la bibliothèque perso/publique mais
+            source différente (SAF système, pas les fichiers Clovis) --
+            voir /areas/clovis.md pour le détail de la décision. Le
+            composant lui-même gère déjà son état "disponible seulement
+            sur mobile" (usePluginNatif), donc pas de logique conditionnelle
+            à dupliquer ici. */}
+        <button
+          onClick={() => setVue("dossiers")}
+          className={`border-b-2 px-3 py-2 text-sm font-medium transition-colors ${
+            vue === "dossiers" ? "border-dj-accent-1 text-dj-texte" : "border-transparent text-dj-texte-muet hover:text-dj-texte"
+          }`}
+        >
+          Dossiers du téléphone
+        </button>
       </div>
 
       {vue === "publique" ? (
         <BibliothequePublique />
+      ) : vue === "dossiers" ? (
+        <EspaceDossiers />
       ) : (
         <>
       <p className="text-sm text-dj-texte-muet">
