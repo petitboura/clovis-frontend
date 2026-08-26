@@ -167,13 +167,15 @@ export const OUTILS_DISPONIBLES: { nom: string; label: string; Icone: typeof Sea
   { nom: "tavily_map", label: "Cartographier un site", Icone: Map, onglet: "rechercher" },
   { nom: "tavily_research", label: "Recherche approfondie", Icone: BookOpen, onglet: "rechercher" },
   { nom: "chercher_fichier", label: "Chercher un fichier", Icone: FolderSearch, onglet: "rechercher" },
-  // consulter_bibliotheque (2026-08-01, nouvelle section "Mon espace" ->
-  // Bibliothèque) -- contrairement à tous les autres outils de ce fichier,
-  // toujours autorisé pour n'importe quel agent dès qu'un utilisateur est
-  // connecté (voir core/mcp_tools.py côté backend, PAS configurable par le
-  // créateur d'agent) : la bibliothèque est personnelle à l'utilisateur,
-  // pas liée à un agent précis.
-  { nom: "consulter_bibliotheque", label: "Consulter ma bibliothèque", Icone: Library, onglet: "rechercher" },
+  // gerer_document_bibliotheque (2026-08-01, nouvelle section "Mon espace" ->
+  // Bibliothèque ; consolidé le 26/08, ex consulter_bibliotheque + 11
+  // autres outils fusionnés en un seul avec un paramètre `action`, voir
+  // serveur_mcp_generation.py côté backend) -- contrairement à tous les
+  // autres outils de ce fichier, toujours autorisé pour n'importe quel
+  // agent dès qu'un utilisateur est connecté (voir core/mcp_tools.py côté
+  // backend, PAS configurable par le créateur d'agent) : la bibliothèque
+  // est personnelle à l'utilisateur, pas liée à un agent précis.
+  { nom: "gerer_document_bibliotheque", label: "Consulter ma bibliothèque", Icone: Library, onglet: "rechercher" },
 
   { nom: "explorer_depot_github", label: "Explorer un dépôt GitHub", Icone: FolderTree, onglet: "action_app", appli: "github" },
   { nom: "lire_fichier_depot_github", label: "Lire un fichier GitHub", Icone: FileCode, onglet: "action_app", appli: "github" },
