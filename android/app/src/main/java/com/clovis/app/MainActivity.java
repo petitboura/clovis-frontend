@@ -7,6 +7,8 @@ import com.clovis.app.controlesession.ControleSessionPlugin;
 import com.clovis.app.connecteurs.ConnecteursPlugin;
 import com.clovis.app.accessibilite.AccessibilitePlugin;
 import com.clovis.app.miseajour.MiseAJourPlugin;
+import com.clovis.app.tempsecran.TempsEcranPlugin;
+import com.clovis.app.notifications.NotificationsPlugin;
 import com.getcapacitor.BridgeActivity;
 
 // Modifie le 25/08/2026, Bourama : Lot 3B (fusion Capacitor). registerPlugin
@@ -28,6 +30,10 @@ public class MainActivity extends BridgeActivity {
         registerPlugin(ConnecteursPlugin.class);
         registerPlugin(AccessibilitePlugin.class);
         registerPlugin(MiseAJourPlugin.class);
+        // 26/08/2026, Bourama : temps d'ecran + notifications/rappels
+        // (Android n'avait pas d'equivalent au plugin iOS existant).
+        registerPlugin(TempsEcranPlugin.class);
+        registerPlugin(NotificationsPlugin.class);
         super.onCreate(savedInstanceState);
     }
 }

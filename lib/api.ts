@@ -1829,3 +1829,21 @@ export async function repondreRevision(elementId: string, qualite: "echec" | "di
     body: JSON.stringify({ qualite }),
   })) as { prochaine_revision: string };
 }
+
+// 26/08/2026, Bourama : Partie 3 mobile, temps d'écran -- contrat déjà en
+// place côté backend (api/appareils_mobiles.py, core/usage_appareil_mobile.py).
+// Le plugin natif TempsEcranPlugin.kt ne renvoie que les chiffres bruts, ces
+// deux fonctions font le pont avec le backend (aucun client HTTP dupliqué
+// côté Kotlin, voir le commentaire d'en-tête de TempsEcranPlugin.kt).
+export type LigneUsage = { plateforme: string; nom_app: string; date: string; duree_secondes: number };
+
+export async function synchroniserUsage(plateforme: "android" | "ios", entrees: { nom_app: string; date: string; duree_secondes: number }[]) {
+  await appelerApi("/api/appareils-mobiles/usage", {
+    method: "POST",
+    body: JSON.stringify({ plateforme, entrees }),
+  });
+}
+
+export async function obtenirUsage(jours = 7) {
+  return (await appelerApi(`/api/appareils-mobiles/usage?jours=${jours}`)) as { usage: LigneUsage[] };
+}

@@ -1,5 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
-<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools">
 
     <application
         android:name=".ClovisApplication"
@@ -47,6 +48,13 @@
             </intent-filter>
         </activity>
 
+        <!-- 26/08/2026 (Bourama, rappels programmes) : recoit l'alarme
+             AlarmManager declenchee par NotificationsPlugin.programmerRappel,
+             affiche la notification au moment voulu meme app fermee. -->
+        <receiver
+            android:name=".notifications.RappelAlarmReceiver"
+            android:exported="false" />
+
         <service
             android:name=".notifications.ClovisFirebaseMessagingService"
             android:exported="false">
@@ -74,4 +82,13 @@
          une session : permission speciale, pas de popup standard, redirection
          vers Reglages geree par ControleSessionRepository.kt. -->
     <uses-permission android:name="android.permission.ACCESS_NOTIFICATION_POLICY" />
+    <!-- 26/08/2026 (Bourama, temps d'ecran) : requise pour que l'app
+         apparaisse dans Reglages > Acces special > Acces a l'usage, sinon
+         l'etudiant n'a nulle part ou accorder la permission verifiee par
+         TempsEcranPlugin.kt (AppOpsManager.OPSTR_GET_USAGE_STATS). Ne
+         declenche pas de popup standard, juste la visibilite dans ce menu
+         Reglages. Voir tools:ignore, requis par le lint Android pour
+         les permissions protegees. -->
+    <uses-permission android:name="android.permission.PACKAGE_USAGE_STATS"
+        tools:ignore="ProtectedPermissions" />
 </manifest>
