@@ -1,10 +1,10 @@
 import { SectionPage } from "@/components/SectionPage";
-import { EspaceControleSession } from "@/components/EspaceControleSession";
+import { EspaceConcentration } from "@/components/EspaceConcentration";
 
 export default function PageControleSession() {
   return (
-    <SectionPage title="Session">
-      <EspaceControleSession />
+    <SectionPage title="Concentration">
+      <EspaceConcentration />
     </SectionPage>
   );
 }
