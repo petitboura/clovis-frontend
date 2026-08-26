@@ -88,12 +88,24 @@ function FenetreSection({
   const glissement = useRef<{ x: number; y: number; fx: number; fy: number } | null>(null);
   const { label, Icone } = LABEL_PAR_ONGLET[ongletId];
 
-  function demarrerGlissement(e: React.MouseEvent) {
-    // Bouton gauche uniquement -- laisse clic droit/milieu tranquilles.
+  // Correctif (26/08/2026, retour "pas déplaçable à la main sur mobile") :
+  // onMouseDown/mousemove/mouseup ne réagissent pas de façon fiable au
+  // doigt sur mobile (au mieux un mousedown synthétique isolé, sans les
+  // mousemove qui suivent pendant le geste). Remplacé par les Pointer
+  // Events (onPointerDown/pointermove/pointerup), qui unifient souris,
+  // doigt et stylet -- même logique de calcul, juste la source de
+  // l'événement qui change. setPointerCapture garde tous les événements
+  // suivants rattachés à cet élément même si le doigt glisse hors de sa
+  // zone d'origine (comportement natif du drag, pas garanti sans ça sur
+  // mobile).
+  function demarrerGlissement(e: React.PointerEvent) {
+    // Bouton gauche uniquement -- laisse clic droit/milieu tranquilles
+    // (le doigt/stylet rapporte toujours button 0, donc jamais bloqué ici).
     if (e.button !== 0) return;
     monterAuPremierPlan(cle);
+    e.currentTarget.setPointerCapture(e.pointerId);
     glissement.current = { x: e.clientX, y: e.clientY, fx: x, fy: y };
-    function onMove(ev: MouseEvent) {
+    function onMove(ev: PointerEvent) {
       if (!glissement.current) return;
       const dx = ev.clientX - glissement.current.x;
       const dy = ev.clientY - glissement.current.y;
@@ -105,19 +117,22 @@ function FenetreSection({
     }
     function onUp() {
       glissement.current = null;
-      window.removeEventListener("mousemove", onMove);
-      window.removeEventListener("mouseup", onUp);
+      window.removeEventListener("pointermove", onMove);
+      window.removeEventListener("pointerup", onUp);
+      window.removeEventListener("pointercancel", onUp);
     }
-    window.addEventListener("mousemove", onMove);
-    window.addEventListener("mouseup", onUp);
+    window.addEventListener("pointermove", onMove);
+    window.addEventListener("pointerup", onUp);
+    window.addEventListener("pointercancel", onUp);
   }
 
-  function demarrerRedimensionnement(e: React.MouseEvent, direction: string) {
+  function demarrerRedimensionnement(e: React.PointerEvent, direction: string) {
     if (e.button !== 0) return;
     e.stopPropagation();
     monterAuPremierPlan(cle);
+    e.currentTarget.setPointerCapture(e.pointerId);
     const depart = { x: e.clientX, y: e.clientY, fx: x, fy: y, fw: width, fh: height };
-    function onMove(ev: MouseEvent) {
+    function onMove(ev: PointerEvent) {
       const dx = ev.clientX - depart.x;
       const dy = ev.clientY - depart.y;
       const patch: Partial<{ x: number; y: number; width: number; height: number }> = {};
@@ -140,21 +155,27 @@ function FenetreSection({
       redimensionner(cle, patch);
     }
     function onUp() {
-      window.removeEventListener("mousemove", onMove);
-      window.removeEventListener("mouseup", onUp);
+      window.removeEventListener("pointermove", onMove);
+      window.removeEventListener("pointerup", onUp);
+      window.removeEventListener("pointercancel", onUp);
     }
-    window.addEventListener("mousemove", onMove);
-    window.addEventListener("mouseup", onUp);
+    window.addEventListener("pointermove", onMove);
+    window.addEventListener("pointerup", onUp);
+    window.addEventListener("pointercancel", onUp);
   }
 
   return (
     <div
-      onMouseDownCapture={() => monterAuPremierPlan(cle)}
+      onPointerDownCapture={() => monterAuPremierPlan(cle)}
       style={{ left: x, top: y, width, height, zIndex: 120 + z }}
       className="fixed flex flex-col overflow-hidden rounded-cgpt-carte border border-dj-bordure bg-dj-surface shadow-[0_16px_60px_rgba(0,0,0,0.5)]"
     >
       <div
-        onMouseDown={demarrerGlissement}
+        onPointerDown={demarrerGlissement}
+        // touch-action: none (26/08/2026, même correctif) -- sans ça, le
+        // navigateur mobile capte le geste comme un scroll de page avant
+        // même que le glissement de la fenêtre ne démarre.
+        style={{ touchAction: "none" }}
         className="flex flex-shrink-0 cursor-grab select-none items-center gap-2 border-b border-dj-bordure bg-dj-surface-haute px-3 py-2 active:cursor-grabbing"
       >
         <Icone size={15} className="flex-shrink-0 text-dj-texte-muet" />
@@ -173,7 +194,8 @@ function FenetreSection({
       {POIGNEES.map((p) => (
         <div
           key={p.direction}
-          onMouseDown={(e) => demarrerRedimensionnement(e, p.direction)}
+          onPointerDown={(e) => demarrerRedimensionnement(e, p.direction)}
+          style={{ touchAction: "none" }}
           className={`absolute z-10 ${p.classe}`}
         />
       ))}
