@@ -66,11 +66,35 @@ struct TokenPush: Codable {
     let token: String
 }
 
+// MARK: Lot 2 (suite, 26/08/2026), miroir des dossiers designes
+
+struct SynchronisationDossiers: Codable {
+    let plateforme: String
+    let noms: [String]
+}
+
 // MARK: Lot 1B, recepteur d'actions
 
 struct ActionAppareil: Codable {
     let id: String
     let type_action: String
+    // Ajoute le 26/08/2026 : brancher le cerveau -- toutes les valeurs de
+    // parametres sont des chaines pour les type_action actuels (dossier_*,
+    // accessibilite_*, voir clovis-backend/core/serveur_mcp_generation.py::
+    // executer_action_mobile) -- si un futur type_action envoie une valeur
+    // non-chaine, il faudra remplacer ce type par un decodage JSON generique.
+    var parametres: [String: String] = [:]
+
+    private enum CodingKeys: String, CodingKey {
+        case id, type_action, parametres
+    }
+
+    init(from decoder: Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        id = try c.decode(String.self, forKey: .id)
+        type_action = try c.decode(String.self, forKey: .type_action)
+        parametres = (try? c.decode([String: String].self, forKey: .parametres)) ?? [:]
+    }
 }
 
 struct ReponseActionsEnAttente: Codable {
@@ -148,6 +172,16 @@ enum ClovisApiClient {
         let url = URL(string: "\(baseURL)/api/appareils-mobiles/push-token")!
         var requete = try requeteAuthentifiee(url, methode: "POST")
         requete.httpBody = try JSONEncoder().encode(payload)
+        _ = try await URLSession.shared.data(for: requete)
+    }
+
+    // Ajoute le 26/08/2026 : miroir cote backend des dossiers designes,
+    // voir clovis-backend/core/dossiers_designes_mobile.py -- uniquement
+    // les noms, jamais le bookmark reel.
+    static func synchroniserDossiers(_ noms: [String]) async throws {
+        let url = URL(string: "\(baseURL)/api/appareils-mobiles/dossiers")!
+        var requete = try requeteAuthentifiee(url, methode: "POST")
+        requete.httpBody = try JSONEncoder().encode(SynchronisationDossiers(plateforme: "ios", noms: noms))
         _ = try await URLSession.shared.data(for: requete)
     }
 

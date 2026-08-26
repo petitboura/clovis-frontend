@@ -39,6 +39,12 @@ data class ResultatAction(val succes: Boolean, val resultat: String = "")
 @Serializable
 data class CorpsTokenPush(val plateforme: String, val token: String)
 
+// Lot 2 (suite, 26/08/2026) : miroir des dossiers designes cote backend,
+// voir clovis-backend/core/dossiers_designes_mobile.py -- uniquement les
+// NOMS, jamais l'URI (propre a l'appareil, sans sens cote serveur).
+@Serializable
+data class CorpsSynchronisationDossiers(val plateforme: String, val noms: List<String>)
+
 // : Lot 5 : connecteurs tiers (Notion), porte le 25/08/2026 
 @Serializable
 data class UrlAutorisationNotion(val url_autorisation: String)
@@ -70,6 +76,14 @@ class ClovisApiClient(private val context: Context) {
             avecAuth(this)
             contentType(ContentType.Application.Json)
             setBody(CorpsTokenPush(plateforme, token))
+        }
+    }
+
+    suspend fun synchroniserDossiers(noms: List<String>): HttpResponse {
+        return http.post("$BASE_URL/api/appareils-mobiles/dossiers") {
+            avecAuth(this)
+            contentType(ContentType.Application.Json)
+            setBody(CorpsSynchronisationDossiers("android", noms))
         }
     }
 

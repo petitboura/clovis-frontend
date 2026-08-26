@@ -16,10 +16,18 @@
 //   await Dossiers.supprimer({ elementUri });
 //   await Dossiers.deplacer({ elementUri, ancienParentUri, nouveauParentUri });
 //   await Dossiers.retirerDossierDesigne({ uri });
+//
+// Ajoute le 26/08/2026 : chaque changement (ajout/retrait) et l'ouverture
+// de l'app (load()) declenchent maintenant automatiquement une
+// synchronisation silencieuse avec le backend (miroir des NOMS de
+// dossiers designes, voir clovis-backend/core/dossiers_designes_mobile.py)
+// -- aucun appel JS supplementaire requis pour ca, c'est transparent.
 package com.clovis.app.dossiers
 
 import android.content.Intent
 import android.net.Uri
+import android.util.Log
+import com.clovis.app.pont.ClovisApiClient
 import com.getcapacitor.JSArray
 import com.getcapacitor.JSObject
 import com.getcapacitor.Plugin
@@ -27,11 +35,37 @@ import com.getcapacitor.PluginCall
 import com.getcapacitor.PluginMethod
 import com.getcapacitor.annotation.ActivityCallback
 import com.getcapacitor.annotation.CapacitorPlugin
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
 
 @CapacitorPlugin(name = "Dossiers")
 class DossiersPlugin : Plugin() {
 
     private val repo by lazy { DossiersDesignesRepository(context) }
+
+    // Ajoute le 26/08/2026 : miroir cote backend (voir
+    // clovis-backend/core/dossiers_designes_mobile.py) pour que l'agent
+    // sache quels noms de dossiers cibler. Appele a l'ouverture de l'app
+    // (load()) et apres CHAQUE changement (ajout/retrait) -- jamais
+    // bloquant pour l'utilisateur : echec silencieux (log seulement), la
+    // prochaine synchronisation (ouverture suivante ou prochain
+    // changement) rattrapera l'etat.
+    private fun synchroniserAvecBackend() {
+        val noms = repo.listerDossiersDesignes().map { it.nom }
+        CoroutineScope(Dispatchers.IO).launch {
+            try {
+                ClovisApiClient(context).synchroniserDossiers(noms)
+            } catch (e: Exception) {
+                Log.w("DossiersPlugin", "Echec synchronisation dossiers designes avec le backend.", e)
+            }
+        }
+    }
+
+    override fun load() {
+        super.load()
+        synchroniserAvecBackend()
+    }
 
     private fun DossierDesigne.toJson() = JSObject().apply {
         put("uri", uri.toString())
@@ -78,6 +112,7 @@ class DossiersPlugin : Plugin() {
             call.reject("Dossier ajoute mais introuvable juste apres (cas inattendu).")
             return
         }
+        synchroniserAvecBackend()
         call.resolve(dossier.toJson())
     }
 
@@ -89,6 +124,7 @@ class DossiersPlugin : Plugin() {
             return
         }
         repo.retirerDossierDesigne(Uri.parse(uri))
+        synchroniserAvecBackend()
         call.resolve()
     }
 

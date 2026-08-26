@@ -32,7 +32,16 @@ if (typeof window !== "undefined") {
     const PontNatif = registerPlugin<{
       enregistrerToken(options: { token: string }): Promise<void>;
       deconnexion(): Promise<void>;
+      rattraperActionsEnAttente(): Promise<{ traitees: number }>;
     }>("PontNatif");
+
+    // Ajouté le 26/08/2026 : filet de secours pour les actions dont le
+    // push (FCM/APNs) n'est jamais arrivé (app tuée, hors ligne...) --
+    // voir PontNatifPlugin.kt/.swift, jamais appelé nulle part avant ce
+    // correctif. Une seule fois par ouverture d'app (ce module ne se
+    // recharge qu'au relancement complet de la WebView), pas à chaque
+    // rafraîchissement de token (~1h) : `dejaRattrape` l'empêche.
+    let dejaRattrape = false;
 
     supabase.auth.onAuthStateChange((event, session) => {
       if (session?.access_token) {
@@ -40,8 +49,16 @@ if (typeof window !== "undefined") {
           // Pas grave : le pont retentera au prochain changement d'état
           // (refresh de token automatique par supabase-js, ~1h).
         });
+        if (!dejaRattrape) {
+          dejaRattrape = true;
+          PontNatif.rattraperActionsEnAttente().catch(() => {
+            // Pas grave : le prochain push (ou la prochaine ouverture)
+            // rattrapera l'action en attente.
+          });
+        }
       } else if (event === "SIGNED_OUT") {
         PontNatif.deconnexion().catch(() => {});
+        dejaRattrape = false;
       }
     });
   });

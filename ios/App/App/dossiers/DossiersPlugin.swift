@@ -40,6 +40,22 @@ public class DossiersPlugin: CAPPlugin, CAPBridgedPlugin, UIDocumentPickerDelega
         CAPPluginMethod(name: "deplacer", returnType: CAPPluginReturnPromise)
     ]
 
+    // Ajoute le 26/08/2026 : miroir cote backend (voir
+    // clovis-backend/core/dossiers_designes_mobile.py), meme role que cote
+    // Android -- appele a l'ouverture de l'app (load()) et apres CHAQUE
+    // changement, jamais bloquant (echec silencieux, log seulement).
+    public override func load() {
+        super.load()
+        synchroniserAvecBackend()
+    }
+
+    private func synchroniserAvecBackend() {
+        let noms = DossiersDesignesRepository.listerDossiersDesignes().map { $0.url.lastPathComponent }
+        Task {
+            try? await ClovisApiClient.synchroniserDossiers(noms)
+        }
+    }
+
     // Appel JS en attente pendant que le picker systeme est affiche (un seul
     // a la fois, coherent avec le fait que choisirDossier() bloque le JS
     // jusqu'a resolution de toute facon).
@@ -83,6 +99,7 @@ public class DossiersPlugin: CAPPlugin, CAPBridgedPlugin, UIDocumentPickerDelega
         }
         DossiersDesignesRepository.ajouterDossierDesigne(url: url)
         if let dossier = DossiersDesignesRepository.listerDossiersDesignes().first(where: { $0.url == url }) {
+            synchroniserAvecBackend()
             call.resolve(["uri": dossier.id, "nom": dossier.url.lastPathComponent])
         } else {
             call.reject("Dossier ajoute mais introuvable juste apres (cas inattendu).")
@@ -108,6 +125,7 @@ public class DossiersPlugin: CAPPlugin, CAPBridgedPlugin, UIDocumentPickerDelega
             return
         }
         DossiersDesignesRepository.retirerDossierDesigne(id: uri)
+        synchroniserAvecBackend()
         call.resolve()
     }
 
