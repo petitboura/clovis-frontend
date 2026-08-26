@@ -15,13 +15,13 @@
 // La synchronisation vers clovis-backend (POST /api/appareils-mobiles/usage)
 // n'est PAS faite ici : ce plugin ne renvoie que les chiffres bruts lus sur
 // le telephone, c'est au code web (lib/api.ts) d'appeler le backend, comme
-// pour le reste de l'app -- pas de client HTTP duplique cote Kotlin pour
+// pour le reste de l'app : pas de client HTTP duplique cote Kotlin pour
 // une capacite qui n'a besoin de fonctionner que quand l'app est ouverte
 // (contrairement au pont PontNatif, qui doit fonctionner app fermee).
 //
 // Pas d'equivalent iOS pour l'instant : Screen Time necessite l'entitlement
 // Family Controls (compte Apple Developer Program actif, que Bourama n'a
-// pas encore) + un target d'extension Xcode separe -- voir
+// pas encore) + un target d'extension Xcode separe : voir
 // clovis-mobile/ios-legacy-natif/.../UsageScreen.swift pour le detail deja
 // documente. Signale a Bourama plutot que devine/simule.
 package com.clovis.app.tempsecran

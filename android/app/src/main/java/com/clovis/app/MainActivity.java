@@ -18,7 +18,7 @@ import com.getcapacitor.BridgeActivity;
 //
 // AccessibilitePlugin et MiseAJourPlugin : meme nom qualifie complet dans
 // src/play et src/externe (com.clovis.app.accessibilite.AccessibilitePlugin,
-// com.clovis.app.miseajour.MiseAJourPlugin) -- Gradle resout automatiquement
+// com.clovis.app.miseajour.MiseAJourPlugin) : Gradle resout automatiquement
 // vers la version du flavor compile, pas besoin de code conditionnel ici
 // (meme pattern que ModuleAccessibilite/ModuleMiseAJour cote clovis-mobile).
 public class MainActivity extends BridgeActivity {

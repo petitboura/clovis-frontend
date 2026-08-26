@@ -1,9 +1,9 @@
 // Cree le 26/08/2026, Bourama : construction des interfaces manquantes,
-// Partie 3 mobile -- Android n'avait AUCUN plugin Capacitor pour les
+// Partie 3 mobile : Android n'avait AUCUN plugin Capacitor pour les
 // rappels/notifications (verifie : seul iOS avait NotificationsPlugin.swift
 // dans ios/App/App/notifications/, MainActivity.java n'enregistrait que
 // Pont/Dossiers/ControleSession/Connecteurs/Accessibilite/MiseAJour). Ce
-// fichier comble cette asymetrie -- meme nom de plugin JS ("Notifications")
+// fichier comble cette asymetrie : meme nom de plugin JS ("Notifications")
 // et memes methodes que la version iOS, pour qu'un seul composant web
 // fonctionne sur les deux plateformes.
 //
@@ -17,7 +17,7 @@
 //   await Notifications.ouvrirApp({ nomPaquet, schema }); // Android lit nomPaquet, iOS lit schema
 //
 // programmerRappel : utilise AlarmManager.setAndAllowWhileIdle (pas
-// setExactAndAllowWhileIdle) -- inexact de quelques minutes possible en
+// setExactAndAllowWhileIdle) : inexact de quelques minutes possible en
 // veille profonde (Doze), volontaire pour NE PAS avoir a demander la
 // permission speciale SCHEDULE_EXACT_ALARM (API 31+, justificatif Play
 // Store exige), disproportionnee pour un rappel qui n'a pas besoin de la
@@ -52,7 +52,7 @@ class NotificationsPlugin : Plugin() {
     @PluginMethod
     fun demanderAutorisation(call: PluginCall) {
         // POST_NOTIFICATIONS n'est une permission runtime qu'a partir
-        // d'Android 13 (API 33) -- avant, deja accordee d'office.
+        // d'Android 13 (API 33) : avant, deja accordee d'office.
         if (Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU) {
             call.resolve(JSObject().put("accordee", NotificationsNatives.permissionNotificationsAccordee(context)))
             return
@@ -127,7 +127,7 @@ class NotificationsPlugin : Plugin() {
         }
         // Contrairement a iOS (EventKitUI donne un vrai callback de
         // sauvegarde), Android delegue a une app externe via un simple
-        // Intent, sans retour possible -- impossible de savoir si
+        // Intent, sans retour possible : impossible de savoir si
         // l'etudiant a reellement enregistre l'evenement une fois l'app
         // Calendrier ouverte. `sauvegarde` vaut donc `true` des que l'app
         // s'est ouverte (pas une vraie confirmation) : difference de
@@ -139,7 +139,7 @@ class NotificationsPlugin : Plugin() {
     fun ouvrirApp(call: PluginCall) {
         // Asymetrie de plateforme volontaire : iOS adresse une app par
         // schema d'URL (`schema`), Android par nom de paquet (`nomPaquet`)
-        // -- aucun terrain commun. Le code web envoie les deux parametres,
+        // : aucun terrain commun. Le code web envoie les deux parametres,
         // chaque plateforme lit celui qui la concerne (voir
         // NotificationsPlugin.swift cote iOS pour le miroir).
         val nomPaquet = call.getString("nomPaquet")

@@ -22,8 +22,8 @@ import { useFermetureAnimee } from "@/lib/useFermetureAnimee";
 
 /**
  * Écran autonome pour le plugin natif Dossiers (Lot 3B Partie 3 mobile,
- * 25/08/2026 -- voir android/.../dossiers/DossiersPlugin.kt, porté depuis
- * clovis-mobile/android-legacy-natif Lot 2 : SAF -- Storage Access
+ * 25/08/2026 : voir android/.../dossiers/DossiersPlugin.kt, porté depuis
+ * clovis-mobile/android-legacy-natif Lot 2 : SAF : Storage Access
  * Framework, accès par URI, pas de chemin de fichier classique).
  *
  * Construit le 26/08/2026 à la demande de Bourama : composant fonctionnel
@@ -31,7 +31,7 @@ import { useFermetureAnimee } from "@/lib/useFermetureAnimee";
  * dans la navigation (fusion avec Bibliothèque décidée par Bourama, mais
  * l'intégration concrète est un autre chantier).
  *
- * Pas de mécanisme i18n branché (voir EspaceParametres.tsx) -- textes en
+ * Pas de mécanisme i18n branché (voir EspaceParametres.tsx) : textes en
  * dur en français.
  */
 
@@ -106,7 +106,7 @@ export function EspaceDossiers() {
       await plugin.choisirDossier();
       rafraichir();
     } catch (e) {
-      // L'utilisateur peut simplement avoir annulé le sélecteur système --
+      // L'utilisateur peut simplement avoir annulé le sélecteur système :
       // pas la peine d'afficher ça comme une vraie erreur bloquante.
     }
   }
@@ -410,7 +410,7 @@ export function EspaceDossiers() {
   );
 }
 
-/** Petit sélecteur de dossier de destination pour "Déplacer" -- navigue dans
+/** Petit sélecteur de dossier de destination pour "Déplacer" : navigue dans
  * les mêmes dossiers désignés, ne propose que des dossiers (pas les
  * fichiers) comme destination. */
 function PickerDeplacement({

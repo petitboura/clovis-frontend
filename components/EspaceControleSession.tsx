@@ -7,21 +7,21 @@ import { Skeleton } from "./Skeleton";
 
 /**
  * Écran autonome pour le plugin natif ControleSession (Lot 3B Partie 3
- * mobile, 25/08/2026 -- voir android/.../controlesession/ControleSessionPlugin.kt).
+ * mobile, 25/08/2026 : voir android/.../controlesession/ControleSessionPlugin.kt).
  * Composant construit le 26/08/2026 à la demande de Bourama : les 5 plugins
  * sans interface doivent être "faits pour qu'elle les intègre où elle veut"
- * -- pas de route Next.js dédiée ici, pas de décision sur l'emplacement dans
+ * : pas de route Next.js dédiée ici, pas de décision sur l'emplacement dans
  * la navigation (un autre chantier de Bourama s'en charge), juste le
  * composant fonctionnel.
  *
  * Le plugin n'expose PAS de méthode pour savoir si une session est déjà en
- * cours (seulement demarrerSession/arreterSession) -- son propre commentaire
+ * cours (seulement demarrerSession/arreterSession) : son propre commentaire
  * dit que l'état ne survit pas à un kill de process. Donc `sessionActive`
  * démarre toujours à `false` ici : ce n'est pas une supposition, c'est ce
  * que le plugin documente lui-même comme comportement voulu.
  *
  * Pas de mécanisme i18n branché dans ce projet (même constat que
- * EspaceParametres.tsx/EspacePlugins.tsx) -- textes en dur en français.
+ * EspaceParametres.tsx/EspacePlugins.tsx) : textes en dur en français.
  */
 
 type PluginControleSession = {
@@ -55,7 +55,7 @@ export function EspaceControleSession() {
   }, [verifierPermission]);
 
   // L'utilisateur accorde la permission dans les Réglages système, en dehors
-  // de l'app -- on revérifie automatiquement quand l'app reprend le focus,
+  // de l'app : on revérifie automatiquement quand l'app reprend le focus,
   // plutôt que d'obliger à revenir sur cet écran ou à taper un bouton
   // "actualiser" (anticipation d'un aller-retour Réglages <-> app).
   useEffect(() => {

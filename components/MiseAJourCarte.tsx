@@ -7,16 +7,16 @@ import { Skeleton } from "./Skeleton";
 
 /**
  * Carte autonome pour le plugin natif MiseAJour (Lot 3B Partie 3 mobile,
- * 25/08/2026 -- voir android/src/play/.../MiseAJourPlugin.kt (stub, Play
+ * 25/08/2026 : voir android/src/play/.../MiseAJourPlugin.kt (stub, Play
  * Store gère les mises à jour lui-même) et android/src/externe/.../MiseAJourPlugin.kt
  * (vraie logique, hors Play Store)). disponible() renvoie `false` sur le
- * flavor "play" -- ce n'est pas une supposition de ma part, c'est le
+ * flavor "play" : ce n'est pas une supposition de ma part, c'est le
  * comportement documenté par le plugin lui-même, donc cette carte affiche
  * une explication plutôt que de disparaître silencieusement.
  *
  * Construit le 26/08/2026, groupe "Capacités du téléphone", carte simple
  * (statut + bouton), pas un écran à part. Pas de mécanisme i18n branché
- * (voir EspaceParametres.tsx) -- textes en dur en français.
+ * (voir EspaceParametres.tsx) : textes en dur en français.
  */
 
 type InfoMiseAJour = {

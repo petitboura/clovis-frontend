@@ -7,8 +7,8 @@ import { Skeleton } from "./Skeleton";
 
 /**
  * Écran autonome pour le plugin natif Accessibilite (Lot 3B Partie 3 mobile,
- * 25/08/2026 -- voir android/src/externe/.../accessibilite/AccessibilitePlugin.kt,
- * flavor "externe" uniquement -- disponible() renvoie `false` sur le flavor
+ * 25/08/2026 : voir android/src/externe/.../accessibilite/AccessibilitePlugin.kt,
+ * flavor "externe" uniquement : disponible() renvoie `false` sur le flavor
  * "play", ce n'est pas une supposition, c'est documenté par le plugin
  * lui-même).
  *
@@ -22,11 +22,11 @@ import { Skeleton } from "./Skeleton";
  * écran de réglages.
  *
  * Pas de méthode pour lister les apps installées côté plugin (seulement
- * autoriser/revoquer par nom de paquet) -- pas de sélecteur d'apps ici,
+ * autoriser/revoquer par nom de paquet) : pas de sélecteur d'apps ici,
  * juste un champ texte pour le nom de paquet. À signaler à Bourama si un
  * vrai sélecteur d'apps installées est souhaité plus tard.
  *
- * Pas de mécanisme i18n branché (voir EspaceParametres.tsx) -- textes en
+ * Pas de mécanisme i18n branché (voir EspaceParametres.tsx) : textes en
  * dur en français.
  */
 

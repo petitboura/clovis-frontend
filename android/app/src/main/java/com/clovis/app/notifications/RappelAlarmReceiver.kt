@@ -1,8 +1,8 @@
 // Cree le 26/08/2026, Bourama : construction des interfaces manquantes,
-// Partie 3 mobile -- declenche par AlarmManager (voir NotificationsPlugin.kt,
+// Partie 3 mobile : declenche par AlarmManager (voir NotificationsPlugin.kt,
 // programmerRappel), affiche la notification via NotificationsNatives
 // (meme mecanisme que le reste des rappels, deja utilise pour les push
-// FCM entrants -- pas de deuxieme systeme d'affichage invente ici).
+// FCM entrants : pas de deuxieme systeme d'affichage invente ici).
 package com.clovis.app.notifications
 
 import android.content.BroadcastReceiver

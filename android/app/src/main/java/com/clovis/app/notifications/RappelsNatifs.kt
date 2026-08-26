@@ -6,7 +6,7 @@
 // vers l'app Horloge) n'est PAS repris ici. Le plugin iOS deja construit
 // (NotificationsPlugin.swift, cote ios/App/App/notifications/) n'expose
 // que demanderAutorisation/autorisationAccordee/afficherNotificationTest/
-// programmerRappel/creerEvenementCalendrier/ouvrirApp -- pas d'equivalent
+// programmerRappel/creerEvenementCalendrier/ouvrirApp : pas d'equivalent
 // "alarme horloge" cote iOS (aucune app Horloge tierce a viser sur iOS).
 // Pour que la MEME interface web fonctionne identiquement sur les deux
 // plateformes, ce plugin Android suit ce contrat deja fixe plutot que
@@ -28,7 +28,7 @@ object RappelsNatifs {
 
     /**
      * Toujours vrai en pratique sur cette methode d'insertion (delegue a
-     * l'app Calendrier, qui affiche sa propre UI de confirmation -- voir
+     * l'app Calendrier, qui affiche sa propre UI de confirmation : voir
      * commentaire du fichier legacy sur le choix de ACTION_INSERT plutot
      * qu'un ContentResolver direct). Renvoie quand meme false si aucune
      * app Calendrier n'est installee, cas reel sur certains appareils.
@@ -57,7 +57,7 @@ object RappelsNatifs {
      * Ne fonctionne que pour un `nomPaquet` deja declare dans le bloc
      * <queries> de AndroidManifest.xml (restriction de visibilite des
      * packages depuis Android 11, deja documentee dans le legacy). Ce
-     * bloc est actuellement VIDE -- aucune app tierce n'est donc ouvrable
+     * bloc est actuellement VIDE : aucune app tierce n'est donc ouvrable
      * pour l'instant, a completer par Bourama une fois qu'il aura
      * confirme lesquelles (WhatsApp, Calculatrice...), pas devine ici.
      */

@@ -7,18 +7,18 @@ import { synchroniserUsage, obtenirUsage, type LigneUsage } from "@/lib/api";
 import { Skeleton } from "./Skeleton";
 
 /**
- * Écran autonome pour le plugin natif TempsEcran (Android uniquement --
+ * Écran autonome pour le plugin natif TempsEcran (Android uniquement :
  * voir TempsEcranPlugin.kt, construit le 26/08/2026). PAS d'équivalent iOS
  * pour l'instant : Screen Time nécessite l'entitlement Family Controls
  * (compte Apple Developer Program actif, que Bourama n'a pas encore) et un
- * target d'extension Xcode séparé -- documenté dans
+ * target d'extension Xcode séparé : documenté dans
  * clovis-mobile/ios-legacy-natif/.../UsageScreen.swift, pas contourné ici.
  *
  * Construit à la demande de Bourama ("go" en réponse à l'audit du 26/08
  * listant les interfaces manquantes) : composant fonctionnel autonome, pas
  * de route ni de placement dans la navigation imposé.
  *
- * Pas de mécanisme i18n branché (voir EspaceParametres.tsx) -- textes en
+ * Pas de mécanisme i18n branché (voir EspaceParametres.tsx) : textes en
  * dur en français.
  */
 
@@ -79,7 +79,7 @@ export function EspaceTempsEcran() {
       .usageAujourdhui()
       .then(async (r) => {
         setAppsAujourdhui(r.apps);
-        // Synchronise vers le backend puis relit l'historique -- voir
+        // Synchronise vers le backend puis relit l'historique : voir
         // lib/api.ts (synchroniserUsage/obtenirUsage), contrat déjà en
         // place côté clovis-backend.
         const aujourdhui = new Date().toISOString().slice(0, 10);

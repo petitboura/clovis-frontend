@@ -6,15 +6,15 @@ import { usePluginNatif, messageErreurPlugin } from "@/lib/usePluginNatif";
 import { Skeleton } from "./Skeleton";
 
 /**
- * Écran autonome pour le plugin Notifications -- construit d'abord côté
+ * Écran autonome pour le plugin Notifications : construit d'abord côté
  * iOS (NotificationsPlugin.swift), Android en avait été oublié (aucun
  * plugin équivalent, aucun registerPlugin dans MainActivity.java). Le
  * plugin Android manquant a été ajouté le 26/08/2026
  * (NotificationsPlugin.kt), avec exactement le même nom JS et les mêmes
- * méthodes que la version iOS -- ce composant fonctionne donc sur les deux
+ * méthodes que la version iOS : ce composant fonctionne donc sur les deux
  * plateformes sans code spécifique, sauf `ouvrirApp` (voir plus bas).
  *
- * Pas de mécanisme i18n branché (voir EspaceParametres.tsx) -- textes en
+ * Pas de mécanisme i18n branché (voir EspaceParametres.tsx) : textes en
  * dur en français.
  */
 
