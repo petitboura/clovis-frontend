@@ -17,8 +17,6 @@ import {
   Download,
   Image as IconImage,
   Bell,
-  FolderTree,
-  FileCode,
   Edit3,
   Sigma,
   AudioLines,
@@ -177,9 +175,7 @@ export const OUTILS_DISPONIBLES: { nom: string; label: string; Icone: typeof Sea
   // est personnelle à l'utilisateur, pas liée à un agent précis.
   { nom: "gerer_document_bibliotheque", label: "Consulter ma bibliothèque", Icone: Library, onglet: "rechercher" },
 
-  { nom: "explorer_depot_github", label: "Explorer un dépôt GitHub", Icone: FolderTree, onglet: "action_app", appli: "github" },
-  { nom: "lire_fichier_depot_github", label: "Lire un fichier GitHub", Icone: FileCode, onglet: "action_app", appli: "github" },
-  { nom: "modifier_fichier_depot_github", label: "Modifier un fichier GitHub", Icone: Edit3, onglet: "action_app", appli: "github" },
+  { nom: "gerer_depot_github", label: "Dépôt GitHub", Icone: Github, onglet: "action_app", appli: "github" },
   // Notion activé à 100% côté backend (01/08, demande Bourama, voir
   // registre_outils.py) -- une icône PAR outil désormais (01/08, demande
   // Bourama : "regarde comment pour github ça fonctionne"), même
