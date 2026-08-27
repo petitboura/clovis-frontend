@@ -14,6 +14,16 @@ export type DetailOuverturePosition = {
   titre: string;
   positionType?: "page" | "timestamp" | null;
   positionValeur?: number | null;
+  // Ajouté 2026-08-27 (demande Bourama : "que tout reste en popup
+  // interne, meme les sites") -- type MIME réel du fichier bibliothèque
+  // (voir core/bibliotheque_rag.py:formater_source_bibliotheque), pour
+  // que le visionneur choisisse le bon aperçu (image, Office, texte...)
+  // sans deviner par extension d'URL. undefined/null pour une source
+  // qui n'est PAS un fichier de bibliothèque (résultat de recherche web
+  // par ex.) -- le visionneur retombe alors sur une carte d'aperçu de
+  // site + bouton explicite pour sortir de l'app (voir LinkPreview.tsx,
+  // même principe déjà en place pour les liens classiques du chat).
+  typeMime?: string | null;
 };
 
 export const EVENEMENT_OUVRIR_POSITION = "clovis:ouvrir-position";

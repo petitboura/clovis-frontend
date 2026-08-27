@@ -49,7 +49,7 @@ function iconePourOutil(outils: ReturnType<typeof useOutilsRegistre>["outils"], 
 export function OutilResultatBulle({
   resultats,
 }: {
-  resultats?: { nomOutil: string; nomLisible: string; resultat: string; sources?: { titre: string; url: string; extrait?: string; url_extrait?: string; reperage?: string; position_type?: "page" | "timestamp"; position_valeur?: number }[] }[];
+  resultats?: { nomOutil: string; nomLisible: string; resultat: string; sources?: { titre: string; url: string; extrait?: string; url_extrait?: string; reperage?: string; position_type?: "page" | "timestamp"; position_valeur?: number; type_mime?: string | null }[] }[];
 }) {
   const { outils } = useOutilsRegistre();
   const [ouverts, setOuverts] = useState<Record<number, boolean>>({});

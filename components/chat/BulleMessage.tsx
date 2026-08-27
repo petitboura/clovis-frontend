@@ -169,7 +169,7 @@ export interface MessageAffiche {
   // séparé du message) : elles doivent apparaître juste après le
   // résultat de leur outil, pas dans un bloc "Sources" à part à la fin
   // -- voir OutilResultatBulle.tsx.
-  outilsResultats?: { nomOutil: string; nomLisible: string; resultat: string; sources?: { titre: string; url: string; extrait?: string; url_extrait?: string; reperage?: string; position_type?: "page" | "timestamp"; position_valeur?: number }[] }[];
+  outilsResultats?: { nomOutil: string; nomLisible: string; resultat: string; sources?: { titre: string; url: string; extrait?: string; url_extrait?: string; reperage?: string; position_type?: "page" | "timestamp"; position_valeur?: number; type_mime?: string | null }[] }[];
   // Ajouté 2026-07-28 (demande Bourama) : lien(s) de fichier(s) générés
   // par un outil, détectés côté backend de façon garantie (voir
   // core/main.py, événement SSE "fichiers_generes") -- INDÉPENDANT de ce
@@ -306,7 +306,7 @@ function BulleMessageInterne({
   enAttente?: boolean;
   raisonnement?: string;
   raisonnementEnCours?: boolean;
-  outilsResultats?: { nomOutil: string; nomLisible: string; resultat: string; sources?: { titre: string; url: string; extrait?: string; url_extrait?: string; reperage?: string; position_type?: "page" | "timestamp"; position_valeur?: number }[] }[];
+  outilsResultats?: { nomOutil: string; nomLisible: string; resultat: string; sources?: { titre: string; url: string; extrait?: string; url_extrait?: string; reperage?: string; position_type?: "page" | "timestamp"; position_valeur?: number; type_mime?: string | null }[] }[];
   fichiersGeneres?: { nomOutil: string; fichiers: { url: string; nom: string }[] }[];
 }) {
   const [copie, setCopie] = useState(false);
@@ -331,6 +331,7 @@ function BulleMessageInterne({
       reperage?: string;
       position_type?: "page" | "timestamp";
       position_valeur?: number;
+      type_mime?: string | null;
     }[] = [];
     for (const r of outilsResultats ?? []) {
       for (const s of r.sources ?? []) toutes.push(s);
@@ -599,36 +600,28 @@ function BulleMessageInterne({
                   const source = sourcesAplaties[numero - 1];
                   if (!source) return null;
                   const libelle = source.reperage ? `${source.titre}, ${source.reperage}` : source.titre;
-                  const resteDansApp = source.position_type === "page" || source.position_type === "timestamp";
-                  if (resteDansApp) {
-                    return (
-                      <button
-                        type="button"
-                        onClick={() =>
-                          ouvrirPosition({
-                            url: source.url,
-                            titre: libelle,
-                            positionType: source.position_type,
-                            positionValeur: source.position_valeur,
-                          })
-                        }
-                        title={libelle}
-                        className="mx-0.5 rounded border border-dj-bordure px-1.5 py-0.5 align-middle text-[11px] font-medium text-dj-accent-1 no-underline hover:underline"
-                      >
-                        {libelle}
-                      </button>
-                    );
-                  }
+                  // CORRECTIF 2026-08-27 (demande Bourama : "que tout
+                  // reste en popup interne, meme les sites") : toujours
+                  // le visionneur en app, plus jamais de <a
+                  // target="_blank"> en repli -- voir SourcesBulle.tsx,
+                  // même logique.
                   return (
-                    <a
-                      href={source.url}
-                      target="_blank"
-                      rel="noopener noreferrer"
+                    <button
+                      type="button"
+                      onClick={() =>
+                        ouvrirPosition({
+                          url: source.url,
+                          titre: libelle,
+                          positionType: source.position_type,
+                          positionValeur: source.position_valeur,
+                          typeMime: source.type_mime,
+                        })
+                      }
                       title={libelle}
                       className="mx-0.5 rounded border border-dj-bordure px-1.5 py-0.5 align-middle text-[11px] font-medium text-dj-accent-1 no-underline hover:underline"
                     >
                       {libelle}
-                    </a>
+                    </button>
                   );
                 }
                 const media = typeMedia(href);

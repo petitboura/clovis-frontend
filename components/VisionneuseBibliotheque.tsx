@@ -14,7 +14,7 @@ import { LinkPreview } from "./chat/LinkPreview";
 // visionneuse Microsoft Office (gratuite, sans limite, lit directement
 // une URL publique), dans une iframe qui reste À L'INTÉRIEUR de cette
 // fenêtre -- rien ne fait sortir l'utilisateur de l'app.
-const TYPES_MIME_OFFICE = new Set([
+export const TYPES_MIME_OFFICE = new Set([
   "application/msword",
   "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
   "application/vnd.ms-excel",
@@ -36,7 +36,7 @@ const TYPES_MIME_TEXTE_SUPPLEMENTAIRES = new Set([
   "application/yaml",
 ]);
 
-function estTypeTexteLisible(typeMime: string) {
+export function estTypeTexteLisible(typeMime: string) {
   return typeMime.startsWith("text/") || TYPES_MIME_TEXTE_SUPPLEMENTAIRES.has(typeMime);
 }
 
@@ -45,7 +45,7 @@ function estTypeTexteLisible(typeMime: string) {
 // OS qui a fait l'upload, un ".md" arrive parfois avec type_mime vide ou
 // "application/octet-stream" (le type "text/markdown" n'est pas garanti
 // comme il l'est pour "image/png" par exemple).
-function estFichierMarkdown(nomFichier: string, typeMime: string) {
+export function estFichierMarkdown(nomFichier: string, typeMime: string) {
   return /\.mdx?$/i.test(nomFichier) || typeMime === "text/markdown" || typeMime === "text/x-markdown";
 }
 
@@ -81,7 +81,7 @@ type FichierBiblio = {
 // Téléchargement via fetch+blob (même raison que partout ailleurs dans
 // le chat : une URL cross-origin Supabase ignore souvent l'attribut
 // <a download>, le blob local force le vrai téléchargement).
-async function telecharger(href: string, nom: string) {
+export async function telecharger(href: string, nom: string) {
   try {
     const reponse = await fetch(href);
     const blob = await reponse.blob();
@@ -124,7 +124,7 @@ function BoutonCopier({ texte }: { texte: string }) {
   );
 }
 
-function ContenuTexte({ href }: { href: string }) {
+export function ContenuTexte({ href }: { href: string }) {
   const [texte, setTexte] = useState<string | null>(null);
   const [enErreur, setEnErreur] = useState(false);
 
@@ -159,7 +159,7 @@ function ContenuTexte({ href }: { href: string }) {
   );
 }
 
-function ContenuMarkdown({ href }: { href: string }) {
+export function ContenuMarkdown({ href }: { href: string }) {
   const [texte, setTexte] = useState<string | null>(null);
   const [enErreur, setEnErreur] = useState(false);
   const [vueBrute, setVueBrute] = useState(false);
@@ -246,7 +246,7 @@ function ContenuMarkdown({ href }: { href: string }) {
   );
 }
 
-function ContenuOffice({ href, titre }: { href: string; titre: string }) {
+export function ContenuOffice({ href, titre }: { href: string; titre: string }) {
   const [charge, setCharge] = useState(false);
   const urlVisionneuse = `https://view.officeapps.live.com/op/embed.aspx?src=${encodeURIComponent(href)}`;
 
@@ -267,7 +267,7 @@ function ContenuOffice({ href, titre }: { href: string; titre: string }) {
   );
 }
 
-function ContenuNonPrevisualisable({ href, nom }: { href: string; nom: string }) {
+export function ContenuNonPrevisualisable({ href, nom }: { href: string; nom: string }) {
   return (
     <div className="flex flex-col items-center gap-3 p-10 text-center">
       <IconFichier size={28} className="text-dj-texte-muet" />

@@ -46,6 +46,7 @@ type Source = {
   reperage?: string;
   position_type?: "page" | "timestamp";
   position_valeur?: number;
+  type_mime?: string | null;
 };
 
 // Deuxième puce cliquable, distincte de la source (26/08, demande
@@ -85,6 +86,7 @@ function ExtraitPuce({ source }: { source: Source }) {
                   titre: source.reperage ? `${source.titre}, ${source.reperage}` : source.titre,
                   positionType: source.position_type,
                   positionValeur: source.position_valeur,
+                  typeMime: source.type_mime,
                 });
               }}
               className="mt-2 inline-block text-dj-accent-1 hover:underline"
@@ -110,45 +112,35 @@ export function SourcesBulle({ sources, numeroDepart = 1 }: { sources?: Source[]
         // formater_source_bibliotheque côté backend).
         const aUnParagrapheDistinct =
           !!source.extrait && !!source.url_extrait && source.url_extrait !== source.url;
-        // PDF/audio (26/08) : reste DANS l'app -- visionneur en app,
-        // ouvert à la page 1 / au début. Tout le reste (page web, lien
-        // ajouté par l'utilisateur, image) garde le comportement
-        // classique : lien externe, nouvel onglet.
-        const resteDansApp = source.position_type === "page" || source.position_type === "timestamp";
 
         return (
           <div key={source.url + index} className="flex items-center gap-1">
-            {resteDansApp ? (
-              <button
-                type="button"
-                onClick={() =>
-                  ouvrirPosition({
-                    url: source.url,
-                    titre: source.titre,
-                    positionType: source.position_type,
-                    positionValeur: source.position_type === "page" ? 1 : 0,
-                  })
-                }
-                title={source.titre}
-                className="flex max-w-[220px] items-center gap-1 rounded-cgpt-bouton border border-dj-bordure px-2.5 py-1 text-[12px] text-dj-texte-muet transition-colors hover:text-dj-texte"
-              >
-                <Favicon url={source.url} />
-                <span className="truncate">{source.titre}</span>
-                <sup className="shrink-0 font-semibold text-dj-texte-muet">{numeroDepart + index}</sup>
-              </button>
-            ) : (
-              <a
-                href={source.url}
-                target="_blank"
-                rel="noopener noreferrer"
-                title={source.titre}
-                className="flex max-w-[220px] items-center gap-1 rounded-cgpt-bouton border border-dj-bordure px-2.5 py-1 text-[12px] text-dj-texte-muet transition-colors hover:text-dj-texte"
-              >
-                <Favicon url={source.url} />
-                <span className="truncate">{source.titre}</span>
-                <sup className="shrink-0 font-semibold text-dj-texte-muet">{numeroDepart + index}</sup>
-              </a>
-            )}
+            {/* CORRECTIF 2026-08-27 (demande Bourama : "que tout reste en
+                popup interne, meme les sites") : toujours un <button> qui
+                ouvre le visionneur en app -- plus jamais de <a
+                target="_blank"> qui sortirait directement de l'app au
+                clic. Le visionneur (VisionneurPositionGlobal.tsx) choisit
+                lui-même l'aperçu adapté (document bibliothèque quel que
+                soit son type, ou carte de site + bouton explicite pour
+                une vraie source web). */}
+            <button
+              type="button"
+              onClick={() =>
+                ouvrirPosition({
+                  url: source.url,
+                  titre: source.titre,
+                  positionType: source.position_type,
+                  positionValeur: source.position_type ? (source.position_type === "page" ? 1 : 0) : undefined,
+                  typeMime: source.type_mime,
+                })
+              }
+              title={source.titre}
+              className="flex max-w-[220px] items-center gap-1 rounded-cgpt-bouton border border-dj-bordure px-2.5 py-1 text-[12px] text-dj-texte-muet transition-colors hover:text-dj-texte"
+            >
+              <Favicon url={source.url} />
+              <span className="truncate">{source.titre}</span>
+              <sup className="shrink-0 font-semibold text-dj-texte-muet">{numeroDepart + index}</sup>
+            </button>
             {aUnParagrapheDistinct && <ExtraitPuce source={source} />}
           </div>
         );
