@@ -96,7 +96,7 @@ math-field {
    mêmes variables), les deux ne se synchronisent pas automatiquement. */
 :root {
   --dj-fond: #faf8f5;
-  --dj-surface: #f2f2ee;
+  --dj-surface: #ffffff;
   --dj-surface-haute: #ebebe9;
   --dj-bordure: rgba(28, 26, 22, 0.08);
   --dj-bordure-forte: rgba(184, 134, 11, 0.35);
