@@ -12,6 +12,18 @@ import { ConfirmationOutil } from "./ConfirmationOutil";
 import { messageErreur } from "@/lib/erreurs";
 import { emettreDonneesModifieesPourOutil } from "@/lib/evenementsDonnees";
 import { IconeGenerique } from "@/components/icones/IconeGenerique";
+import dynamic from "next/dynamic";
+
+// Chargé dynamiquement, ssr:false (26/08) : react-pdf/pdfjs-dist accède
+// à des API navigateur (Path2D, DOMMatrix...) dès son import, pas
+// seulement à l'utilisation -- une évaluation côté serveur (SSR
+// classique de Next.js pour un composant client) plante sans ça. Sans
+// incidence perçue : le composant ne rend rien tant qu'aucune position
+// n'a été ouverte (voir VisionneurPositionGlobal.tsx).
+const VisionneurPositionGlobal = dynamic(
+  () => import("./VisionneurPositionGlobal").then((m) => m.VisionneurPositionGlobal),
+  { ssr: false },
+);
 
 // Page de chat qui remplace chat.py (Streamlit). Consomme la
 // nouvelle route /api/chat (api/chat.py) en streaming, au lieu d'appeler
@@ -781,6 +793,7 @@ export function ChatIA({
           onEnvoye={() => setPopupFeedback(null)}
         />
       )}
+      <VisionneurPositionGlobal />
     </div>
   );
 }

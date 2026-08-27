@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState, isValidElement, ReactNode, memo } from "react";
+import { useEffect, useRef, useState, useMemo, isValidElement, ReactNode, memo } from "react";
 import ReactMarkdown from "react-markdown";
 import type { PluggableList } from "unified";
 import remarkGfm from "remark-gfm";
@@ -27,6 +27,7 @@ import { NoteTexteChip, estNoteTexteBibliotheque } from "./NoteTexteChip";
 import { LinkPreview } from "./LinkPreview";
 import { RaisonnementBulle } from "./RaisonnementBulle";
 import { OutilResultatBulle } from "./OutilResultatBulle";
+import { ouvrirPosition } from "./visionneurPositionEvenement";
 import { Skeleton } from "../Skeleton";
 
 // Chargé à la demande (pas en haut du bundle du chat) : recharts ne sert
@@ -44,7 +45,20 @@ const GraphiqueDonnees = dynamic(() => import("./GraphiqueDonnees").then((m) => 
 // streaming pour le message en cours -- alors que leur contenu ne
 // change jamais. Même valeurs qu'avant, juste calculées une seule fois.
 const PLUGINS_REMARK: PluggableList = [remarkGfm, remarkMath];
-const PLUGINS_REHYPE: PluggableList = [rehypeRaw, [rehypeSanitize, defaultSchema], rehypeKatex];
+// rehype-sanitize retire par défaut tout href dont le "protocole" n'est
+// pas dans une liste blanche (http/https/mailto...) -- il faut y ajouter
+// "citation" explicitement, sinon [n](citation:n) (26/08, voir a() plus
+// bas) se ferait vider de son href AVANT même d'atteindre notre
+// composant personnalisé, silencieusement.
+const SCHEMA_SANITIZE = {
+  ...defaultSchema,
+  protocols: {
+    ...defaultSchema.protocols,
+    href: [...(defaultSchema.protocols?.href ?? []), "citation"],
+  },
+};
+
+const PLUGINS_REHYPE: PluggableList = [rehypeRaw, [rehypeSanitize, SCHEMA_SANITIZE], rehypeKatex];
 
 // Extrait le texte brut d'un enfant React -- nécessaire pour récupérer le
 // contenu source d'un bloc de code (```lang ... ```) tel que ReactMarkdown
@@ -155,7 +169,7 @@ export interface MessageAffiche {
   // séparé du message) : elles doivent apparaître juste après le
   // résultat de leur outil, pas dans un bloc "Sources" à part à la fin
   // -- voir OutilResultatBulle.tsx.
-  outilsResultats?: { nomOutil: string; nomLisible: string; resultat: string; sources?: { titre: string; url: string; extrait?: string; url_extrait?: string }[] }[];
+  outilsResultats?: { nomOutil: string; nomLisible: string; resultat: string; sources?: { titre: string; url: string; extrait?: string; url_extrait?: string; reperage?: string; position_type?: "page" | "timestamp"; position_valeur?: number }[] }[];
   // Ajouté 2026-07-28 (demande Bourama) : lien(s) de fichier(s) générés
   // par un outil, détectés côté backend de façon garantie (voir
   // core/main.py, événement SSE "fichiers_generes") -- INDÉPENDANT de ce
@@ -292,12 +306,37 @@ function BulleMessageInterne({
   enAttente?: boolean;
   raisonnement?: string;
   raisonnementEnCours?: boolean;
-  outilsResultats?: { nomOutil: string; nomLisible: string; resultat: string; sources?: { titre: string; url: string; extrait?: string; url_extrait?: string }[] }[];
+  outilsResultats?: { nomOutil: string; nomLisible: string; resultat: string; sources?: { titre: string; url: string; extrait?: string; url_extrait?: string; reperage?: string; position_type?: "page" | "timestamp"; position_valeur?: number }[] }[];
   fichiersGeneres?: { nomOutil: string; fichiers: { url: string; nom: string }[] }[];
 }) {
   const [copie, setCopie] = useState(false);
   const [pieceJointeOuverteIndex, setPieceJointeOuverteIndex] = useState<number | null>(null);
   const [enEdition, setEnEdition] = useState(false);
+
+  // Citations inline dans le texte (26/08, demande Bourama : les sources
+  // doivent apparaître à la fois AU FIL DU TEXTE, là où le modèle les
+  // utilise, ET dans la liste complète en bas -- pas l'un OU l'autre).
+  // Numérotation GLOBALE sur tout le message, dans l'ordre des appels
+  // d'outils (identique à celle déjà affichée par SourcesBulle en bas) :
+  // le modèle est instrui de placer un marqueur [n](citation:n) dans sa
+  // propre réponse -- voir a() plus bas, qui résout "citation:n" contre
+  // cette liste pour ouvrir la bonne source au clic, sans jamais afficher
+  // le gros aperçu LinkPreview réservé aux vrais liens externes.
+  const sourcesAplaties = useMemo(() => {
+    const toutes: {
+      titre: string;
+      url: string;
+      extrait?: string;
+      url_extrait?: string;
+      reperage?: string;
+      position_type?: "page" | "timestamp";
+      position_valeur?: number;
+    }[] = [];
+    for (const r of outilsResultats ?? []) {
+      for (const s of r.sources ?? []) toutes.push(s);
+    }
+    return toutes;
+  }, [outilsResultats]);
   const [texteEdition, setTexteEdition] = useState(message.content);
   const [enLecture, setEnLecture] = useState(false);
   const [fichiersOuverts, setFichiersOuverts] = useState(false);
@@ -538,6 +577,60 @@ function BulleMessageInterne({
               // rien d'autre n'est exploitable).
               a({ href, children }) {
                 if (!href) return <>{children}</>;
+                // Citation inline (26/08) : le modèle écrit [n](citation:n)
+                // au fil de sa réponse, juste après le passage concerné,
+                // en plus de la liste complète déjà affichée en bas par
+                // OutilResultatBulle/SourcesBulle -- même numérotation
+                // globale des deux côtés (voir sourcesAplaties ci-dessus).
+                // Volontairement PAS un lien classique (pas de LinkPreview
+                // ici) : juste un petit texte cliquable qui ouvre la
+                // source, pour rester léger au milieu d'une phrase.
+                //
+                // Affiche le NOM du fichier + le repérage ("page 4"/"à
+                // 02:15") en clair (26/08, retour Bourama : "un chiffre
+                // nu, on n'y comprend rien") -- jamais juste "[n]". Pour
+                // un PDF/audio, ouvre le visionneur EN APP à la bonne
+                // position plutôt qu'un lien externe (même raison que
+                // SourcesBulle.tsx : le fragment #page=/#t= est ignoré une
+                // fois hors de l'app).
+                const matchCitation = /^citation:(\d+)$/.exec(href);
+                if (matchCitation) {
+                  const numero = parseInt(matchCitation[1], 10);
+                  const source = sourcesAplaties[numero - 1];
+                  if (!source) return null;
+                  const libelle = source.reperage ? `${source.titre}, ${source.reperage}` : source.titre;
+                  const resteDansApp = source.position_type === "page" || source.position_type === "timestamp";
+                  if (resteDansApp) {
+                    return (
+                      <button
+                        type="button"
+                        onClick={() =>
+                          ouvrirPosition({
+                            url: source.url,
+                            titre: libelle,
+                            positionType: source.position_type,
+                            positionValeur: source.position_valeur,
+                          })
+                        }
+                        title={libelle}
+                        className="mx-0.5 rounded border border-dj-bordure px-1.5 py-0.5 align-middle text-[11px] font-medium text-dj-accent-1 no-underline hover:underline"
+                      >
+                        {libelle}
+                      </button>
+                    );
+                  }
+                  return (
+                    <a
+                      href={source.url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      title={libelle}
+                      className="mx-0.5 rounded border border-dj-bordure px-1.5 py-0.5 align-middle text-[11px] font-medium text-dj-accent-1 no-underline hover:underline"
+                    >
+                      {libelle}
+                    </a>
+                  );
+                }
                 const media = typeMedia(href);
                 if (media) return <LecteurMedia href={href} type={media} />;
                 if (estNoteTexteBibliotheque(href)) {

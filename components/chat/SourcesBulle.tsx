@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { ExternalLink, Quote } from "lucide-react";
+import { ouvrirPosition } from "./visionneurPositionEvenement";
 
 // Rendu "bête" d'une liste de puces de sources cliquables -- PLUS de
 // toggle propre depuis le 26/07 (retour Bourama : les sources d'une
@@ -37,14 +38,26 @@ function Favicon({ url }: { url: string }) {
   );
 }
 
+type Source = {
+  titre: string;
+  url: string;
+  extrait?: string;
+  url_extrait?: string;
+  reperage?: string;
+  position_type?: "page" | "timestamp";
+  position_valeur?: number;
+};
+
 // Deuxième puce cliquable, distincte de la source (26/08, demande
 // Bourama : deux popups séparées -- l'une ouvre le document, l'autre
-// montre directement le paragraphe/passage exact utilisé). Un simple
-// clic ouvre un petit popover avec l'extrait ; un lien à l'intérieur
-// pointe vers `url_extrait` (fragment #page=/#t= construit côté
-// backend, voir core/main.py:_sources_bibliotheque_depuis_texte) pour
-// rouvrir le document PILE à cet endroit, dans un nouvel onglet.
-function ExtraitPuce({ extrait, urlExtrait }: { extrait: string; urlExtrait: string }) {
+// montre directement le paragraphe/passage exact utilisé). Un clic
+// ouvre un petit popover avec l'extrait ; le lien "Ouvrir à cet endroit"
+// N'EST PLUS un <a target="_blank"> vers `url_extrait` (26/08, retour
+// Bourama : ça sort de l'app et le fragment #page=/#t= est ignoré par
+// le lecteur externe qui prend la main) -- ouvre désormais le
+// visionneur EN APP (VisionneurPositionGlobal.tsx), qui affiche
+// vraiment la bonne page/le bon instant.
+function ExtraitPuce({ source }: { source: Source }) {
   const [ouvert, setOuvert] = useState(false);
 
   return (
@@ -62,15 +75,22 @@ function ExtraitPuce({ extrait, urlExtrait }: { extrait: string; urlExtrait: str
           {/* Zone invisible pour fermer le popover au clic en dehors */}
           <div className="fixed inset-0 z-10" onClick={() => setOuvert(false)} />
           <div className="absolute bottom-full left-0 z-20 mb-1.5 w-64 rounded-cgpt-bouton border border-dj-bordure bg-dj-fond p-2.5 text-[12px] shadow-lg">
-            <p className="max-h-40 overflow-y-auto whitespace-pre-wrap text-dj-texte-muet">{extrait}</p>
-            <a
-              href={urlExtrait}
-              target="_blank"
-              rel="noopener noreferrer"
+            <p className="max-h-40 overflow-y-auto whitespace-pre-wrap text-dj-texte-muet">{source.extrait}</p>
+            <button
+              type="button"
+              onClick={() => {
+                setOuvert(false);
+                ouvrirPosition({
+                  url: source.url,
+                  titre: source.reperage ? `${source.titre}, ${source.reperage}` : source.titre,
+                  positionType: source.position_type,
+                  positionValeur: source.position_valeur,
+                });
+              }}
               className="mt-2 inline-block text-dj-accent-1 hover:underline"
             >
               Ouvrir à cet endroit
-            </a>
+            </button>
           </div>
         </>
       )}
@@ -78,9 +98,7 @@ function ExtraitPuce({ extrait, urlExtrait }: { extrait: string; urlExtrait: str
   );
 }
 
-type Source = { titre: string; url: string; extrait?: string; url_extrait?: string };
-
-export function SourcesBulle({ sources }: { sources?: Source[] }) {
+export function SourcesBulle({ sources, numeroDepart = 1 }: { sources?: Source[]; numeroDepart?: number }) {
   if (!sources || !sources.length) return null;
 
   return (
@@ -92,23 +110,46 @@ export function SourcesBulle({ sources }: { sources?: Source[] }) {
         // formater_source_bibliotheque côté backend).
         const aUnParagrapheDistinct =
           !!source.extrait && !!source.url_extrait && source.url_extrait !== source.url;
+        // PDF/audio (26/08) : reste DANS l'app -- visionneur en app,
+        // ouvert à la page 1 / au début. Tout le reste (page web, lien
+        // ajouté par l'utilisateur, image) garde le comportement
+        // classique : lien externe, nouvel onglet.
+        const resteDansApp = source.position_type === "page" || source.position_type === "timestamp";
 
         return (
           <div key={source.url + index} className="flex items-center gap-1">
-            <a
-              href={source.url}
-              target="_blank"
-              rel="noopener noreferrer"
-              title={source.titre}
-              className="flex max-w-[220px] items-center gap-1 rounded-cgpt-bouton border border-dj-bordure px-2.5 py-1 text-[12px] text-dj-texte-muet transition-colors hover:text-dj-texte"
-            >
-              <Favicon url={source.url} />
-              <span className="truncate">{source.titre}</span>
-              <sup className="shrink-0 font-semibold text-dj-texte-muet">{index + 1}</sup>
-            </a>
-            {aUnParagrapheDistinct && (
-              <ExtraitPuce extrait={source.extrait!} urlExtrait={source.url_extrait!} />
+            {resteDansApp ? (
+              <button
+                type="button"
+                onClick={() =>
+                  ouvrirPosition({
+                    url: source.url,
+                    titre: source.titre,
+                    positionType: source.position_type,
+                    positionValeur: source.position_type === "page" ? 1 : 0,
+                  })
+                }
+                title={source.titre}
+                className="flex max-w-[220px] items-center gap-1 rounded-cgpt-bouton border border-dj-bordure px-2.5 py-1 text-[12px] text-dj-texte-muet transition-colors hover:text-dj-texte"
+              >
+                <Favicon url={source.url} />
+                <span className="truncate">{source.titre}</span>
+                <sup className="shrink-0 font-semibold text-dj-texte-muet">{numeroDepart + index}</sup>
+              </button>
+            ) : (
+              <a
+                href={source.url}
+                target="_blank"
+                rel="noopener noreferrer"
+                title={source.titre}
+                className="flex max-w-[220px] items-center gap-1 rounded-cgpt-bouton border border-dj-bordure px-2.5 py-1 text-[12px] text-dj-texte-muet transition-colors hover:text-dj-texte"
+              >
+                <Favicon url={source.url} />
+                <span className="truncate">{source.titre}</span>
+                <sup className="shrink-0 font-semibold text-dj-texte-muet">{numeroDepart + index}</sup>
+              </a>
             )}
+            {aUnParagrapheDistinct && <ExtraitPuce source={source} />}
           </div>
         );
       })}
