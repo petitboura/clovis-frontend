@@ -278,24 +278,49 @@ async function envoyerFichiersDirect(fichiersChoisis: FileList | File[]) {
   }
 
   // 27/08/2026, demande Bourama : upload d'un dossier entier depuis
-  // l'appareil (voir champ webkitdirectory sur l'input plus bas). Un
-  // dossier Clovis est créé avec le nom du dossier choisi, tous les
-  // fichiers qu'il contient y sont rangés. Web/PC + navigateur mobile
-  // uniquement (voir commentaire sur uploadDossierEnCours plus haut).
+  // l'appareil (voir champ webkitdirectory sur l'input plus bas). Web/PC
+  // + navigateur mobile uniquement (voir commentaire sur
+  // uploadDossierEnCours plus haut).
+  // CORRECTIF (27/08, même jour) : la première version mettait tous les
+  // fichiers à plat dans un seul dossier -- Bourama veut l'arborescence
+  // EXACTE (sous-dossiers compris), comme sur son PC. webkitRelativePath
+  // donne le chemin complet par fichier (ex: "Cours/Chimie/td1.pdf") ; on
+  // recrée chaque segment de dossier une seule fois (cache par chemin),
+  // récursivement du parent vers l'enfant, avant d'y ranger le fichier.
   async function envoyerDossierDirect(fichiersChoisis: FileList | File[]) {
     const liste = Array.from(fichiersChoisis) as (File & { webkitRelativePath?: string })[];
     if (liste.length === 0) return;
-    const nomDossier = liste[0].webkitRelativePath?.split("/")[0]?.trim() || "Dossier importé";
     setUploadDossierEnCours(true);
     setErreursEnvoi([]);
     const erreurs: { nom: string; erreur: string }[] = [];
+    const dossiersCrees = new Map<string, string | undefined>();
+
+    async function obtenirDossierPourChemin(segments: string[]): Promise<string | undefined> {
+      if (segments.length === 0) return dossierCourantId ?? undefined;
+      const chemin = segments.join("/");
+      if (dossiersCrees.has(chemin)) return dossiersCrees.get(chemin);
+      const parentId = await obtenirDossierPourChemin(segments.slice(0, -1));
+      const nom = segments[segments.length - 1];
+      let id: string | undefined;
+      try {
+        const dossier = await creerDossierBibliotheque(nom, parentId);
+        id = dossier?.id;
+      } catch (e) {
+        erreurs.push({ nom: `Dossier « ${nom} »`, erreur: messageErreur(e) });
+      }
+      dossiersCrees.set(chemin, id);
+      return id;
+    }
+
     try {
-      const dossierCree = await creerDossierBibliotheque(nomDossier, dossierCourantId ?? undefined);
       for (const fichier of liste) {
         try {
+          const chemin = fichier.webkitRelativePath || fichier.name;
+          const segmentsDossier = chemin.split("/").slice(0, -1);
+          const dossierId = await obtenirDossierPourChemin(segmentsDossier);
           const ligne = await ajouterFichierBibliothequePersonnelle(fichier, "", "");
-          if (ligne?.id && dossierCree?.id) {
-            await rangerFichierDansDossier(dossierCree.id, ligne.id);
+          if (ligne?.id && dossierId) {
+            await rangerFichierDansDossier(dossierId, ligne.id);
           }
         } catch (e) {
           erreurs.push({ nom: fichier.name, erreur: messageErreur(e) });
@@ -649,10 +674,13 @@ async function envoyerFichiersDirect(fichiersChoisis: FileList | File[]) {
           unique, menu au clic (Importer / Texte / Lien). Fichiers et
           dossier partagent la même entrée "Importer" -- pas de catégorie
           "Dossier" séparée, juste rendue possible via un second input
-          caché (webkitdirectory). Position alignée sur le FAB de
-          ChatFlottant.tsx (même style, jamais rendu sur cette page donc
-          pas de collision), avec la marge de la barre native mobile déjà
-          utilisée dans BarreDeSaisie.tsx. */}
+          caché (webkitdirectory). CORRECTIF (27/08, même jour) : posé à
+          GAUCHE (pas à droite comme la première version) -- ChatFlottant
+          est monté globalement dans AppShell.tsx (jamais démonté au
+          changement de page), toujours en bas à droite, y compris agrandi
+          en plein panneau de chat -- un FAB à droite le recouvrait/était
+          recouvert par lui sur cette page. Marge de la barre native
+          mobile reprise de BarreDeSaisie.tsx. */}
       <input
         id="ajout-fab-fichiers"
         type="file"
@@ -680,7 +708,7 @@ async function envoyerFichiersDirect(fichiersChoisis: FileList | File[]) {
       />
 
       {(envoi || uploadDossierEnCours) && (
-        <div className="fixed bottom-[calc(6rem+var(--cap-native-navigation-bottom,0px))] right-5 z-40 flex items-center gap-2 rounded-cgpt-bouton border border-dj-bordure bg-dj-surface px-3 py-2 text-xs text-dj-texte shadow-xl">
+        <div className="fixed bottom-[calc(6rem+var(--cap-native-navigation-bottom,0px))] left-5 z-40 flex items-center gap-2 rounded-cgpt-bouton border border-dj-bordure bg-dj-surface px-3 py-2 text-xs text-dj-texte shadow-xl">
           <Loader2 size={14} className="animate-spin" />
           Envoi…
         </div>
@@ -693,7 +721,7 @@ async function envoyerFichiersDirect(fichiersChoisis: FileList | File[]) {
         />
       )}
       {menuAjoutOuvert && (
-        <div className="fixed bottom-[calc(6rem+var(--cap-native-navigation-bottom,0px))] right-5 z-40 flex flex-col items-end gap-2">
+        <div className="fixed bottom-[calc(6rem+var(--cap-native-navigation-bottom,0px))] left-5 z-40 flex flex-col items-start gap-2">
           <label
             htmlFor="ajout-fab-fichiers"
             className="flex cursor-pointer items-center gap-2 rounded-cgpt-bouton border border-dj-bordure bg-dj-surface px-4 py-2 text-sm font-medium text-dj-texte shadow-lg transition-colors hover:border-dj-bordure-forte"
@@ -733,7 +761,7 @@ async function envoyerFichiersDirect(fichiersChoisis: FileList | File[]) {
       <button
         onClick={() => setMenuAjoutOuvert((v) => !v)}
         aria-label={menuAjoutOuvert ? "Fermer le menu d'ajout" : "Ajouter"}
-        className="fixed bottom-[calc(1.25rem+var(--cap-native-navigation-bottom,0px))] right-5 z-40 flex h-14 w-14 items-center justify-center rounded-cgpt-bouton bg-dj-accent-1 text-[#1A0D02] shadow-[0_4px_20px_rgba(0,0,0,0.35)] transition-transform hover:bg-dj-accent-2"
+        className="fixed bottom-[calc(1.25rem+var(--cap-native-navigation-bottom,0px))] left-5 z-40 flex h-14 w-14 items-center justify-center rounded-cgpt-bouton bg-dj-accent-1 text-[#1A0D02] shadow-[0_4px_20px_rgba(0,0,0,0.35)] transition-transform hover:bg-dj-accent-2"
       >
         <Plus size={24} className={`transition-transform ${menuAjoutOuvert ? "rotate-45" : ""}`} />
       </button>
