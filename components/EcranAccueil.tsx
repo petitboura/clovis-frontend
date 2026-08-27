@@ -2,8 +2,8 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { Bird, MessageSquare, Library, ScanSearch, BookOpen, type LucideIcon } from "lucide-react";
-import { appelerApi, listerProgrammes, listerAuditsProgramme, listerMatieresProgramme } from "@/lib/api";
+import { Bird, MessageSquare, Library, type LucideIcon } from "lucide-react";
+import { appelerApi } from "@/lib/api";
 import { dateRelative } from "@/lib/dateRelative";
 import { useOuvrirChat } from "@/lib/contexteChat";
 import { texteAccueilTableauDeBordSelonHeure } from "@/lib/salutations";
@@ -14,17 +14,17 @@ import { ONGLETS } from "@/components/AppSidebar";
 
 // Écran d'accueil réel de l'app (16/08/2026, demande Bourama : "faut une
 // vraie écran d'accueil pour l'app, pas un lieu dans l'app" -- avant
-// cette page, "/" redirigeait simplement vers /programme, qui n'a jamais
-// été conçu pour être un accueil). Combine, comme demandé ("les deux, à
-// voir ensemble") :
+// cette page, "/" redirigeait simplement vers une section interne, qui
+// n'a jamais été conçue pour être un accueil). Combine, comme demandé
+// ("les deux, à voir ensemble") :
 // - un écran de bienvenue (message + accès rapide au chat)
 // - un tableau de bord (raccourcis vers chaque section + activité
 //   récente RÉELLE -- pas d'échéances, aucune donnée de date limite
-//   n'existe dans le modèle programme actuel, voir échange avec Bourama)
+//   n'existe dans le modèle actuel, voir échange avec Bourama)
 
 type ActiviteItem = {
   id: string;
-  type: "conversation" | "bibliotheque" | "audit" | "programme";
+  type: "conversation" | "bibliotheque";
   Icone: LucideIcon;
   label: string;
   date: string;
@@ -106,48 +106,6 @@ export function EcranAccueil() {
         // Idem.
       }
 
-      // Audits + matières modifiées -- nécessite de lister les
-      // programmes d'abord (pas de endpoint global "tous mes audits").
-      try {
-        const programmes = await listerProgrammes();
-        for (const p of programmes) {
-          try {
-            const audits = await listerAuditsProgramme(p.id);
-            for (const a of audits) {
-              if (!a.derniere_execution) continue;
-              items.push({
-                id: `audit-${a.matiere_id}`,
-                type: "audit",
-                Icone: ScanSearch,
-                label: `Audit : ${a.matiere_nom}`,
-                date: a.derniere_execution,
-                href: "/audits",
-              });
-            }
-          } catch {
-            // Programme sans audits accessibles -- ignoré.
-          }
-
-          try {
-            const matieres = await listerMatieresProgramme(p.id);
-            for (const m of matieres) {
-              items.push({
-                id: `matiere-${m.id}`,
-                type: "programme",
-                Icone: BookOpen,
-                label: `Programme modifié : ${m.nom}`,
-                date: m.updated_at,
-                href: "/programme",
-              });
-            }
-          } catch {
-            // Idem.
-          }
-        }
-      } catch {
-        // Visiteur sans compte -- pas de programme, section ignorée.
-      }
-
       if (!annule) {
         items.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
         setActivite(items.slice(0, 8));
@@ -226,6 +184,14 @@ export function EcranAccueil() {
 
       {/* Activité récente */}
       <div>
+        {/* Hiérarchie du texte (26/08/2026, demande Bourama : le gris
+            discret dj-texte-muet était réutilisé partout de façon uniforme,
+            sur les titres de section comme sur les icônes et labels de
+            l'activité récente, ce qui écrasait toute hiérarchie. Il ne
+            reste réservé qu'aux dates, vraiment secondaires ; titres,
+            icônes et labels passent en dj-texte pour redevenir lisibles.
+            Les icônes des raccourcis "Mon espace" ne sont volontairement
+            pas touchées ici. */}
         <h2 className="mb-3 font-display text-sm font-bold uppercase tracking-wide text-dj-texte">
           Activité récente
         </h2>

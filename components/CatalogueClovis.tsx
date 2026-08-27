@@ -6,8 +6,6 @@ import {
   Brain,
   Library,
   Calculator,
-  BookOpen,
-  Puzzle,
   Smartphone,
   Upload,
   Download,
@@ -48,17 +46,6 @@ const FONCTIONNALITES: Fonctionnalite[] = [
       "Calcul symbolique, éditeur de formules et de réactions chimiques, dessin de géométrie, pas juste du texte qui décrit une réponse.",
   },
   {
-    Icone: BookOpen,
-    titre: "Ton programme, structuré par toi",
-    description:
-      "Organise tes matières et chapitres toi-même ; Clovis s'appuie dessus et écrit un point chaque semaine sur chaque matière.",
-  },
-  {
-    Icone: Puzzle,
-    titre: "Plugins communautaires",
-    description: "Télécharge ou partage des espaces de classe entiers créés par d'autres utilisateurs.",
-  },
-  {
     Icone: Smartphone,
     titre: "Une vraie application",
     description: "S'installe sur téléphone ou ordinateur, avec notifications, pas juste un site ouvert dans un onglet.",
@@ -67,19 +54,19 @@ const FONCTIONNALITES: Fonctionnalite[] = [
     Icone: Bot,
     titre: "Une IA qui agit, pas juste qui répond",
     description:
-      "Clovis peut naviguer dans l'appli comme toi, dans ton programme, tes matières et tes chapitres, ajouter des documents dans ta bibliothèque, et mettre à jour sa mémoire de toi sans que tu aies à tout faire à la main.",
+      "Clovis peut naviguer dans l'appli comme toi, ajouter des documents dans ta bibliothèque, et mettre à jour sa mémoire de toi sans que tu aies à tout faire à la main.",
   },
   {
     Icone: Share2,
     titre: "Partage en un code",
     description:
-      "Partage ta bibliothèque, tes skills ou ton programme entier via un simple code ; tout se propage automatiquement chez celui qui le reçoit.",
+      "Partage ta bibliothèque ou tes skills via un simple code ; tout se propage automatiquement chez celui qui le reçoit.",
   },
   {
     Icone: Plug,
     titre: "Connectable à Claude",
     description:
-      "Une fois connecté, Claude peut naviguer dans Clovis exactement comme toi, dans la bibliothèque, la mémoire, le programme, les matières et les chapitres, pas juste lire des données en vrac.",
+      "Une fois connecté, Claude peut naviguer dans Clovis exactement comme toi, dans la bibliothèque et la mémoire, pas juste lire des données en vrac.",
   },
 ];
 

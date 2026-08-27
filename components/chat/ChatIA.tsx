@@ -286,8 +286,8 @@ export function ChatIA({
       //
       // 15/08 (demande Bourama : "quand l'IA crée un comportement on ne
       // le voit pas") : en plus de l'affichage dans le fil, on signale
-      // aux sections concernées (programme, comportements) de se
-      // recharger si elles sont déjà montées -- voir lib/evenementsDonnees.ts.
+      // à la section comportements de se recharger si elle est déjà
+      // montée -- voir lib/evenementsDonnees.ts.
       emettreDonneesModifieesPourOutil(evenement.nom_outil);
       majMessages((prec) => {
         const copie = [...prec];

@@ -6,13 +6,13 @@ import { listerSignalements, traiterSignalement, type Signalement } from "@/lib/
 import { ErreurApi, messageErreur } from "@/lib/erreurs";
 import { Skeleton } from "./Skeleton";
 
-// Traitement des signalements (bibliothèque publique + documents
-// publics de programme). 22/08, chantier "rendre la bibliothèque plus
-// sérieuse". Réservé aux admins (_est_admin côté backend, voir
-// api/signalements.py), aucune vérification client-side du rôle ici
-// volontairement (pas de mécanisme de rôle exposé côté Clovis, voir
-// lib/api.ts) : le 403 renvoyé par l'API est la seule porte, affiché
-// tel quel si l'utilisateur courant n'est pas admin.
+// Traitement des signalements (bibliothèque publique). 22/08, chantier
+// "rendre la bibliothèque plus sérieuse". Réservé aux admins
+// (_est_admin côté backend, voir api/signalements.py), aucune
+// vérification client-side du rôle ici volontairement (pas de
+// mécanisme de rôle exposé côté Clovis, voir lib/api.ts) : le 403
+// renvoyé par l'API est la seule porte, affiché tel quel si
+// l'utilisateur courant n'est pas admin.
 export function EspaceAdminSignalements() {
   const [liste, setListe] = useState<Signalement[] | undefined>(undefined);
   const [accesRefuse, setAccesRefuse] = useState(false);
@@ -70,7 +70,7 @@ export function EspaceAdminSignalements() {
               <div className="flex items-center justify-between gap-2">
                 <p className="text-sm font-medium text-dj-texte">{s.lien_document}</p>
                 <span className="flex-shrink-0 rounded-full border border-dj-bordure px-2 py-0.5 text-[11px] text-dj-texte-muet">
-                  {s.type_signalement === "bibliotheque_publique" ? "Bibliothèque publique" : "Document de programme"}
+                  Bibliothèque publique
                 </span>
               </div>
               <p className="text-sm text-dj-texte-muet">{s.motif}</p>

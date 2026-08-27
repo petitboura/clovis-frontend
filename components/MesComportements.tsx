@@ -3,7 +3,7 @@
 import { useEffect, useState, useRef, type MouseEvent } from "react";
 import {
   Trash2, Plus, X, Check, ScrollText, FileCode2, Loader2, Link2, Unlink, Eye, Code2, Upload, ToggleLeft, ToggleRight,
-  Download, ClipboardCheck, Sparkles, ChevronDown, ChevronRight, FileUp,
+  Download, Sparkles, FileUp,
 } from "lucide-react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
@@ -156,44 +156,25 @@ export function MesComportements({ agentId }: { agentId: string }) {
   // EspacePlugins.tsx pour les plugins).
   const [vue, setVue] = useState<"mes-comportements" | "public">("mes-comportements");
 
-  // 22/08/2026, demande Bourama : distinguer les 4 origines d'un skill
-  // (créé directement / téléchargé du public / attaché à un emplacement
-  // du programme / issu d'un audit) par des onglets-filtres au-dessus de
-  // la liste. Non exclusif par design (confirmé par Bourama) : un skill
-  // peut correspondre à plusieurs onglets à la fois -- ex: téléchargé du
-  // public PUIS attaché à un chapitre apparaît dans "Public" ET
-  // "Attachés". Exception volontaire : un skill issu d'un audit a
-  // TOUJOURS un lien_type/lien_id (voir
-  // core/audit_programme.py::_synchroniser_skill_audit), donc il serait
-  // systématiquement compté aussi dans "Attachés" si on ne l'excluait pas
-  // -- choisi de le réserver à "Audits" pour que "Attachés" reste utile
-  // (les dizaines de skills d'audit l'auraient sinon noyé). À ajuster si
-  // Bourama préfère l'inverse.
+  // 22/08/2026, demande Bourama : distinguer les origines d'un skill
+  // (créé directement / téléchargé du public) par des onglets-filtres
+  // au-dessus de la liste. Non exclusif par design (confirmé par
+  // Bourama).
   //
-  // Pas de mécanisme i18n branché sur ce composant (même constat que
-  // EspacePlugins.tsx, vérifié 22/08) -- libellés en français en dur
-  // comme le reste du fichier, à signaler à Bourama si la traduction
-  // doit être ajoutée plus tard.
-  type FiltreOrigine = "tous" | "crees" | "public" | "attaches" | "audits";
+  // Pas de mécanisme i18n branché sur ce composant -- libellés en
+  // français en dur comme le reste du fichier, à signaler à Bourama si
+  // la traduction doit être ajoutée plus tard.
+  type FiltreOrigine = "tous" | "crees" | "public";
   const [filtreOrigine, setFiltreOrigine] = useState<FiltreOrigine>("tous");
-
-  // 22/08/2026, demande Bourama : groupes repliables par matière dans
-  // l'onglet "Audits" -- fermés par défaut (potentiellement des dizaines
-  // de chapitres), clé = matiere_id (ou "sans-matiere" en repli).
-  const [groupesOuverts, setGroupesOuverts] = useState<Set<string>>(new Set());
 
   function correspondFiltre(c: Comportement, f: FiltreOrigine): boolean {
     switch (f) {
       case "tous":
         return true;
       case "crees":
-        return !c.depuis_audit && !c.depuis_public;
+        return !c.depuis_public;
       case "public":
         return c.depuis_public;
-      case "attaches":
-        return !c.depuis_audit && !!c.lien_type && !!c.lien_id;
-      case "audits":
-        return c.depuis_audit;
     }
   }
 
@@ -552,8 +533,6 @@ export function MesComportements({ agentId }: { agentId: string }) {
               { valeur: "tous", libelle: "Tous", icone: null },
               { valeur: "crees", libelle: "Créés", icone: Sparkles },
               { valeur: "public", libelle: "Public", icone: Download },
-              { valeur: "attaches", libelle: "Attachés", icone: Link2 },
-              { valeur: "audits", libelle: "Audits", icone: ClipboardCheck },
             ] as const
           ).map(({ valeur, libelle, icone: Icone }) => {
             const compte = liste.filter((c) => correspondFiltre(c, valeur)).length;
@@ -586,80 +565,11 @@ export function MesComportements({ agentId }: { agentId: string }) {
         <p className="text-sm text-dj-texte-muet">Aucun skill dans cette catégorie pour l&apos;instant.</p>
       )}
 
-      {liste.length > 0 && filtreOrigine !== "audits" && (
+      {liste.length > 0 && (
         <div key={filtreOrigine} className="flex animate-dj-fade-in-rapide flex-wrap gap-2">
           {liste.filter((c) => correspondFiltre(c, filtreOrigine)).map((c) => (
             <ChipComportement key={c.id} c={c} onOuvrir={ouvrirEdition} onToggleActif={toggleActif} />
           ))}
-        </div>
-      )}
-
-      {/* 22/08/2026, demande Bourama ("les audits regroupés par matière") :
-          dans l'onglet Audits, "Vue d'ensemble" (skills liés à une matière
-          entière ou au programme entier) toujours visible en premier, puis
-          un groupe repliable par matière pour les skills liés à un
-          chapitre précis -- sinon la liste (un skill par chapitre, donc
-          potentiellement des dizaines) est illisible en vrac. */}
-      {liste.length > 0 && filtreOrigine === "audits" && (
-        <div key="audits" className="flex animate-dj-fade-in-rapide flex-col gap-4">
-          {(() => {
-            const audits = liste.filter((c) => correspondFiltre(c, "audits"));
-            const vueEnsemble = audits.filter((c) => c.lien_type !== "chapitre");
-            const parChapitre = audits.filter((c) => c.lien_type === "chapitre");
-            const groupes = new Map<string, { nom: string; items: Comportement[] }>();
-            for (const c of parChapitre) {
-              const cle = c.matiere_id || "sans-matiere";
-              const nom = c.matiere_nom || "Autres chapitres";
-              if (!groupes.has(cle)) groupes.set(cle, { nom, items: [] });
-              groupes.get(cle)!.items.push(c);
-            }
-            const groupesTries = [...groupes.entries()].sort((a, b) => a[1].nom.localeCompare(b[1].nom));
-
-            return (
-              <>
-                {vueEnsemble.length > 0 && (
-                  <div className="flex flex-col gap-2">
-                    <p className="text-xs font-medium text-dj-texte-muet">Vue d&apos;ensemble</p>
-                    <div className="flex flex-wrap gap-2">
-                      {vueEnsemble.map((c) => (
-                        <ChipComportement key={c.id} c={c} onOuvrir={ouvrirEdition} onToggleActif={toggleActif} />
-                      ))}
-                    </div>
-                  </div>
-                )}
-
-                {groupesTries.map(([cle, groupe]) => {
-                  const ouvert = groupesOuverts.has(cle);
-                  return (
-                    <div key={cle} className="flex flex-col gap-2">
-                      <button
-                        onClick={() =>
-                          setGroupesOuverts((prec) => {
-                            const suivant = new Set(prec);
-                            if (suivant.has(cle)) suivant.delete(cle);
-                            else suivant.add(cle);
-                            return suivant;
-                          })
-                        }
-                        className="flex w-fit items-center gap-1.5 text-xs font-medium text-dj-texte-muet transition-colors hover:text-dj-texte"
-                      >
-                        {ouvert ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
-                        {groupe.nom}
-                        <span className="text-[10px] text-dj-texte-muet">{groupe.items.length}</span>
-                      </button>
-                      {ouvert && (
-                        <div className="flex animate-dj-fade-in-rapide flex-wrap gap-2 pl-1">
-                          {groupe.items.map((c) => (
-                            <ChipComportement key={c.id} c={c} onOuvrir={ouvrirEdition} onToggleActif={toggleActif} />
-                          ))}
-                        </div>
-                      )}
-                    </div>
-                  );
-                })}
-              </>
-            );
-          })()}
         </div>
       )}
 

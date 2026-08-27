@@ -16,10 +16,9 @@ import { CTACompteRequis } from "./CTACompteRequis";
  * Bloc "Entrer un code" (réécrit le 14/08/2026, demande Bourama --
  * remplace le système "un code = une matière débloquée", jamais lu par
  * le chat, voir core/codes_partage.py). Entrer un code donne accès à
- * TOUT ce que ce code porte (comportement/programme/bibliothèque/texte)
- * -- rien à choisir, avoir le code suffit. Le comportement/programme
- * reçus apparaissent dans leurs sections respectives (voir
- * ComportementsRecus.tsx / ProgrammesRecus.tsx), la bibliothèque se
+ * TOUT ce que ce code porte (comportement/bibliothèque/texte) -- rien à
+ * choisir, avoir le code suffit. Le comportement reçu apparaît dans sa
+ * section respective (voir ComportementsRecus.tsx), la bibliothèque se
  * copie automatiquement (voir core/codes_partage.py::propager_*) -- ce
  * bloc-ci reste la vue d'ensemble de mes rattachements + le texte libre,
  * qui lui n'a pas d'autre section où vivre.
@@ -128,7 +127,6 @@ export function EspaceEntrerCode() {
                 <span className="text-dj-texte-muet"> · reçu de {r.proprietaire_nom}</span>
                 <div className="mt-1 flex flex-wrap gap-1">
                   {r.a_comportement && <Badge>Skill</Badge>}
-                  {r.a_programme && <Badge>Programme</Badge>}
                   {r.partage_bibliotheque && <Badge>Bibliothèque</Badge>}
                   {r.texte_libre && <Badge>Texte</Badge>}
                 </div>

@@ -13,9 +13,6 @@ import {
   ScrollText,
   Library,
   Brain,
-  BookOpen,
-  Puzzle,
-  ScanSearch,
   MoreHorizontal,
   Share2,
   Star,
@@ -27,7 +24,6 @@ import {
   PanelLeft,
   Settings,
   Wand2,
-  GraduationCap,
 } from "lucide-react";
 import { supabase } from "@/lib/supabase";
 import { lireMonProfil } from "@/lib/api";
@@ -85,9 +81,6 @@ export type OngletId =
   | "bibliotheque"
   | "notes"
   | "memoire"
-  | "programme"
-  | "plugins"
-  | "audits"
   | "claude";
 
 export const ONGLETS: { id: OngletId; href: string; label: string; Icone: typeof Briefcase }[] = [
@@ -102,9 +95,6 @@ export const ONGLETS: { id: OngletId; href: string; label: string; Icone: typeof
   // organisé par l'étudiant).
   { id: "notes", href: "/notes", label: "Notes", Icone: NotebookPen },
   { id: "memoire", href: "/memoire", label: "Ma mémoire", Icone: Brain },
-  { id: "programme", href: "/programme", label: "Mon programme", Icone: BookOpen },
-  { id: "plugins", href: "/plugins", label: "Plugins", Icone: Puzzle },
-  { id: "audits", href: "/audits", label: "Audits", Icone: ScanSearch },
   // Guide "Utiliser Clovis dans Claude" (18/08, demande Bourama) --
   // icône Plug ("branchement", demande explicite Bourama) plutôt que le
   // logo Claude, propriété d'Anthropic.
@@ -115,17 +105,14 @@ export const ONGLETS: { id: OngletId; href: string; label: string; Icone: typeof
 // 22/08/2026, demande Bourama : "chaque section n'a pas forcément un
 // bouton dédié, c'est peut-être un bouton qui ouvre une liste de cette
 // catégorie", même esprit que la page Paramètres). Bureau, Bibliothèque
-// et Notes restent en accès direct (usage quotidien). Mes skills, Ma
-// mémoire et Plugins sont regroupés sous "Personnaliser Clovis" (les 3
-// façons de configurer ce que Clovis sait/fait). Mon programme et Audits
-// sont regroupés sous "Scolarité" (les audits analysent justement le
-// programme, déjà couplés dans EspaceAudits.tsx). "Utiliser Clovis dans
-// Claude" est un guide de configuration ponctuel, il descend dans le
-// menu "Plus" plutôt que d'occuper un bouton du rail.
+// et Notes restent en accès direct (usage quotidien). Mes skills et Ma
+// mémoire sont regroupés sous "Personnaliser Clovis" (les façons de
+// configurer ce que Clovis sait/fait). "Utiliser Clovis dans Claude" est
+// un guide de configuration ponctuel, il descend dans le menu "Plus"
+// plutôt que d'occuper un bouton du rail.
 type Groupe = { id: string; href: string; label: string; Icone: typeof Briefcase; ongletIds: OngletId[] };
 const GROUPES: Groupe[] = [
-  { id: "personnaliser", href: "/personnaliser", label: "Personnaliser Clovis", Icone: Wand2, ongletIds: ["comportements", "memoire", "plugins"] },
-  { id: "scolarite", href: "/scolarite", label: "Scolarité", Icone: GraduationCap, ongletIds: ["programme", "audits"] },
+  { id: "personnaliser", href: "/personnaliser", label: "Personnaliser Clovis", Icone: Wand2, ongletIds: ["comportements", "memoire"] },
 ];
 
 // Rotation des mouvements pour les icônes de nav (Accueil + les 7

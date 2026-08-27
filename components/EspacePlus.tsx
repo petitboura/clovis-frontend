@@ -1,7 +1,7 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { Wand2, GraduationCap, Plug, Settings, Briefcase, ChevronRight, type LucideIcon } from "lucide-react";
+import { Wand2, Plug, Settings, Briefcase, ChevronRight, type LucideIcon } from "lucide-react";
 
 // Créé le 26/08/2026, Bourama : refonte navigation mobile native. Écran
 // derrière l'onglet "Plus" de la barre du bas (voir components/mobile/
@@ -18,8 +18,7 @@ import { Wand2, GraduationCap, Plug, Settings, Briefcase, ChevronRight, type Luc
 // mobile), donc l'ajouter maintenant serait construire du neuf, pas
 // ranger. À trancher avec Bourama avant de l'ajouter.
 const SECTIONS: { icone: LucideIcon; titre: string; sousTitre?: string; href: string }[] = [
-  { icone: Wand2, titre: "Personnaliser Clovis", sousTitre: "Mes skills, ma mémoire, plugins", href: "/personnaliser" },
-  { icone: GraduationCap, titre: "Scolarité", sousTitre: "Programme, audits", href: "/scolarite" },
+  { icone: Wand2, titre: "Personnaliser Clovis", sousTitre: "Mes skills, ma mémoire", href: "/personnaliser" },
   { icone: Plug, titre: "Connecter Claude", sousTitre: "Utiliser Clovis dans Claude", href: "/connecter-claude" },
   { icone: Briefcase, titre: "Bureau", href: "/bureau" },
   { icone: Settings, titre: "Paramètres", sousTitre: "Profil, confidentialité, capacités du téléphone...", href: "/parametres" },

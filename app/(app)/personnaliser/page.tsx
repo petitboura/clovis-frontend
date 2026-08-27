@@ -1,6 +1,6 @@
 import { SectionPage } from "@/components/SectionPage";
 import { ListeSections } from "@/components/ListeSections";
-import { ScrollText, Brain, Puzzle } from "lucide-react";
+import { ScrollText, Brain } from "lucide-react";
 
 const SECTIONS = [
   {
@@ -14,12 +14,6 @@ const SECTIONS = [
     label: "Ma mémoire",
     description: "Ce que Clovis retient de toi entre les conversations",
     Icone: Brain,
-  },
-  {
-    href: "/plugins",
-    label: "Plugins",
-    description: "Des outils externes que Clovis peut utiliser pour toi",
-    Icone: Puzzle,
   },
 ];
 

@@ -649,22 +649,11 @@ export type Comportement = {
   lien_id: string | null;
   lien_libelle: string | null;
   actif: boolean;
-  depuis_audit: boolean;
   depuis_public: boolean;
-  matiere_id: string | null;
-  matiere_nom: string | null;
 };
 
 export async function lireMesComportements(agentId: string) {
   const resultat = await appelerApi(`/api/agents/${agentId}/mes-comportements`);
-  return resultat as Comportement[];
-}
-
-// 20/08/2026, demande Bourama : comportements déjà attachés à un
-// emplacement précis du programme (chapitre, matière, examen, section…)
-// -- pour les afficher directement sur l'écran correspondant.
-export async function comportementsParLien(agentId: string, lienType: string, lienId: string) {
-  const resultat = await appelerApi(`/api/agents/${agentId}/mes-comportements/par-lien/${lienType}/${lienId}`);
   return resultat as Comportement[];
 }
 
@@ -902,11 +891,10 @@ export async function supprimerMonCompte() {
 //
 // Un code peut porter, chacun optionnel et combinable : des comportements
 // (18/08/2026 : sélection parmi "Mes comportements", référence vivante --
-// plus un texte tapé ici, voir MesCodes.tsx), un programme (référence
-// vers un des miens), un partage de bibliothèque (copie automatique à
-// chaque ajout), un texte libre. Vivant : modifier le code (ou un
-// comportement référencé) met à jour ce que voient tous ses receveurs,
-// pas besoin d'un nouveau code.
+// plus un texte tapé ici, voir MesCodes.tsx), un partage de bibliothèque
+// (copie automatique à chaque ajout), un texte libre. Vivant : modifier
+// le code (ou un comportement référencé) met à jour ce que voient tous
+// ses receveurs, pas besoin d'un nouveau code.
 
 export type ComportementLie = { id: string; nom: string };
 
@@ -915,7 +903,6 @@ export type CodePartage = {
   code: string;
   nom: string | null;
   comportements: ComportementLie[];
-  programme_id: string | null;
   partage_bibliotheque: boolean;
   texte_libre: string | null;
   actif: boolean;
@@ -926,7 +913,6 @@ export type CodePartage = {
 export type CodePartagePayload = {
   nom?: string | null;
   comportement_ids?: string[];
-  programme_id?: string | null;
   partage_bibliotheque?: boolean;
   texte_libre?: string | null;
 };
@@ -960,9 +946,6 @@ export type RattachementCode = {
   proprietaire_nom: string;
   a_comportement: boolean;
   comportements: ComportementLie[];
-  a_programme: boolean;
-  programme_id: string | null;
-  programme_nom: string | null;
   partage_bibliotheque: boolean;
   texte_libre: string | null;
 };
@@ -1097,213 +1080,10 @@ export async function diffuserLienMatiere(contenuId: string, url: string, descri
   }) as Promise<ResultatDiffusion>;
 }
 
-/**
- * Onglet "Mon programme" (lot 4/5, chantier programme étudiant) --
- * navigation classe/niveau -> matière -> chapitre. Voir
- * components/EspaceProgramme.tsx. Contrat backend construit en parallèle
- * par le lot 1 (peut ne pas encore être mergé au moment où ce fichier est
- * écrit) -- pas de agentId ici, ces routes sont personnelles à
- * l'utilisateur connecté, pas rattachées à un agent précis.
- */
-
-export type Programme = {
-  id: string;
-  niveau: string;
-  nom: string | null;
-  created_at: string;
-  updated_at: string;
-};
-
-export type MatiereDuProgramme = {
-  id: string;
-  nom: string;
-  limites: string | null;
-  created_at: string;
-  updated_at: string;
-};
-
-export type ChapitreDeLaMatiere = {
-  id: string;
-  nom: string;
-  ordre: number;
-  limites: string | null;
-  created_at: string;
-  updated_at: string;
-};
-
-export async function listerProgrammes() {
-  return appelerApi("/api/programmes") as Promise<Programme[]>;
-}
-
-export async function creerProgramme(niveau: string, nom?: string) {
-  return appelerApi("/api/programmes", {
-    method: "POST",
-    body: JSON.stringify({ niveau, nom }),
-  }) as Promise<Programme>;
-}
-
-export async function modifierProgramme(id: string, donnees: { niveau?: string; nom?: string }) {
-  return appelerApi(`/api/programmes/${id}`, {
-    method: "PATCH",
-    body: JSON.stringify(donnees),
-  }) as Promise<Programme>;
-}
-
-export async function supprimerProgramme(id: string) {
-  return appelerApi(`/api/programmes/${id}`, { method: "DELETE" });
-}
-
-export async function listerMatieresProgramme(programmeId: string) {
-  return appelerApi(`/api/programmes/${programmeId}/matieres`) as Promise<MatiereDuProgramme[]>;
-}
-
-export async function creerMatiereProgramme(programmeId: string, nom: string, limites?: string) {
-  return appelerApi(`/api/programmes/${programmeId}/matieres`, {
-    method: "POST",
-    body: JSON.stringify({ nom, limites }),
-  }) as Promise<MatiereDuProgramme>;
-}
-
-export async function modifierMatiereProgramme(id: string, donnees: { nom?: string; limites?: string }) {
-  return appelerApi(`/api/matieres/${id}`, {
-    method: "PATCH",
-    body: JSON.stringify(donnees),
-  }) as Promise<MatiereDuProgramme>;
-}
-
-export async function supprimerMatiereProgramme(id: string) {
-  return appelerApi(`/api/matieres/${id}`, { method: "DELETE" });
-}
-
-export async function listerChapitresMatiere(matiereId: string) {
-  return appelerApi(`/api/matieres/${matiereId}/chapitres`) as Promise<ChapitreDeLaMatiere[]>;
-}
-
-export async function creerChapitreMatiere(matiereId: string, nom: string, ordre?: number, limites?: string) {
-  return appelerApi(`/api/matieres/${matiereId}/chapitres`, {
-    method: "POST",
-    body: JSON.stringify({ nom, ordre, limites }),
-  }) as Promise<ChapitreDeLaMatiere>;
-}
-
-export async function modifierChapitreMatiere(
-  id: string,
-  donnees: { nom?: string; ordre?: number; limites?: string }
-) {
-  return appelerApi(`/api/chapitres/${id}`, {
-    method: "PATCH",
-    body: JSON.stringify(donnees),
-  }) as Promise<ChapitreDeLaMatiere>;
-}
-
-export async function supprimerChapitreMatiere(id: string) {
-  return appelerApi(`/api/chapitres/${id}`, { method: "DELETE" });
-}
-
-// ---------------------------------------------------------------------------
-// Audits IA hebdomadaires par matière (2026-08-12, chantier "connexion IA
-// <-> structure programme"). Lecture seule : l'audit est écrit uniquement
-// par la boucle planificatrice du lundi côté backend (core/audit_programme.py),
-// jamais modifiable directement -- ce serait de toute façon écrasé au lundi
-// suivant.
-
-export type AuditMatiere = {
-  matiere_id: string;
-  matiere_nom: string;
-  texte: string | null;
-  derniere_execution: string | null;
-};
-
-export async function listerAuditsProgramme(programmeId: string) {
-  return appelerApi(`/api/programmes/${programmeId}/audits`) as Promise<AuditMatiere[]>;
-}
-
-// 26/08/2026, chantier "Audits" complet (récap Bourama) : la cascade
-// couvre désormais aussi le chapitre (le plus détaillé) et le programme
-// entier (le plus large), en plus de la matière déjà existante.
-
-export type AuditChapitre = {
-  chapitre_id: string;
-  chapitre_nom: string;
-  matiere_id: string;
-  texte: string | null;
-  derniere_execution: string | null;
-};
-
-export type AuditProgrammeGlobal = {
-  texte: string | null;
-  derniere_execution: string | null;
-};
-
-export async function listerAuditsChapitres(programmeId: string) {
-  return appelerApi(`/api/programmes/${programmeId}/audits/chapitres`) as Promise<AuditChapitre[]>;
-}
-
-export async function lireAuditProgrammeGlobal(programmeId: string) {
-  return appelerApi(`/api/programmes/${programmeId}/audits/programme`) as Promise<AuditProgrammeGlobal>;
-}
-
-// Déclenchement manuel de la cascade pour CE programme -- pensé pour
-// tester sans attendre le lundi suivant (voir core/audit_programme.py).
-export async function executerAuditsProgramme(programmeId: string) {
-  return appelerApi(`/api/programmes/${programmeId}/audits/executer`, { method: "POST" }) as Promise<{
-    statut: string;
-  }>;
-}
-
-// ---------------------------------------------------------------------------
-// Programme étudiant (classe -> matière -> chapitre), lot 5 -- documents et
-// exercices d'un chapitre, examens/devoirs multi-chapitres d'un programme,
-// classements transversaux, et système de plugins. Contrat backend construit
-// en parallèle par les lots 2/3 (voir chantier-programme-etudiant.md) --
-// endpoints ci-dessous suivent ce contrat tel quel.
-
-// ---------------------------------------------------------------------------
-// Documents de la bibliothèque classés à un emplacement du programme
-// (programme/matière/chapitre/exercice/examen), 17/08 -- voir
-// api/emplacements_bibliotheque_programme.py côté backend (nouvelle
-// couche REST par-dessus core/bibliotheque_programme.py, jusqu'ici
-// réservé aux outils MCP). Distinct de DocumentChapitre plus bas
-// (ancien système titre+lien, laissé tel quel -- Bourama : "bibliothèque
-// et classement est un plus", pas un remplacement).
-
-export type TypeEmplacementProgramme = "programme" | "matiere" | "chapitre" | "exercice" | "examen";
-
-export type FichierEmplacementProgramme = {
-  id: string;
-  nom_fichier: string;
-  type_mime: string;
-  description: string | null;
-  url_publique: string;
-  created_at: string;
-  // 22/08, chantier signalements : voir api/emplacements_bibliotheque_programme.py.
-  ajoute_par: string | null;
-  emplacement_public: boolean;
-};
-
-export async function listerDocumentsEmplacement(type: TypeEmplacementProgramme, cibleId: string) {
-  const resultat = await appelerApi(`/api/emplacements/${type}/${cibleId}/documents`);
-  return resultat as FichierEmplacementProgramme[];
-}
-
-export async function classerDocumentEmplacement(type: TypeEmplacementProgramme, cibleId: string, fichierId: string) {
-  return appelerApi(`/api/emplacements/${type}/${cibleId}/documents`, {
-    method: "POST",
-    body: JSON.stringify({ fichier_id: fichierId }),
-  });
-}
-
-export async function declasserDocumentEmplacement(type: TypeEmplacementProgramme, cibleId: string, fichierId: string) {
-  return appelerApi(`/api/emplacements/${type}/${cibleId}/documents/${fichierId}`, { method: "DELETE" });
-}
-
 // ---------------------------------------------------------------------------
 // Dossiers de la bibliothèque personnelle (22/08, demande Bourama), voir
 // api/dossiers_bibliotheque.py côté backend. Un fichier peut être rangé dans
 // plusieurs dossiers à la fois (fichier_ids ci-dessous est un tableau).
-// Distinct du classement ci-dessus (emplacements du Programme) : deux
-// systèmes séparés, celui-ci concerne l'organisation interne de la
-// bibliothèque elle-même.
 
 export type DossierBibliotheque = {
   id: string;
@@ -1347,19 +1127,16 @@ export async function retirerFichierDuDossier(dossierId: string, fichierId: stri
   return appelerApi(`/api/bibliotheque/dossiers/${dossierId}/fichiers/${fichierId}`, { method: "DELETE" });
 }
 
-// Signalements (bibliothèque publique + documents publics de programme)
-// et contenu légal (CGU / copyright), 22/08, chantier "rendre la
-// bibliothèque plus sérieuse" (guide Notion "Guide pour droit d'auteur").
+// Signalements (bibliothèque publique) et contenu légal (CGU /
+// copyright), 22/08, chantier "rendre la bibliothèque plus sérieuse"
+// (guide Notion "Guide pour droit d'auteur").
 
-export type TypeSignalement = "bibliotheque_publique" | "document_programme";
+export type TypeSignalement = "bibliotheque_publique";
 
 export type Signalement = {
   id: string;
   type_signalement: TypeSignalement;
   bibliotheque_publique_id: string | null;
-  fichier_id: string | null;
-  type_emplacement: string | null;
-  emplacement_id: string | null;
   lien_document: string;
   motif: string;
   plaignant_nom: string;
@@ -1376,9 +1153,6 @@ export type Signalement = {
 export type NouveauSignalement = {
   type_signalement: TypeSignalement;
   bibliotheque_publique_id?: string;
-  fichier_id?: string;
-  type_emplacement?: string;
-  emplacement_id?: string;
   lien_document: string;
   motif: string;
   plaignant_nom: string;
@@ -1414,204 +1188,6 @@ export type ContenuLegal = { cle: string; titre: string; contenu_markdown: strin
 export async function lireContenuLegal(cle: "cgu" | "copyright") {
   const resultat = await appelerApi(`/api/legal/${cle}`);
   return resultat as ContenuLegal;
-}
-
-export type DocumentChapitre = { id: string; titre: string; url_ou_contenu: string; created_at: string };
-
-export async function lireDocumentsChapitre(chapitreId: string) {
-  const resultat = await appelerApi(`/api/chapitres/${chapitreId}/documents`);
-  return resultat as DocumentChapitre[];
-}
-
-export async function ajouterDocumentChapitre(chapitreId: string, titre: string, urlOuContenu: string) {
-  const resultat = await appelerApi(`/api/chapitres/${chapitreId}/documents`, {
-    method: "POST",
-    body: JSON.stringify({ titre, url_ou_contenu: urlOuContenu }),
-  });
-  return resultat as DocumentChapitre;
-}
-
-export async function supprimerDocumentChapitre(documentId: string) {
-  return appelerApi(`/api/documents/${documentId}`, { method: "DELETE" });
-}
-
-export type ExerciceChapitre = { id: string; enonce: string; created_at: string; updated_at: string };
-
-export async function lireExercicesChapitre(chapitreId: string) {
-  const resultat = await appelerApi(`/api/chapitres/${chapitreId}/exercices`);
-  return resultat as ExerciceChapitre[];
-}
-
-export async function ajouterExerciceChapitre(chapitreId: string, enonce: string) {
-  const resultat = await appelerApi(`/api/chapitres/${chapitreId}/exercices`, {
-    method: "POST",
-    body: JSON.stringify({ enonce }),
-  });
-  return resultat as ExerciceChapitre;
-}
-
-export async function modifierExerciceChapitre(exerciceId: string, enonce: string) {
-  const resultat = await appelerApi(`/api/exercices/${exerciceId}`, {
-    method: "PATCH",
-    body: JSON.stringify({ enonce }),
-  });
-  return resultat as ExerciceChapitre;
-}
-
-export async function supprimerExerciceChapitre(exerciceId: string) {
-  return appelerApi(`/api/exercices/${exerciceId}`, { method: "DELETE" });
-}
-
-export type TypeExamen = "examen" | "devoir" | "probleme_composite";
-
-export type Examen = {
-  id: string;
-  titre: string;
-  type: TypeExamen;
-  chapitre_ids: string[];
-  created_at: string;
-};
-
-export async function lireExamensProgramme(programmeId: string) {
-  const resultat = await appelerApi(`/api/programmes/${programmeId}/examens`);
-  return resultat as Examen[];
-}
-
-export async function creerExamen(titre: string, type: TypeExamen, chapitreIds: string[]) {
-  const resultat = await appelerApi(`/api/examens`, {
-    method: "POST",
-    body: JSON.stringify({ titre, type, chapitre_ids: chapitreIds }),
-  });
-  return resultat as Examen;
-}
-
-export async function modifierExamen(
-  examenId: string,
-  patch: { titre?: string; type?: TypeExamen; chapitre_ids?: string[] }
-) {
-  const resultat = await appelerApi(`/api/examens/${examenId}`, {
-    method: "PATCH",
-    body: JSON.stringify(patch),
-  });
-  return resultat as Examen;
-}
-
-export async function supprimerExamen(examenId: string) {
-  return appelerApi(`/api/examens/${examenId}`, { method: "DELETE" });
-}
-
-export type TypeClassement = "semestre" | "annee" | "section";
-export type CibleClassement = "matiere" | "chapitre" | "document" | "exercice" | "examen";
-
-export type Classement = { id: string; type: TypeClassement; label: string; created_at: string };
-
-export type ItemClassement = { id: string; cible_type: CibleClassement; cible_id: string; libelle: string | null };
-
-export async function lireClassements() {
-  const resultat = await appelerApi(`/api/classements`);
-  return resultat as Classement[];
-}
-
-// 20/08/2026 : jusqu'ici on pouvait seulement AJOUTER un élément à un
-// classement (AjouterAClassementBouton) -- rien pour consulter son
-// contenu. Voir VueClassementContenu dans EspaceProgramme.tsx.
-export async function listerItemsClassement(classementId: string) {
-  const resultat = await appelerApi(`/api/classements/${classementId}/items`);
-  return resultat as ItemClassement[];
-}
-
-export async function creerClassement(type: TypeClassement, label: string) {
-  const resultat = await appelerApi(`/api/classements`, {
-    method: "POST",
-    body: JSON.stringify({ type, label }),
-  });
-  return resultat as Classement;
-}
-
-export async function ajouterItemClassement(classementId: string, cibleType: CibleClassement, cibleId: string) {
-  return appelerApi(`/api/classements/${classementId}/items`, {
-    method: "POST",
-    body: JSON.stringify({ cible_type: cibleType, cible_id: cibleId }),
-  });
-}
-
-export async function supprimerItemClassement(classementId: string, itemId: string) {
-  return appelerApi(`/api/classements/${classementId}/items/${itemId}`, { method: "DELETE" });
-}
-
-export async function supprimerClassement(classementId: string) {
-  return appelerApi(`/api/classements/${classementId}`, { method: "DELETE" });
-}
-
-export type Plugin = {
-  id: string;
-  programme_source_id: string;
-  nom: string;
-  niveau: string;
-  auteur_id: string;
-  gratuit: boolean;
-  contribution_libre: boolean;
-  telechargements_count: number;
-};
-
-export type ExamenTransverse = {
-  id: string;
-  titre: string;
-  type: string;
-};
-
-export async function examensTransversesProgramme(programmeId: string) {
-  const resultat = await appelerApi(`/api/programmes/${programmeId}/examens-transverses`);
-  return resultat as ExamenTransverse[];
-}
-
-export async function publierProgrammeCommePlugin(
-  programmeId: string,
-  nom: string,
-  examensTransversesInclus: string[] = []
-) {
-  const resultat = await appelerApi(`/api/programmes/${programmeId}/publier-plugin`, {
-    method: "POST",
-    body: JSON.stringify({ nom, examens_transverses_inclus: examensTransversesInclus }),
-  });
-  return resultat as Plugin;
-}
-
-export async function listerPlugins(motCle?: string) {
-  const suffixe = motCle && motCle.trim() ? `?q=${encodeURIComponent(motCle.trim())}` : "";
-  const resultat = await appelerApi(`/api/plugins${suffixe}`);
-  return resultat as Plugin[];
-}
-
-export async function telechargerPlugin(pluginId: string) {
-  const resultat = await appelerApi(`/api/plugins/${pluginId}/telecharger`, { method: "POST" });
-  return resultat as { programme_id: string };
-}
-
-export type ChapitreApercuPlugin = {
-  id: string;
-  nom: string;
-  documents_count: number;
-  exercices_count: number;
-};
-
-export type MatiereApercuPlugin = {
-  id: string;
-  nom: string;
-  chapitres: ChapitreApercuPlugin[];
-};
-
-export type ApercuPlugin = {
-  id: string;
-  nom: string;
-  niveau: string;
-  auteur_nom: string | null;
-  matieres: MatiereApercuPlugin[];
-};
-
-export async function apercuPlugin(pluginId: string) {
-  const resultat = await appelerApi(`/api/plugins/${pluginId}/apercu`);
-  return resultat as ApercuPlugin;
 }
 
 // ---------------------------------------------------------------------

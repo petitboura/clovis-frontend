@@ -10,10 +10,6 @@ import { MesComportements } from "@/components/MesComportements";
 import { EspaceBibliotheque } from "@/components/EspaceBibliotheque";
 import { EspaceNotes } from "@/components/EspaceNotes";
 import { MaMemoire } from "@/components/MaMemoire";
-import { ProgrammesRecus } from "@/components/ProgrammesRecus";
-import { EspaceProgramme } from "@/components/EspaceProgramme";
-import { EspacePlugins } from "@/components/EspacePlugins";
-import { EspaceAudits } from "@/components/EspaceAudits";
 import { EspaceConnecterClaude } from "@/components/EspaceConnecterClaude";
 
 const AGENT_ID = "clovis";
@@ -35,14 +31,6 @@ const CONTENU_PAR_ONGLET: Record<OngletId, React.ReactNode> = {
   bibliotheque: <EspaceBibliotheque />,
   notes: <EspaceNotes />,
   memoire: <MaMemoire />,
-  programme: (
-    <>
-      <ProgrammesRecus />
-      <EspaceProgramme />
-    </>
-  ),
-  plugins: <EspacePlugins />,
-  audits: <EspaceAudits />,
   claude: <EspaceConnecterClaude />,
 };
 

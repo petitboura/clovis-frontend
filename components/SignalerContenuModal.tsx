@@ -7,24 +7,13 @@ import { messageErreur } from "@/lib/erreurs";
 
 // Formulaire de signalement (22/08, chantier "rendre la bibliothèque
 // plus sérieuse", voir guide Notion "Guide pour droit d'auteur",
-// Phase 1). Réutilisé pour les deux surfaces publiques : une entrée de
-// la bibliothèque publique (BibliothequePublique.tsx) et un document
-// classé dans un emplacement de programme couvert par un plugin
-// contribution_libre (SectionDocumentsBibliotheque.tsx), distingué
-// par `typeSignalement` + les identifiants de cible correspondants.
+// Phase 1). Réutilisé pour une entrée de la bibliothèque publique
+// (BibliothequePublique.tsx).
 //
 // Accessible sans compte (utilisateur_optionnel côté backend) : un
 // ayant droit externe n'a aucune raison d'avoir un compte Djiguignè.
 
-type CibleSignalement =
-  | { typeSignalement: "bibliotheque_publique"; bibliothequePubliqueId: string; libelle: string }
-  | {
-      typeSignalement: "document_programme";
-      fichierId: string;
-      typeEmplacement: string;
-      emplacementId: string;
-      libelle: string;
-    };
+type CibleSignalement = { typeSignalement: "bibliotheque_publique"; bibliothequePubliqueId: string; libelle: string };
 
 export function SignalerContenuModal({ cible, onFermer }: { cible: CibleSignalement; onFermer: () => void }) {
   const [motif, setMotif] = useState("");
@@ -41,25 +30,16 @@ export function SignalerContenuModal({ cible, onFermer }: { cible: CibleSignalem
     setEnvoiEnCours(true);
     setErreur(null);
     try {
-      const base = {
+      await creerSignalement({
         type_signalement: cible.typeSignalement as TypeSignalement,
+        bibliotheque_publique_id: cible.bibliothequePubliqueId,
         lien_document: cible.libelle,
         motif: motif.trim(),
         plaignant_nom: nom.trim(),
         plaignant_email: email.trim(),
         plaignant_organisation: organisation.trim() || undefined,
         declaration_honneur: declarationHonneur,
-      };
-      await creerSignalement(
-        cible.typeSignalement === "bibliotheque_publique"
-          ? { ...base, bibliotheque_publique_id: cible.bibliothequePubliqueId }
-          : {
-              ...base,
-              fichier_id: cible.fichierId,
-              type_emplacement: cible.typeEmplacement,
-              emplacement_id: cible.emplacementId,
-            }
-      );
+      });
       setEnvoye(true);
     } catch (e) {
       setErreur(messageErreur(e));

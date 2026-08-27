@@ -8,16 +8,13 @@ import {
   modifierCode,
   activerCode,
   supprimerCode,
-  listerProgrammes,
   lireMesComportements,
   type CodePartage,
-  type Programme,
   type Comportement,
 } from "@/lib/api";
 import { messageErreur, ErreurApi } from "@/lib/erreurs";
 import { Skeleton } from "./Skeleton";
 import { CTACompteRequis } from "./CTACompteRequis";
-import { SelectPersonnalise } from "./SelectPersonnalise";
 
 // Même agent générique que MesComportements.tsx (app/(app)/comportements/page.tsx)
 // -- "Mes comportements" n'a jamais eu de notion de rôle, un seul agentId
@@ -33,15 +30,13 @@ const AGENT_ID = "clovis";
  * -- chaque code peut porter, tous optionnels et combinables : une
  * sélection de comportements déjà créés dans "Mes comportements"
  * (18/08/2026, demande Bourama : plus de texte tapé ici, référence
- * vivante -- voir ChampComportement), un programme (référence vers un
- * des miens), un partage de bibliothèque (copie automatique à chaque
- * ajout), un texte libre. Vivant : modifier un champ met à jour ce que
- * voient tous les receveurs de ce code, pas besoin d'en générer un
- * nouveau.
+ * vivante -- voir ChampComportement), un partage de bibliothèque (copie
+ * automatique à chaque ajout), un texte libre. Vivant : modifier un
+ * champ met à jour ce que voient tous les receveurs de ce code, pas
+ * besoin d'en générer un nouveau.
  */
 export function MesCodes() {
   const [codes, setCodes] = useState<CodePartage[] | undefined>(undefined);
-  const [programmes, setProgrammes] = useState<Programme[]>([]);
   const [mesComportements, setMesComportements] = useState<Comportement[]>([]);
   const [erreur, setErreur] = useState<string | null>(null);
   const [ouvert, setOuvert] = useState<string | null>(null); // id du code en édition
@@ -65,7 +60,6 @@ export function MesCodes() {
 
   useEffect(() => {
     charger();
-    listerProgrammes().then(setProgrammes).catch(() => setProgrammes([]));
     lireMesComportements(AGENT_ID).then(setMesComportements).catch(() => setMesComportements([]));
   }, []);
 
@@ -139,7 +133,7 @@ export function MesCodes() {
           <h2 className="font-display text-base font-semibold text-dj-texte">Mes codes</h2>
           <p className="mt-1 text-xs text-dj-texte-muet">
             Crée un code et partage-le : tous ceux qui l&apos;entrent reçoivent tout ce que tu y mets,
-            comportement, programme, bibliothèque, texte. Modifiable après coup, tout le monde voit la mise à jour.
+            comportement, bibliothèque, texte. Modifiable après coup, tout le monde voit la mise à jour.
           </p>
         </div>
         <button
@@ -211,7 +205,6 @@ export function MesCodes() {
                     mesComportements={mesComportements}
                     onSauver={(comportement_ids) => sauvegarder(c.id, { comportement_ids })}
                   />
-                  <ChampProgramme c={c} programmes={programmes} onSauver={(programme_id) => sauvegarder(c.id, { programme_id })} />
                   <ChampBibliotheque c={c} onSauver={(partage_bibliotheque) => sauvegarder(c.id, { partage_bibliotheque })} />
                   <ChampTexteLibre c={c} onSauver={(texte_libre) => sauvegarder(c.id, { texte_libre })} />
                 </div>
@@ -296,30 +289,6 @@ function ChampComportement({
           ))}
         </div>
       )}
-    </div>
-  );
-}
-
-function ChampProgramme({
-  c,
-  programmes,
-  onSauver,
-}: {
-  c: CodePartage;
-  programmes: Programme[];
-  onSauver: (v: string | null) => void;
-}) {
-  return (
-    <div>
-      <label className="text-xs font-semibold text-dj-texte-muet">Programme</label>
-      <div className="mt-1">
-        <SelectPersonnalise
-          valeur={c.programme_id || ""}
-          onChange={(id) => onSauver(id || null)}
-          placeholder="Aucun"
-          options={[{ id: "", label: "Aucun" }, ...programmes.map((p) => ({ id: p.id, label: p.nom || p.niveau }))]}
-        />
-      </div>
     </div>
   );
 }

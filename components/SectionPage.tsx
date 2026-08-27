@@ -15,8 +15,7 @@ import { ChevronRight } from "lucide-react";
 // faisait que répéter le titre déjà affiché juste en dessous par le h1 --
 // aucune vraie hiérarchie à montrer, donc aucune utilité, juste un
 // doublon visuel. Un vrai fil d'Ariane garde son sens uniquement là où il
-// y a une vraie profondeur (ex : EspaceProgramme.tsx, programme -> matière
-// -> chapitre) -- pas ajouté ici pour cette raison.
+// y a une vraie profondeur -- pas ajouté ici pour cette raison.
 //
 // Prop `groupe` réintroduite le 22/08/2026 (demande Bourama, sidebar
 // regroupée) : ici la profondeur existe vraiment (Personnaliser Clovis ->
