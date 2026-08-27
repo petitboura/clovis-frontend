@@ -67,7 +67,7 @@ const config: Config = {
         "dj-shimmer-texte": "var(--dj-shimmer-texte)",
       },
       fontFamily: {
-        display: ["var(--font-space-grotesk)", "sans-serif"],
+        display: ["var(--font-fraunces)", "serif"],
         sans: ["var(--font-work-sans)", "sans-serif"],
         mono: ["var(--font-jetbrains-mono)", "monospace"],
         // Corps des réponses de l'IA uniquement (09/08, façon Claude) --

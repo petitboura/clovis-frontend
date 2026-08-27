@@ -1,5 +1,5 @@
 import type { Metadata, Viewport } from "next";
-import { Space_Grotesk, Work_Sans, JetBrains_Mono, Source_Serif_4 } from "next/font/google";
+import { Fraunces, Work_Sans, JetBrains_Mono, Source_Serif_4 } from "next/font/google";
 import "./globals.css";
 // KaTeX/MathLive (rendu de formules dans BulleMessage.tsx et
 // EditeurMathsRiche.tsx) : dans djiguigne-frontend ce CSS est scopé à la
@@ -17,9 +17,14 @@ import { SplashPret } from "@/components/SplashPret";
 // Djiguignè (jugée trop générique "IA" -- palette + paire de polices
 // Bricolage Grotesque/Inter, devenue elle-même un choix par défaut des
 // produits IA/SaaS actuels) au profit d'une identité propre à Clovis :
-// Space Grotesk (titres/UI) + Work Sans (texte courant). Portée CLOVIS
-// UNIQUEMENT -- djiguigne-frontend garde Bricolage Grotesque/Inter,
-// ce fichier n'est donc plus dérivé à l'identique de son homologue.
+// Work Sans (texte courant). Portée CLOVIS UNIQUEMENT -- djiguigne-frontend
+// garde Bricolage Grotesque/Inter, ce fichier n'est donc plus dérivé à
+// l'identique de son homologue.
+//
+// CORRECTIF (27/08) -- Space Grotesk (titres/UI) remplacé par Fraunces
+// (serif éditoriale, dans l'esprit de la police maison de Perplexity)
+// sur demande explicite de Bourama. Portée : titres/UI (font-display)
+// uniquement -- Work Sans reste inchangé pour le texte courant.
 //
 // Volontairement ABSENT ici : SessionSyncVitrine (synchronisation de
 // session avec djiguigne-ai.vercel.app). Clovis ne doit jamais
@@ -33,10 +38,10 @@ export const viewport: Viewport = {
   interactiveWidget: "resizes-content",
 };
 
-const spaceGrotesk = Space_Grotesk({
+const fraunces = Fraunces({
   subsets: ["latin"],
   weight: ["500", "600", "700"],
-  variable: "--font-space-grotesk",
+  variable: "--font-fraunces",
   display: "swap",
 });
 
@@ -56,10 +61,9 @@ const jetbrainsMono = JetBrains_Mono({
 
 // Police serif éditoriale pour le corps des réponses de l'IA uniquement
 // (09/08, demande Bourama : "façon Claude" pour le texte des réponses --
-// pas pour les titres, qui restent en display, juste agrandis). Non
-// concernée par le changement de palette/typo UI du 17/08 (Space
-// Grotesk/Work Sans) -- reste Source Serif 4, partagée avec
-// djiguigne-frontend pour ce seul élément.
+// pas pour les titres, qui restent en display, juste agrandis). Distincte
+// de la police display (Fraunces depuis le 27/08) -- reste Source Serif 4,
+// partagée avec djiguigne-frontend pour ce seul élément.
 const sourceSerif = Source_Serif_4({
   subsets: ["latin"],
   weight: ["400", "500", "600"],
@@ -118,7 +122,7 @@ export default function RacineLayout({
       // (avec data-theme posé par le script) et log un avertissement
       // d'hydratation à chaque chargement, alors que c'est volontaire.
       suppressHydrationWarning
-      className={`${spaceGrotesk.variable} ${workSans.variable} ${jetbrainsMono.variable} ${sourceSerif.variable}`}
+      className={`${fraunces.variable} ${workSans.variable} ${jetbrainsMono.variable} ${sourceSerif.variable}`}
     >
       <head>
         {/* Script anti-flash (17/08, thème clair/sombre) : doit s'exécuter
