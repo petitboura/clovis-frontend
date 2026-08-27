@@ -351,7 +351,7 @@ export function EditeurFormule({
           />
           {previsuChimie && (
             <div
-              className="overflow-x-auto rounded-lg border border-dj-bordure bg-white p-3"
+              className="overflow-x-auto rounded-lg border border-dj-bordure bg-dj-surface p-3"
               dangerouslySetInnerHTML={{ __html: previsuChimie }}
             />
           )}

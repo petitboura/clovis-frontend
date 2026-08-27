@@ -128,7 +128,7 @@ export function CanvasDessin({
         </div>
       }
     >
-      <div className="min-h-0 flex-1 overflow-hidden rounded-xl border border-dj-bordure bg-white">
+      <div className="min-h-0 flex-1 overflow-hidden rounded-xl border border-dj-bordure bg-dj-surface">
         <canvas
           ref={canvasRef}
           onPointerDown={debuterTrait}
