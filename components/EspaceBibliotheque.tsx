@@ -16,6 +16,7 @@ import {
   ChevronRight,
   Pencil,
   Upload,
+  Plus,
   Loader2,
   X,
 } from "lucide-react";
@@ -98,10 +99,26 @@ export function EspaceBibliotheque() {
   const [sousOnglet, setSousOnglet] = useState<SousOngletBiblio>("tous");
   const [fichiers, setFichiers] = useState<FichierBiblio[] | null>(null);
   const [dossiers, setDossiers] = useState<DossierBibliotheque[] | null>(null);
-  const [nouveauxFichiers, setNouveauxFichiers] = useState<File[]>([]);
   const [texteOuLien, setTexteOuLien] = useState("");
   const [envoi, setEnvoi] = useState(false);
   const [erreursEnvoi, setErreursEnvoi] = useState<{ nom: string; erreur: string }[]>([]);
+  // 27/08/2026, refonte "Ajouter" (demande Bourama : la carte d'ajout
+  // fixe prenait toute la place) -- remplacée par un bouton flottant
+  // unique (voir JSX en bas) qui ouvre un petit menu (Importer / Texte /
+  // Lien). Fichiers et dossier partagent la même entrée "Importer" (pas
+  // de catégorie séparée pour dossier, demande explicite) ; Texte/Lien
+  // ouvrent une mini-modale avec un champ Titre (optionnel, l'API le
+  // supportait déjà côté backend mais n'était jamais exposé côté UI).
+  const [menuAjoutOuvert, setMenuAjoutOuvert] = useState(false);
+  const [modaleAjout, setModaleAjout] = useState<"texte" | "lien" | null>(null);
+  const [titreAjout, setTitreAjout] = useState("");
+  // Upload de dossier (webkitdirectory) : fonctionne sur PC et navigateur
+  // mobile, PAS dans l'app native Capacitor (limite de la plateforme,
+  // pas du code -- pas de plugin natif dédié pour l'instant, décision de
+  // Bourama). Un dossier Clovis est créé automatiquement avec le nom du
+  // dossier importé, tous ses fichiers y sont rangés (à plat, la
+  // sous-arborescence n'est pas recréée).
+  const [uploadDossierEnCours, setUploadDossierEnCours] = useState(false);
   // Visiteur sans compte (refonte "Mon espace = l'app") -- section
   // auparavant inatteignable sans compte, même détection que
   // MesComportements.tsx : 401 -> CTA plutôt qu'une liste vide.
@@ -235,20 +252,14 @@ export function EspaceBibliotheque() {
 // atterrir directement -- avant ce correctif, ajouter() ignorait
 // totalement dossierCourantId, tout finissait "libre" à la racine, et il
 // fallait sortir du dossier pour aller "ranger" le fichier après coup.
-// 25/08/2026, demande Bourama ("le dossier est juste là et point") :
-// tant qu'on est DANS un dossier, un ajout (fichier, texte, lien) doit y
-// atterrir directement -- avant ce correctif, ajouter() ignorait
-// totalement dossierCourantId, tout finissait "libre" à la racine, et il
-// fallait sortir du dossier pour aller "ranger" le fichier après coup.
-async function ajouter() {
-    const texte = texteOuLien.trim();
-    if (nouveauxFichiers.length === 0 && !texte) return;
-
+async function envoyerFichiersDirect(fichiersChoisis: FileList | File[]) {
+    const liste = Array.from(fichiersChoisis);
+    if (liste.length === 0) return;
     setEnvoi(true);
     setErreursEnvoi([]);
     const erreurs: { nom: string; erreur: string }[] = [];
     try {
-      for (const fichier of nouveauxFichiers) {
+      for (const fichier of liste) {
         try {
           const ligne = await ajouterFichierBibliothequePersonnelle(fichier, "", "");
           if (dossierCourantId && ligne?.id) {
@@ -258,25 +269,74 @@ async function ajouter() {
           erreurs.push({ nom: fichier.name, erreur: messageErreur(e) });
         }
       }
-
-      if (texte) {
-        try {
-          const ligne = URL_REGEX.test(texte)
-            ? await ajouterLienBibliothequePersonnelle(texte)
-            : await ajouterTexteBibliothequePersonnelle(texte);
-          if (dossierCourantId && ligne?.id) {
-            await rangerFichierDansDossier(dossierCourantId, ligne.id);
-          }
-        } catch (e) {
-          erreurs.push({ nom: texte, erreur: messageErreur(e) });
-        }
-      }
-
       setErreursEnvoi(erreurs);
-      setNouveauxFichiers([]);
-      setTexteOuLien("");
       chargerFichiers();
       chargerDossiers();
+    } finally {
+      setEnvoi(false);
+    }
+  }
+
+  // 27/08/2026, demande Bourama : upload d'un dossier entier depuis
+  // l'appareil (voir champ webkitdirectory sur l'input plus bas). Un
+  // dossier Clovis est créé avec le nom du dossier choisi, tous les
+  // fichiers qu'il contient y sont rangés. Web/PC + navigateur mobile
+  // uniquement (voir commentaire sur uploadDossierEnCours plus haut).
+  async function envoyerDossierDirect(fichiersChoisis: FileList | File[]) {
+    const liste = Array.from(fichiersChoisis) as (File & { webkitRelativePath?: string })[];
+    if (liste.length === 0) return;
+    const nomDossier = liste[0].webkitRelativePath?.split("/")[0]?.trim() || "Dossier importé";
+    setUploadDossierEnCours(true);
+    setErreursEnvoi([]);
+    const erreurs: { nom: string; erreur: string }[] = [];
+    try {
+      const dossierCree = await creerDossierBibliotheque(nomDossier, dossierCourantId ?? undefined);
+      for (const fichier of liste) {
+        try {
+          const ligne = await ajouterFichierBibliothequePersonnelle(fichier, "", "");
+          if (ligne?.id && dossierCree?.id) {
+            await rangerFichierDansDossier(dossierCree.id, ligne.id);
+          }
+        } catch (e) {
+          erreurs.push({ nom: fichier.name, erreur: messageErreur(e) });
+        }
+      }
+      setErreursEnvoi(erreurs);
+      chargerFichiers();
+      chargerDossiers();
+    } catch (e) {
+      window.alert(messageErreur(e));
+    } finally {
+      setUploadDossierEnCours(false);
+    }
+  }
+
+  // 27/08/2026, demande Bourama : champ Titre exposé pour texte/lien
+  // (déjà supporté côté API, jamais branché côté UI). Le type
+  // (texte/lien) vient désormais du bouton cliqué dans le menu du FAB
+  // (modaleAjout), plus besoin de deviner via URL_REGEX -- gardé en
+  // repli si jamais modaleAjout est null.
+  async function envoyerTexteOuLien() {
+    const contenu = texteOuLien.trim();
+    if (!contenu) return;
+    const titre = titreAjout.trim();
+    setEnvoi(true);
+    setErreursEnvoi([]);
+    try {
+      const estLien = modaleAjout === "lien" || (modaleAjout === null && URL_REGEX.test(contenu));
+      const ligne = estLien
+        ? await ajouterLienBibliothequePersonnelle(contenu, titre || undefined)
+        : await ajouterTexteBibliothequePersonnelle(contenu, titre || undefined);
+      if (dossierCourantId && ligne?.id) {
+        await rangerFichierDansDossier(dossierCourantId, ligne.id);
+      }
+      setTexteOuLien("");
+      setTitreAjout("");
+      setModaleAjout(null);
+      chargerFichiers();
+      chargerDossiers();
+    } catch (e) {
+      setErreursEnvoi([{ nom: titre || contenu, erreur: messageErreur(e) }]);
     } finally {
       setEnvoi(false);
     }
@@ -427,37 +487,6 @@ async function ajouter() {
         Les documents ajoutés ici sont personnels : toi seul y as accès, et Clovis peut les consulter
         pendant une conversation.
       </p>
-
-      <div className="flex flex-col gap-3 rounded-cgpt-carte border border-dj-bordure bg-dj-surface p-4">
-        <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
-          <input
-            type="text"
-            value={texteOuLien}
-            onChange={(e) => setTexteOuLien(e.target.value)}
-            placeholder="Colle un lien, ou écris/colle un texte…"
-            className="flex-1 rounded-cgpt-bouton border border-dj-bordure bg-dj-fond px-4 py-2 text-sm text-dj-texte outline-none focus:border-dj-bordure-forte"
-          />
-          <label className="flex cursor-pointer items-center gap-2 rounded-cgpt-bouton border border-dj-bordure px-4 py-2 text-xs text-dj-texte transition-colors hover:border-dj-bordure-forte">
-            <Paperclip size={14} />
-            {nouveauxFichiers.length > 0 ? `${nouveauxFichiers.length} fichier(s)` : "Joindre des fichiers"}
-            <input
-              type="file"
-              multiple
-              accept="*/*"
-              onChange={(e) => setNouveauxFichiers(Array.from(e.target.files ?? []))}
-              className="hidden"
-            />
-          </label>
-        </div>
-        <button
-          type="button"
-          onClick={ajouter}
-          disabled={(nouveauxFichiers.length === 0 && !texteOuLien.trim()) || envoi}
-          className="self-end rounded-cgpt-bouton bg-dj-accent-1 px-5 py-2 text-sm font-bold text-[#1A0D02] transition-colors hover:bg-dj-accent-2 disabled:opacity-50"
-        >
-          {envoi ? "Envoi…" : "Ajouter"}
-        </button>
-      </div>
 
       {erreursEnvoi.length > 0 && (
         <div className="flex flex-col gap-1 rounded-xl border border-[var(--dj-erreur)]/40 bg-[var(--dj-erreur)]/5 px-4 py-3">
@@ -613,6 +642,166 @@ async function ajouter() {
               </div>
             </div>
           ))}
+        </div>
+      )}
+
+      {/* 27/08/2026, refonte "Ajouter" (demande Bourama) : bouton flottant
+          unique, menu au clic (Importer / Texte / Lien). Fichiers et
+          dossier partagent la même entrée "Importer" -- pas de catégorie
+          "Dossier" séparée, juste rendue possible via un second input
+          caché (webkitdirectory). Position alignée sur le FAB de
+          ChatFlottant.tsx (même style, jamais rendu sur cette page donc
+          pas de collision), avec la marge de la barre native mobile déjà
+          utilisée dans BarreDeSaisie.tsx. */}
+      <input
+        id="ajout-fab-fichiers"
+        type="file"
+        multiple
+        accept="*/*"
+        className="hidden"
+        onChange={(e) => {
+          if (e.target.files) envoyerFichiersDirect(e.target.files);
+          e.target.value = "";
+          setMenuAjoutOuvert(false);
+        }}
+      />
+      <input
+        id="ajout-fab-dossier"
+        type="file"
+        multiple
+        // @ts-expect-error -- webkitdirectory n'est pas dans le typage React standard, mais bien supporté par les navigateurs (PC + mobile web, pas l'app native)
+        webkitdirectory=""
+        className="hidden"
+        onChange={(e) => {
+          if (e.target.files) envoyerDossierDirect(e.target.files);
+          e.target.value = "";
+          setMenuAjoutOuvert(false);
+        }}
+      />
+
+      {(envoi || uploadDossierEnCours) && (
+        <div className="fixed bottom-[calc(6rem+var(--cap-native-navigation-bottom,0px))] right-5 z-40 flex items-center gap-2 rounded-cgpt-bouton border border-dj-bordure bg-dj-surface px-3 py-2 text-xs text-dj-texte shadow-xl">
+          <Loader2 size={14} className="animate-spin" />
+          Envoi…
+        </div>
+      )}
+
+      {menuAjoutOuvert && (
+        <div
+          className="fixed inset-0 z-40"
+          onClick={() => setMenuAjoutOuvert(false)}
+        />
+      )}
+      {menuAjoutOuvert && (
+        <div className="fixed bottom-[calc(6rem+var(--cap-native-navigation-bottom,0px))] right-5 z-40 flex flex-col items-end gap-2">
+          <label
+            htmlFor="ajout-fab-fichiers"
+            className="flex cursor-pointer items-center gap-2 rounded-cgpt-bouton border border-dj-bordure bg-dj-surface px-4 py-2 text-sm font-medium text-dj-texte shadow-lg transition-colors hover:border-dj-bordure-forte"
+          >
+            Importer des fichiers
+            <Upload size={15} />
+          </label>
+          <label
+            htmlFor="ajout-fab-dossier"
+            className="flex cursor-pointer items-center gap-2 rounded-cgpt-bouton border border-dj-bordure bg-dj-surface px-4 py-2 text-sm font-medium text-dj-texte shadow-lg transition-colors hover:border-dj-bordure-forte"
+          >
+            Importer un dossier
+            <IconDossier size={15} />
+          </label>
+          <button
+            onClick={() => {
+              setModaleAjout("texte");
+              setMenuAjoutOuvert(false);
+            }}
+            className="flex items-center gap-2 rounded-cgpt-bouton border border-dj-bordure bg-dj-surface px-4 py-2 text-sm font-medium text-dj-texte shadow-lg transition-colors hover:border-dj-bordure-forte"
+          >
+            Texte
+            <FileText size={15} />
+          </button>
+          <button
+            onClick={() => {
+              setModaleAjout("lien");
+              setMenuAjoutOuvert(false);
+            }}
+            className="flex items-center gap-2 rounded-cgpt-bouton border border-dj-bordure bg-dj-surface px-4 py-2 text-sm font-medium text-dj-texte shadow-lg transition-colors hover:border-dj-bordure-forte"
+          >
+            Lien
+            <IconLien size={15} />
+          </button>
+        </div>
+      )}
+      <button
+        onClick={() => setMenuAjoutOuvert((v) => !v)}
+        aria-label={menuAjoutOuvert ? "Fermer le menu d'ajout" : "Ajouter"}
+        className="fixed bottom-[calc(1.25rem+var(--cap-native-navigation-bottom,0px))] right-5 z-40 flex h-14 w-14 items-center justify-center rounded-cgpt-bouton bg-dj-accent-1 text-[#1A0D02] shadow-[0_4px_20px_rgba(0,0,0,0.35)] transition-transform hover:bg-dj-accent-2"
+      >
+        <Plus size={24} className={`transition-transform ${menuAjoutOuvert ? "rotate-45" : ""}`} />
+      </button>
+
+      {modaleAjout && (
+        <div
+          className="fixed inset-0 z-50 flex items-end justify-center bg-black/40 p-4 animate-dj-fade-in-rapide sm:items-center"
+          onClick={() => {
+            setModaleAjout(null);
+            setTitreAjout("");
+            setTexteOuLien("");
+          }}
+        >
+          <div
+            onClick={(e) => e.stopPropagation()}
+            className="flex w-full max-w-sm flex-col gap-3 rounded-cgpt-carte border border-dj-bordure bg-dj-surface p-4"
+          >
+            <div className="flex items-center justify-between">
+              <p className="text-sm font-semibold text-dj-texte">
+                {modaleAjout === "lien" ? "Ajouter un lien" : "Ajouter un texte"}
+              </p>
+              <button
+                onClick={() => {
+                  setModaleAjout(null);
+                  setTitreAjout("");
+                  setTexteOuLien("");
+                }}
+                className="text-dj-texte-muet hover:text-dj-texte"
+              >
+                <X size={16} />
+              </button>
+            </div>
+            <input
+              type="text"
+              value={titreAjout}
+              onChange={(e) => setTitreAjout(e.target.value)}
+              placeholder="Titre (optionnel)"
+              className="w-full rounded-cgpt-bouton border border-dj-bordure bg-dj-fond px-3 py-2 text-sm text-dj-texte outline-none focus:border-dj-bordure-forte"
+            />
+            {modaleAjout === "lien" ? (
+              <input
+                autoFocus
+                type="text"
+                value={texteOuLien}
+                onChange={(e) => setTexteOuLien(e.target.value)}
+                onKeyDown={(e) => e.key === "Enter" && envoyerTexteOuLien()}
+                placeholder="Colle un lien…"
+                className="w-full rounded-cgpt-bouton border border-dj-bordure bg-dj-fond px-3 py-2 text-sm text-dj-texte outline-none focus:border-dj-bordure-forte"
+              />
+            ) : (
+              <textarea
+                autoFocus
+                value={texteOuLien}
+                onChange={(e) => setTexteOuLien(e.target.value)}
+                placeholder="Écris ou colle ton texte…"
+                rows={5}
+                className="w-full rounded-cgpt-bouton border border-dj-bordure bg-dj-fond px-3 py-2 text-sm text-dj-texte outline-none focus:border-dj-bordure-forte"
+              />
+            )}
+            <button
+              type="button"
+              onClick={envoyerTexteOuLien}
+              disabled={!texteOuLien.trim() || envoi}
+              className="self-end rounded-cgpt-bouton bg-dj-accent-1 px-5 py-2 text-sm font-bold text-[#1A0D02] transition-colors hover:bg-dj-accent-2 disabled:opacity-50"
+            >
+              {envoi ? "Envoi…" : "Ajouter"}
+            </button>
+          </div>
         </div>
       )}
 
