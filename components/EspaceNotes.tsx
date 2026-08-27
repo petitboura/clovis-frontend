@@ -5,12 +5,6 @@ import {
   FileText,
   Plus,
   Trash2,
-  Link as IconLien,
-  Table as IconTable,
-  List as IconListe,
-  Calendar as IconCalendrier,
-  Columns as IconKanban,
-  Brain,
   Menu,
   ChevronRight,
   ChevronDown,
@@ -33,24 +27,9 @@ import {
   modifierBloc,
   supprimerBloc,
   uploaderBlocFichier,
-  listerCarrefour,
-  ajouterCarrefour,
-  supprimerCarrefour,
-  creerBaseDonnees,
-  obtenirBaseDonnees,
-  creerProprieteBase,
-  creerElementBase,
-  modifierElementBase,
-  supprimerElementBase,
-  listerRevisionsDues,
-  repondreRevision,
   type PageEspace,
   type PageDetail,
   type BlocEspace,
-  type ReferenceCarrefour,
-  type BaseDonneesDetail,
-  type ProprieteBase,
-  type ElementBase,
 } from "@/lib/api";
 import { ErreurApi } from "@/lib/erreurs";
 import { CTACompteRequis } from "./CTACompteRequis";
@@ -116,7 +95,6 @@ export function EspaceNotes() {
   const [racines, setRacines] = useState<PageEspace[] | null>(null);
   const [sansCompte, setSansCompte] = useState(false);
   const [pageActiveId, setPageActiveId] = useState<string | null>(null);
-  const [ongletDroit, setOngletDroit] = useState<"page" | "revision">("page");
   const [enfants, setEnfants] = useState<Record<string, PageEspace[]>>({});
   const [ouverts, setOuverts] = useState<Record<string, boolean>>({});
   const [sidebarMobileOuverte, setSidebarMobileOuverte] = useState(false);
@@ -203,7 +181,6 @@ export function EspaceNotes() {
 
   function naviguer(id: string) {
     setPageActiveId(id);
-    setOngletDroit("page");
     setSidebarMobileOuverte(false);
   }
 
@@ -232,13 +209,8 @@ export function EspaceNotes() {
       <div className={`fixed inset-y-0 left-0 z-40 md:static md:z-auto ${sidebarMobileOuverte ? "flex" : "hidden"} md:flex`}>
         <SidebarArbre
           racines={racines}
-          pageActiveId={ongletDroit === "page" ? pageActiveId : null}
-          revisionActive={ongletDroit === "revision"}
+          pageActiveId={pageActiveId}
           onNaviguer={naviguer}
-          onRevision={() => {
-            setOngletDroit("revision");
-            setSidebarMobileOuverte(false);
-          }}
           onRechercher={() => setRechercheOuverte(true)}
           onCreerRacine={creerPageRacine}
           enfants={enfants}
@@ -260,9 +232,7 @@ export function EspaceNotes() {
         </div>
 
         <div className="mx-auto w-full max-w-3xl px-6 pb-24 pt-4 md:px-14 md:pt-12">
-          {ongletDroit === "revision" ? (
-            <PanneauRevision />
-          ) : pageActiveId ? (
+          {pageActiveId ? (
             <PanneauPage
               key={pageActiveId}
               pageId={pageActiveId}
@@ -348,9 +318,7 @@ function ModaleRecherche({ onFermer, onNaviguer }: { onFermer: () => void; onNav
 function SidebarArbre({
   racines,
   pageActiveId,
-  revisionActive,
   onNaviguer,
-  onRevision,
   onRechercher,
   onCreerRacine,
   enfants,
@@ -360,9 +328,7 @@ function SidebarArbre({
 }: {
   racines: PageEspace[] | null;
   pageActiveId: string | null;
-  revisionActive: boolean;
   onNaviguer: (id: string) => void;
-  onRevision: () => void;
   onRechercher: () => void;
   onCreerRacine: () => void;
   enfants: Record<string, PageEspace[]>;
@@ -380,14 +346,6 @@ function SidebarArbre({
           <Search size={14} /> Rechercher
         </span>
         <span className="text-[10px] text-dj-texte-muet">Ctrl+K</span>
-      </button>
-      <button
-        onClick={onRevision}
-        className={`mb-3 flex items-center gap-2 rounded-md px-2 py-1.5 text-sm transition-colors ${
-          revisionActive ? "bg-dj-accent-1/15 text-dj-accent-2" : "text-dj-texte hover:bg-dj-surface-haute"
-        }`}
-      >
-        <Brain size={14} /> À réviser
       </button>
 
       <p className="mb-1 px-2 text-[11px] font-semibold uppercase tracking-wide text-dj-texte-muet">Pages</p>
@@ -773,10 +731,6 @@ function PanneauPage({
     );
   }
 
-  const basesDeLaPage = page.blocs
-    .filter((b) => b.type === "base_donnees" && b.contenu?.base_donnees_id)
-    .map((b) => ({ blocId: b.id, baseId: b.contenu.base_donnees_id as string }));
-
   return (
     <div>
       <div className="group/titre flex items-start gap-2">
@@ -802,17 +756,10 @@ function PanneauPage({
         </button>
       </div>
 
-      {page.est_carrefour && (
-        <div className="mt-4">
-          <PanneauCarrefour pageId={pageId} />
-        </div>
-      )}
-
       <div className="mt-6">
         <ListeBlocs
           tousLesBlocs={page.blocs}
           parentBlocId={null}
-          basesDeLaPage={basesDeLaPage}
           onChange={recharger}
           onDeplacer={deplacerBloc}
           onAjouterA={(index, parentId, type) => inserterBlocA(index, type, parentId)}
@@ -899,7 +846,6 @@ function PanneauPage({
 function ListeBlocs({
   tousLesBlocs,
   parentBlocId,
-  basesDeLaPage,
   onChange,
   onDeplacer,
   onAjouterA,
@@ -911,7 +857,6 @@ function ListeBlocs({
 }: {
   tousLesBlocs: BlocEspace[];
   parentBlocId: string | null;
-  basesDeLaPage: { blocId: string; baseId: string }[];
   onChange: () => void;
   onDeplacer: (idSource: string, idCible: string) => void;
   onAjouterA: (indexDansFreres: number, parentId: string | null, type: string) => void;
@@ -951,7 +896,6 @@ function ListeBlocs({
             <div className="min-w-0 flex-1">
               <LigneBloc
                 bloc={b}
-                basesDeLaPage={basesDeLaPage}
                 onChange={onChange}
                 onNouveauBlocApres={(type) => onAjouterA(i + 1, parentBlocId, type ?? "texte")}
                 onNaviguer={onNaviguer}
@@ -969,7 +913,6 @@ function ListeBlocs({
               <ListeBlocs
                 tousLesBlocs={tousLesBlocs}
                 parentBlocId={b.id}
-                basesDeLaPage={basesDeLaPage}
                 onChange={onChange}
                 onDeplacer={onDeplacer}
                 onAjouterA={onAjouterA}
@@ -1099,7 +1042,6 @@ function extraireIdYoutube(url: string): string | null {
 
 function LigneBloc({
   bloc,
-  basesDeLaPage,
   onChange,
   onNouveauBlocApres,
   onNaviguer,
@@ -1110,7 +1052,6 @@ function LigneBloc({
   onActivationConsommee,
 }: {
   bloc: BlocEspace;
-  basesDeLaPage: { blocId: string; baseId: string }[];
   onChange: () => void;
   onNouveauBlocApres: (type?: string) => void;
   onNaviguer: (id: string) => void;
@@ -1280,17 +1221,6 @@ function LigneBloc({
       setEnEdition(false);
       setValeur((bloc.contenu?.[cle] as string) ?? "");
     }
-  }
-
-  if (bloc.type === "base_donnees") {
-    return (
-      <BlocBaseDonnees
-        bloc={bloc}
-        basesDeLaPage={basesDeLaPage}
-        onChange={onChange}
-        onSupprimer={supprimer}
-      />
-    );
   }
 
   if (bloc.type === "separateur") {
@@ -1547,864 +1477,6 @@ function LigneBloc({
       <button onClick={supprimer} className="hidden shrink-0 text-dj-texte-muet hover:text-red-500 group-hover:block">
         <Trash2 size={13} />
       </button>
-    </div>
-  );
-}
-
-// ---------------------------------------------------------------------
-// Page carrefour -- références vers programme/matière/chapitre/document
-// ---------------------------------------------------------------------
-
-function PanneauCarrefour({ pageId }: { pageId: string }) {
-  const [refs, setRefs] = useState<ReferenceCarrefour[] | null>(null);
-
-  useEffect(() => {
-    listerCarrefour(pageId).then(setRefs);
-  }, [pageId]);
-
-  if (!refs) return <Skeleton className="h-10 w-full rounded-md" />;
-
-  return (
-    <div className="space-y-1.5 rounded-lg border border-dj-bordure bg-dj-surface-haute p-3">
-      <p className="flex items-center gap-1.5 text-xs font-semibold text-dj-texte">
-        <IconLien size={13} /> Page carrefour
-      </p>
-      {refs.length === 0 ? (
-        <p className="text-xs text-dj-texte-muet">Aucune référence pour l'instant.</p>
-      ) : (
-        <ul className="space-y-1">
-          {refs.map((r) => (
-            <li key={r.id} className="flex items-center justify-between gap-2 text-sm text-dj-texte">
-              <span>
-                <span className="mr-1.5 rounded bg-dj-surface-haute px-1.5 py-0.5 text-[10px] uppercase text-dj-texte-muet">
-                  {r.type_cible}
-                </span>
-                {r.label}
-              </span>
-              <button
-                onClick={async () => {
-                  await supprimerCarrefour(pageId, r.id);
-                  setRefs((prev) => (prev ?? []).filter((rr) => rr.id !== r.id));
-                }}
-                className="text-dj-texte-muet hover:text-red-500"
-              >
-                <Trash2 size={13} />
-              </button>
-            </li>
-          ))}
-        </ul>
-      )}
-    </div>
-  );
-}
-
-// ---------------------------------------------------------------------
-// Bloc "base de données" -- 4 vues, filtre/tri, propriétés avancées
-// (relation/rollup/formule -- relation limitée aux autres bases de LA
-// MÊME PAGE).
-// ---------------------------------------------------------------------
-
-function BlocBaseDonnees({
-  bloc,
-  basesDeLaPage,
-  onChange,
-  onSupprimer,
-}: {
-  bloc: BlocEspace;
-  basesDeLaPage: { blocId: string; baseId: string }[];
-  onChange: () => void;
-  onSupprimer: () => void;
-}) {
-  const baseIdInitiale = bloc.contenu?.base_donnees_id as string | undefined;
-  const [baseId, setBaseId] = useState<string | undefined>(baseIdInitiale);
-  const [base, setBase] = useState<BaseDonneesDetail | null>(null);
-  const [vue, setVue] = useState<"liste" | "tableau" | "calendrier" | "kanban">("tableau");
-  const [nomBase, setNomBase] = useState("Fiches de révision");
-
-  useEffect(() => {
-    if (baseId) obtenirBaseDonnees(baseId).then((b) => {
-      setBase(b);
-      setVue((b.vue_par_defaut as typeof vue) || "tableau");
-    });
-  }, [baseId]);
-
-  async function initialiser() {
-    const b = await creerBaseDonnees(bloc.page_id, nomBase);
-    await modifierBloc(bloc.id, { contenu: { base_donnees_id: b.id } });
-    setBaseId(b.id);
-    onChange();
-  }
-
-  if (!baseId) {
-    return (
-      <div className="space-y-2 rounded-lg border border-dashed border-dj-bordure p-3">
-        <input
-          value={nomBase}
-          onChange={(e) => setNomBase(e.target.value)}
-          className="w-full rounded-md border border-dj-bordure bg-dj-surface px-2 py-1 text-sm outline-none"
-        />
-        <div className="flex items-center justify-between">
-          <button
-            onClick={initialiser}
-            className="rounded-md bg-dj-accent-1 px-2.5 py-1 text-xs font-semibold text-[#1A0D02] hover:bg-dj-accent-2"
-          >
-            Créer la base
-          </button>
-          <button onClick={onSupprimer} className="text-dj-texte-muet hover:text-red-500">
-            <Trash2 size={13} />
-          </button>
-        </div>
-      </div>
-    );
-  }
-
-  if (!base) return <Skeleton className="h-32 w-full rounded-md" />;
-
-  return (
-    <div className="space-y-2 rounded-lg border border-dj-bordure p-3">
-      <div className="flex items-center justify-between">
-        <p className="text-sm font-semibold text-dj-texte">{base.titre || "(sans titre)"}</p>
-        <div className="flex items-center gap-1">
-          {(
-            [
-              ["liste", IconListe],
-              ["tableau", IconTable],
-              ["calendrier", IconCalendrier],
-              ["kanban", IconKanban],
-            ] as const
-          ).map(([id, Icone]) => (
-            <button
-              key={id}
-              onClick={() => setVue(id)}
-              className={`rounded-md p-1 ${vue === id ? "bg-dj-accent-1/20 text-dj-accent-2" : "text-dj-texte-muet hover:bg-dj-surface-haute"}`}
-              title={id}
-            >
-              <Icone size={14} />
-            </button>
-          ))}
-          <button onClick={onSupprimer} className="ml-1 text-dj-texte-muet hover:text-red-500">
-            <Trash2 size={13} />
-          </button>
-        </div>
-      </div>
-      <VueBaseDonnees
-        base={base}
-        vue={vue}
-        basesDeLaPage={basesDeLaPage}
-        onChange={async () => setBase(await obtenirBaseDonnees(baseId))}
-      />
-    </div>
-  );
-}
-
-function VueBaseDonnees({
-  base,
-  vue,
-  basesDeLaPage,
-  onChange,
-}: {
-  base: BaseDonneesDetail;
-  vue: "liste" | "tableau" | "calendrier" | "kanban";
-  basesDeLaPage: { blocId: string; baseId: string }[];
-  onChange: () => void;
-}) {
-  const [filtreProprieteId, setFiltreProprieteId] = useState("");
-  const [filtreValeur, setFiltreValeur] = useState("");
-  const [triProprieteId, setTriProprieteId] = useState("");
-  const [triDesc, setTriDesc] = useState(false);
-  const [basesCibles, setBasesCibles] = useState<Record<string, BaseDonneesDetail>>({});
-
-  const elementsRacine = base.elements.filter((e) => !e.parent_element_id);
-  const valeurDe = (elementId: string, proprieteId: string) =>
-    base.valeurs.find((v) => v.element_id === elementId && v.propriete_id === proprieteId)?.valeur;
-
-  // Charge les bases cibles des propriétés relation/rollup présentes
-  // (nécessaire pour afficher les libellés liés et calculer les rollups).
-  useEffect(() => {
-    const idsCibles = new Set<string>();
-    for (const p of base.proprietes) {
-      if (p.type === "relation") {
-        const id = (p.config as { base_cible_id?: string } | undefined)?.base_cible_id;
-        if (id) idsCibles.add(id);
-      } else if (p.type === "rollup") {
-        const relProp = base.proprietes.find((pp) => pp.id === (p.config as { relation_propriete_id?: string } | undefined)?.relation_propriete_id);
-        const id = (relProp?.config as { base_cible_id?: string } | undefined)?.base_cible_id;
-        if (id) idsCibles.add(id);
-      }
-    }
-    idsCibles.forEach((id) => {
-      obtenirBaseDonnees(id).then((d) => setBasesCibles((prev) => ({ ...prev, [id]: d })));
-    });
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [base.proprietes.map((p) => p.id).join(",")]);
-
-  function appliquerFiltreEtTri(liste: ElementBase[]): ElementBase[] {
-    let resultat = liste;
-    if (filtreProprieteId && filtreValeur.trim()) {
-      const q = filtreValeur.trim().toLowerCase();
-      resultat = resultat.filter((el) => String(valeurDe(el.id, filtreProprieteId) ?? "").toLowerCase().includes(q));
-    }
-    if (triProprieteId) {
-      resultat = [...resultat].sort((a, b) => {
-        const va = String(valeurDe(a.id, triProprieteId) ?? "");
-        const vb = String(valeurDe(b.id, triProprieteId) ?? "");
-        return triDesc ? vb.localeCompare(va) : va.localeCompare(vb);
-      });
-    }
-    return resultat;
-  }
-
-  async function ajouterElement() {
-    await creerElementBase(base.id, {});
-    onChange();
-  }
-
-  async function changerValeur(elementId: string, propriete: ProprieteBase, valeur: unknown) {
-    await modifierElementBase(elementId, { [propriete.nom]: valeur });
-    onChange();
-  }
-
-  const barreFiltreTri = vue !== "calendrier" && base.proprietes.length > 0 && (
-    <div className="mb-1.5 flex flex-wrap items-center gap-1.5 text-[11px]">
-      <select
-        value={filtreProprieteId}
-        onChange={(e) => setFiltreProprieteId(e.target.value)}
-        className="rounded border border-dj-bordure bg-dj-surface px-1 py-0.5 text-dj-texte-muet outline-none"
-      >
-        <option value="">Filtrer…</option>
-        {base.proprietes.map((p) => (
-          <option key={p.id} value={p.id}>{p.nom}</option>
-        ))}
-      </select>
-      {filtreProprieteId && (
-        <input
-          value={filtreValeur}
-          onChange={(e) => setFiltreValeur(e.target.value)}
-          placeholder="contient…"
-          className="w-24 rounded border border-dj-bordure bg-dj-surface px-1 py-0.5 outline-none"
-        />
-      )}
-      <select
-        value={triProprieteId}
-        onChange={(e) => setTriProprieteId(e.target.value)}
-        className="rounded border border-dj-bordure bg-dj-surface px-1 py-0.5 text-dj-texte-muet outline-none"
-      >
-        <option value="">Trier…</option>
-        {base.proprietes.map((p) => (
-          <option key={p.id} value={p.id}>{p.nom}</option>
-        ))}
-      </select>
-      {triProprieteId && (
-        <button
-          onClick={() => setTriDesc((v) => !v)}
-          className="rounded border border-dj-bordure px-1 py-0.5 text-dj-texte-muet hover:border-dj-bordure-forte hover:text-dj-texte"
-        >
-          {triDesc ? "↓" : "↑"}
-        </button>
-      )}
-    </div>
-  );
-
-  const panneauPropriete = (
-    <PanneauAjoutPropriete base={base} basesDeLaPage={basesDeLaPage} onCree={onChange} />
-  );
-
-  if (base.proprietes.length === 0) {
-    return <div>{panneauPropriete}</div>;
-  }
-
-  if (vue === "tableau") {
-    const liste = appliquerFiltreEtTri(elementsRacine);
-    return (
-      <div>
-        {barreFiltreTri}
-        <div className="overflow-x-auto">
-          <table className="w-full text-left text-xs">
-            <thead>
-              <tr className="text-dj-texte-muet">
-                {base.proprietes.map((p) => (
-                  <th key={p.id} className="px-2 py-1 font-medium">
-                    {p.nom}
-                  </th>
-                ))}
-                <th />
-              </tr>
-            </thead>
-            <tbody>
-              {liste.map((el) => (
-                <tr key={el.id} className="border-t border-dj-bordure">
-                  {base.proprietes.map((p) => (
-                    <td key={p.id} className="px-2 py-1">
-                      <CelluleValeur
-                        propriete={p}
-                        valeur={valeurDe(el.id, p.id)}
-                        onChange={(v) => changerValeur(el.id, p, v)}
-                        base={base}
-                        basesCibles={basesCibles}
-                        elementId={el.id}
-                        valeurDe={valeurDe}
-                      />
-                    </td>
-                  ))}
-                  <td>
-                    <button
-                      onClick={async () => {
-                        await supprimerElementBase(el.id);
-                        onChange();
-                      }}
-                      className="text-dj-texte-muet hover:text-red-500"
-                    >
-                      <Trash2 size={12} />
-                    </button>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-          <div className="mt-1 flex items-center gap-3">
-            <button onClick={ajouterElement} className="text-xs text-dj-texte-muet hover:text-dj-texte">
-              + Ajouter une ligne
-            </button>
-            {panneauPropriete}
-          </div>
-        </div>
-      </div>
-    );
-  }
-
-  if (vue === "liste") {
-    const proprieteTitre = base.proprietes[0];
-    const liste = appliquerFiltreEtTri(elementsRacine);
-    return (
-      <div>
-        {barreFiltreTri}
-        <div className="space-y-1">
-          {liste.map((el) => (
-            <div key={el.id} className="flex items-center justify-between rounded-md px-2 py-1 text-xs hover:bg-dj-surface-haute">
-              <CelluleValeur
-                propriete={proprieteTitre}
-                valeur={valeurDe(el.id, proprieteTitre.id)}
-                onChange={(v) => changerValeur(el.id, proprieteTitre, v)}
-                base={base}
-                basesCibles={basesCibles}
-                elementId={el.id}
-                valeurDe={valeurDe}
-              />
-              <button
-                onClick={async () => {
-                  await supprimerElementBase(el.id);
-                  onChange();
-                }}
-                className="text-dj-texte-muet hover:text-red-500"
-              >
-                <Trash2 size={12} />
-              </button>
-            </div>
-          ))}
-          <div className="flex items-center gap-3">
-            <button onClick={ajouterElement} className="text-xs text-dj-texte-muet hover:text-dj-texte">
-              + Ajouter
-            </button>
-            {panneauPropriete}
-          </div>
-        </div>
-      </div>
-    );
-  }
-
-  if (vue === "kanban") {
-    const proprieteStatut = base.proprietes.find((p) => p.type === "statut") ?? base.proprietes[0];
-    const colonnes = proprieteStatut.options.length > 0 ? proprieteStatut.options : ["(vide)"];
-    const liste = appliquerFiltreEtTri(elementsRacine);
-    return (
-      <div>
-        {barreFiltreTri}
-        <div className="flex gap-2 overflow-x-auto">
-          {colonnes.map((col) => (
-            <div key={col} className="w-40 shrink-0 space-y-1 rounded-md bg-dj-surface-haute p-2">
-              <p className="text-[10px] font-semibold uppercase text-dj-texte-muet">{col}</p>
-              {liste
-                .filter((el) => (valeurDe(el.id, proprieteStatut.id) ?? "(vide)") === col)
-                .map((el) => (
-                  <div key={el.id} className="rounded-md border border-dj-bordure bg-dj-surface px-2 py-1 text-xs">
-                    {base.proprietes[0].id !== proprieteStatut.id
-                      ? String(valeurDe(el.id, base.proprietes[0].id) ?? "—")
-                      : String(el.id).slice(0, 8)}
-                  </div>
-                ))}
-            </div>
-          ))}
-          <div className="flex shrink-0 flex-col gap-1 self-start">
-            <button onClick={ajouterElement} className="text-xs text-dj-texte-muet hover:text-dj-texte">
-              + Ajouter
-            </button>
-            {panneauPropriete}
-          </div>
-        </div>
-      </div>
-    );
-  }
-
-  // vue === "calendrier"
-  const proprieteDate = base.proprietes.find((p) => p.type === "date");
-  if (!proprieteDate) {
-    return (
-      <div className="space-y-1.5">
-        <p className="text-xs text-dj-texte-muet">Ajoute une propriété de type "date" pour utiliser la vue calendrier.</p>
-        {panneauPropriete}
-      </div>
-    );
-  }
-  return (
-    <VueCalendrier
-      base={base}
-      proprieteDate={proprieteDate}
-      elementsRacine={elementsRacine}
-      valeurDe={valeurDe}
-      ajouterElement={ajouterElement}
-    />
-  );
-}
-
-// ---------------------------------------------------------------------
-// Ajout de propriété -- texte/nombre/date/statut/case à cocher, ainsi
-// que relation/rollup/formule (Partie 2).
-// ---------------------------------------------------------------------
-
-function PanneauAjoutPropriete({
-  base,
-  basesDeLaPage,
-  onCree,
-}: {
-  base: BaseDonneesDetail;
-  basesDeLaPage: { blocId: string; baseId: string }[];
-  onCree: () => void;
-}) {
-  const [ouvert, setOuvert] = useState(false);
-  const [nom, setNom] = useState("");
-  const [type, setType] = useState("texte");
-  const [baseCibleId, setBaseCibleId] = useState("");
-  const [titresBases, setTitresBases] = useState<Record<string, string>>({});
-  const [relationProprieteId, setRelationProprieteId] = useState("");
-  const [proprieteCibleId, setProprieteCibleId] = useState("");
-  const [fonction, setFonction] = useState<"nombre" | "somme" | "texte">("nombre");
-  const [proprieteAId, setProprieteAId] = useState("");
-  const [operation, setOperation] = useState<"concatener" | "addition" | "soustraction" | "multiplication">("addition");
-  const [proprieteBId, setProprieteBId] = useState("");
-  const [baseCibleDuRollup, setBaseCibleDuRollup] = useState<BaseDonneesDetail | null>(null);
-
-  const proprietesRelation = base.proprietes.filter((p) => p.type === "relation");
-  const proprietesSimples = base.proprietes.filter((p) => !["relation", "rollup", "formule"].includes(p.type));
-
-  useEffect(() => {
-    if (!ouvert || type !== "relation") return;
-    basesDeLaPage.forEach((b) => {
-      if (!titresBases[b.baseId]) {
-        obtenirBaseDonnees(b.baseId).then((d) => setTitresBases((prev) => ({ ...prev, [b.baseId]: d.titre || "(sans titre)" })));
-      }
-    });
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [ouvert, type]);
-
-  useEffect(() => {
-    if (type !== "rollup" || !relationProprieteId) {
-      setBaseCibleDuRollup(null);
-      return;
-    }
-    const rel = proprietesRelation.find((p) => p.id === relationProprieteId);
-    const cibleId = (rel?.config as { base_cible_id?: string } | undefined)?.base_cible_id;
-    if (cibleId) obtenirBaseDonnees(cibleId).then(setBaseCibleDuRollup);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [type, relationProprieteId]);
-
-  async function valider() {
-    if (!nom.trim()) return;
-    let config: Record<string, unknown> = {};
-    if (type === "relation") {
-      if (!baseCibleId) return;
-      config = { base_cible_id: baseCibleId };
-    } else if (type === "rollup") {
-      if (!relationProprieteId || !proprieteCibleId) return;
-      config = { relation_propriete_id: relationProprieteId, propriete_cible_id: proprieteCibleId, fonction };
-    } else if (type === "formule") {
-      if (!proprieteAId || !proprieteBId) return;
-      config = { propriete_a_id: proprieteAId, operation, propriete_b_id: proprieteBId };
-    }
-    await creerProprieteBase(base.id, nom.trim(), type, [], config);
-    setOuvert(false);
-    setNom("");
-    setType("texte");
-    setBaseCibleId("");
-    setRelationProprieteId("");
-    setProprieteCibleId("");
-    setProprieteAId("");
-    setProprieteBId("");
-    onCree();
-  }
-
-  if (!ouvert) {
-    return (
-      <button onClick={() => setOuvert(true)} className="flex items-center gap-1 text-xs text-dj-texte-muet hover:text-dj-texte">
-        <Plus size={12} /> Propriété
-      </button>
-    );
-  }
-
-  return (
-    <div className="w-64 space-y-1.5 rounded-cgpt-carte border border-dj-bordure bg-dj-surface p-2 text-xs">
-      <input
-        value={nom}
-        onChange={(e) => setNom(e.target.value)}
-        placeholder="Nom de la propriété"
-        className="w-full rounded border border-dj-bordure bg-dj-fond px-2 py-1 outline-none"
-      />
-      <select value={type} onChange={(e) => setType(e.target.value)} className="w-full rounded border border-dj-bordure bg-dj-fond px-2 py-1 outline-none">
-        <option value="texte">Texte</option>
-        <option value="nombre">Nombre</option>
-        <option value="date">Date</option>
-        <option value="statut">Statut</option>
-        <option value="case_a_cocher">Case à cocher</option>
-        <option value="relation">Relation</option>
-        <option value="rollup">Rollup</option>
-        <option value="formule">Formule</option>
-      </select>
-
-      {type === "relation" && (
-        <select value={baseCibleId} onChange={(e) => setBaseCibleId(e.target.value)} className="w-full rounded border border-dj-bordure bg-dj-fond px-2 py-1 outline-none">
-          <option value="">Base cible (même page)…</option>
-          {basesDeLaPage.map((b) => (
-            <option key={b.baseId} value={b.baseId}>{titresBases[b.baseId] ?? "…"}</option>
-          ))}
-        </select>
-      )}
-
-      {type === "rollup" && (
-        <>
-          <select
-            value={relationProprieteId}
-            onChange={(e) => {
-              setRelationProprieteId(e.target.value);
-              setProprieteCibleId("");
-            }}
-            className="w-full rounded border border-dj-bordure bg-dj-fond px-2 py-1 outline-none"
-          >
-            <option value="">Relation…</option>
-            {proprietesRelation.map((p) => (
-              <option key={p.id} value={p.id}>{p.nom}</option>
-            ))}
-          </select>
-          {baseCibleDuRollup && (
-            <select value={proprieteCibleId} onChange={(e) => setProprieteCibleId(e.target.value)} className="w-full rounded border border-dj-bordure bg-dj-fond px-2 py-1 outline-none">
-              <option value="">Propriété à agréger…</option>
-              {baseCibleDuRollup.proprietes.filter((p) => p.type !== "relation" && p.type !== "rollup").map((p) => (
-                <option key={p.id} value={p.id}>{p.nom}</option>
-              ))}
-            </select>
-          )}
-          <select value={fonction} onChange={(e) => setFonction(e.target.value as typeof fonction)} className="w-full rounded border border-dj-bordure bg-dj-fond px-2 py-1 outline-none">
-            <option value="nombre">Nombre d'éléments liés</option>
-            <option value="somme">Somme (si numérique)</option>
-            <option value="texte">Liste (texte)</option>
-          </select>
-        </>
-      )}
-
-      {type === "formule" && (
-        <div className="flex items-center gap-1">
-          <select value={proprieteAId} onChange={(e) => setProprieteAId(e.target.value)} className="min-w-0 flex-1 rounded border border-dj-bordure bg-dj-fond px-1 py-1 outline-none">
-            <option value="">A…</option>
-            {proprietesSimples.map((p) => (
-              <option key={p.id} value={p.id}>{p.nom}</option>
-            ))}
-          </select>
-          <select value={operation} onChange={(e) => setOperation(e.target.value as typeof operation)} className="shrink-0 rounded border border-dj-bordure bg-dj-fond px-1 py-1 outline-none">
-            <option value="addition">+</option>
-            <option value="soustraction">−</option>
-            <option value="multiplication">×</option>
-            <option value="concatener">&amp;</option>
-          </select>
-          <select value={proprieteBId} onChange={(e) => setProprieteBId(e.target.value)} className="min-w-0 flex-1 rounded border border-dj-bordure bg-dj-fond px-1 py-1 outline-none">
-            <option value="">B…</option>
-            {proprietesSimples.map((p) => (
-              <option key={p.id} value={p.id}>{p.nom}</option>
-            ))}
-          </select>
-        </div>
-      )}
-
-      <div className="flex justify-end gap-1.5 pt-1">
-        <button onClick={() => setOuvert(false)} className="rounded px-2 py-1 text-dj-texte-muet hover:bg-dj-surface-haute">
-          Annuler
-        </button>
-        <button onClick={valider} className="rounded bg-dj-accent-1 px-2 py-1 font-semibold text-[#1A0D02] hover:bg-dj-accent-2">
-          Ajouter
-        </button>
-      </div>
-    </div>
-  );
-}
-
-function VueCalendrier({
-  base,
-  proprieteDate,
-  elementsRacine,
-  valeurDe,
-  ajouterElement,
-}: {
-  base: BaseDonneesDetail;
-  proprieteDate: ProprieteBase;
-  elementsRacine: ElementBase[];
-  valeurDe: (elementId: string, proprieteId: string) => unknown;
-  ajouterElement: () => void;
-}) {
-  const [moisAffiche, setMoisAffiche] = useState(() => {
-    const d = new Date();
-    return new Date(d.getFullYear(), d.getMonth(), 1);
-  });
-
-  const premierJour = new Date(moisAffiche.getFullYear(), moisAffiche.getMonth(), 1);
-  const dernierJourNum = new Date(moisAffiche.getFullYear(), moisAffiche.getMonth() + 1, 0).getDate();
-  const decalageDebut = (premierJour.getDay() + 6) % 7; // lundi = 0
-  const cases: (number | null)[] = [...Array(decalageDebut).fill(null), ...Array.from({ length: dernierJourNum }, (_, i) => i + 1)];
-  while (cases.length % 7 !== 0) cases.push(null);
-
-  const parJour = new Map<number, ElementBase[]>();
-  for (const el of elementsRacine) {
-    const brut = String(valeurDe(el.id, proprieteDate.id) ?? "");
-    if (!brut) continue;
-    const d = new Date(brut);
-    if (Number.isNaN(d.getTime())) continue;
-    if (d.getFullYear() === moisAffiche.getFullYear() && d.getMonth() === moisAffiche.getMonth()) {
-      const liste = parJour.get(d.getDate()) ?? [];
-      liste.push(el);
-      parJour.set(d.getDate(), liste);
-    }
-  }
-
-  return (
-    <div>
-      <div className="mb-2 flex items-center justify-between">
-        <button
-          onClick={() => setMoisAffiche(new Date(moisAffiche.getFullYear(), moisAffiche.getMonth() - 1, 1))}
-          className="rounded px-2 py-0.5 text-xs text-dj-texte-muet hover:bg-dj-surface-haute"
-        >
-          ‹
-        </button>
-        <p className="text-xs font-semibold capitalize text-dj-texte">
-          {moisAffiche.toLocaleDateString("fr-FR", { month: "long", year: "numeric" })}
-        </p>
-        <button
-          onClick={() => setMoisAffiche(new Date(moisAffiche.getFullYear(), moisAffiche.getMonth() + 1, 1))}
-          className="rounded px-2 py-0.5 text-xs text-dj-texte-muet hover:bg-dj-surface-haute"
-        >
-          ›
-        </button>
-      </div>
-      <div className="grid grid-cols-7 gap-1 pb-1 text-center text-[10px] font-medium text-dj-texte-muet">
-        {["L", "M", "M", "J", "V", "S", "D"].map((j, i) => (
-          <div key={i}>{j}</div>
-        ))}
-      </div>
-      <div className="grid grid-cols-7 gap-1">
-        {cases.map((jour, i) => (
-          <div
-            key={i}
-            className={`min-h-[3.25rem] rounded-md p-1 text-[10px] ${jour ? "border border-dj-bordure" : ""}`}
-          >
-            {jour && (
-              <>
-                <p className="text-dj-texte-muet">{jour}</p>
-                {(parJour.get(jour) ?? []).slice(0, 3).map((el) => (
-                  <p key={el.id} className="mt-0.5 truncate rounded bg-dj-surface-haute px-1 text-dj-texte">
-                    {String(valeurDe(el.id, base.proprietes[0].id) ?? "—")}
-                  </p>
-                ))}
-              </>
-            )}
-          </div>
-        ))}
-      </div>
-      <button onClick={ajouterElement} className="mt-1.5 text-xs text-dj-texte-muet hover:text-dj-texte">
-        + Ajouter
-      </button>
-    </div>
-  );
-}
-
-function CelluleValeur({
-  propriete,
-  valeur,
-  onChange,
-  base,
-  basesCibles,
-  elementId,
-  valeurDe,
-}: {
-  propriete: ProprieteBase;
-  valeur: unknown;
-  onChange: (v: unknown) => void;
-  base: BaseDonneesDetail;
-  basesCibles: Record<string, BaseDonneesDetail>;
-  elementId: string;
-  valeurDe: (elementId: string, proprieteId: string) => unknown;
-}) {
-  if (propriete.type === "relation") {
-    const baseCibleId = String((propriete.config as { base_cible_id?: string } | undefined)?.base_cible_id ?? "");
-    const baseCible = basesCibles[baseCibleId];
-    const idsLies = Array.isArray(valeur) ? (valeur as string[]) : [];
-    if (!baseCible) return <span className="text-dj-texte-muet">…</span>;
-    const proprieteAffichage = baseCible.proprietes[0];
-    const libelleDe = (id: string) =>
-      proprieteAffichage
-        ? String(baseCible.valeurs.find((v) => v.element_id === id && v.propriete_id === proprieteAffichage.id)?.valeur ?? "(sans titre)")
-        : id.slice(0, 8);
-    return (
-      <div className="flex flex-wrap items-center gap-1">
-        {idsLies.map((id) => (
-          <span key={id} className="flex items-center gap-1 rounded bg-dj-surface-haute px-1.5 py-0.5 text-dj-texte">
-            {libelleDe(id)}
-            <button onClick={() => onChange(idsLies.filter((x) => x !== id))} className="hover:text-red-500">
-              ×
-            </button>
-          </span>
-        ))}
-        <select
-          value=""
-          onChange={(e) => {
-            if (e.target.value) onChange([...idsLies, e.target.value]);
-          }}
-          className="rounded border border-dj-bordure bg-transparent text-[10px] text-dj-texte-muet outline-none"
-        >
-          <option value="">+ lier…</option>
-          {baseCible.elements.filter((e) => !idsLies.includes(e.id)).map((e) => (
-            <option key={e.id} value={e.id}>
-              {libelleDe(e.id)}
-            </option>
-          ))}
-        </select>
-      </div>
-    );
-  }
-
-  if (propriete.type === "rollup") {
-    const config = propriete.config as { relation_propriete_id?: string; propriete_cible_id?: string; fonction?: string } | undefined;
-    const relationProp = base.proprietes.find((p) => p.id === config?.relation_propriete_id);
-    const idsLies = relationProp
-      ? (Array.isArray(valeurDe(elementId, relationProp.id)) ? (valeurDe(elementId, relationProp.id) as string[]) : [])
-      : [];
-    const baseCibleId = String((relationProp?.config as { base_cible_id?: string } | undefined)?.base_cible_id ?? "");
-    const baseCible = basesCibles[baseCibleId];
-    if (!relationProp || !baseCible || !config) return <span className="text-dj-texte-muet">—</span>;
-    if (config.fonction === "nombre") return <span>{idsLies.length}</span>;
-    const valeursCibles = idsLies.map(
-      (id) => baseCible.valeurs.find((v) => v.element_id === id && v.propriete_id === config.propriete_cible_id)?.valeur
-    );
-    if (config.fonction === "somme") {
-      const somme = valeursCibles.reduce((acc: number, v) => acc + (Number(v) || 0), 0);
-      return <span>{somme}</span>;
-    }
-    return <span className="text-dj-texte-muet">{valeursCibles.filter(Boolean).map(String).join(", ") || "—"}</span>;
-  }
-
-  if (propriete.type === "formule") {
-    const config = propriete.config as
-      | { propriete_a_id?: string; operation?: string; propriete_b_id?: string }
-      | undefined;
-    const a = config?.propriete_a_id ? valeurDe(elementId, config.propriete_a_id) : undefined;
-    const b = config?.propriete_b_id ? valeurDe(elementId, config.propriete_b_id) : undefined;
-    if (config?.operation === "concatener") return <span>{`${a ?? ""}${b ?? ""}`}</span>;
-    const na = Number(a) || 0;
-    const nb = Number(b) || 0;
-    const resultat =
-      config?.operation === "addition" ? na + nb : config?.operation === "soustraction" ? na - nb : config?.operation === "multiplication" ? na * nb : 0;
-    return <span>{resultat}</span>;
-  }
-
-  if (propriete.type === "case_a_cocher") {
-    return <input type="checkbox" checked={Boolean(valeur)} onChange={(e) => onChange(e.target.checked)} />;
-  }
-  if (propriete.type === "statut" && propriete.options.length > 0) {
-    return (
-      <select value={String(valeur ?? "")} onChange={(e) => onChange(e.target.value)} className="rounded bg-transparent text-xs outline-none">
-        <option value="" />
-        {propriete.options.map((o) => (
-          <option key={o} value={o}>
-            {o}
-          </option>
-        ))}
-      </select>
-    );
-  }
-  return (
-    <input
-      defaultValue={String(valeur ?? "")}
-      onBlur={(e) => e.target.value !== String(valeur ?? "") && onChange(e.target.value)}
-      type={propriete.type === "nombre" ? "number" : propriete.type === "date" ? "date" : "text"}
-      className="w-full bg-transparent text-xs outline-none"
-    />
-  );
-}
-
-// ---------------------------------------------------------------------
-// Panneau de révision (répétition espacée, lot 4)
-// ---------------------------------------------------------------------
-
-function PanneauRevision() {
-  const [dus, setDus] = useState<{ element_id: string; base_id: string }[] | null>(null);
-  const [index, setIndex] = useState(0);
-  const [reponseVisible, setReponseVisible] = useState(false);
-
-  useEffect(() => {
-    listerRevisionsDues().then(setDus);
-  }, []);
-
-  async function repondre(qualite: "echec" | "difficile" | "correct" | "facile") {
-    if (!dus) return;
-    await repondreRevision(dus[index].element_id, qualite);
-    setReponseVisible(false);
-    setIndex((i) => i + 1);
-  }
-
-  if (!dus) return <Skeleton className="h-32 w-full rounded-md" />;
-  if (dus.length === 0) return <p className="text-sm text-dj-texte-muet">Rien à réviser pour l'instant 🎉</p>;
-  if (index >= dus.length) return <p className="text-sm text-dj-texte">Session terminée, bien joué !</p>;
-
-  return (
-    <div className="mx-auto max-w-sm space-y-4 text-center">
-      <p className="text-xs text-dj-texte-muet">
-        {index + 1} / {dus.length}
-      </p>
-      <div className="rounded-cgpt-carte border border-dj-bordure bg-dj-surface-haute p-6">
-        <p className="text-sm text-dj-texte-muet">Élément id {dus[index].element_id.slice(0, 8)}…</p>
-        <p className="mt-2 text-xs text-dj-texte-muet">Ouvre la base correspondante pour revoir le détail, puis évalue-toi.</p>
-      </div>
-      {!reponseVisible ? (
-        <button
-          onClick={() => setReponseVisible(true)}
-          className="rounded-lg bg-dj-accent-1 px-4 py-2 text-sm font-semibold text-[#1A0D02] hover:bg-dj-accent-2"
-        >
-          Voir la réponse
-        </button>
-      ) : (
-        <div className="flex justify-center gap-2">
-          {(
-            [
-              ["echec", "Échec"],
-              ["difficile", "Difficile"],
-              ["correct", "Correct"],
-              ["facile", "Facile"],
-            ] as const
-          ).map(([id, label]) => (
-            <button
-              key={id}
-              onClick={() => repondre(id)}
-              className="rounded-lg border border-dj-bordure px-3 py-1.5 text-xs hover:border-dj-bordure-forte hover:text-dj-texte"
-            >
-              {label}
-            </button>
-          ))}
-        </div>
-      )}
     </div>
   );
 }

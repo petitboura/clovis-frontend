@@ -1191,10 +1191,9 @@ export async function lireContenuLegal(cle: "cgu" | "copyright") {
 }
 
 // ---------------------------------------------------------------------
-// Section "Notion-like" (Partie 2, lot 5/5), 2026-08-20, demande Bourama.
-// Voir api/pages_notion.py, api/bases_donnees.py, api/revision.py côté
-// backend (lots 1 à 4). Noms volontairement différents de
-// pagesNotion/creerPageNotion ci-dessus, qui sont pour le connecteur
+// Section "Notion-like" -- pages et blocs (bloc-note interne à Clovis).
+// Voir api/pages_notion.py côté backend. Noms volontairement différents
+// de pagesNotion/creerPageNotion ci-dessus, qui sont pour le connecteur
 // Notion externe (compte Notion réel de l'utilisateur) -- sans rapport.
 // ---------------------------------------------------------------------
 
@@ -1204,7 +1203,6 @@ export type PageEspace = {
   parent_id: string | null;
   titre: string;
   ordre: number;
-  est_carrefour: boolean;
   icone: string | null;
   created_at: string;
   updated_at: string;
@@ -1220,8 +1218,6 @@ export type BlocEspace = {
   created_at: string;
   updated_at: string;
 };
-
-export type ReferenceCarrefour = { id: string; type_cible: string; cible_id: string; label: string };
 
 export type PageDetail = PageEspace & { sous_pages: PageEspace[]; blocs: BlocEspace[] };
 
@@ -1261,21 +1257,6 @@ export async function modifierPage(pageId: string, patch: string | { titre?: str
 
 export async function supprimerPage(pageId: string) {
   await appelerApi(`/api/pages/${pageId}`, { method: "DELETE" });
-}
-
-export async function listerCarrefour(pageId: string) {
-  return (await appelerApi(`/api/pages/${pageId}/carrefour`)) as ReferenceCarrefour[];
-}
-
-export async function ajouterCarrefour(pageId: string, typeCible: string, cibleId: string) {
-  return (await appelerApi(`/api/pages/${pageId}/carrefour`, {
-    method: "POST",
-    body: JSON.stringify({ type_cible: typeCible, cible_id: cibleId }),
-  })) as ReferenceCarrefour;
-}
-
-export async function supprimerCarrefour(pageId: string, referenceId: string) {
-  await appelerApi(`/api/pages/${pageId}/carrefour/${referenceId}`, { method: "DELETE" });
 }
 
 export async function creerBloc(pageId: string, type: string, contenu: Record<string, unknown>, ordre = 0, parentBlocId: string | null = null) {
@@ -1330,80 +1311,6 @@ export async function modifierBloc(
 
 export async function supprimerBloc(blocId: string) {
   await appelerApi(`/api/blocs/${blocId}`, { method: "DELETE" });
-}
-
-export type ProprieteBase = {
-  id: string;
-  base_id: string;
-  nom: string;
-  type: string;
-  options: string[];
-  config: Record<string, unknown>;
-  ordre: number;
-};
-export type ElementBase = { id: string; base_id: string; parent_element_id: string | null; ordre: number };
-export type ValeurBase = { id: string; element_id: string; propriete_id: string; valeur: unknown };
-export type BaseDonneesDetail = {
-  id: string;
-  page_id: string;
-  titre: string;
-  vue_par_defaut: string;
-  proprietes: ProprieteBase[];
-  elements: ElementBase[];
-  valeurs: ValeurBase[];
-};
-
-export async function creerBaseDonnees(pageId: string, titre: string) {
-  return (await appelerApi("/api/bases-donnees", {
-    method: "POST",
-    body: JSON.stringify({ page_id: pageId, titre }),
-  })) as { id: string; page_id: string; titre: string; vue_par_defaut: string };
-}
-
-export async function obtenirBaseDonnees(baseId: string) {
-  return (await appelerApi(`/api/bases-donnees/${baseId}`)) as BaseDonneesDetail;
-}
-
-export async function creerProprieteBase(
-  baseId: string,
-  nom: string,
-  type: string,
-  options: string[] = [],
-  config: Record<string, unknown> = {}
-) {
-  return (await appelerApi(`/api/bases-donnees/${baseId}/proprietes`, {
-    method: "POST",
-    body: JSON.stringify({ nom, type, options, config }),
-  })) as ProprieteBase;
-}
-
-export async function creerElementBase(baseId: string, valeurs: Record<string, unknown>, parentElementId?: string | null) {
-  return (await appelerApi(`/api/bases-donnees/${baseId}/elements`, {
-    method: "POST",
-    body: JSON.stringify({ valeurs, parent_element_id: parentElementId ?? null }),
-  })) as ElementBase;
-}
-
-export async function modifierElementBase(elementId: string, valeurs: Record<string, unknown>) {
-  await appelerApi(`/api/bases-donnees/elements/${elementId}`, { method: "PATCH", body: JSON.stringify({ valeurs }) });
-}
-
-export async function supprimerElementBase(elementId: string) {
-  await appelerApi(`/api/bases-donnees/elements/${elementId}`, { method: "DELETE" });
-}
-
-export type ElementARevisor = { element_id: string; base_id: string; prochaine_revision: string };
-
-export async function listerRevisionsDues(baseId?: string) {
-  const q = baseId ? `?base_id=${encodeURIComponent(baseId)}` : "";
-  return (await appelerApi(`/api/revision/a-reviser${q}`)) as ElementARevisor[];
-}
-
-export async function repondreRevision(elementId: string, qualite: "echec" | "difficile" | "correct" | "facile") {
-  return (await appelerApi(`/api/revision/${elementId}/reponse`, {
-    method: "POST",
-    body: JSON.stringify({ qualite }),
-  })) as { prochaine_revision: string };
 }
 
 // 26/08/2026, Bourama : Partie 3 mobile, temps d'écran -- contrat déjà en
