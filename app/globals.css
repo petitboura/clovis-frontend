@@ -95,9 +95,9 @@ math-field {
    de tailwind.config.ts (colors + backgroundImage, qui référencent ces
    mêmes variables), les deux ne se synchronisent pas automatiquement. */
 :root {
-  --dj-fond: #f5f5f2;
-  --dj-surface: #ffffff;
-  --dj-surface-haute: #fbfaf8;
+  --dj-fond: #faf8f5;
+  --dj-surface: #f2f2ee;
+  --dj-surface-haute: #ebebe9;
   --dj-bordure: rgba(28, 26, 22, 0.08);
   --dj-bordure-forte: rgba(184, 134, 11, 0.35);
   --dj-accent-1: #b8860b;

@@ -65,7 +65,7 @@ const ONGLETS_NATIFS = [
 // --dj-texte-muet, thèmes clair et sombre), pas de nouvelle couleur
 // inventée, juste la même palette appliquée à la barre native.
 const COULEURS_THEME: Record<"clair" | "sombre", { fond: string; accent: string; muet: string }> = {
-  clair: { fond: "#f5f5f2", accent: "#b8860b", muet: "#6b675e" },
+  clair: { fond: "#faf8f5", accent: "#b8860b", muet: "#6b675e" },
   sombre: { fond: "#0f0d0b", accent: "#e8bf60", muet: "#9a9184" },
 };
 
