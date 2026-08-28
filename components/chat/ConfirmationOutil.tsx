@@ -20,7 +20,7 @@ export function ConfirmationOutil({
   const entrees = Object.entries(args);
 
   return (
-    <div className="my-2 max-w-[80%] animate-dj-fade-in rounded-xl border border-dj-bordure-forte bg-dj-surface-haute p-3.5">
+    <div className="my-2 max-w-[80%] animate-dj-fade-in rounded-xl border border-dj-bordure-forte bg-dj-surface p-3.5">
       <div className="flex items-start gap-2.5">
         <AlertTriangle size={16} className="mt-0.5 shrink-0 text-dj-accent-1" />
         <div className="min-w-0 flex-1">

@@ -207,9 +207,9 @@ export function FichierChip({ href, nom }: { href: string; nom: string }) {
   return (
     <button
       onClick={() => telechargerFichier(href, nom)}
-      className="my-2 flex w-fit max-w-full animate-dj-fade-in items-center gap-3 rounded-xl border border-dj-bordure bg-dj-surface-haute px-3 py-2.5 text-left transition-colors hover:border-dj-bordure-forte"
+      className="my-2 flex w-fit max-w-full animate-dj-fade-in items-center gap-3 rounded-xl border border-dj-bordure bg-dj-surface px-3 py-2.5 text-left transition-colors hover:border-dj-bordure-forte"
     >
-      <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-dj-surface text-dj-texte">
+      <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-dj-surface-haute text-dj-texte">
         <Icone size={16} />
       </span>
       <span className="min-w-0">
