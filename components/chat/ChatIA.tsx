@@ -282,8 +282,29 @@ export function ChatIA({
         if (!outils.length) return prec; // sources sans outil_resultat correspondant -- ne devrait pas arriver
         const iDernierOutil = outils.length - 1;
         const existantes = outils[iDernierOutil].sources || [];
-        const urlsExistantes = new Set(existantes.map((s) => s.url));
-        const nouvelles = (evenement.sources || []).filter((s: { url: string }) => !urlsExistantes.has(s.url));
+        // CORRECTIF 27/08 (Bourama : "les citations n'apparaissent pas
+        // toujours dans le texte, c'est le frontend qui ne sait pas
+        // l'afficher") -- dédoublonner par `s.url` cassait les sources
+        // bibliothèque : plusieurs extraits d'un MÊME fichier (page 4 ET
+        // page 7 d'un même PDF, par ex.) partagent la même `url` de base
+        // et ne se distinguent que par `url_extrait` -- avec `s.url`
+        // comme clé, seul le premier extrait de ce fichier survivait,
+        // les suivants étaient silencieusement supprimés. Résultat : le
+        // texte contenait bien `[nom, page 7](citation:2)` (le modèle
+        // suivait l'instruction), mais `sourcesAplaties[1]` n'existait
+        // plus côté frontend une fois ces "doublons" retirés -> le lien
+        // ne résolvait plus rien, et `a()` (BulleMessage.tsx) rend alors
+        // `null`, sans trace visible ni erreur. D'où l'impression que la
+        // citation n'était "jamais" affichée dans le texte, alors que le
+        // modèle l'écrivait bien -- ce n'était donc pas lui le problème.
+        // Clé de dédoublonnage : `url_extrait` quand il existe (distinct
+        // par page/timestamp), sinon `url` (image/note/lien : un seul
+        // extrait par fichier, dédoublonnage par url reste correct).
+        const cle = (s: { url: string; url_extrait?: string }) => s.url_extrait || s.url;
+        const clesExistantes = new Set(existantes.map(cle));
+        const nouvelles = (evenement.sources || []).filter(
+          (s: { url: string; url_extrait?: string }) => !clesExistantes.has(cle(s)),
+        );
         if (!nouvelles.length) return prec;
         const outilsCopie = [...outils];
         outilsCopie[iDernierOutil] = { ...outilsCopie[iDernierOutil], sources: [...existantes, ...nouvelles] };

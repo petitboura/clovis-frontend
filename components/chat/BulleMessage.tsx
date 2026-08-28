@@ -598,7 +598,21 @@ function BulleMessageInterne({
                 if (matchCitation) {
                   const numero = parseInt(matchCitation[1], 10);
                   const source = sourcesAplaties[numero - 1];
-                  if (!source) return null;
+                  // CORRECTIF 27/08 (Bourama : "c'est le frontend qui ne
+                  // sait pas l'afficher, pas un problème du modèle") --
+                  // avant : `if (!source) return null`, donc si la
+                  // résolution échouait pour une raison quelconque
+                  // (dédoublonnage par url trop agressif entre plusieurs
+                  // extraits d'un même fichier, corrigé dans
+                  // ChatIA.tsx -- ou toute autre cause), la citation
+                  // disparaissait purement et simplement du texte, sans
+                  // aucune trace ni erreur visible : impossible à
+                  // distinguer d'un marqueur que le modèle n'aurait
+                  // jamais écrit. Après : le texte des enfants (ce que le
+                  // modèle a écrit comme libellé du lien) reste TOUJOURS
+                  // visible, même si la source ne résout pas -- juste
+                  // sans interactivité dans ce cas précis.
+                  if (!source) return <span className="text-dj-accent-1">{children}</span>;
                   const libelle = source.reperage ? `${source.titre}, ${source.reperage}` : source.titre;
                   // CORRECTIF 2026-08-27 (demande Bourama : "que tout
                   // reste en popup interne, meme les sites") : toujours
