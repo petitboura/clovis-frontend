@@ -204,7 +204,12 @@ export function ChatFlottant({
       <button
         onClick={() => setEtat("mini")}
         aria-label="Ouvrir le chat"
-        className="group fixed bottom-5 right-5 z-40 flex h-12 w-12 items-center justify-center rounded-cgpt-bouton bg-dj-accent-1 text-[#1A0D02] shadow-[0_4px_20px_rgba(0,0,0,0.35)] transition-colors hover:bg-dj-accent-2"
+        // 28/08/2026, chantier "web mobile façon appli" : levée au-dessus
+        // de BarreOngletsWeb (voir components/mobile/BarreOngletsWeb.tsx)
+        // via --dj-barre-onglets-web, qui vaut 0px sur desktop -- pas de
+        // ternaire sur `natif` ici, ce bloc n'est de toute façon jamais
+        // atteint en natif (voir `if (natif) return null` juste au-dessus).
+        className="group fixed bottom-[calc(1.25rem+var(--dj-barre-onglets-web,0px))] right-5 z-40 flex h-12 w-12 items-center justify-center rounded-cgpt-bouton bg-dj-accent-1 text-[#1A0D02] shadow-[0_4px_20px_rgba(0,0,0,0.35)] transition-colors hover:bg-dj-accent-2"
       >
         <Bird size={20} className="transition-transform duration-200 group-hover:-rotate-12 group-hover:scale-110" />
       </button>
@@ -246,7 +251,12 @@ export function ChatFlottant({
             // une demi-hauteur trop bas. Centrage refait ici avec
             // inset-0 + margin:auto (propriétés indépendantes de
             // transform), qui coexiste sans conflit avec l'animation.
-            "fixed bottom-5 right-5 z-40 flex h-[min(70dvh,600px)] w-[min(92vw,380px)] flex-col overflow-hidden rounded-cgpt-carte border border-dj-bordure bg-dj-fond shadow-[0_4px_30px_rgba(0,0,0,0.45)] md:inset-0 md:m-auto") +
+            //
+            // 28/08/2026, chantier "web mobile façon appli" : bottom-5
+            // remplacé par un calc() incluant --dj-barre-onglets-web
+            // (vaut 0px en natif et sur desktop, voir app/globals.css),
+            // pour lever le popup au-dessus de BarreOngletsWeb sur mobile web.
+            "fixed bottom-[calc(1.25rem+var(--dj-barre-onglets-web,0px))] right-5 z-40 flex h-[min(70dvh,600px)] w-[min(92vw,380px)] flex-col overflow-hidden rounded-cgpt-carte border border-dj-bordure bg-dj-fond shadow-[0_4px_30px_rgba(0,0,0,0.45)] md:inset-0 md:m-auto") +
         // Fondu d'ouverture (mount -- reprend l'animation standard des
         // modals du projet, cgpt-entree-modal) et de fermeture (juste
         // avant le démontage réel, voir fermerAvecFondu) -- demande

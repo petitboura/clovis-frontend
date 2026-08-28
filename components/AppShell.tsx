@@ -10,6 +10,7 @@ import { PaletteCommandes } from "@/components/PaletteCommandes";
 import { ContexteChat, type EtatChat } from "@/lib/contexteChat";
 import { ContexteFenetres, useFournirFenetres } from "@/lib/contexteFenetres";
 import { BarreOngletsNative } from "@/components/mobile/BarreOngletsNative";
+import { BarreOngletsWeb } from "@/components/mobile/BarreOngletsWeb";
 
 // Coquille de l'app entière (refonte "Mon espace = l'app", 15/08/2026).
 // Monte UNE SEULE FOIS, au niveau du layout (voir app/(app)/layout.tsx) :
@@ -59,7 +60,15 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     let annule = false;
     import("@capacitor/core").then(({ Capacitor }) => {
-      if (!annule) setNatif(Capacitor.isNativePlatform());
+      const estNatif = Capacitor.isNativePlatform();
+      if (!annule) setNatif(estNatif);
+      // Chantier "web mobile façon appli" (28/08/2026) : attribut lu par
+      // --dj-barre-onglets-web dans app/globals.css, pour que cette
+      // variable CSS (marge réservée par la nouvelle barre du bas web)
+      // reste à 0 dans l'appli native, qui a déjà sa propre marge via
+      // --cap-native-navigation-bottom -- sans cet attribut, les deux
+      // marges se seraient additionnées dans l'appli native.
+      if (!annule) document.documentElement.setAttribute("data-natif", estNatif ? "true" : "false");
     });
     return () => {
       annule = true;
@@ -71,10 +80,19 @@ export function AppShell({ children }: { children: React.ReactNode }) {
       <ContexteFenetres.Provider value={fenetres}>
         <div className="flex h-dvh">
           {natif && <BarreOngletsNative />}
+          {!natif && <BarreOngletsWeb />}
           <AppSidebar
             connecte={connecte}
             onOuvrirCatalogue={() => setCatalogueOuvert(true)}
-            masquerChromeMobile={natif}
+            // Toujours masqué désormais (avant : uniquement natif) --
+            // chantier "web mobile façon appli" (28/08/2026) : le menu
+            // hamburger + tiroir mobile est remplacé aussi bien côté web
+            // (BarreOngletsWeb ci-dessus) que côté natif (BarreOngletsNative,
+            // déjà le cas). Ne concerne QUE cette instance-ci d'AppSidebar
+            // (nav principale) -- celle montée dans ChatFlottant.tsx pour
+            // le chat plein écran (contexteChat) garde son hamburger/tiroir
+            // mobile inchangé, jamais touchée par ce chantier.
+            masquerChromeMobile
           />
           {/* Marges via les variables CSS du plugin (voir "CSS insets" de
               la doc @capgo/capacitor-native-navigation) : valent 0px sur le
@@ -99,7 +117,14 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                     paddingTop: "var(--cap-native-navigation-top, 0px)",
                     paddingBottom: "var(--cap-native-navigation-bottom, 0px)",
                   }
-                : { paddingTop: "env(safe-area-inset-top)" }
+                : {
+                    paddingTop: "env(safe-area-inset-top)",
+                    // Réserve l'espace de BarreOngletsWeb (0px sur
+                    // desktop et hors mobile, voir --dj-barre-onglets-web
+                    // dans app/globals.css) pour que le bas de chaque
+                    // page ne se retrouve pas caché derrière la barre.
+                    paddingBottom: "var(--dj-barre-onglets-web, 0px)",
+                  }
             }
           >
             {children}

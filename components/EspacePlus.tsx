@@ -1,7 +1,10 @@
 "use client";
 
+import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { Wand2, Plug, Settings, Briefcase, ChevronRight, type LucideIcon } from "lucide-react";
+import { Wand2, Plug, Settings, Briefcase, Share2, Star, ChevronRight, type LucideIcon } from "lucide-react";
+import { NoteAgent } from "@/components/NoteAgent";
+import { CommentairesAgent } from "@/components/CommentairesAgent";
 
 // Créé le 26/08/2026, Bourama : refonte navigation mobile native. Écran
 // derrière l'onglet "Plus" de la barre du bas (voir components/mobile/
@@ -17,6 +20,20 @@ import { Wand2, Plug, Settings, Briefcase, ChevronRight, type LucideIcon } from 
 // ce lien n'existe déjà dans AUCUNE navigation actuelle (ni desktop ni
 // mobile), donc l'ajouter maintenant serait construire du neuf, pas
 // ranger. À trancher avec Bourama avant de l'ajouter.
+//
+// 28/08/2026, chantier "web mobile façon appli" : cet écran sert
+// désormais AUSSI l'onglet "Plus" de BarreOngletsWeb.tsx (nouvelle barre
+// du bas web mobile), qui remplace l'ancien tiroir mobile d'AppSidebar.tsx.
+// Ce tiroir contenait Partager et Avis sur Clovis (dans son dropdown
+// "Plus"), qui n'avaient jamais été repris ici lors du chantier natif du
+// 26/08 -- ajoutés maintenant pour que ces deux actions restent
+// atteignables sur mobile (natif ET web), pas seulement sur desktop.
+// "Pourquoi Clovis ?" (3ᵉ item de ce même dropdown desktop) reste hors de
+// cet écran : il ouvre CatalogueClovis via un state possédé par
+// AppShell.tsx, jamais transmis jusqu'ici (aucun contexte existant pour
+// ça) -- ajouter ce bouton demanderait de créer ce contexte, une
+// décision à part, pas juste "ranger l'existant". Signalé à Bourama,
+// pas tranché seul.
 const SECTIONS: { icone: LucideIcon; titre: string; sousTitre?: string; href: string }[] = [
   { icone: Wand2, titre: "Personnaliser Clovis", sousTitre: "Mes skills, ma mémoire", href: "/personnaliser" },
   { icone: Plug, titre: "Connecter Claude", sousTitre: "Utiliser Clovis dans Claude", href: "/connecter-claude" },
@@ -40,8 +57,33 @@ function LigneSection({ icone: Icone, titre, sousTitre, onClick }: { icone: Luci
   );
 }
 
+const AGENT_ID = "clovis";
+
 export function EspacePlus() {
   const router = useRouter();
+  const [copie, setCopie] = useState(false);
+  const [avisDeplie, setAvisDeplie] = useState(false);
+
+  // Repris à l'identique de la fonction `partager` d'AppSidebar.tsx.
+  async function partager() {
+    const url = window.location.origin;
+    if (typeof navigator !== "undefined" && navigator.share) {
+      try {
+        await navigator.share({ title: "Clovis", url });
+      } catch {
+        // Annulé par la personne.
+      }
+      return;
+    }
+    try {
+      await navigator.clipboard.writeText(url);
+      setCopie(true);
+      setTimeout(() => setCopie(false), 2000);
+    } catch {
+      // Presse-papier indisponible, tant pis.
+    }
+  }
+
   return (
     <div className="mx-auto flex max-w-2xl flex-col gap-4 p-4">
       <div className="overflow-hidden rounded-cgpt-carte border border-dj-bordure bg-dj-surface">
@@ -49,6 +91,31 @@ export function EspacePlus() {
           {SECTIONS.map((s) => (
             <LigneSection key={s.href} icone={s.icone} titre={s.titre} sousTitre={s.sousTitre} onClick={() => router.push(s.href)} />
           ))}
+        </div>
+      </div>
+
+      <div className="overflow-hidden rounded-cgpt-carte border border-dj-bordure bg-dj-surface">
+        <div className="divide-y divide-dj-bordure">
+          <button
+            onClick={partager}
+            className="flex w-full items-center gap-3 px-4 py-3 text-left transition-colors hover:bg-dj-surface-haute"
+          >
+            <Share2 size={18} className="flex-shrink-0 text-dj-texte-muet" />
+            <span className="flex-1 text-sm text-dj-texte">{copie ? "Copié !" : "Partager"}</span>
+          </button>
+          <button
+            onClick={() => setAvisDeplie((v) => !v)}
+            className="flex w-full items-center gap-3 px-4 py-3 text-left transition-colors hover:bg-dj-surface-haute"
+          >
+            <Star size={18} className="flex-shrink-0 text-dj-texte-muet" />
+            <span className="flex-1 text-sm text-dj-texte">Avis sur Clovis</span>
+          </button>
+          {avisDeplie && (
+            <div className="flex flex-col gap-4 p-4">
+              <NoteAgent agentId={AGENT_ID} />
+              <CommentairesAgent agentId={AGENT_ID} />
+            </div>
+          )}
         </div>
       </div>
     </div>

@@ -177,11 +177,72 @@ math-field {
 
 html {
   scroll-behavior: smooth;
+  /* Chantier "web mobile façon appli" (28/08/2026, demande Bourama --
+     voir components/mobile/BarreOngletsWeb.tsx). Supprime le halo
+     gris/bleu que les navigateurs mobiles posent par défaut sur tout
+     élément tapé (liens, boutons) : ce halo n'existe jamais dans une
+     vraie appli, et sur Clovis on a déjà un vrai retour visuel au tap
+     (voir la règle @media (hover: none) plus bas), donc ce halo par
+     défaut était en trop, pas en remplacement de quelque chose. */
+  -webkit-tap-highlight-color: transparent;
 }
 
 body {
   background-color: var(--dj-fond);
   color: var(--dj-texte);
+  /* Même chantier : coupe l'effet "élastique"/rebond du navigateur en
+     haut et en bas de page (et le geste "tirer pour rafraîchir" que ça
+     déclenche parfois sur Android/Chrome) -- une vraie appli maîtrise ce
+     comportement plutôt que de laisser le navigateur improviser. Les
+     zones qui doivent défiler normalement (main, listes de messages...)
+     gardent leur propre scroll, seul le "débordement" au-delà du
+     contenu réel est coupé ici, au niveau racine. */
+  overscroll-behavior: none;
+}
+
+/* Chantier "web mobile façon appli" (28/08/2026) -- retour tactile
+   immédiat au tap, qui manquait partout (aucun état "pressé" sur les
+   boutons/liens, brief 2026 : "immediate visual feedback"). Portée
+   volontairement globale via une seule règle CSS plutôt qu'en ajoutant
+   active:scale/opacity bouton par bouton dans chaque composant (des
+   centaines de boutons dans le projet, refaire ça fichier par fichier
+   aurait été long et fragile) -- scopé à (hover: none) (véritables
+   écrans tactiles) pour ne JAMAIS toucher le survol souris desktop, qui
+   a déjà ses propres transitions hover: définies partout dans l'app. */
+@media (hover: none) {
+  a,
+  button,
+  [role="button"] {
+    transition: opacity 0.15s ease;
+  }
+  a:active,
+  button:active,
+  [role="button"]:active {
+    opacity: 0.6;
+  }
+}
+
+/* Hauteur réservée pour BarreOngletsWeb.tsx (barre d'onglets du web
+   mobile, chantier 28/08/2026) -- 0px partout par défaut (desktop, et
+   appli native Capacitor qui a sa propre barre système, voir
+   --cap-native-navigation-bottom déjà utilisé ailleurs dans le projet).
+   Activée UNIQUEMENT en dessous du point de rupture md (768px, même
+   valeur que le reste du projet) ET seulement si <html> n'a pas
+   l'attribut data-natif="true" (posé par AppShell.tsx dès qu'il sait
+   qu'on tourne dans l'appli Capacitor) -- sans cette exclusion, l'appli
+   native (qui tourne aussi en dessous de 768px) aurait empilé CETTE
+   marge par-dessus celle déjà réservée par le plugin natif. Consommée
+   par tout élément fixed ancré en bas d'écran sur les pages normales
+   (voir ChatFlottant.tsx, EspaceBibliotheque.tsx) via
+   var(--dj-barre-onglets-web, 0px), même convention que
+   --cap-native-navigation-bottom. */
+:root {
+  --dj-barre-onglets-web: 0px;
+}
+@media (max-width: 767px) {
+  :root:not([data-natif="true"]) {
+    --dj-barre-onglets-web: calc(4rem + env(safe-area-inset-bottom));
+  }
 }
 
 ::selection {
