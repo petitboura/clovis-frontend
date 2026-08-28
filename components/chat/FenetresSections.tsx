@@ -93,10 +93,16 @@ function FenetreSection({
       if (!glissement.current) return;
       const dx = ev.clientX - glissement.current.x;
       const dy = ev.clientY - glissement.current.y;
-      // Garde la fenêtre au moins partiellement visible (barre de titre
-      // jamais complètement hors écran, ni au-dessus du haut visible).
-      const nx = Math.max(-400, glissement.current.fx + dx);
-      const ny = Math.max(0, glissement.current.fy + dy);
+      // Garde la fenêtre au moins partiellement visible sur les 4 côtés.
+      // AVANT (audit 28/08/2026) : seuls la gauche (-400) et le haut (0)
+      // étaient bornés -- rien n'empêchait de la traîner hors écran à
+      // droite ou en bas, où son bouton Fermer devenait alors
+      // inaccessible (seul recours : "fermer toutes" en cliquant dans le
+      // chat, qui ferme aussi les autres fenêtres ouvertes). Bornes
+      // calculées sur la taille d'écran actuelle plutôt qu'une valeur
+      // fixe, pour rester correct sur petit comme grand écran.
+      const nx = Math.max(-400, Math.min(glissement.current.fx + dx, window.innerWidth - 80));
+      const ny = Math.max(0, Math.min(glissement.current.fy + dy, window.innerHeight - 40));
       deplacer(cle, nx, ny);
     }
     function onUp() {
