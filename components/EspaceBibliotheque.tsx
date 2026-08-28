@@ -115,9 +115,9 @@ export function EspaceBibliotheque() {
   // Upload de dossier (webkitdirectory) : fonctionne sur PC et navigateur
   // mobile, PAS dans l'app native Capacitor (limite de la plateforme,
   // pas du code -- pas de plugin natif dédié pour l'instant, décision de
-  // Bourama). Un dossier Clovis est créé automatiquement avec le nom du
-  // dossier importé, tous ses fichiers y sont rangés (à plat, la
-  // sous-arborescence n'est pas recréée).
+  // Bourama). L'arborescence exacte du dossier importé (sous-dossiers
+  // compris) est recréée dans Clovis -- voir envoyerDossierDirect plus
+  // bas pour le détail et son historique de correctifs.
   const [uploadDossierEnCours, setUploadDossierEnCours] = useState(false);
   // Visiteur sans compte (refonte "Mon espace = l'app") -- section
   // auparavant inatteignable sans compte, même détection que
@@ -234,12 +234,22 @@ export function EspaceBibliotheque() {
   }, [enfantsDe, dossierCourantId, sousOnglet, fichiersParId]);
 
   const fichiersAffiches = useMemo(() => {
-    if (!fichiers) return null;
+    // CORRECTIF 2026-08-27 (bug remonté par Bourama : "d'abord liste
+    // plate, ensuite ça se range") -- fichiers et dossiers se chargent
+    // en parallèle (deux appels API séparés, voir useEffect plus haut).
+    // Si `fichiers` arrive avant `dossiers`, idsFichiersRanges est
+    // encore vide (basé sur `dossiers ?? []`) : TOUS les fichiers
+    // semblent "libres" un court instant, d'où le flash à plat avant
+    // que le rangement ne s'applique une fois `dossiers` arrivé. On
+    // attend maintenant que les DEUX soient chargés avant de calculer
+    // quoi que ce soit (voir le Skeleton affiché plus bas tant que
+    // fichiersAffiches est null).
+    if (!fichiers || !dossiers) return null;
     let base: FichierBiblio[];
     if (dossierCourantId === null) {
       base = fichiers.filter((f) => !idsFichiersRanges.has(f.id));
     } else {
-      const dossier = (dossiers ?? []).find((d) => d.id === dossierCourantId);
+      const dossier = dossiers.find((d) => d.id === dossierCourantId);
       const ids = new Set(dossier?.fichier_ids ?? []);
       base = fichiers.filter((f) => ids.has(f.id));
     }
@@ -287,43 +297,73 @@ async function envoyerFichiersDirect(fichiersChoisis: FileList | File[]) {
   // donne le chemin complet par fichier (ex: "Cours/Chimie/td1.pdf") ; on
   // recrée chaque segment de dossier une seule fois (cache par chemin),
   // récursivement du parent vers l'enfant, avant d'y ranger le fichier.
+  // CORRECTIF 2 (27/08, retour Bourama : "des sous-dossiers toujours pas
+  // traités, ça reste à plat") : si la création d'UN segment de dossier
+  // échouait (aléa réseau, session, etc.), l'ancien code renvoyait
+  // `undefined` pour ce chemin -- indiscernable du cas "à la racine,
+  // c'est normal" -- et continuait quand même à uploader tous les
+  // fichiers de ce sous-dossier (et de ses propres sous-dossiers), qui
+  // finissaient donc "libres" à la racine, à plat, avec pour seul indice
+  // une ligne d'erreur unique sur le DOSSIER (jamais sur les fichiers
+  // eux-mêmes, invisible si on n'a pas fait défiler). Un dossier créé
+  // avec succès mémorise maintenant son id ; un dossier en échec
+  // mémorise un échec explicite et le fait REMONTER (throw) à tous ses
+  // descendants -- un fichier n'est donc plus jamais envoyé "au cas où"
+  // dans le mauvais endroit : soit il part au bon endroit, soit il ne
+  // part pas du tout, avec une erreur claire et complète (chemin entier,
+  // pas juste le nom du fichier) dans erreursEnvoi.
   async function envoyerDossierDirect(fichiersChoisis: FileList | File[]) {
     const liste = Array.from(fichiersChoisis) as (File & { webkitRelativePath?: string })[];
     if (liste.length === 0) return;
     setUploadDossierEnCours(true);
     setErreursEnvoi([]);
     const erreurs: { nom: string; erreur: string }[] = [];
-    const dossiersCrees = new Map<string, string | undefined>();
+    const dossiersCrees = new Map<string, string | null>();
 
     async function obtenirDossierPourChemin(segments: string[]): Promise<string | undefined> {
       if (segments.length === 0) return dossierCourantId ?? undefined;
       const chemin = segments.join("/");
-      if (dossiersCrees.has(chemin)) return dossiersCrees.get(chemin);
+      if (dossiersCrees.has(chemin)) {
+        const id = dossiersCrees.get(chemin);
+        if (id === null) throw new Error(`Le dossier « ${segments[segments.length - 1]} » n'a pas pu être créé`);
+        return id;
+      }
+      // Propage naturellement une éventuelle erreur du parent -- on ne
+      // tente jamais de créer un sous-dossier sous un parent en échec.
       const parentId = await obtenirDossierPourChemin(segments.slice(0, -1));
       const nom = segments[segments.length - 1];
       let id: string | undefined;
       try {
         const dossier = await creerDossierBibliotheque(nom, parentId);
         id = dossier?.id;
-      } catch (e) {
-        erreurs.push({ nom: `Dossier « ${nom} »`, erreur: messageErreur(e) });
+      } catch {
+        id = undefined;
       }
-      dossiersCrees.set(chemin, id);
+      dossiersCrees.set(chemin, id ?? null);
+      if (!id) throw new Error(`Le dossier « ${nom} » n'a pas pu être créé`);
       return id;
     }
 
     try {
       for (const fichier of liste) {
+        const chemin = fichier.webkitRelativePath || fichier.name;
         try {
-          const chemin = fichier.webkitRelativePath || fichier.name;
           const segmentsDossier = chemin.split("/").slice(0, -1);
           const dossierId = await obtenirDossierPourChemin(segmentsDossier);
           const ligne = await ajouterFichierBibliothequePersonnelle(fichier, "", "");
           if (ligne?.id && dossierId) {
-            await rangerFichierDansDossier(dossierId, ligne.id);
+            // Léger réessai (26/08 -- aléa réseau ponctuel observé sur
+            // de longs envois séquentiels) : un fichier déjà envoyé ne
+            // doit pas finir orphelin (non rangé, donc "à plat") pour
+            // un simple blip -- 1 nouvelle tentative avant d'abandonner.
+            try {
+              await rangerFichierDansDossier(dossierId, ligne.id);
+            } catch {
+              await rangerFichierDansDossier(dossierId, ligne.id);
+            }
           }
         } catch (e) {
-          erreurs.push({ nom: fichier.name, erreur: messageErreur(e) });
+          erreurs.push({ nom: chemin, erreur: messageErreur(e) });
         }
       }
       setErreursEnvoi(erreurs);
@@ -609,7 +649,7 @@ async function envoyerFichiersDirect(fichiersChoisis: FileList | File[]) {
         </div>
       )}
 
-      {dossiers === null && fichiersAffiches === null && (
+      {fichiersAffiches === null && (
         <div className="flex flex-col gap-2" aria-hidden>
           <Skeleton className="h-14 rounded-xl border border-dj-bordure" />
           <Skeleton className="h-14 rounded-xl border border-dj-bordure" style={{ animationDelay: "100ms" }} />
