@@ -304,6 +304,24 @@ select:focus-visible {
   }
 }
 
+/* Fade "par bloc" du texte streamé dans le chat (BulleMessage.tsx,
+   prop estEnCoursDeGeneration) : à chaque nouveau morceau de texte reçu
+   pour le message assistant en cours de génération, la bulle rejoue
+   cette pulsation d'opacité -- lisse la perception des rafales de
+   tokens irrégulières sans toucher au rendu Markdown lui-même (option
+   retenue par Bourama après comparaison de 3 approches). */
+@keyframes dj-chunk-pulse {
+  from {
+    opacity: 0.55;
+  }
+  to {
+    opacity: 1;
+  }
+}
+.dj-chunk-pulse {
+  animation: dj-chunk-pulse 450ms ease-out;
+}
+
 .dj-reveal {
   opacity: 0;
   transform: translateY(16px);

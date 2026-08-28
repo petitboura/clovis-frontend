@@ -725,6 +725,7 @@ export function ChatIA({
                 statuts.length === 0 &&
                 !message.raisonnement
               }
+              estEnCoursDeGeneration={estDernier && genEnCours && message.role === "assistant"}
               raisonnement={message.raisonnement}
               raisonnementEnCours={estDernier ? raisonnementEnCours : false}
               outilsResultats={message.outilsResultats}

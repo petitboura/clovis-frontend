@@ -284,6 +284,7 @@ function BulleMessageInterne({
   onExpliquerSelection,
   nomAgent,
   enAttente,
+  estEnCoursDeGeneration,
   raisonnement,
   raisonnementEnCours,
   outilsResultats,
@@ -304,6 +305,12 @@ function BulleMessageInterne({
   // vrai uniquement pour le dernier message en cours de génération.
   nomAgent?: string;
   enAttente?: boolean;
+  // Ajouté (demande Bourama) : vrai uniquement pour le dernier message
+  // assistant pendant que sa réponse est en train d'arriver (voir
+  // ChatIA.tsx : estDernier && genEnCours). Sert uniquement à déclencher
+  // la pulsation "dj-chunk-pulse" ci-dessous à chaque nouveau morceau de
+  // texte reçu -- jamais utilisé pour un message déjà terminé/historique.
+  estEnCoursDeGeneration?: boolean;
   raisonnement?: string;
   raisonnementEnCours?: boolean;
   outilsResultats?: { nomOutil: string; nomLisible: string; resultat: string; sources?: { titre: string; url: string; extrait?: string; url_extrait?: string; reperage?: string; position_type?: "page" | "timestamp"; position_valeur?: number; type_mime?: string | null }[] }[];
@@ -342,6 +349,40 @@ function BulleMessageInterne({
   const [enLecture, setEnLecture] = useState(false);
   const [fichiersOuverts, setFichiersOuverts] = useState(false);
   const estUtilisateur = message.role === "user";
+
+  // Fade "par bloc" du texte streamé (option retenue par Bourama après
+  // comparaison de 3 approches -- voir historique). À chaque morceau de
+  // texte reçu pour le message en cours de génération, on rejoue une
+  // courte pulsation d'opacité sur toute la bulle plutôt que d'essayer
+  // d'animer mot par mot à l'intérieur de ReactMarkdown : ce dernier
+  // reparse tout l'arbre à chaque chunk, donc cibler précisément le
+  // texte "nouveau" sans risquer de casser le rendu (gras/italique/
+  // tableaux/LaTeX/citations déjà en place) n'est pas fiable -- voir
+  // le bug encore ouvert sur Streamdown pour la même raison. Volontai-
+  // rement coarse/robuste plutôt que fin/fragile.
+  const [pulseActif, setPulseActif] = useState(false);
+  const longueurPrecedenteRef = useRef(message.content.length);
+  const pulseTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  useEffect(() => {
+    const longueurActuelle = message.content.length;
+    const aGrandi = longueurActuelle > longueurPrecedenteRef.current;
+    longueurPrecedenteRef.current = longueurActuelle;
+    if (!estEnCoursDeGeneration || !aGrandi) return;
+    // Retire puis réapplique la classe (via rAF) pour forcer le
+    // redémarrage de l'animation CSS même si un chunk précédent est
+    // arrivé il y a moins de 450ms -- sinon le navigateur ne rejoue pas
+    // une animation déjà active sur le même élément.
+    setPulseActif(false);
+    const frame = requestAnimationFrame(() => setPulseActif(true));
+    if (pulseTimeoutRef.current) clearTimeout(pulseTimeoutRef.current);
+    pulseTimeoutRef.current = setTimeout(() => setPulseActif(false), 450);
+    return () => cancelAnimationFrame(frame);
+  }, [message.content, estEnCoursDeGeneration]);
+  useEffect(() => {
+    return () => {
+      if (pulseTimeoutRef.current) clearTimeout(pulseTimeoutRef.current);
+    };
+  }, []);
 
 
   // Sélection de texte -> "expliquer ce passage" (2026-07-20). Signal
@@ -511,7 +552,7 @@ function BulleMessageInterne({
         <div
           ref={conteneurRef}
           onMouseUp={gererFinSelection}
-          className="dj-markdown [&_ul]:list-disc [&_ul]:pl-5 [&_ol]:list-decimal [&_ol]:pl-5 [&_p]:mb-2 last:[&_p]:mb-0 [&_h1]:font-lecture [&_h1]:font-semibold [&_h1]:tracking-[-0.01em] [&_h1]:text-dj-texte [&_h1]:text-xl [&_h1]:mb-2 [&_h1]:mt-3 [&_h2]:font-lecture [&_h2]:font-semibold [&_h2]:tracking-[-0.01em] [&_h2]:text-dj-texte [&_h2]:text-lg [&_h2]:mb-2 [&_h2]:mt-3 [&_h3]:font-lecture [&_h3]:font-semibold [&_h3]:tracking-[-0.01em] [&_h3]:text-dj-texte [&_h3]:text-base [&_h3]:mb-1.5 [&_h3]:mt-2"
+          className={`dj-markdown [&_ul]:list-disc [&_ul]:pl-5 [&_ol]:list-decimal [&_ol]:pl-5 [&_p]:mb-2 last:[&_p]:mb-0 [&_h1]:font-lecture [&_h1]:font-semibold [&_h1]:tracking-[-0.01em] [&_h1]:text-dj-texte [&_h1]:text-xl [&_h1]:mb-2 [&_h1]:mt-3 [&_h2]:font-lecture [&_h2]:font-semibold [&_h2]:tracking-[-0.01em] [&_h2]:text-dj-texte [&_h2]:text-lg [&_h2]:mb-2 [&_h2]:mt-3 [&_h3]:font-lecture [&_h3]:font-semibold [&_h3]:tracking-[-0.01em] [&_h3]:text-dj-texte [&_h3]:text-base [&_h3]:mb-1.5 [&_h3]:mt-2${pulseActif ? " dj-chunk-pulse" : ""}`}
         >
           {/* remarkGfm (tableaux/gras/liens) + remarkMath/rehypeKatex
               (LaTeX) tournent dans LA MÊME passe de parsing -- c'est ça
@@ -844,6 +885,7 @@ function memeApparence(
     precedent.message === suivant.message &&
     precedent.nomAgent === suivant.nomAgent &&
     precedent.enAttente === suivant.enAttente &&
+    precedent.estEnCoursDeGeneration === suivant.estEnCoursDeGeneration &&
     precedent.raisonnement === suivant.raisonnement &&
     precedent.raisonnementEnCours === suivant.raisonnementEnCours &&
     precedent.outilsResultats === suivant.outilsResultats &&
