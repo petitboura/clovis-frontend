@@ -57,8 +57,9 @@ import { BoutonInstaller } from "@/components/BoutonInstaller";
 // lisaient plus comme de la personnalité mais comme du bruit, l'oeil ne
 // peut pas retenir "quelle icône fait quel mouvement", donc l'effet
 // perçu était juste de l'agitation. Un seul geste cohérent laisse le
-// trait signature (TraitSignature, sous l'onglet actif) faire le travail
-// de repère distinctif, lui seul mérite d'être unique. Les icônes
+// fond (bg-dj-surface-haute) faire le travail de repère distinctif sur
+// l'onglet actif (28/08/2026 : trait signature doré sous l'onglet actif
+// retiré à la demande de Bourama, ne reste que ce fond). Les icônes
 // contextuelles avec un sens propre (chevrons, boussole "Pourquoi
 // Clovis ?") gardent leur mouvement dédié, gardé tel quel plus bas :
 // seule la nav principale (accueil + 8 onglets) est uniformisée ici.
@@ -554,28 +555,7 @@ export function AppSidebar({
           <onglet.Icone size={18} className={`transition-transform duration-200 ${mouvement}`} />
         </span>
         {mobile ? <span className="text-sm">{onglet.label}</span> : <LibelleRail ouverte={ouverte}>{onglet.label}</LibelleRail>}
-        {actif && <TraitSignature className="absolute bottom-0.5 left-2" />}
       </Link>
-    );
-  }
-
-  // Élément signature (17/08, nouvelle direction "Nuit d'étude") : trait
-  // à main levée (irrégulier, pas une ligne géométriquement parfaite --
-  // même logique que le traitement "cgpt-*" du reste de l'app) sous
-  // l'onglet de navigation actif, en accent doré. Remplace tout autre
-  // indicateur d'état actif redondant -- volontairement discret, un seul
-  // endroit, pas décoratif ailleurs.
-  function TraitSignature({ className = "" }: { className?: string }) {
-    return (
-      <svg width="24" height="5" viewBox="0 0 24 5" className={className} aria-hidden="true">
-        <path
-          d="M0.5,2.6 C4,1.1 8,3.4 12,2 C16,0.7 20,3.1 23.5,1.8"
-          stroke="var(--dj-accent-1)"
-          strokeWidth="1.5"
-          fill="none"
-          strokeLinecap="round"
-        />
-      </svg>
     );
   }
 
@@ -748,7 +728,6 @@ export function AppSidebar({
                       >
                         <o.Icone size={16} className="flex-shrink-0" />
                         {o.label}
-                        {actif && <TraitSignature className="absolute bottom-0.5 left-2" />}
                       </Link>
                     );
                   })}
@@ -961,7 +940,6 @@ export function AppSidebar({
                       >
                         <o.Icone size={16} />
                         {o.label}
-                        {actif && <TraitSignature className="absolute bottom-0.5 left-2" />}
                       </Link>
                     );
                   })}
