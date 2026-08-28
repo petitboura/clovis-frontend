@@ -161,17 +161,44 @@ export function ChatFlottant({
     if (!agent) return;
     try {
       const cheminId = fil.conversation_id ?? "legacy";
-      const lignes: { role: "user" | "assistant"; content: string; created_at: string }[] = await appelerApi(
-        `/api/historique/${agent.id}/conversations/${cheminId}`
-      );
+      const lignes: {
+        role: "user" | "assistant";
+        content: string;
+        created_at: string;
+        // Ajouté 28/08/2026 (Bourama : outils exécutés/sources/pièces
+        // jointes disparaissaient à la réouverture d'une conversation --
+        // voir core/main.py:_sauvegarder_echange). Structure déjà alignée
+        // sur MessageAffiche.outilsResultats/piecesJointes côté backend,
+        // aucune transformation nécessaire au-delà du renommage de champ.
+        meta?: {
+          outils?: MessageAffiche["outilsResultats"];
+          pieces_jointes?: MessageAffiche["piecesJointes"];
+        } | null;
+      }[] = await appelerApi(`/api/historique/${agent.id}/conversations/${cheminId}`);
       setCle(fil.conversation_id ?? crypto.randomUUID());
       setMessagesInitiaux(
         lignes.map((l) => {
           if (l.role !== "user") {
-            return { id: null, role: l.role, content: l.content, created_at: l.created_at };
+            return {
+              id: null,
+              role: l.role,
+              content: l.content,
+              created_at: l.created_at,
+              outilsResultats: l.meta?.outils ?? undefined,
+            };
           }
           const { texte, piecesJointes } = nettoyerMessageHistorique(l.content);
-          return { id: null, role: l.role, content: texte, created_at: l.created_at, piecesJointes };
+          return {
+            id: null,
+            role: l.role,
+            content: texte,
+            created_at: l.created_at,
+            // Les marqueurs texte (nettoyerMessageHistorique) restent la
+            // source principale ; meta.pieces_jointes ne comble que les
+            // cas qu'ils ne couvrent pas encore (ex: image envoyée via
+            // le chemin vision dédié).
+            piecesJointes: piecesJointes ?? l.meta?.pieces_jointes ?? undefined,
+          };
         })
       );
       setNbMessages(lignes.length);
