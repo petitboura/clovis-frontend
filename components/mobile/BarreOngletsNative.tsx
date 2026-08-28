@@ -52,7 +52,6 @@ const ONGLETS_NATIFS = [
   { id: "bibliotheque", titre: "Bibliothèque", route: "/bibliotheque", icone: ICONES_SVG.bibliotheque },
   { id: "controle-session", titre: "Concentration", route: "/controle-session", icone: ICONES_SVG.controleSession },
   { id: "chat", titre: "Chat", route: null, icone: ICONES_SVG.chat },
-  { id: "notes", titre: "Notes", route: "/notes", icone: ICONES_SVG.notes },
   { id: "plus", titre: "Plus", route: "/plus", icone: ICONES_SVG.plus },
 ] as const;
 

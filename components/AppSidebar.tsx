@@ -18,7 +18,7 @@ import {
   Star,
   Compass,
   Plug,
-  NotebookPen,
+  NotebookPen, // gardé importé : section Notes masquée mais pas supprimée, voir plus bas
   MessageSquarePlus,
   History,
   PanelLeft,
@@ -90,10 +90,10 @@ export const ONGLETS: { id: OngletId; href: string; label: string; Icone: typeof
   // voir la note dans lib/api.ts. Seul le mot vu par l'utilisateur change.
   { id: "comportements", href: "/comportements", label: "Mes skills", Icone: ScrollText },
   { id: "bibliotheque", href: "/bibliotheque", label: "Bibliothèque", Icone: Library },
-  // Section "Notion-like" (Partie 2, lot 5/5, 20/08, demande Bourama) --
-  // juste après Bibliothèque, thématiquement proche (contenu personnel
-  // organisé par l'étudiant).
-  { id: "notes", href: "/notes", label: "Notes", Icone: NotebookPen },
+  // Section "Notes" masquée du frontend le 28/08/2026, demande Bourama --
+  // en repensation complète (système de blocs pas satisfaisant). Code et
+  // route toujours là, juste retirée de la navigation visible.
+  // { id: "notes", href: "/notes", label: "Notes", Icone: NotebookPen },
   { id: "memoire", href: "/memoire", label: "Ma mémoire", Icone: Brain },
   // Guide "Utiliser Clovis dans Claude" (18/08, demande Bourama) --
   // icône Plug ("branchement", demande explicite Bourama) plutôt que le
