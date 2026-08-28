@@ -8,7 +8,6 @@ import { MesCodes } from "@/components/MesCodes";
 import { EspaceEntrerCode } from "@/components/EspaceEntrerCode";
 import { MesComportements } from "@/components/MesComportements";
 import { EspaceBibliotheque } from "@/components/EspaceBibliotheque";
-import { EspaceNotes } from "@/components/EspaceNotes";
 import { MaMemoire } from "@/components/MaMemoire";
 import { EspaceConnecterClaude } from "@/components/EspaceConnecterClaude";
 
@@ -17,9 +16,7 @@ const AGENT_ID = "clovis";
 // Contenu de chaque section (22/08/2026) -- repris tel quel des pages
 // app/(app)/*/page.tsx (mêmes composants, mêmes props), MOINS le
 // conteneur SectionPage (le titre y fait doublon avec la barre de titre
-// de la fenêtre flottante elle-même, voir plus bas). "Notes" reste hors
-// SectionPage comme sur sa vraie page (canevas plein, décision UX
-// explicite de Bourama, voir app/(app)/notes/page.tsx).
+// de la fenêtre flottante elle-même, voir plus bas).
 const CONTENU_PAR_ONGLET: Record<OngletId, React.ReactNode> = {
   bureau: (
     <div className="flex flex-col gap-4">
@@ -29,7 +26,6 @@ const CONTENU_PAR_ONGLET: Record<OngletId, React.ReactNode> = {
   ),
   comportements: <MesComportements agentId={AGENT_ID} />,
   bibliotheque: <EspaceBibliotheque />,
-  notes: <EspaceNotes />,
   memoire: <MaMemoire />,
   claude: <EspaceConnecterClaude />,
 };

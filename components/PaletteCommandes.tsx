@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
-import { useRouter, usePathname } from "next/navigation";
+import { useRouter } from "next/navigation";
 import {
   Search,
   Home,
@@ -58,7 +58,6 @@ export function PaletteCommandes({
   nouvelleConversationRef: React.MutableRefObject<(() => void) | null>;
 }) {
   const router = useRouter();
-  const pathname = usePathname();
   const { choix, changerTheme } = useTheme();
   const [ouverte, setOuverte] = useState(false);
   const [requete, setRequete] = useState("");
@@ -67,12 +66,6 @@ export function PaletteCommandes({
 
   useEffect(() => {
     function surTouche(e: KeyboardEvent) {
-      // EspaceNotes.tsx a son propre Ctrl+K (recherche interne aux notes,
-      // ajouté par un commit distant après le début de ce chantier) -- la
-      // palette globale ne doit pas lui voler le raccourci sur /notes,
-      // sous peine d'ouvrir les deux en même temps. Le reste de l'app
-      // n'a pas ce conflit.
-      if (pathname?.startsWith("/notes")) return;
       if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "k") {
         e.preventDefault();
         setOuverte((v) => !v);
@@ -82,7 +75,7 @@ export function PaletteCommandes({
     }
     document.addEventListener("keydown", surTouche);
     return () => document.removeEventListener("keydown", surTouche);
-  }, [pathname]);
+  }, []);
 
   useEffect(() => {
     if (!ouverte) return;

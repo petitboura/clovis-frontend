@@ -51,10 +51,10 @@ export const ContexteFenetres = createContext<ContexteFenetresValeur | null>(nul
 const PAS_CASCADE = 32;
 const POSITION_BASE = { x: 80, y: 70 };
 
-// "Notes"/"bibliotheque" occupent tout l'espace disponible sur leur
-// vraie page -- une fenêtre plus large leur va mieux. Source unique
-// (réutilisée par FenetresSections.tsx pour le rendu).
-export const ONGLETS_LARGES = new Set<OngletId>(["notes", "bibliotheque"]);
+// "bibliotheque" occupe tout l'espace disponible sur sa vraie page --
+// une fenêtre plus large lui va mieux. Source unique (réutilisée par
+// FenetresSections.tsx pour le rendu).
+export const ONGLETS_LARGES = new Set<OngletId>(["bibliotheque"]);
 const TAILLE_NORMALE = { width: 480, height: 560 };
 const TAILLE_LARGE = { width: 760, height: 640 };
 export const TAILLE_MIN = { width: 320, height: 280 };

@@ -18,7 +18,6 @@ import {
   Star,
   Compass,
   Plug,
-  NotebookPen, // gardé importé : section Notes masquée mais pas supprimée, voir plus bas
   MessageSquarePlus,
   History,
   PanelLeft,
@@ -79,7 +78,6 @@ export type OngletId =
   | "bureau"
   | "comportements"
   | "bibliotheque"
-  | "notes"
   | "memoire"
   | "claude";
 
@@ -90,10 +88,6 @@ export const ONGLETS: { id: OngletId; href: string; label: string; Icone: typeof
   // voir la note dans lib/api.ts. Seul le mot vu par l'utilisateur change.
   { id: "comportements", href: "/comportements", label: "Mes skills", Icone: ScrollText },
   { id: "bibliotheque", href: "/bibliotheque", label: "Bibliothèque", Icone: Library },
-  // Section "Notes" masquée du frontend le 28/08/2026, demande Bourama --
-  // en repensation complète (système de blocs pas satisfaisant). Code et
-  // route toujours là, juste retirée de la navigation visible.
-  // { id: "notes", href: "/notes", label: "Notes", Icone: NotebookPen },
   { id: "memoire", href: "/memoire", label: "Ma mémoire", Icone: Brain },
   // Guide "Utiliser Clovis dans Claude" (18/08, demande Bourama) --
   // icône Plug ("branchement", demande explicite Bourama) plutôt que le
@@ -593,8 +587,8 @@ export function AppSidebar({
   // "Plus" (place prise par Nouvelle conversation + Historique, élargi
   // le 22/08/2026, demande Bourama).
   const idsDirects: OngletId[] = contexteChat
-    ? ["bibliotheque", "notes"]
-    : ["bureau", "bibliotheque", "notes"];
+    ? ["bibliotheque"]
+    : ["bureau", "bibliotheque"];
   const idsPlusFlat: OngletId[] = contexteChat ? ["bureau", "claude"] : ["claude"];
   const ongletsDirects = ONGLETS.filter((o) => idsDirects.includes(o.id));
   const ongletsDansActions = ONGLETS.filter((o) => idsPlusFlat.includes(o.id));
