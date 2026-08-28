@@ -143,18 +143,26 @@ export default function RacineLayout({
       <body className="min-h-screen bg-dj-fond font-sans text-dj-texte antialiased">
         {/* Écran d'ouverture (25/08, demande Bourama) -- voir
             SplashOuverture.tsx pour le pourquoi du composant serveur.
-            Le script qui suit fait disparaître #clovis-splash quand
-            l'app signale qu'elle est prête (événement "clovis:pret",
-            déclenché par SplashPret.tsx plus bas une fois React monté),
-            ou au bout de 4s en filet de sécurité si ce signal tarde
-            (connexion lente) -- ne doit jamais bloquer indéfiniment
-            l'accès à l'appli (standards-dev #9). Doit rester APRÈS le
-            <div id="clovis-splash"> dans le HTML pour le trouver dans
-            le DOM au moment où il s'exécute. */}
+            Le script qui suit fait disparaître #clovis-splash une fois
+            SA CHORÉGRAPHIE COMPLÈTE terminée (~3,9s : tracé + "prend
+            vie") ET que l'app signale qu'elle est prête (événement
+            "clovis:pret", déclenché par SplashPret.tsx plus bas une fois
+            React monté) -- les deux conditions, pas juste la première
+            arrivée, sinon l'animation serait coupée en plein milieu sur
+            un hydratation rapide (28/08, Bourama : "ça doit se montrer
+            obligatoirement"). Filet de sécurité à 6s si le signal
+            "prêt" tarde trop (connexion lente) -- ne doit jamais
+            bloquer indéfiniment l'accès à l'appli (standards-dev #9).
+            L'attente de 3,9s est ignorée pour prefers-reduced-motion :
+            les animations CSS y sont déjà quasi instantanées (règle
+            globale dans globals.css), forcer l'attente reviendrait à
+            imposer un écran figé inutile à ces personnes. Doit rester
+            APRÈS le <div id="clovis-splash"> dans le HTML pour le
+            trouver dans le DOM au moment où il s'exécute. */}
         <SplashOuverture />
         <script
           dangerouslySetInnerHTML={{
-            __html: `(function(){try{var el=document.getElementById("clovis-splash");if(!el)return;var parti=false;function partir(){if(parti)return;parti=true;el.classList.add("clovis-splash-sortie");el.addEventListener("transitionend",function(){if(el.parentNode)el.parentNode.removeChild(el);},{once:true});}document.addEventListener("clovis:pret",partir,{once:true});setTimeout(partir,4000);}catch(e){}})();`,
+            __html: `(function(){try{var el=document.getElementById("clovis-splash");if(!el)return;var reduit=window.matchMedia&&window.matchMedia("(prefers-reduced-motion: reduce)").matches;var DUREE_MIN=reduit?0:3900;var pret=false,tempsEcoule=false,parti=false;function partir(){if(parti)return;parti=true;el.classList.add("clovis-splash-sortie");el.addEventListener("transitionend",function(){if(el.parentNode)el.parentNode.removeChild(el);},{once:true});}function tenter(){if(pret&&tempsEcoule)partir();}document.addEventListener("clovis:pret",function(){pret=true;tenter();},{once:true});setTimeout(function(){tempsEcoule=true;tenter();},DUREE_MIN);setTimeout(partir,6000);}catch(e){}})();`,
           }}
         />
         <ServiceWorkerRegistration />
