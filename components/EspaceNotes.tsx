@@ -602,10 +602,29 @@ function PanneauPage({
     });
   }, [pageId]);
 
-  async function recharger() {
-    const p = await obtenirPage(pageId);
-    setPage(p);
-    return p;
+  // Met à jour un ou plusieurs blocs directement dans l'état local, sans
+  // repasser par le serveur -- élimine l'aller-retour réseau complet
+  // (page + sous-pages + tous les blocs) après chaque frappe/action,
+  // qui rendait l'éditeur lent (demande Bourama, 27/08/2026).
+  function patcherBlocsLocal(patches: { id: string; champs: Partial<BlocEspace> }[]) {
+    setPage((prev) => {
+      if (!prev) return prev;
+      const parId = new Map(patches.map((p) => [p.id, p.champs]));
+      return { ...prev, blocs: prev.blocs.map((b) => (parId.has(b.id) ? { ...b, ...parId.get(b.id) } : b)) };
+    });
+  }
+
+  function ajouterBlocsLocal(nouveaux: BlocEspace[]) {
+    setPage((prev) => (prev ? { ...prev, blocs: [...prev.blocs, ...nouveaux] } : prev));
+  }
+
+  function retirerBlocLocal(blocId: string) {
+    setPage((prev) => (prev ? { ...prev, blocs: prev.blocs.filter((b) => b.id !== blocId) } : prev));
+  }
+
+  function retirerBlocLocalEtSupprimer(blocId: string) {
+    retirerBlocLocal(blocId);
+    supprimerBloc(blocId).catch(() => {});
   }
 
   async function enregistrerTitre() {
@@ -633,14 +652,23 @@ function PanneauPage({
     idsOrdonnes.splice(indexDansFreres, 0, nouveau.id);
     const parId = new Map<string, BlocEspace>(freres.map((b) => [b.id, b]));
     parId.set(nouveau.id, nouveau);
-    await Promise.all(
+    // Affichage immédiat (optimiste) : le bloc apparaît tout de suite avec
+    // le bon ordre local, sans attendre le serveur.
+    const nouveauxOrdonnes = idsOrdonnes.map((id, i) => ({ ...parId.get(id)!, ordre: i }));
+    setPage((prev) => {
+      if (!prev) return prev;
+      const autres = prev.blocs.filter((b) => (b.parent_bloc_id ?? null) !== parentBlocId);
+      return { ...prev, blocs: [...autres, ...nouveauxOrdonnes] };
+    });
+    setActivation({ id: nouveau.id, position: "debut" });
+    // Persistance du réordonnancement en arrière-plan -- n'empêche pas
+    // l'utilisateur de continuer à taper pendant ce temps.
+    Promise.all(
       idsOrdonnes.map((id, i) => {
         const b = parId.get(id)!;
         return b.ordre === i ? null : modifierBloc(id, { ordre: i });
       }).filter((p): p is Promise<BlocEspace> => p !== null)
-    );
-    await recharger();
-    setActivation({ id: nouveau.id, position: "debut" });
+    ).catch(() => {});
   }
 
   // Navigation clavier flèche haut/bas entre blocs de même parent --
@@ -665,9 +693,9 @@ function PanneauPage({
     const freres = page.blocs.filter((b) => (b.parent_bloc_id ?? null) === (bloc.parent_bloc_id ?? null));
     const index = freres.findIndex((b) => b.id === depuisId);
     const precedent = freres[index - 1];
-    await supprimerBloc(depuisId);
-    await recharger();
+    retirerBlocLocal(depuisId);
     if (precedent) setActivation({ id: precedent.id, position: "fin" });
+    supprimerBloc(depuisId).catch(() => {});
   }
 
   // Choix dans le menu "+" : image/fichier passent par un vrai upload
@@ -684,7 +712,7 @@ function PanneauPage({
         if (!f || !page) return;
         const freres = page.blocs.filter((b) => (b.parent_bloc_id ?? null) === parentBlocId);
         const nouveau = await uploaderBlocFichier(pageId, type, f, freres.length, parentBlocId);
-        await recharger();
+        ajouterBlocsLocal([nouveau]);
         setActivation({ id: nouveau.id, position: "debut" });
       };
       input.click();
@@ -707,11 +735,50 @@ function PanneauPage({
     const [retire] = nouveauxIds.splice(depuisIndex, 1);
     nouveauxIds.splice(versIndex, 0, retire);
     const parId = new Map(freres.map((b) => [b.id, b]));
-    await Promise.all(
+    const nouveauxOrdonnes = nouveauxIds.map((id, i) => ({ ...parId.get(id)!, ordre: i }));
+    setPage((prev) => {
+      if (!prev) return prev;
+      const autres = prev.blocs.filter((b) => (b.parent_bloc_id ?? null) !== parentBlocId);
+      return { ...prev, blocs: [...autres, ...nouveauxOrdonnes] };
+    });
+    Promise.all(
       nouveauxIds.map((id, i) => (parId.get(id)!.ordre === i ? null : modifierBloc(id, { ordre: i })))
         .filter((p): p is Promise<BlocEspace> => p !== null)
-    );
-    await recharger();
+    ).catch(() => {});
+  }
+
+  // Imbrique idSource comme DERNIER enfant de idCible (glisser-déposer
+  // sur la moitié droite d'un bloc, ou Tab en début de bloc) -- aucune
+  // restriction de type, contrairement à l'ancienne version limitée au
+  // seul bloc "bascule" (demande Bourama, 27/08/2026).
+  async function imbriquerBloc(idSource: string, idCibleParent: string) {
+    if (!page || idSource === idCibleParent) return;
+    // Jamais imbriquer un bloc dans l'un de ses propres descendants.
+    let curseur: string | null = idCibleParent;
+    while (curseur) {
+      if (curseur === idSource) return;
+      curseur = page.blocs.find((b) => b.id === curseur)?.parent_bloc_id ?? null;
+    }
+    const freresCible = page.blocs.filter((b) => (b.parent_bloc_id ?? null) === idCibleParent);
+    const nouvelOrdre = freresCible.length;
+    patcherBlocsLocal([{ id: idSource, champs: { parent_bloc_id: idCibleParent, ordre: nouvelOrdre } }]);
+    modifierBloc(idSource, { parent_bloc_id: idCibleParent, ordre: nouvelOrdre }).catch(() => {});
+  }
+
+  // Désimbrique idSource : remonte d'un niveau, devient le frère suivant
+  // de son ancien parent (Shift+Tab).
+  async function desimbriquerBloc(idSource: string) {
+    if (!page) return;
+    const bloc = page.blocs.find((b) => b.id === idSource);
+    if (!bloc || !bloc.parent_bloc_id) return;
+    const parent = page.blocs.find((b) => b.id === bloc.parent_bloc_id);
+    if (!parent) return;
+    const nouveauParentId = parent.parent_bloc_id ?? null;
+    const nouveauxFreres = page.blocs.filter((b) => (b.parent_bloc_id ?? null) === nouveauParentId);
+    const indexParent = nouveauxFreres.findIndex((b) => b.id === parent.id);
+    const nouvelOrdre = indexParent + 1;
+    patcherBlocsLocal([{ id: idSource, champs: { parent_bloc_id: nouveauParentId, ordre: nouvelOrdre } }]);
+    modifierBloc(idSource, { parent_bloc_id: nouveauParentId, ordre: nouvelOrdre }).catch(() => {});
   }
 
   async function ajouterSousPage() {
@@ -729,6 +796,47 @@ function PanneauPage({
         <Skeleton className="h-24 w-full rounded-md" />
       </div>
     );
+  }
+
+  // Colle plusieurs blocs d'un coup après une position donnée (résultat
+  // du découpage d'un texte markdown collé) -- créés séquentiellement
+  // côté serveur pour garder l'ordre, affichés localement sans attendre
+  // de rechargement complet.
+  async function collerBlocsApres(
+    indexDansFreres: number,
+    parentBlocId: string | null,
+    blocsACreer: { type: string; texte: string }[]
+  ) {
+    if (!page || blocsACreer.length === 0) return;
+    const freres = page.blocs.filter((b) => (b.parent_bloc_id ?? null) === parentBlocId);
+    const crees: BlocEspace[] = [];
+    let ordre = freres.length;
+    for (const b of blocsACreer) {
+      const cle = b.type === "equation" ? "latex" : "texte";
+      const contenu = b.type === "separateur" ? {} : { [cle]: b.texte };
+      const nouveau = await creerBloc(pageId, b.type, contenu, ordre, parentBlocId);
+      crees.push(nouveau);
+      ordre += 1;
+    }
+    const idsOrdonnes = freres.map((f) => f.id);
+    idsOrdonnes.splice(indexDansFreres, 0, ...crees.map((c) => c.id));
+    const parId = new Map<string, BlocEspace>([...freres, ...crees].map((b) => [b.id, b]));
+    const nouveauxOrdonnes = idsOrdonnes.map((id, i) => ({ ...parId.get(id)!, ordre: i }));
+    setPage((prev) => {
+      if (!prev) return prev;
+      const autres = prev.blocs.filter((b) => (b.parent_bloc_id ?? null) !== parentBlocId);
+      return { ...prev, blocs: [...autres, ...nouveauxOrdonnes] };
+    });
+    if (crees.length > 0) setActivation({ id: crees[crees.length - 1].id, position: "fin" });
+    Promise.all(
+      idsOrdonnes
+        .map((id, i) => (parId.get(id)!.ordre === i ? null : modifierBloc(id, { ordre: i })))
+        .filter((p): p is Promise<BlocEspace> => p !== null)
+    ).catch(() => {});
+  }
+
+  function patcherUnBloc(blocId: string, champs: Partial<BlocEspace>) {
+    patcherBlocsLocal([{ id: blocId, champs }]);
   }
 
   return (
@@ -760,9 +868,13 @@ function PanneauPage({
         <ListeBlocs
           tousLesBlocs={page.blocs}
           parentBlocId={null}
-          onChange={recharger}
+          onChange={patcherUnBloc}
+          onSupprimerBloc={retirerBlocLocalEtSupprimer}
           onDeplacer={deplacerBloc}
+          onImbriquer={imbriquerBloc}
+          onDesimbriquer={desimbriquerBloc}
           onAjouterA={(index, parentId, type) => inserterBlocA(index, type, parentId)}
+          onCollerBlocsApres={collerBlocsApres}
           onNaviguer={onNaviguer}
           onNaviguerVertical={naviguerVertical}
           onSupprimerEtReculer={supprimerEtReculer}
@@ -847,8 +959,12 @@ function ListeBlocs({
   tousLesBlocs,
   parentBlocId,
   onChange,
+  onSupprimerBloc,
   onDeplacer,
+  onImbriquer,
+  onDesimbriquer,
   onAjouterA,
+  onCollerBlocsApres,
   onNaviguer,
   onNaviguerVertical,
   onSupprimerEtReculer,
@@ -857,9 +973,13 @@ function ListeBlocs({
 }: {
   tousLesBlocs: BlocEspace[];
   parentBlocId: string | null;
-  onChange: () => void;
+  onChange: (blocId: string, champs: Partial<BlocEspace>) => void;
+  onSupprimerBloc: (blocId: string) => void;
   onDeplacer: (idSource: string, idCible: string) => void;
+  onImbriquer: (idSource: string, idCibleParent: string) => void;
+  onDesimbriquer: (idSource: string) => void;
   onAjouterA: (indexDansFreres: number, parentId: string | null, type: string) => void;
+  onCollerBlocsApres: (indexDansFreres: number, parentId: string | null, blocs: { type: string; texte: string }[]) => void;
   onNaviguer: (id: string) => void;
   onNaviguerVertical: (depuisId: string, direction: "haut" | "bas") => void;
   onSupprimerEtReculer: (depuisId: string) => void;
@@ -878,7 +998,14 @@ function ListeBlocs({
             onDrop={(e) => {
               e.preventDefault();
               const idSource = e.dataTransfer.getData("text/plain");
-              if (idSource) onDeplacer(idSource, b.id);
+              if (!idSource) return;
+              // Déposer sur la partie droite d'un bloc l'imbrique dedans
+              // (devient enfant) ; sur la partie gauche/milieu, réordonne
+              // comme frère -- même geste que Notion (27/08/2026).
+              const rect = e.currentTarget.getBoundingClientRect();
+              const positionRelative = (e.clientX - rect.left) / rect.width;
+              if (positionRelative > 0.6) onImbriquer(idSource, b.id);
+              else if (idSource !== b.id) onDeplacer(idSource, b.id);
             }}
             className="group/ligne flex items-start gap-1"
           >
@@ -888,8 +1015,8 @@ function ListeBlocs({
                 e.dataTransfer.setData("text/plain", b.id);
                 e.dataTransfer.effectAllowed = "move";
               }}
-              className="mt-1.5 hidden shrink-0 cursor-grab text-dj-texte-muet group-hover/ligne:block"
-              title="Glisser pour réordonner"
+              className="mt-1.5 shrink-0 cursor-grab text-dj-texte-muet opacity-0 transition-opacity group-hover/ligne:opacity-100"
+              title="Glisser pour réordonner (déposer à droite pour imbriquer)"
             >
               <GripVertical size={13} />
             </span>
@@ -897,7 +1024,11 @@ function ListeBlocs({
               <LigneBloc
                 bloc={b}
                 onChange={onChange}
+                onSupprimer={() => onSupprimerBloc(b.id)}
+                onIndenter={() => i > 0 && onImbriquer(b.id, freres[i - 1].id)}
+                onDesindenter={() => onDesimbriquer(b.id)}
                 onNouveauBlocApres={(type) => onAjouterA(i + 1, parentBlocId, type ?? "texte")}
+                onCollerApres={(blocsListe) => onCollerBlocsApres(i + 1, parentBlocId, blocsListe)}
                 onNaviguer={onNaviguer}
                 onNaviguerVertical={(direction) => onNaviguerVertical(b.id, direction)}
                 onSupprimerEtReculer={() => onSupprimerEtReculer(b.id)}
@@ -908,36 +1039,44 @@ function ListeBlocs({
             </div>
           </div>
 
-          {b.type === "bascule" && Boolean(b.contenu?.ouvert) && (
+          {(b.type === "bascule"
+            ? Boolean(b.contenu?.ouvert)
+            : tousLesBlocs.some((x) => (x.parent_bloc_id ?? null) === b.id)) && (
             <div className="mt-0.5">
               <ListeBlocs
                 tousLesBlocs={tousLesBlocs}
                 parentBlocId={b.id}
                 onChange={onChange}
+                onSupprimerBloc={onSupprimerBloc}
                 onDeplacer={onDeplacer}
+                onImbriquer={onImbriquer}
+                onDesimbriquer={onDesimbriquer}
                 onAjouterA={onAjouterA}
+                onCollerBlocsApres={onCollerBlocsApres}
                 onNaviguer={onNaviguer}
                 onNaviguerVertical={onNaviguerVertical}
                 onSupprimerEtReculer={onSupprimerEtReculer}
                 activation={activation}
                 onActivationConsommee={onActivationConsommee}
               />
-              <div className="relative ml-4 mt-0.5 inline-block pl-3">
-                <button
-                  onClick={() => setMenuOuvertPourIndex(menuOuvertPourIndex === i ? null : i)}
-                  className="-mx-2 flex items-center gap-1.5 rounded-md px-2 py-1 text-xs text-dj-texte-muet/70 hover:bg-dj-surface-haute hover:text-dj-texte-muet"
-                >
-                  <Plus size={12} /> Ajouter
-                </button>
-                {menuOuvertPourIndex === i && (
-                  <MenuAjouterBloc
-                    onChoisir={(type) => {
-                      setMenuOuvertPourIndex(null);
-                      onAjouterA(tousLesBlocs.filter((x) => (x.parent_bloc_id ?? null) === b.id).length, b.id, type);
-                    }}
-                  />
-                )}
-              </div>
+              {b.type === "bascule" && (
+                <div className="relative ml-4 mt-0.5 inline-block pl-3">
+                  <button
+                    onClick={() => setMenuOuvertPourIndex(menuOuvertPourIndex === i ? null : i)}
+                    className="-mx-2 flex items-center gap-1.5 rounded-md px-2 py-1 text-xs text-dj-texte-muet/70 hover:bg-dj-surface-haute hover:text-dj-texte-muet"
+                  >
+                    <Plus size={12} /> Ajouter
+                  </button>
+                  {menuOuvertPourIndex === i && (
+                    <MenuAjouterBloc
+                      onChoisir={(type) => {
+                        setMenuOuvertPourIndex(null);
+                        onAjouterA(tousLesBlocs.filter((x) => (x.parent_bloc_id ?? null) === b.id).length, b.id, type);
+                      }}
+                    />
+                  )}
+                </div>
+              )}
             </div>
           )}
         </div>
@@ -1029,6 +1168,35 @@ function detecterDeclencheurLien(texte: string, curseur: number): { debut: numbe
   return null;
 }
 
+// Raccourcis markdown en tapant : "# " -> titre, "- "/"* " -> liste à
+// puces, "1. " -> liste numérotée, "> " -> citation, "[] "/"[ ] " ->
+// case à cocher -- comme Notion, converti dès la frappe de l'espace qui
+// suit le marqueur, marqueur retiré (demande Bourama, 27/08/2026).
+function detecterRaccourciMarkdown(v: string): { type: string; reste: string } | null {
+  let m: RegExpMatchArray | null;
+  if ((m = v.match(/^#{1,3} ([\s\S]*)$/))) return { type: "titre", reste: m[1] };
+  if ((m = v.match(/^[-*] ([\s\S]*)$/))) return { type: "liste_puces", reste: m[1] };
+  if ((m = v.match(/^\d+\. ([\s\S]*)$/))) return { type: "liste_numerotee", reste: m[1] };
+  if ((m = v.match(/^> ([\s\S]*)$/))) return { type: "citation", reste: m[1] };
+  if ((m = v.match(/^\[ ?\] ([\s\S]*)$/))) return { type: "case_a_cocher", reste: m[1] };
+  return null;
+}
+
+// Découpe un texte collé (potentiellement multi-lignes/markdown) en
+// blocs typés -- réutilise le même détecteur que la frappe.
+function decouperTexteEnBlocs(texte: string): { type: string; texte: string }[] {
+  return texte
+    .split("\n")
+    .map((ligne) => ligne.trim())
+    .filter((ligne) => ligne.length > 0)
+    .map((ligne) => {
+      const conv = detecterRaccourciMarkdown(ligne);
+      if (conv) return { type: conv.type, texte: conv.reste };
+      if (/^---+$/.test(ligne)) return { type: "separateur", texte: "" };
+      return { type: "texte", texte: ligne };
+    });
+}
+
 function extraireIdYoutube(url: string): string | null {
   const m = url.match(/(?:youtube\.com\/watch\?v=|youtu\.be\/|youtube\.com\/embed\/)([\w-]{6,})/);
   return m ? m[1] : null;
@@ -1043,7 +1211,11 @@ function extraireIdYoutube(url: string): string | null {
 function LigneBloc({
   bloc,
   onChange,
+  onSupprimer,
+  onIndenter,
+  onDesindenter,
   onNouveauBlocApres,
+  onCollerApres,
   onNaviguer,
   onNaviguerVertical,
   onSupprimerEtReculer,
@@ -1052,8 +1224,12 @@ function LigneBloc({
   onActivationConsommee,
 }: {
   bloc: BlocEspace;
-  onChange: () => void;
+  onChange: (blocId: string, champs: Partial<BlocEspace>) => void;
+  onSupprimer: () => void;
+  onIndenter: () => void;
+  onDesindenter: () => void;
   onNouveauBlocApres: (type?: string) => void;
+  onCollerApres: (blocs: { type: string; texte: string }[]) => void;
   onNaviguer: (id: string) => void;
   onNaviguerVertical: (direction: "haut" | "bas") => void;
   onSupprimerEtReculer: () => void;
@@ -1102,20 +1278,35 @@ function LigneBloc({
     setSelection(null);
     setLienTrigger(null);
     if (valeur === ((bloc.contenu?.[cle] as string) ?? "")) return;
-    await modifierBloc(bloc.id, { contenu: { [cle]: valeur } });
-    onChange();
-  }
-
-  async function supprimer() {
-    await supprimerBloc(bloc.id);
-    onChange();
+    const contenu = { ...bloc.contenu, [cle]: valeur };
+    await modifierBloc(bloc.id, { contenu });
+    onChange(bloc.id, { contenu });
   }
 
   async function convertirEnType(type: string) {
     setValeur("");
     setEnEdition(false);
     await modifierBloc(bloc.id, { type, contenu: {} });
-    onChange();
+    onChange(bloc.id, { type, contenu: {} });
+  }
+
+  // Raccourci markdown en tapant ("# ", "- ", "1. ", "> ", "[] ") --
+  // convertit le bloc courant sans effacer ni quitter l'édition,
+  // contrairement à convertirEnType (utilisée par le menu slash) qui
+  // repart d'un bloc vide (demande Bourama, 27/08/2026).
+  async function convertirEnTypeAvecTexte(type: string, texte: string) {
+    const cleNouvelle = type === "equation" ? "latex" : "texte";
+    const contenu = { [cleNouvelle]: texte };
+    setValeur(texte);
+    await modifierBloc(bloc.id, { type, contenu });
+    onChange(bloc.id, { type, contenu });
+    requestAnimationFrame(() => {
+      const zone = refZone.current;
+      if (zone) {
+        zone.focus();
+        if ("setSelectionRange" in zone) zone.setSelectionRange(texte.length, texte.length);
+      }
+    });
   }
 
   function appliquerFormat(marque: string) {
@@ -1140,9 +1331,35 @@ function LigneBloc({
 
   function surChangement(e: React.ChangeEvent<HTMLTextAreaElement>) {
     const v = e.target.value;
+    if (bloc.type === "texte") {
+      const conv = detecterRaccourciMarkdown(v);
+      if (conv) {
+        convertirEnTypeAvecTexte(conv.type, conv.reste);
+        return;
+      }
+    }
     setValeur(v);
     const curseur = e.target.selectionStart ?? v.length;
     setLienTrigger(detecterDeclencheurLien(v, curseur));
+  }
+
+  // Collage markdown multi-lignes -- éclate en plusieurs blocs typés au
+  // lieu de tout déverser en texte brut dans un seul bloc (demande
+  // Bourama, 27/08/2026). Un collage simple (une ligne, pas de syntaxe
+  // markdown de bloc) garde le comportement natif du navigateur.
+  async function surCollage(e: React.ClipboardEvent<HTMLTextAreaElement>) {
+    const texte = e.clipboardData.getData("text/plain");
+    if (!texte.includes("\n")) return;
+    const blocsACreer = decouperTexteEnBlocs(texte);
+    if (blocsACreer.length === 0) return;
+    e.preventDefault();
+    // Le premier bloc collé remplace le contenu du bloc courant (s'il
+    // était vide) ou continue le texte déjà tapé ; les suivants sont
+    // insérés juste après.
+    const [premier, ...suite] = blocsACreer;
+    const nouveauTexte = valeur + premier.texte;
+    await convertirEnTypeAvecTexte(premier.type, nouveauTexte);
+    if (suite.length > 0) onCollerApres(suite);
   }
 
   function choisirLien(p: PageEspace) {
@@ -1203,6 +1420,25 @@ function LigneBloc({
       return;
     }
 
+    // Tab / Shift+Tab -- imbrique/désimbrique le bloc, quel que soit son
+    // type (avant, réservé au seul bloc "bascule"). Demande Bourama,
+    // 27/08/2026.
+    if (e.key === "Tab") {
+      e.preventDefault();
+      enregistrer();
+      if (e.shiftKey) onDesindenter();
+      else onIndenter();
+      return;
+    }
+
+    // "---" puis Entrée -> ligne de séparation, comme Notion.
+    if (e.key === "Enter" && !e.shiftKey && !e.ctrlKey && !e.metaKey && bloc.type === "texte" && /^---+$/.test(valeur.trim())) {
+      e.preventDefault();
+      convertirEnType("separateur");
+      onNouveauBlocApres();
+      return;
+    }
+
     // Ctrl/Cmd+Entrée, comme Shift+Entrée : saut de ligne DANS le bloc,
     // ne le quitte pas -- ne pas intercepter, laisser le textarea gérer.
     if (e.key === "Enter" && !e.shiftKey && !e.ctrlKey && !e.metaKey) {
@@ -1227,7 +1463,7 @@ function LigneBloc({
     return (
       <div className="group -mx-2 flex items-center gap-2 rounded-md px-2 py-1.5">
         <hr className="flex-1 border-dj-bordure" />
-        <button onClick={supprimer} className="hidden text-dj-texte-muet hover:text-red-500 group-hover:block">
+        <button onClick={onSupprimer} className="text-dj-texte-muet opacity-0 transition-opacity hover:text-red-500 group-hover:opacity-100">
           <Trash2 size={13} />
         </button>
       </div>
@@ -1239,8 +1475,9 @@ function LigneBloc({
       <div className="group flex items-center gap-1 -mx-2 rounded-md px-2 py-1 hover:bg-dj-surface-haute/60">
         <button
           onClick={async () => {
-            await modifierBloc(bloc.id, { contenu: { ...bloc.contenu, ouvert: !bloc.contenu?.ouvert } });
-            onChange();
+            const contenu = { ...bloc.contenu, ouvert: !bloc.contenu?.ouvert };
+            await modifierBloc(bloc.id, { contenu });
+            onChange(bloc.id, { contenu });
           }}
           className="shrink-0 text-dj-texte-muet"
         >
@@ -1252,8 +1489,9 @@ function LigneBloc({
           onChange={(e) => setValeur(e.target.value)}
           onBlur={async () => {
             if (valeur === ((bloc.contenu?.texte as string) ?? "")) return;
-            await modifierBloc(bloc.id, { contenu: { ...bloc.contenu, texte: valeur } });
-            onChange();
+            const contenu = { ...bloc.contenu, texte: valeur };
+            await modifierBloc(bloc.id, { contenu });
+            onChange(bloc.id, { contenu });
           }}
           onKeyDown={(e) => {
             if (e.key === "Enter" && !e.shiftKey && !e.ctrlKey && !e.metaKey) {
@@ -1277,7 +1515,7 @@ function LigneBloc({
           placeholder="Bascule sans titre"
           className="flex-1 bg-transparent text-sm font-medium text-dj-texte outline-none placeholder:text-dj-texte-muet/50"
         />
-        <button onClick={supprimer} className="hidden shrink-0 text-dj-texte-muet hover:text-red-500 group-hover:block">
+        <button onClick={onSupprimer} className="shrink-0 text-dj-texte-muet opacity-0 transition-opacity hover:text-red-500 group-hover:opacity-100">
           <Trash2 size={13} />
         </button>
       </div>
@@ -1294,8 +1532,8 @@ function LigneBloc({
           className="max-h-[420px] w-full rounded-md object-contain"
         />
         <button
-          onClick={supprimer}
-          className="absolute right-3 top-1 hidden rounded-md bg-dj-fond/80 p-1.5 text-dj-texte-muet hover:text-red-500 group-hover:block"
+          onClick={onSupprimer}
+          className="absolute right-3 top-1 rounded-md bg-dj-fond/80 p-1.5 text-dj-texte-muet opacity-0 transition-opacity hover:text-red-500 group-hover:opacity-100"
         >
           <Trash2 size={13} />
         </button>
@@ -1315,7 +1553,7 @@ function LigneBloc({
           <IconFichier size={15} className="shrink-0" />
           <span className="truncate">{String(bloc.contenu?.nom ?? "Fichier")}</span>
         </a>
-        <button onClick={supprimer} className="hidden shrink-0 text-dj-texte-muet hover:text-red-500 group-hover:block">
+        <button onClick={onSupprimer} className="shrink-0 text-dj-texte-muet opacity-0 transition-opacity hover:text-red-500 group-hover:opacity-100">
           <Trash2 size={13} />
         </button>
       </div>
@@ -1331,13 +1569,14 @@ function LigneBloc({
             placeholder={bloc.type === "video" ? "Colle un lien vidéo (YouTube…) puis Entrée" : "Colle un lien à intégrer puis Entrée"}
             onKeyDown={async (e) => {
               if (e.key === "Enter" && e.currentTarget.value.trim()) {
-                await modifierBloc(bloc.id, { contenu: { url: e.currentTarget.value.trim() } });
-                onChange();
+                const contenu = { url: e.currentTarget.value.trim() };
+                await modifierBloc(bloc.id, { contenu });
+                onChange(bloc.id, { contenu });
               }
             }}
             className="w-full rounded-md border border-dj-bordure bg-dj-surface px-2 py-1 text-sm outline-none"
           />
-          <button onClick={supprimer} className="hidden shrink-0 text-dj-texte-muet hover:text-red-500 group-hover:block">
+          <button onClick={onSupprimer} className="shrink-0 text-dj-texte-muet opacity-0 transition-opacity hover:text-red-500 group-hover:opacity-100">
             <Trash2 size={13} />
           </button>
         </div>
@@ -1358,7 +1597,7 @@ function LigneBloc({
           <a href={url} target="_blank" rel="noreferrer" className="text-xs text-dj-texte-muet hover:text-dj-texte hover:underline">
             Ouvrir dans un nouvel onglet
           </a>
-          <button onClick={supprimer} className="hidden text-dj-texte-muet hover:text-red-500 group-hover:block">
+          <button onClick={onSupprimer} className="text-dj-texte-muet opacity-0 transition-opacity hover:text-red-500 group-hover:opacity-100">
             <Trash2 size={13} />
           </button>
         </div>
@@ -1381,8 +1620,9 @@ function LigneBloc({
           className="mt-1.5 shrink-0"
           checked={Boolean(bloc.contenu?.coche)}
           onChange={async (e) => {
-            await modifierBloc(bloc.id, { contenu: { ...bloc.contenu, coche: e.target.checked } });
-            onChange();
+            const contenu = { ...bloc.contenu, coche: e.target.checked };
+            await modifierBloc(bloc.id, { contenu });
+            onChange(bloc.id, { contenu });
           }}
         />
       )}
@@ -1411,6 +1651,7 @@ function LigneBloc({
                 autoFocus
                 value={valeur}
                 onChange={surChangement}
+                onPaste={surCollage}
                 onSelect={surSelection}
                 onBlur={enregistrer}
                 onKeyDown={surTouche}
@@ -1474,7 +1715,7 @@ function LigneBloc({
           </div>
         )}
       </div>
-      <button onClick={supprimer} className="hidden shrink-0 text-dj-texte-muet hover:text-red-500 group-hover:block">
+      <button onClick={onSupprimer} className="shrink-0 text-dj-texte-muet opacity-0 transition-opacity hover:text-red-500 group-hover:opacity-100">
         <Trash2 size={13} />
       </button>
     </div>
