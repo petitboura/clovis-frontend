@@ -714,12 +714,12 @@ async function envoyerFichiersDirect(fichiersChoisis: FileList | File[]) {
           unique, menu au clic (Importer / Texte / Lien). Fichiers et
           dossier partagent la même entrée "Importer" -- pas de catégorie
           "Dossier" séparée, juste rendue possible via un second input
-          caché (webkitdirectory). CORRECTIF (27/08, même jour) : posé à
-          GAUCHE (pas à droite comme la première version) -- ChatFlottant
-          est monté globalement dans AppShell.tsx (jamais démonté au
-          changement de page), toujours en bas à droite, y compris agrandi
-          en plein panneau de chat -- un FAB à droite le recouvrait/était
-          recouvert par lui sur cette page. Marge de la barre native
+          caché (webkitdirectory). CORRECTIF (27/08, encore le même jour) :
+          repassé à DROITE (la version "à gauche" cachait le profil) --
+          empilé juste au-dessus du ChatFlottant (monté globalement dans
+          AppShell.tsx, jamais démonté au changement de page), et rendu
+          plus petit que lui (h-10 vs h-12, ChatFlottant réduit lui aussi
+          de h-14 à h-12 dans le même correctif). Marge de la barre native
           mobile reprise de BarreDeSaisie.tsx. */}
       <input
         id="ajout-fab-fichiers"
@@ -748,7 +748,7 @@ async function envoyerFichiersDirect(fichiersChoisis: FileList | File[]) {
       />
 
       {(envoi || uploadDossierEnCours) && (
-        <div className="fixed bottom-[calc(6rem+var(--cap-native-navigation-bottom,0px))] left-5 z-40 flex items-center gap-2 rounded-cgpt-bouton border border-dj-bordure bg-dj-surface px-3 py-2 text-xs text-dj-texte shadow-xl">
+        <div className="fixed bottom-[calc(8.25rem+var(--cap-native-navigation-bottom,0px))] right-5 z-40 flex items-center gap-2 rounded-cgpt-bouton border border-dj-bordure bg-dj-surface px-3 py-2 text-xs text-dj-texte shadow-xl">
           <Loader2 size={14} className="animate-spin" />
           Envoi…
         </div>
@@ -761,7 +761,7 @@ async function envoyerFichiersDirect(fichiersChoisis: FileList | File[]) {
         />
       )}
       {menuAjoutOuvert && (
-        <div className="fixed bottom-[calc(6rem+var(--cap-native-navigation-bottom,0px))] left-5 z-40 flex flex-col items-start gap-2">
+        <div className="fixed bottom-[calc(8.25rem+var(--cap-native-navigation-bottom,0px))] right-5 z-40 flex flex-col items-end gap-2">
           <label
             htmlFor="ajout-fab-fichiers"
             className="flex cursor-pointer items-center gap-2 rounded-cgpt-bouton border border-dj-bordure bg-dj-surface px-4 py-2 text-sm font-medium text-dj-texte shadow-lg transition-colors hover:border-dj-bordure-forte"
@@ -801,9 +801,9 @@ async function envoyerFichiersDirect(fichiersChoisis: FileList | File[]) {
       <button
         onClick={() => setMenuAjoutOuvert((v) => !v)}
         aria-label={menuAjoutOuvert ? "Fermer le menu d'ajout" : "Ajouter"}
-        className="fixed bottom-[calc(1.25rem+var(--cap-native-navigation-bottom,0px))] left-5 z-40 flex h-14 w-14 items-center justify-center rounded-cgpt-bouton bg-dj-accent-1 text-[#1A0D02] shadow-[0_4px_20px_rgba(0,0,0,0.35)] transition-transform hover:bg-dj-accent-2"
+        className="fixed bottom-[calc(5rem+var(--cap-native-navigation-bottom,0px))] right-5 z-40 flex h-10 w-10 items-center justify-center rounded-cgpt-bouton bg-dj-accent-1 text-[#1A0D02] shadow-[0_4px_20px_rgba(0,0,0,0.35)] transition-transform hover:bg-dj-accent-2"
       >
-        <Plus size={24} className={`transition-transform ${menuAjoutOuvert ? "rotate-45" : ""}`} />
+        <Plus size={18} className={`transition-transform ${menuAjoutOuvert ? "rotate-45" : ""}`} />
       </button>
 
       {modaleAjout && (

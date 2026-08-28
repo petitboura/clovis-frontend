@@ -204,9 +204,9 @@ export function ChatFlottant({
       <button
         onClick={() => setEtat("mini")}
         aria-label="Ouvrir le chat"
-        className="group fixed bottom-5 right-5 z-40 flex h-14 w-14 items-center justify-center rounded-cgpt-bouton bg-dj-accent-1 text-[#1A0D02] shadow-[0_4px_20px_rgba(0,0,0,0.35)] transition-colors hover:bg-dj-accent-2"
+        className="group fixed bottom-5 right-5 z-40 flex h-12 w-12 items-center justify-center rounded-cgpt-bouton bg-dj-accent-1 text-[#1A0D02] shadow-[0_4px_20px_rgba(0,0,0,0.35)] transition-colors hover:bg-dj-accent-2"
       >
-        <Bird size={24} className="transition-transform duration-200 group-hover:-rotate-12 group-hover:scale-110" />
+        <Bird size={20} className="transition-transform duration-200 group-hover:-rotate-12 group-hover:scale-110" />
       </button>
     );
   }
