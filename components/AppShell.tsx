@@ -8,6 +8,7 @@ import { FenetresSections } from "@/components/chat/FenetresSections";
 import { CatalogueClovis } from "@/components/CatalogueClovis";
 import { PaletteCommandes } from "@/components/PaletteCommandes";
 import { ContexteChat, type EtatChat } from "@/lib/contexteChat";
+import { ContexteCatalogue } from "@/lib/contexteCatalogue";
 import { ContexteFenetres, useFournirFenetres } from "@/lib/contexteFenetres";
 import { BarreOngletsNative } from "@/components/mobile/BarreOngletsNative";
 import { BarreOngletsWeb } from "@/components/mobile/BarreOngletsWeb";
@@ -77,6 +78,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
 
   return (
     <ContexteChat.Provider value={{ etat: etatChat, setEtat: setEtatChat }}>
+    <ContexteCatalogue.Provider value={{ ouvrir: () => setCatalogueOuvert(true) }}>
       <ContexteFenetres.Provider value={fenetres}>
         <div className="flex h-dvh">
           {natif && <BarreOngletsNative />}
@@ -148,6 +150,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           {catalogueOuvert && <CatalogueClovis onFerme={() => setCatalogueOuvert(false)} />}
         </div>
       </ContexteFenetres.Provider>
+    </ContexteCatalogue.Provider>
     </ContexteChat.Provider>
   );
 }
