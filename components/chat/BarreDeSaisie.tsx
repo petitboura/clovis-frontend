@@ -1434,8 +1434,12 @@ export function BarreDeSaisie({
       )}
 
       {/* Rectangle à coins arrondis (plus une pilule ovale complète), tous
-          les éléments alignés en bas -- voir section 3.3. */}
-      <div className="relative hidden rounded-cgpt-carte border border-dj-bordure bg-dj-surface-haute px-4 py-3 focus-within:border-dj-bordure-forte md:block">
+          les éléments alignés en bas -- voir section 3.3.
+          CORRECTIF (27/08) : bg-dj-surface-haute -> bg-dj-surface, la
+          barre de saisie avait été oubliée quand les cartes sont
+          repassées en blanc pur (--dj-surface), demande explicite de
+          Bourama. */}
+      <div className="relative hidden rounded-cgpt-carte border border-dj-bordure bg-dj-surface px-4 py-3 focus-within:border-dj-bordure-forte md:block">
         {/* Aperçu formules (2026-07-27) -- affiché seulement si le
             brouillon contient au moins un "$", pour ne pas dupliquer
             inutilement un simple message texte sans maths. Placé
@@ -2067,7 +2071,7 @@ export function BarreDeSaisie({
           )}
         </div>
       )}
-      <div className="flex flex-col gap-1 rounded-cgpt-carte border border-dj-bordure bg-dj-surface-haute px-3 py-2.5 focus-within:border-dj-bordure-forte md:hidden">
+      <div className="flex flex-col gap-1 rounded-cgpt-carte border border-dj-bordure bg-dj-surface px-3 py-2.5 focus-within:border-dj-bordure-forte md:hidden">
         <textarea
           ref={zoneTexteMobileRef}
           value={texte}
