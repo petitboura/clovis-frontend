@@ -708,11 +708,21 @@ export function BarreDeSaisie({
   // scrollHeight à chaque frappe -- le CSS max-h-40 (voir plus bas) prend
   // le relais au-delà pour repasser en défilement interne plutôt que de
   // grandir indéfiniment.
+  // Étendu au composeur mobile (28/08/2026, retour Bourama : "il ne
+  // s'agrandit pas, tout reste sur une même ligne") -- la v1 mobile du
+  // 28/07 avait volontairement laissé de côté l'auto-agrandissement
+  // (rows={1} fixe, défilement interne uniquement), mais Bourama veut le
+  // même comportement que sur desktop. Les deux textarea (desktop et
+  // mobile) restent montés en même temps avec le même état `texte` (voir
+  // zoneTexteMobileRef plus haut), donc on ajuste les deux à chaque
+  // appel plutôt que de dupliquer la fonction.
   function ajusterHauteurTexte() {
-    const el = zoneTexteRef.current;
-    if (!el) return;
-    el.style.height = "auto";
-    el.style.height = `${el.scrollHeight}px`;
+    for (const ref of [zoneTexteRef, zoneTexteMobileRef]) {
+      const el = ref.current;
+      if (!el) continue;
+      el.style.height = "auto";
+      el.style.height = `${el.scrollHeight}px`;
+    }
   }
 
   useEffect(() => {
@@ -2075,7 +2085,10 @@ export function BarreDeSaisie({
         <textarea
           ref={zoneTexteMobileRef}
           value={texte}
-          onChange={(e) => setTexte(e.target.value)}
+          onChange={(e) => {
+            setTexte(e.target.value);
+            ajusterHauteurTexte();
+          }}
           onPaste={gererCollage}
           onKeyDown={(e) => {
             if (e.key === "Enter" && !e.shiftKey) {
