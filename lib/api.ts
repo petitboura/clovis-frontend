@@ -285,7 +285,20 @@ export async function ajouterFichierBibliothequePersonnelle(fichier: File, descr
   }
 
   const corps = new FormData();
-  corps.append("fichier", fichier);
+  // CORRECTIF 2026-08-27 (bug remonté par Bourama : un fichier issu d'un
+  // dossier importé gardait "le nom de toutes ses mères et grand-mères
+  // séparé par /" -- ex: nom_fichier = "Cours/Chimie/td1.pdf" au lieu de
+  // "td1.pdf"). Cause : pour un fichier obtenu via un input
+  // webkitdirectory, certains navigateurs utilisent la propriété
+  // webkitRelativePath (le chemin complet) plutôt que .name comme nom de
+  // fichier dans l'encodage multipart de FormData.append quand aucun 3e
+  // argument n'est fourni -- ce que le backend reçoit tel quel comme
+  // nom_original (voir api/bibliotheque_utilisateur.py). On force donc
+  // explicitement le nom envoyé au SEUL nom de fichier (dernier segment),
+  // jamais son chemin -- corrige la source, pour tous les appelants
+  // (dossier importé ou fichier simple), peu importe le navigateur.
+  const nomSeul = (fichier.webkitRelativePath || fichier.name).split("/").pop() || fichier.name;
+  corps.append("fichier", fichier, nomSeul);
   if (titre?.trim()) corps.append("titre", titre.trim());
   corps.append("description", description);
 
