@@ -392,6 +392,30 @@ export async function supprimerDeBibliothequePublique(entreeId: string) {
   return appelerApi(`/api/bibliotheque-publique/${entreeId}`, { method: "DELETE" });
 }
 
+/**
+ * Upload de PLUSIEURS fichiers d'un coup vers la bibliothèque publique
+ * (28/08/2026, demande Bourama). Même pattern que
+ * ajouterFichiersBibliothequePersonnelle : boucle séquentielle, pas
+ * d'endpoint bulk dédié côté backend. Chaque fichier reçoit son nom
+ * (sans extension) comme nom de document, sans description -- voir
+ * BibliothequePublique.tsx pour la raison (choix de Bourama : dans ce
+ * cas précis, pas de description). Si un fichier échoue, les autres
+ * continuent quand même ; l'appelant reçoit la liste des erreurs (vide
+ * si tout est passé) pour les afficher.
+ */
+export async function ajouterFichiersABibliothequePublique(fichiers: File[]) {
+  const erreurs: { nom: string; erreur: string }[] = [];
+  for (const fichier of fichiers) {
+    const nomAuto = fichier.name.replace(/\.[^/.]+$/, "");
+    try {
+      await ajouterABibliothequePublique(fichier, nomAuto, "");
+    } catch (e) {
+      erreurs.push({ nom: fichier.name, erreur: messageErreur(e) });
+    }
+  }
+  return erreurs;
+}
+
 // Copie un fichier de la bibliothèque publique vers la bibliothèque
 // personnelle de l'utilisateur connecté (25/08, demande Bourama).
 // appelerApi lève déjà une ErreurApi (statusCode 401) si pas connecté --

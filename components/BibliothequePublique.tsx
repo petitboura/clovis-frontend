@@ -3,12 +3,13 @@
 import { useEffect, useRef, useState } from "react";
 import {
   Search, Plus, Trash2, Paperclip, FileText, Image as IconImage, Music as IconAudio, Video as IconVideo, Download,
-  Flag, FolderPlus, Check,
+  Flag, FolderPlus, Check, X,
 } from "lucide-react";
 import Link from "next/link";
 import {
   listerBibliothequePublique,
   ajouterABibliothequePublique,
+  ajouterFichiersABibliothequePublique,
   supprimerDeBibliothequePublique,
   copierVersBibliothequePersonnelle,
   type EntreeBibliothequePublique,
@@ -43,15 +44,31 @@ function iconePourType(typeMime: string | null) {
 // par contenu (SignalerContenuModal, voir aussi le guide Notion "Guide
 // pour droit d'auteur") et des liens vers les CGU/politique de
 // copyright (api/contenu_legal.py, pages /cgu et /copyright).
+//
+// 28/08/2026, demande Bourama : "on ne peut pas ajouter plusieurs
+// fichiers en un coup". Input file passé en `multiple`, state fichier
+// devenu un tableau. Choix de Bourama sur nom/description dans ce cas :
+// 1 fichier -> comportement inchangé (nom + description saisis à la
+// main) ; plusieurs fichiers -> nom auto (nom du fichier) par fichier,
+// pas de description du tout, formulaire nom/description masqué. Voir
+// ajouterFichiersABibliothequePublique dans lib/api.ts (même pattern
+// que ajouterFichiersBibliothequePersonnelle : boucle séquentielle, pas
+// d'endpoint bulk dédié côté backend).
 export function BibliothequePublique() {
   const [liste, setListe] = useState<EntreeBibliothequePublique[] | undefined>(undefined);
   const [recherche, setRecherche] = useState("");
   const [formulaireOuvert, setFormulaireOuvert] = useState(false);
-  const [fichier, setFichier] = useState<File | null>(null);
+  const [fichiers, setFichiers] = useState<File[]>([]);
   const [nom, setNom] = useState("");
   const [description, setDescription] = useState("");
   const [envoi, setEnvoi] = useState(false);
   const [erreur, setErreur] = useState<string | null>(null);
+  // Rempli seulement dans le cas multi-fichiers (28/08/2026, demande
+  // Bourama : "on ne peut pas ajouter plusieurs fichiers en un coup") --
+  // même pattern que erreursEnvoi dans EspaceBibliotheque.tsx : chaque
+  // fichier est envoyé séquentiellement, un échec n'empêche pas les
+  // autres, on affiche la liste des échecs à la fin.
+  const [erreursEnvoi, setErreursEnvoi] = useState<{ nom: string; erreur: string }[]>([]);
   const [sansCompte, setSansCompte] = useState(false);
   const [entreeSignalee, setEntreeSignalee] = useState<EntreeBibliothequePublique | null>(null);
   const [entreeOuverte, setEntreeOuverte] = useState<EntreeBibliothequePublique | null>(null);
@@ -76,18 +93,49 @@ export function BibliothequePublique() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [recherche]);
 
-  function choisirFichier(f: File) {
-    setFichier(f);
-    if (!nom.trim()) setNom(f.name.replace(/\.[^/.]+$/, "")); // nom du fichier sans extension comme point de départ, modifiable
+  // 28/08/2026, demande Bourama : plusieurs fichiers en un coup. Choix
+  // de Bourama sur nom/description dans ce cas : un seul fichier ->
+  // comportement inchangé (nom modifiable, description modifiable) ;
+  // plusieurs fichiers -> nom auto (nom du fichier) par fichier, pas de
+  // description du tout, donc les champs nom/description sont masqués
+  // dans le formulaire quand fichiers.length > 1 (voir plus bas).
+  function choisirFichiers(fichiersChoisis: FileList | File[]) {
+    const liste = Array.from(fichiersChoisis);
+    if (liste.length === 0) return;
+    setFichiers(liste);
+    if (liste.length === 1 && !nom.trim()) {
+      setNom(liste[0].name.replace(/\.[^/.]+$/, "")); // nom du fichier sans extension comme point de départ, modifiable
+    }
+  }
+
+  function retirerFichier(f: File) {
+    setFichiers((liste) => liste.filter((x) => x !== f));
   }
 
   async function ajouter() {
-    if (!fichier || !nom.trim()) return;
+    if (fichiers.length === 0) return;
     setEnvoi(true);
     setErreur(null);
+    setErreursEnvoi([]);
     try {
-      await ajouterABibliothequePublique(fichier, nom, description);
-      setFichier(null);
+      if (fichiers.length === 1) {
+        // Un seul fichier : comportement inchangé, nom obligatoire saisi par l'utilisateur.
+        if (!nom.trim()) {
+          setEnvoi(false);
+          return;
+        }
+        await ajouterABibliothequePublique(fichiers[0], nom, description);
+      } else {
+        const erreurs = await ajouterFichiersABibliothequePublique(fichiers);
+        if (erreurs.length === fichiers.length) {
+          // Tout a échoué : probablement pas connecté, même traitement que le cas single-fichier.
+          setEnvoi(false);
+          setSansCompte(true);
+          return;
+        }
+        setErreursEnvoi(erreurs);
+      }
+      setFichiers([]);
       setNom("");
       setDescription("");
       setFormulaireOuvert(false);
@@ -167,7 +215,11 @@ export function BibliothequePublique() {
 
       {!formulaireOuvert ? (
         <button
-          onClick={() => setFormulaireOuvert(true)}
+          onClick={() => {
+            setErreur(null);
+            setErreursEnvoi([]);
+            setFormulaireOuvert(true);
+          }}
           className="flex items-center justify-center gap-2 rounded-cgpt-carte border border-dj-bordure bg-dj-surface px-4 py-3 text-sm font-semibold text-dj-texte transition-colors hover:border-dj-bordure-forte hover:bg-dj-surface-haute"
         >
           <Plus size={16} /> Ajouter un document
@@ -177,35 +229,81 @@ export function BibliothequePublique() {
           <input
             ref={inputFichierRef}
             type="file"
+            multiple
             className="hidden"
-            onChange={(e) => e.target.files?.[0] && choisirFichier(e.target.files[0])}
+            onChange={(e) => e.target.files && choisirFichiers(e.target.files)}
           />
           <button
             onClick={() => inputFichierRef.current?.click()}
             className="flex items-center gap-2 rounded-cgpt-bouton border border-dashed border-dj-bordure px-4 py-3 text-sm text-dj-texte-muet transition-colors hover:border-dj-bordure-forte hover:text-dj-texte"
           >
             <Paperclip size={15} />
-            {fichier ? fichier.name : "Choisir un fichier..."}
+            {fichiers.length === 0
+              ? "Choisir un ou plusieurs fichiers..."
+              : fichiers.length === 1
+                ? fichiers[0].name
+                : `${fichiers.length} fichiers sélectionnés`}
           </button>
-          <input
-            value={nom}
-            onChange={(e) => setNom(e.target.value)}
-            placeholder="Nom du document"
-            className="rounded-cgpt-bouton border border-dj-bordure bg-dj-fond px-4 py-2 text-sm text-dj-texte outline-none focus:border-dj-bordure-forte"
-          />
-          <textarea
-            value={description}
-            onChange={(e) => setDescription(e.target.value)}
-            placeholder="Décris-le en quelques mots"
-            rows={3}
-            className="resize-none rounded-xl border border-dj-bordure bg-dj-fond px-4 py-2 text-sm text-dj-texte outline-none focus:border-dj-bordure-forte"
-          />
+
+          {/* Plusieurs fichiers : liste avec retrait individuel, pas de nom/description
+              (choix de Bourama, 28/08/2026) -- nom auto par fichier côté envoi. */}
+          {fichiers.length > 1 && (
+            <div className="flex flex-col gap-1">
+              {fichiers.map((f) => (
+                <div
+                  key={`${f.name}-${f.lastModified}`}
+                  className="flex items-center justify-between gap-2 rounded-cgpt-bouton border border-dj-bordure bg-dj-fond px-3 py-2 text-xs text-dj-texte-muet"
+                >
+                  <span className="truncate">{f.name}</span>
+                  <button
+                    onClick={() => retirerFichier(f)}
+                    title="Retirer ce fichier de la sélection"
+                    className="flex-shrink-0 text-dj-texte-muet transition-colors hover:text-[var(--dj-erreur)]"
+                  >
+                    <X size={13} />
+                  </button>
+                </div>
+              ))}
+            </div>
+          )}
+
+          {fichiers.length <= 1 && (
+            <>
+              <input
+                value={nom}
+                onChange={(e) => setNom(e.target.value)}
+                placeholder="Nom du document"
+                className="rounded-cgpt-bouton border border-dj-bordure bg-dj-fond px-4 py-2 text-sm text-dj-texte outline-none focus:border-dj-bordure-forte"
+              />
+              <textarea
+                value={description}
+                onChange={(e) => setDescription(e.target.value)}
+                placeholder="Décris-le en quelques mots"
+                rows={3}
+                className="resize-none rounded-xl border border-dj-bordure bg-dj-fond px-4 py-2 text-sm text-dj-texte outline-none focus:border-dj-bordure-forte"
+              />
+            </>
+          )}
+
           {erreur && <p className="text-xs text-[var(--dj-erreur)]">{erreur}</p>}
+
+          {erreursEnvoi.length > 0 && (
+            <div className="flex flex-col gap-1 rounded-xl border border-[var(--dj-erreur)]/40 bg-[var(--dj-erreur)]/5 px-4 py-3">
+              {erreursEnvoi.map((e) => (
+                <p key={e.nom} className="text-xs text-[var(--dj-erreur)]">
+                  {e.nom} : {e.erreur}
+                </p>
+              ))}
+            </div>
+          )}
+
           <div className="flex justify-end gap-2 pt-1">
             <button
               onClick={() => {
                 setFormulaireOuvert(false);
-                setFichier(null);
+                setFichiers([]);
+                setErreur(null);
+                setErreursEnvoi([]);
               }}
               className="rounded-cgpt-bouton border border-dj-bordure px-3 py-1.5 text-xs text-dj-texte-muet hover:text-dj-texte"
             >
@@ -213,10 +311,10 @@ export function BibliothequePublique() {
             </button>
             <button
               onClick={ajouter}
-              disabled={!fichier || !nom.trim() || envoi}
+              disabled={fichiers.length === 0 || (fichiers.length === 1 && !nom.trim()) || envoi}
               className="rounded-cgpt-bouton bg-dj-accent-1 px-4 py-1.5 text-xs font-bold text-[#1A0D02] transition-colors hover:bg-dj-accent-2 disabled:opacity-50"
             >
-              {envoi ? "Envoi…" : "Ajouter"}
+              {envoi ? "Envoi…" : fichiers.length > 1 ? `Ajouter (${fichiers.length})` : "Ajouter"}
             </button>
           </div>
         </div>
