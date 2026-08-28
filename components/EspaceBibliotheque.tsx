@@ -419,8 +419,8 @@ async function envoyerFichiersDirect(fichiersChoisis: FileList | File[]) {
   }
 
   async function creerDossier() {
+    // Nom optionnel (28/08, demande Bourama, retrofit depuis le catalogue public) -- l'API se rabat sur "Nouveau dossier" si vide.
     const nom = nouveauNomDossier.trim();
-    if (!nom) return;
     try {
       await creerDossierBibliotheque(nom, dossierCourantId ?? undefined);
       setNouveauNomDossier("");

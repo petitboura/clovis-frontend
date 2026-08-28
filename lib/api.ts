@@ -361,7 +361,7 @@ export async function listerBibliothequePublique(q?: string) {
   return resultat as EntreeBibliothequePublique[];
 }
 
-export async function ajouterABibliothequePublique(fichier: File, nom: string, description?: string) {
+export async function ajouterABibliothequePublique(fichier: File, nom?: string, description?: string, dossierId?: string) {
   const {
     data: { session },
   } = await supabase.auth.getSession();
@@ -372,8 +372,9 @@ export async function ajouterABibliothequePublique(fichier: File, nom: string, d
 
   const corps = new FormData();
   corps.append("fichier", fichier);
-  corps.append("nom", nom.trim());
+  corps.append("nom", (nom || "").trim());
   corps.append("description", description || "");
+  if (dossierId) corps.append("dossier_id", dossierId);
 
   const reponse = await fetch(`${API_URL}/api/bibliotheque-publique`, {
     method: "POST",
@@ -386,6 +387,66 @@ export async function ajouterABibliothequePublique(fichier: File, nom: string, d
   }
 
   return (await reponse.json()) as EntreeBibliothequePublique;
+}
+
+// 28/08/2026, demande Bourama : "le bouton + doit être comme en privé"
+// -- parité texte/lien avec ajouterTexteBibliothequePersonnelle /
+// ajouterLienBibliothequePersonnelle.
+export async function ajouterLienBibliothequePublique(url: string, nom?: string, description?: string, dossierId?: string) {
+  return appelerApi("/api/bibliotheque-publique/lien", {
+    method: "POST",
+    body: JSON.stringify({ url, nom: nom || "", description: description || "", dossier_id: dossierId || "" }),
+  }) as Promise<EntreeBibliothequePublique>;
+}
+
+export async function ajouterTexteBibliothequePublique(contenu: string, nom?: string, dossierId?: string) {
+  return appelerApi("/api/bibliotheque-publique/texte", {
+    method: "POST",
+    body: JSON.stringify({ contenu, nom: nom || "", dossier_id: dossierId || "" }),
+  }) as Promise<EntreeBibliothequePublique>;
+}
+
+export type DossierCataloguePublic = {
+  id: string;
+  cree_par: string | null;
+  nom: string;
+  statut: "contribution_libre" | "privee";
+  dossier_parent_id: string | null;
+  created_at: string;
+  fichier_ids: string[];
+};
+
+export async function listerDossiersCataloguePublic() {
+  return appelerApi("/api/bibliotheque-publique/dossiers") as Promise<DossierCataloguePublic[]>;
+}
+
+export async function creerDossierCataloguePublic(nom: string, statut: "contribution_libre" | "privee" = "contribution_libre", dossierParentId?: string) {
+  return appelerApi("/api/bibliotheque-publique/dossiers", {
+    method: "POST",
+    body: JSON.stringify({ nom, statut, dossier_parent_id: dossierParentId || null }),
+  }) as Promise<DossierCataloguePublic>;
+}
+
+export async function renommerDossierCataloguePublic(dossierId: string, nom: string) {
+  return appelerApi(`/api/bibliotheque-publique/dossiers/${dossierId}`, {
+    method: "PATCH",
+    body: JSON.stringify({ nom }),
+  });
+}
+
+export async function supprimerDossierCataloguePublic(dossierId: string) {
+  return appelerApi(`/api/bibliotheque-publique/dossiers/${dossierId}`, { method: "DELETE" });
+}
+
+export async function rangerFichierDossierCataloguePublic(dossierId: string, fichierId: string) {
+  return appelerApi(`/api/bibliotheque-publique/dossiers/${dossierId}/fichiers`, {
+    method: "POST",
+    body: JSON.stringify({ fichier_id: fichierId }),
+  });
+}
+
+export async function retirerFichierDossierCataloguePublic(dossierId: string, fichierId: string) {
+  return appelerApi(`/api/bibliotheque-publique/dossiers/${dossierId}/fichiers/${fichierId}`, { method: "DELETE" });
 }
 
 export async function supprimerDeBibliothequePublique(entreeId: string) {

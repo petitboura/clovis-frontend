@@ -2,17 +2,23 @@
 
 import { useEffect, useRef, useState } from "react";
 import {
-  Search, Plus, Trash2, Paperclip, FileText, Image as IconImage, Music as IconAudio, Video as IconVideo, Download,
-  Flag, FolderPlus, Check, X,
+  Search, Plus, Trash2, Paperclip, FileText, Image as IconImage, Music as IconAudio, Video as IconVideo,
+  Flag, FolderPlus, Check, Link as IconLien, Upload, FolderX, X, Globe, Lock,
 } from "lucide-react";
 import Link from "next/link";
 import {
   listerBibliothequePublique,
   ajouterABibliothequePublique,
   ajouterFichiersABibliothequePublique,
+  ajouterLienBibliothequePublique,
+  ajouterTexteBibliothequePublique,
   supprimerDeBibliothequePublique,
   copierVersBibliothequePersonnelle,
+  listerDossiersCataloguePublic,
+  creerDossierCataloguePublic,
+  supprimerDossierCataloguePublic,
   type EntreeBibliothequePublique,
+  type DossierCataloguePublic,
 } from "@/lib/api";
 import { messageErreur, ErreurApi } from "@/lib/erreurs";
 import { CTACompteRequis } from "@/components/CTACompteRequis";
@@ -23,10 +29,11 @@ import { Skeleton } from "./Skeleton";
 
 function iconePourType(typeMime: string | null) {
   if (!typeMime) return Paperclip;
+  if (typeMime === "text/uri-list") return IconLien;
   if (typeMime === "text/plain") return FileText;
-  if (typeMime.startsWith("image/")) return IconImage;
-  if (typeMime.startsWith("audio/")) return IconAudio;
-  if (typeMime.startsWith("video/")) return IconVideo;
+  if (typeMime?.startsWith("image/")) return IconImage;
+  if (typeMime?.startsWith("audio/")) return IconAudio;
+  if (typeMime?.startsWith("video/")) return IconVideo;
   return Paperclip;
 }
 
@@ -38,36 +45,27 @@ function iconePourType(typeMime: string | null) {
 // uploadé -- ce n'est pas un catalogue de simples liens/notes. Voir
 // api/bibliotheque_publique.py côté backend.
 //
-// Passée d'une fonctionnalité légère à un composant à part entière le
-// 22/08 (demande Bourama : "rendre la section bibliothèque plus
-// sérieuse, notamment la version publique"), ajout du signalement
-// par contenu (SignalerContenuModal, voir aussi le guide Notion "Guide
-// pour droit d'auteur") et des liens vers les CGU/politique de
-// copyright (api/contenu_legal.py, pages /cgu et /copyright).
+// REFONTE 28/08/2026 (demande Bourama : "le bouton + doit être comme
+// en privé, pour un fichier nom/description optionnels, même pour un
+// dossier") : bouton flottant unique (Fichier(s) / Texte / Lien /
+// Nouveau dossier), même principe que EspaceBibliotheque.tsx. Dossiers
+// du catalogue public : statut "contribution_libre" (tout le monde
+// peut y ranger un document) ou "privee" (seul le créateur), choisi à
+// la création -- voir core/dossiers_catalogue_public.py.
 //
-// 28/08/2026, demande Bourama : "on ne peut pas ajouter plusieurs
-// fichiers en un coup". Input file passé en `multiple`, state fichier
-// devenu un tableau. Choix de Bourama sur nom/description dans ce cas :
-// 1 fichier -> comportement inchangé (nom + description saisis à la
-// main) ; plusieurs fichiers -> nom auto (nom du fichier) par fichier,
-// pas de description du tout, formulaire nom/description masqué. Voir
-// ajouterFichiersABibliothequePublique dans lib/api.ts (même pattern
-// que ajouterFichiersBibliothequePersonnelle : boucle séquentielle, pas
-// d'endpoint bulk dédié côté backend).
+// Multi-fichiers (28/08/2026 bis, demande Bourama : "on ne peut pas
+// ajouter plusieurs fichiers en un coup") : input file `multiple`.
+// 1 fichier -> nom/description modifiables (optionnels). Plusieurs
+// fichiers -> nom auto par fichier, pas de description, même choix que
+// EspaceBibliotheque.tsx pour le cas multi (ajouterFichiersABibliothequePublique
+// dans lib/api.ts, boucle séquentielle).
 export function BibliothequePublique() {
   const [liste, setListe] = useState<EntreeBibliothequePublique[] | undefined>(undefined);
+  const [dossiers, setDossiers] = useState<DossierCataloguePublic[]>([]);
+  const [dossierCourantId, setDossierCourantId] = useState<string | null>(null);
   const [recherche, setRecherche] = useState("");
-  const [formulaireOuvert, setFormulaireOuvert] = useState(false);
-  const [fichiers, setFichiers] = useState<File[]>([]);
-  const [nom, setNom] = useState("");
-  const [description, setDescription] = useState("");
   const [envoi, setEnvoi] = useState(false);
   const [erreur, setErreur] = useState<string | null>(null);
-  // Rempli seulement dans le cas multi-fichiers (28/08/2026, demande
-  // Bourama : "on ne peut pas ajouter plusieurs fichiers en un coup") --
-  // même pattern que erreursEnvoi dans EspaceBibliotheque.tsx : chaque
-  // fichier est envoyé séquentiellement, un échec n'empêche pas les
-  // autres, on affiche la liste des échecs à la fin.
   const [erreursEnvoi, setErreursEnvoi] = useState<{ nom: string; erreur: string }[]>([]);
   const [sansCompte, setSansCompte] = useState(false);
   const [entreeSignalee, setEntreeSignalee] = useState<EntreeBibliothequePublique | null>(null);
@@ -75,7 +73,20 @@ export function BibliothequePublique() {
   const [copieEnCours, setCopieEnCours] = useState<string | null>(null);
   const [copieReussie, setCopieReussie] = useState<string | null>(null);
   const [compteRequisPourCopie, setCompteRequisPourCopie] = useState(false);
+
+  // Sélecteur flottant "+" (même principe que EspaceBibliotheque.tsx).
+  const [menuAjoutOuvert, setMenuAjoutOuvert] = useState(false);
+  const [modaleFichierOuverte, setModaleFichierOuverte] = useState(false);
+  const [modaleAjout, setModaleAjout] = useState<"texte" | "lien" | null>(null);
+  const [fichiers, setFichiers] = useState<File[]>([]);
+  const [nom, setNom] = useState("");
+  const [description, setDescription] = useState("");
+  const [texteOuLien, setTexteOuLien] = useState("");
   const inputFichierRef = useRef<HTMLInputElement>(null);
+
+  const [creationDossierOuverte, setCreationDossierOuverte] = useState(false);
+  const [nouveauNomDossier, setNouveauNomDossier] = useState("");
+  const [nouveauStatutDossier, setNouveauStatutDossier] = useState<"contribution_libre" | "privee">("contribution_libre");
 
   function charger(q?: string) {
     listerBibliothequePublique(q)
@@ -83,8 +94,15 @@ export function BibliothequePublique() {
       .catch(() => setListe([]));
   }
 
+  function chargerDossiers() {
+    listerDossiersCataloguePublic()
+      .then(setDossiers)
+      .catch(() => setDossiers([]));
+  }
+
   useEffect(() => {
     charger();
+    chargerDossiers();
   }, []);
 
   useEffect(() => {
@@ -93,12 +111,6 @@ export function BibliothequePublique() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [recherche]);
 
-  // 28/08/2026, demande Bourama : plusieurs fichiers en un coup. Choix
-  // de Bourama sur nom/description dans ce cas : un seul fichier ->
-  // comportement inchangé (nom modifiable, description modifiable) ;
-  // plusieurs fichiers -> nom auto (nom du fichier) par fichier, pas de
-  // description du tout, donc les champs nom/description sont masqués
-  // dans le formulaire quand fichiers.length > 1 (voir plus bas).
   function choisirFichiers(fichiersChoisis: FileList | File[]) {
     const liste = Array.from(fichiersChoisis);
     if (liste.length === 0) return;
@@ -106,29 +118,28 @@ export function BibliothequePublique() {
     if (liste.length === 1 && !nom.trim()) {
       setNom(liste[0].name.replace(/\.[^/.]+$/, "")); // nom du fichier sans extension comme point de départ, modifiable
     }
+    setModaleFichierOuverte(true);
   }
 
   function retirerFichier(f: File) {
     setFichiers((liste) => liste.filter((x) => x !== f));
   }
 
-  async function ajouter() {
+  // Nom optionnel (28/08, demande Bourama : "nom et description
+  // optionnels même pour dossier") -- l'API se rabat sur le nom du
+  // fichier si vide. Cas multi-fichiers : pas de nom/description
+  // saisis, chacun garde son nom de fichier (voir lib/api.ts).
+  async function ajouterFichier() {
     if (fichiers.length === 0) return;
     setEnvoi(true);
     setErreur(null);
     setErreursEnvoi([]);
     try {
       if (fichiers.length === 1) {
-        // Un seul fichier : comportement inchangé, nom obligatoire saisi par l'utilisateur.
-        if (!nom.trim()) {
-          setEnvoi(false);
-          return;
-        }
-        await ajouterABibliothequePublique(fichiers[0], nom, description);
+        await ajouterABibliothequePublique(fichiers[0], nom, description, dossierCourantId || undefined);
       } else {
         const erreurs = await ajouterFichiersABibliothequePublique(fichiers);
         if (erreurs.length === fichiers.length) {
-          // Tout a échoué : probablement pas connecté, même traitement que le cas single-fichier.
           setEnvoi(false);
           setSansCompte(true);
           return;
@@ -138,8 +149,9 @@ export function BibliothequePublique() {
       setFichiers([]);
       setNom("");
       setDescription("");
-      setFormulaireOuvert(false);
+      setModaleFichierOuverte(false);
       charger(recherche);
+      chargerDossiers();
     } catch (e) {
       if (e instanceof ErreurApi && e.statusCode === 401) {
         setSansCompte(true);
@@ -148,6 +160,58 @@ export function BibliothequePublique() {
       }
     } finally {
       setEnvoi(false);
+    }
+  }
+
+  async function envoyerTexteOuLien() {
+    const contenu = texteOuLien.trim();
+    if (!contenu) return;
+    const titre = nom.trim();
+    setEnvoi(true);
+    setErreur(null);
+    try {
+      if (modaleAjout === "lien") {
+        await ajouterLienBibliothequePublique(contenu, titre || undefined, description || undefined, dossierCourantId || undefined);
+      } else {
+        await ajouterTexteBibliothequePublique(contenu, titre || undefined, dossierCourantId || undefined);
+      }
+      setTexteOuLien("");
+      setNom("");
+      setDescription("");
+      setModaleAjout(null);
+      charger(recherche);
+      chargerDossiers();
+    } catch (e) {
+      if (e instanceof ErreurApi && e.statusCode === 401) {
+        setSansCompte(true);
+      } else {
+        setErreur(messageErreur(e));
+      }
+    } finally {
+      setEnvoi(false);
+    }
+  }
+
+  async function creerDossier() {
+    // Nom optionnel (28/08, demande Bourama) -- l'API se rabat sur "Nouveau dossier" si vide.
+    try {
+      await creerDossierCataloguePublic(nouveauNomDossier.trim(), nouveauStatutDossier);
+      setNouveauNomDossier("");
+      setCreationDossierOuverte(false);
+      chargerDossiers();
+    } catch (e) {
+      window.alert(messageErreur(e));
+    }
+  }
+
+  async function supprimerDossier(d: DossierCataloguePublic) {
+    if (!window.confirm(`Supprimer le dossier « ${d.nom} » ? (les documents qu'il contient restent dans le catalogue)`)) return;
+    try {
+      await supprimerDossierCataloguePublic(d.id);
+      if (dossierCourantId === d.id) setDossierCourantId(null);
+      chargerDossiers();
+    } catch (e) {
+      window.alert(messageErreur(e));
     }
   }
 
@@ -178,6 +242,7 @@ export function BibliothequePublique() {
     try {
       await supprimerDeBibliothequePublique(id);
       charger(recherche);
+      chargerDossiers();
     } catch (e) {
       window.alert(messageErreur(e));
     }
@@ -187,12 +252,18 @@ export function BibliothequePublique() {
     return <CTACompteRequis texte="Crée un compte pour ajouter un document à la bibliothèque publique." />;
   }
 
+  const dossiersRacine = dossiers.filter((d) => !d.dossier_parent_id);
+  const dossierActuel = dossierCourantId ? dossiers.find((d) => d.id === dossierCourantId) : null;
+  const listeAffichee = dossierCourantId
+    ? (liste || []).filter((e) => dossierActuel?.fichier_ids.includes(e.id))
+    : liste;
+
   return (
     <div className="flex animate-dj-fade-in-rapide flex-col gap-4">
       <p className="text-sm text-dj-texte-muet">
-        Un catalogue de documents partagé par tout le monde : uploade un fichier avec un nom et une description
-        pour que les autres le retrouvent facilement. En publiant, tu garantis détenir les droits sur ce contenu,
-        voir les{" "}
+        Un catalogue de documents partagé par tout le monde : ajoute un fichier, un lien ou une note avec un nom et
+        une description pour que les autres le retrouvent facilement. En publiant, tu garantis détenir les droits sur
+        ce contenu, voir les{" "}
         <Link href="/cgu" className="text-dj-texte-muet hover:text-dj-texte hover:underline">
           CGU
         </Link>{" "}
@@ -213,110 +284,83 @@ export function BibliothequePublique() {
         />
       </div>
 
-      {!formulaireOuvert ? (
+      <div className="flex flex-wrap items-center gap-2 text-xs">
         <button
-          onClick={() => {
-            setErreur(null);
-            setErreursEnvoi([]);
-            setFormulaireOuvert(true);
-          }}
-          className="flex items-center justify-center gap-2 rounded-cgpt-carte border border-dj-bordure bg-dj-surface px-4 py-3 text-sm font-semibold text-dj-texte transition-colors hover:border-dj-bordure-forte hover:bg-dj-surface-haute"
+          onClick={() => setDossierCourantId(null)}
+          className={`rounded-cgpt-bouton px-2 py-1 font-semibold transition-colors ${
+            dossierCourantId === null ? "bg-dj-surface-haute text-dj-texte" : "text-dj-texte-muet hover:text-dj-texte"
+          }`}
         >
-          <Plus size={16} /> Ajouter un document
+          Tous
         </button>
-      ) : (
-        <div className="flex flex-col gap-2 rounded-cgpt-carte border border-dj-bordure bg-dj-surface p-4">
+        {dossiersRacine.map((d) => (
+          <span key={d.id} className="flex items-center gap-1 rounded-cgpt-bouton px-2 py-1">
+            <button
+              onClick={() => setDossierCourantId(d.id)}
+              title={d.statut === "contribution_libre" ? "Contribution libre : tout le monde peut y ajouter" : "Privé : seul le créateur peut y ajouter"}
+              className={`flex items-center gap-1 font-semibold transition-colors ${
+                dossierCourantId === d.id ? "text-dj-texte" : "text-dj-texte-muet hover:text-dj-texte"
+              }`}
+            >
+              {d.statut === "contribution_libre" ? <Globe size={12} /> : <Lock size={12} />}
+              {d.nom}
+            </button>
+            <button onClick={() => supprimerDossier(d)} className="text-dj-texte-muet hover:text-[var(--dj-erreur)]" title="Supprimer le dossier">
+              <FolderX size={12} />
+            </button>
+          </span>
+        ))}
+        <button
+          onClick={() => setCreationDossierOuverte((v) => !v)}
+          className="flex items-center gap-1 rounded-cgpt-bouton px-2 py-1 font-semibold text-dj-texte-muet transition-colors hover:text-dj-texte"
+        >
+          <FolderPlus size={14} />
+          Nouveau dossier
+        </button>
+      </div>
+
+      {creationDossierOuverte && (
+        <div className="flex animate-dj-fade-in-rapide items-center gap-2">
           <input
-            ref={inputFichierRef}
-            type="file"
-            multiple
-            className="hidden"
-            onChange={(e) => e.target.files && choisirFichiers(e.target.files)}
+            autoFocus
+            type="text"
+            value={nouveauNomDossier}
+            onChange={(e) => setNouveauNomDossier(e.target.value)}
+            onKeyDown={(e) => e.key === "Enter" && creerDossier()}
+            placeholder="Nom du dossier… (optionnel)"
+            className="flex-1 rounded-cgpt-bouton border border-dj-bordure bg-dj-fond px-3 py-1.5 text-sm text-dj-texte outline-none focus:border-dj-bordure-forte"
           />
-          <button
-            onClick={() => inputFichierRef.current?.click()}
-            className="flex items-center gap-2 rounded-cgpt-bouton border border-dashed border-dj-bordure px-4 py-3 text-sm text-dj-texte-muet transition-colors hover:border-dj-bordure-forte hover:text-dj-texte"
+          <select
+            value={nouveauStatutDossier}
+            onChange={(e) => setNouveauStatutDossier(e.target.value as "contribution_libre" | "privee")}
+            className="rounded-cgpt-bouton border border-dj-bordure bg-dj-fond px-2 py-1.5 text-xs text-dj-texte outline-none focus:border-dj-bordure-forte"
           >
-            <Paperclip size={15} />
-            {fichiers.length === 0
-              ? "Choisir un ou plusieurs fichiers..."
-              : fichiers.length === 1
-                ? fichiers[0].name
-                : `${fichiers.length} fichiers sélectionnés`}
+            <option value="contribution_libre">Contribution libre</option>
+            <option value="privee">Privé (moi seul)</option>
+          </select>
+          <button
+            onClick={creerDossier}
+            className="rounded-cgpt-bouton bg-dj-accent-1 px-3 py-1.5 text-xs font-bold text-[#1A0D02] hover:bg-dj-accent-2"
+          >
+            Créer
           </button>
+          <button
+            onClick={() => {
+              setCreationDossierOuverte(false);
+              setNouveauNomDossier("");
+            }}
+            className="text-dj-texte-muet hover:text-dj-texte"
+          >
+            <X size={16} />
+          </button>
+        </div>
+      )}
 
-          {/* Plusieurs fichiers : liste avec retrait individuel, pas de nom/description
-              (choix de Bourama, 28/08/2026) -- nom auto par fichier côté envoi. */}
-          {fichiers.length > 1 && (
-            <div className="flex flex-col gap-1">
-              {fichiers.map((f) => (
-                <div
-                  key={`${f.name}-${f.lastModified}`}
-                  className="flex items-center justify-between gap-2 rounded-cgpt-bouton border border-dj-bordure bg-dj-fond px-3 py-2 text-xs text-dj-texte-muet"
-                >
-                  <span className="truncate">{f.name}</span>
-                  <button
-                    onClick={() => retirerFichier(f)}
-                    title="Retirer ce fichier de la sélection"
-                    className="flex-shrink-0 text-dj-texte-muet transition-colors hover:text-[var(--dj-erreur)]"
-                  >
-                    <X size={13} />
-                  </button>
-                </div>
-              ))}
-            </div>
-          )}
-
-          {fichiers.length <= 1 && (
-            <>
-              <input
-                value={nom}
-                onChange={(e) => setNom(e.target.value)}
-                placeholder="Nom du document"
-                className="rounded-cgpt-bouton border border-dj-bordure bg-dj-fond px-4 py-2 text-sm text-dj-texte outline-none focus:border-dj-bordure-forte"
-              />
-              <textarea
-                value={description}
-                onChange={(e) => setDescription(e.target.value)}
-                placeholder="Décris-le en quelques mots"
-                rows={3}
-                className="resize-none rounded-xl border border-dj-bordure bg-dj-fond px-4 py-2 text-sm text-dj-texte outline-none focus:border-dj-bordure-forte"
-              />
-            </>
-          )}
-
-          {erreur && <p className="text-xs text-[var(--dj-erreur)]">{erreur}</p>}
-
-          {erreursEnvoi.length > 0 && (
-            <div className="flex flex-col gap-1 rounded-xl border border-[var(--dj-erreur)]/40 bg-[var(--dj-erreur)]/5 px-4 py-3">
-              {erreursEnvoi.map((e) => (
-                <p key={e.nom} className="text-xs text-[var(--dj-erreur)]">
-                  {e.nom} : {e.erreur}
-                </p>
-              ))}
-            </div>
-          )}
-
-          <div className="flex justify-end gap-2 pt-1">
-            <button
-              onClick={() => {
-                setFormulaireOuvert(false);
-                setFichiers([]);
-                setErreur(null);
-                setErreursEnvoi([]);
-              }}
-              className="rounded-cgpt-bouton border border-dj-bordure px-3 py-1.5 text-xs text-dj-texte-muet hover:text-dj-texte"
-            >
-              Annuler
-            </button>
-            <button
-              onClick={ajouter}
-              disabled={fichiers.length === 0 || (fichiers.length === 1 && !nom.trim()) || envoi}
-              className="rounded-cgpt-bouton bg-dj-accent-1 px-4 py-1.5 text-xs font-bold text-[#1A0D02] transition-colors hover:bg-dj-accent-2 disabled:opacity-50"
-            >
-              {envoi ? "Envoi…" : fichiers.length > 1 ? `Ajouter (${fichiers.length})` : "Ajouter"}
-            </button>
-          </div>
+      {erreursEnvoi.length > 0 && (
+        <div className="flex flex-col gap-1 rounded-cgpt-carte border border-[var(--dj-erreur)] bg-dj-surface p-3 text-xs text-[var(--dj-erreur)]">
+          {erreursEnvoi.map((e, i) => (
+            <p key={i}>« {e.nom} » : {e.erreur}</p>
+          ))}
         </div>
       )}
 
@@ -326,14 +370,14 @@ export function BibliothequePublique() {
           <Skeleton className="h-14 rounded-xl border border-dj-bordure" style={{ animationDelay: "100ms" }} />
         </div>
       )}
-      {liste?.length === 0 && (
+      {listeAffichee?.length === 0 && (
         <p className="text-sm text-dj-texte-muet">
           {recherche ? "Aucun résultat pour cette recherche." : "Rien ici pour l'instant."}
         </p>
       )}
-      {liste && liste.length > 0 && (
+      {listeAffichee && listeAffichee.length > 0 && (
         <div className="flex flex-col gap-2">
-          {liste.map((entree) => {
+          {listeAffichee.map((entree) => {
             const Icone = iconePourType(entree.type_mime);
             return (
               <div
@@ -421,6 +465,201 @@ export function BibliothequePublique() {
           texte="Crée un compte pour copier ce document dans ta bibliothèque."
           onFerme={() => setCompteRequisPourCopie(false)}
         />
+      )}
+
+      {/* 28/08/2026, refonte "Ajouter" (demande Bourama : "le bouton +
+          doit être comme en privé") : bouton flottant unique, même
+          principe que EspaceBibliotheque.tsx -- Fichier(s) / Texte /
+          Lien. "Nouveau dossier" reste géré au-dessus (barre de
+          dossiers), pas dans ce menu, pour rester cohérent avec la
+          navigation par dossiers déjà affichée. */}
+      <input
+        ref={inputFichierRef}
+        type="file"
+        multiple
+        className="hidden"
+        onChange={(e) => {
+          if (e.target.files) choisirFichiers(e.target.files);
+          e.target.value = "";
+          setMenuAjoutOuvert(false);
+        }}
+      />
+
+      {menuAjoutOuvert && (
+        <div className="fixed inset-0 z-40" onClick={() => setMenuAjoutOuvert(false)} />
+      )}
+      {menuAjoutOuvert && (
+        <div className="fixed bottom-[calc(8.25rem+var(--cap-native-navigation-bottom,0px))] right-5 z-40 flex flex-col items-end gap-2">
+          <button
+            onClick={() => {
+              inputFichierRef.current?.click();
+            }}
+            className="flex items-center gap-2 rounded-cgpt-bouton border border-dj-bordure bg-dj-surface px-4 py-2 text-sm font-medium text-dj-texte shadow-lg transition-colors hover:border-dj-bordure-forte"
+          >
+            Importer des fichiers
+            <Upload size={15} />
+          </button>
+          <button
+            onClick={() => {
+              setModaleAjout("texte");
+              setMenuAjoutOuvert(false);
+            }}
+            className="flex items-center gap-2 rounded-cgpt-bouton border border-dj-bordure bg-dj-surface px-4 py-2 text-sm font-medium text-dj-texte shadow-lg transition-colors hover:border-dj-bordure-forte"
+          >
+            Texte
+            <FileText size={15} />
+          </button>
+          <button
+            onClick={() => {
+              setModaleAjout("lien");
+              setMenuAjoutOuvert(false);
+            }}
+            className="flex items-center gap-2 rounded-cgpt-bouton border border-dj-bordure bg-dj-surface px-4 py-2 text-sm font-medium text-dj-texte shadow-lg transition-colors hover:border-dj-bordure-forte"
+          >
+            Lien
+            <IconLien size={15} />
+          </button>
+        </div>
+      )}
+      <button
+        onClick={() => setMenuAjoutOuvert((v) => !v)}
+        aria-label={menuAjoutOuvert ? "Fermer le menu d'ajout" : "Ajouter"}
+        className="fixed bottom-[calc(5rem+var(--cap-native-navigation-bottom,0px))] right-5 z-40 flex h-10 w-10 items-center justify-center rounded-cgpt-bouton bg-dj-accent-1 text-[#1A0D02] shadow-[0_4px_20px_rgba(0,0,0,0.35)] transition-transform hover:bg-dj-accent-2"
+      >
+        <Plus size={18} className={`transition-transform ${menuAjoutOuvert ? "rotate-45" : ""}`} />
+      </button>
+
+      {modaleFichierOuverte && fichiers.length > 0 && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4" onClick={() => setModaleFichierOuverte(false)}>
+          <div
+            className="flex w-full max-w-sm animate-dj-fade-in-rapide flex-col gap-2 rounded-cgpt-carte border border-dj-bordure bg-dj-surface p-4"
+            onClick={(e) => e.stopPropagation()}
+          >
+            {fichiers.length === 1 ? (
+              <>
+                <p className="flex items-center gap-2 text-sm text-dj-texte-muet">
+                  <Paperclip size={15} /> {fichiers[0].name}
+                </p>
+                <input
+                  autoFocus
+                  value={nom}
+                  onChange={(e) => setNom(e.target.value)}
+                  placeholder="Nom du document (optionnel)"
+                  className="rounded-cgpt-bouton border border-dj-bordure bg-dj-fond px-4 py-2 text-sm text-dj-texte outline-none focus:border-dj-bordure-forte"
+                />
+                <textarea
+                  value={description}
+                  onChange={(e) => setDescription(e.target.value)}
+                  placeholder="Décris-le en quelques mots (optionnel)"
+                  rows={3}
+                  className="resize-none rounded-xl border border-dj-bordure bg-dj-fond px-4 py-2 text-sm text-dj-texte outline-none focus:border-dj-bordure-forte"
+                />
+              </>
+            ) : (
+              <div className="flex flex-col gap-1">
+                <p className="text-sm text-dj-texte-muet">{fichiers.length} fichiers -- chacun garde son nom, pas de description.</p>
+                <div className="flex max-h-40 flex-col gap-1 overflow-y-auto">
+                  {fichiers.map((f, i) => (
+                    <div key={i} className="flex items-center justify-between gap-2 rounded-cgpt-bouton border border-dj-bordure px-3 py-1.5 text-xs text-dj-texte">
+                      <span className="truncate">{f.name}</span>
+                      <button onClick={() => retirerFichier(f)} className="text-dj-texte-muet hover:text-[var(--dj-erreur)]">
+                        <X size={13} />
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+            {erreur && <p className="text-xs text-[var(--dj-erreur)]">{erreur}</p>}
+            <div className="flex justify-end gap-2 pt-1">
+              <button
+                onClick={() => {
+                  setModaleFichierOuverte(false);
+                  setFichiers([]);
+                  setNom("");
+                  setDescription("");
+                }}
+                className="rounded-cgpt-bouton border border-dj-bordure px-3 py-1.5 text-xs text-dj-texte-muet hover:text-dj-texte"
+              >
+                Annuler
+              </button>
+              <button
+                onClick={ajouterFichier}
+                disabled={envoi || fichiers.length === 0}
+                className="rounded-cgpt-bouton bg-dj-accent-1 px-4 py-1.5 text-xs font-bold text-[#1A0D02] transition-colors hover:bg-dj-accent-2 disabled:opacity-50"
+              >
+                {envoi ? "Envoi…" : "Ajouter"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {modaleAjout && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4" onClick={() => setModaleAjout(null)}>
+          <div
+            className="flex w-full max-w-sm animate-dj-fade-in-rapide flex-col gap-2 rounded-cgpt-carte border border-dj-bordure bg-dj-surface p-4"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <p className="text-sm font-semibold text-dj-texte">
+              {modaleAjout === "lien" ? "Ajouter un lien" : "Ajouter un texte"}
+            </p>
+            <input
+              value={nom}
+              onChange={(e) => setNom(e.target.value)}
+              placeholder="Nom (optionnel)"
+              className="rounded-cgpt-bouton border border-dj-bordure bg-dj-fond px-4 py-2 text-sm text-dj-texte outline-none focus:border-dj-bordure-forte"
+            />
+            {modaleAjout === "lien" ? (
+              <input
+                autoFocus
+                value={texteOuLien}
+                onChange={(e) => setTexteOuLien(e.target.value)}
+                placeholder="https://…"
+                className="rounded-cgpt-bouton border border-dj-bordure bg-dj-fond px-4 py-2 text-sm text-dj-texte outline-none focus:border-dj-bordure-forte"
+              />
+            ) : (
+              <textarea
+                autoFocus
+                value={texteOuLien}
+                onChange={(e) => setTexteOuLien(e.target.value)}
+                placeholder="Ton texte…"
+                rows={5}
+                className="resize-none rounded-xl border border-dj-bordure bg-dj-fond px-4 py-2 text-sm text-dj-texte outline-none focus:border-dj-bordure-forte"
+              />
+            )}
+            {modaleAjout === "lien" && (
+              <textarea
+                value={description}
+                onChange={(e) => setDescription(e.target.value)}
+                placeholder="Décris-le en quelques mots (optionnel)"
+                rows={2}
+                className="resize-none rounded-xl border border-dj-bordure bg-dj-fond px-4 py-2 text-sm text-dj-texte outline-none focus:border-dj-bordure-forte"
+              />
+            )}
+            {erreur && <p className="text-xs text-[var(--dj-erreur)]">{erreur}</p>}
+            <div className="flex justify-end gap-2 pt-1">
+              <button
+                onClick={() => {
+                  setModaleAjout(null);
+                  setTexteOuLien("");
+                  setNom("");
+                  setDescription("");
+                }}
+                className="rounded-cgpt-bouton border border-dj-bordure px-3 py-1.5 text-xs text-dj-texte-muet hover:text-dj-texte"
+              >
+                Annuler
+              </button>
+              <button
+                onClick={envoyerTexteOuLien}
+                disabled={!texteOuLien.trim() || envoi}
+                className="rounded-cgpt-bouton bg-dj-accent-1 px-4 py-1.5 text-xs font-bold text-[#1A0D02] transition-colors hover:bg-dj-accent-2 disabled:opacity-50"
+              >
+                {envoi ? "Envoi…" : "Ajouter"}
+              </button>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );
