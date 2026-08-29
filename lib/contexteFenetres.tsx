@@ -82,15 +82,35 @@ export function useFournirFenetres(): ContexteFenetresValeur {
       }
       const n = nbOuvertures.current++;
       const z = prochainZ.current++;
-      const taille = ONGLETS_LARGES.has(ongletId) ? TAILLE_LARGE : TAILLE_NORMALE;
+      const tailleVoulue = ONGLETS_LARGES.has(ongletId) ? TAILLE_LARGE : TAILLE_NORMALE;
+      // Correctif (28/08/2026, audit) : AVANT, taille et position
+      // d'ouverture étaient toujours fixes (480x560 ou 760x640, position
+      // 80/70 + cascade), sans tenir compte de la largeur d'écran. Sur
+      // téléphone (~375-414px de large), la fenêtre démarrait déjà en
+      // grande partie hors écran dès l'ouverture, avant tout glissement --
+      // gênant depuis que le glissement/redimensionnement tactile marche
+      // (26/08/2026). Ici : la taille est plafonnée à l'espace réellement
+      // disponible (avec 24px de marge, jamais sous TAILLE_MIN), et la
+      // position de départ (cascade classique sur grand écran) est ramenée
+      // dans l'écran si besoin -- mêmes bornes que le glissement à la main
+      // (voir components/chat/FenetresSections.tsx).
+      const largeurEcran = window.innerWidth;
+      const hauteurEcran = window.innerHeight;
+      const width = Math.max(TAILLE_MIN.width, Math.min(tailleVoulue.width, largeurEcran - 24));
+      const height = Math.max(TAILLE_MIN.height, Math.min(tailleVoulue.height, hauteurEcran - 24));
+      const xCascade = POSITION_BASE.x + (n % 6) * PAS_CASCADE;
+      const yCascade = POSITION_BASE.y + (n % 6) * PAS_CASCADE;
+      const x = Math.min(xCascade, Math.max(12, largeurEcran - width - 12));
+      const y = Math.min(yCascade, Math.max(12, hauteurEcran - height - 12));
       return [
         ...f,
         {
           cle: crypto.randomUUID(),
           ongletId,
-          x: POSITION_BASE.x + (n % 6) * PAS_CASCADE,
-          y: POSITION_BASE.y + (n % 6) * PAS_CASCADE,
-          ...taille,
+          x,
+          y,
+          width,
+          height,
           z,
         },
       ];
