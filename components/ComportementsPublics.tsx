@@ -28,10 +28,12 @@ export function ComportementsPublics({ onActive }: { onActive: () => void }) {
   const [erreur, setErreur] = useState<string | null>(null);
   const [formulaireOuvert, setFormulaireOuvert] = useState(false);
   const [fichierUpload, setFichierUpload] = useState<File | null>(null);
+  const [fichiersUploadLot, setFichiersUploadLot] = useState<File[]>([]);
   const [nomUpload, setNomUpload] = useState("");
   const [descriptionUpload, setDescriptionUpload] = useState("");
   const [envoiUpload, setEnvoiUpload] = useState(false);
   const [erreurUpload, setErreurUpload] = useState<string | null>(null);
+  const [erreursUploadLot, setErreursUploadLot] = useState<{ nom: string; erreur: string }[]>([]);
   const inputFichierRef = useRef<HTMLInputElement>(null);
 
   function charger(q?: string) {
@@ -76,9 +78,18 @@ export function ComportementsPublics({ onActive }: { onActive: () => void }) {
     telechargerTexte(nomFichierDepuis(c.nom, "md"), c.skill_md);
   }
 
-  function choisirFichierUpload(f: File) {
-    setFichierUpload(f);
-    if (!nomUpload.trim()) setNomUpload(f.name.replace(/\.md$/i, ""));
+  function choisirFichiersUpload(fichiers: FileList) {
+    const liste = Array.from(fichiers).filter((f) => /\.md$/i.test(f.name));
+    if (liste.length === 0) return;
+    if (liste.length === 1) {
+      setFichierUpload(liste[0]);
+      setFichiersUploadLot([]);
+      if (!nomUpload.trim()) setNomUpload(liste[0].name.replace(/\.md$/i, ""));
+    } else {
+      setFichierUpload(null);
+      setFichiersUploadLot(liste);
+      setNomUpload("");
+    }
   }
 
   // 25/08/2026, demande Bourama ("on peut y téléverser... depuis la
@@ -107,6 +118,46 @@ export function ComportementsPublics({ onActive }: { onActive: () => void }) {
     }
   }
 
+  // 29/08/2026, demande Bourama : publier plusieurs skills publics en une
+  // fois. Chaque fichier garde son propre nom (déduit du nom de fichier,
+  // pas éditable individuellement -- éditer n noms un par un n'aurait
+  // pas de sens ici) ; la description saisie dans le formulaire (si
+  // remplie) s'applique à tous. Import séquentiel, une erreur sur un
+  // fichier n'empêche pas les suivants.
+  async function uploaderPlusieursSkills() {
+    if (fichiersUploadLot.length === 0) return;
+    setEnvoiUpload(true);
+    setErreurUpload(null);
+    setErreursUploadLot([]);
+    const erreurs: { nom: string; erreur: string }[] = [];
+    const creees: ComportementPublic[] = [];
+
+    for (const f of fichiersUploadLot) {
+      const nom = f.name.replace(/\.md$/i, "");
+      try {
+        const cree = await uploaderSkillPublic(f, nom, descriptionUpload);
+        creees.push(cree);
+      } catch (e) {
+        if (e instanceof ErreurApi && e.statusCode === 401) {
+          setSansCompte(true);
+          break;
+        }
+        erreurs.push({ nom: f.name, erreur: messageErreur(e) });
+      }
+    }
+
+    if (creees.length > 0) {
+      setListe((prec) => [...creees, ...(prec || [])]);
+    }
+    setErreursUploadLot(erreurs);
+    setEnvoiUpload(false);
+    if (erreurs.length === 0) {
+      setFichiersUploadLot([]);
+      setDescriptionUpload("");
+      setFormulaireOuvert(false);
+    }
+  }
+
   if (sansCompte) {
     return <CTACompteRequis texte="Crée un compte pour activer un skill publié par la communauté." />;
   }
@@ -131,9 +182,9 @@ export function ComportementsPublics({ onActive }: { onActive: () => void }) {
       {!formulaireOuvert ? (
         <button
           onClick={() => setFormulaireOuvert(true)}
-          className="flex items-center justify-center gap-2 rounded-cgpt-carte border border-dj-bordure bg-dj-surface px-4 py-3 text-sm font-semibold text-dj-texte transition-colors hover:border-dj-bordure-forte hover:bg-dj-surface-haute"
+          className="flex w-fit items-center gap-1.5 rounded-cgpt-bouton border border-dj-bordure bg-dj-surface px-3 py-1.5 text-xs font-semibold text-dj-texte transition-colors hover:border-dj-bordure-forte hover:bg-dj-surface-haute"
         >
-          <Plus size={16} /> Uploader un skill (.md)
+          <Plus size={14} /> Ajouter un skill
         </button>
       ) : (
         <div className="flex flex-col gap-2 rounded-cgpt-carte border border-dj-bordure bg-dj-surface p-4">
@@ -141,47 +192,82 @@ export function ComportementsPublics({ onActive }: { onActive: () => void }) {
             ref={inputFichierRef}
             type="file"
             accept=".md"
+            multiple
             className="hidden"
-            onChange={(e) => e.target.files?.[0] && choisirFichierUpload(e.target.files[0])}
+            onChange={(e) => {
+              if (e.target.files && e.target.files.length > 0) choisirFichiersUpload(e.target.files);
+              e.target.value = "";
+            }}
           />
           <button
             onClick={() => inputFichierRef.current?.click()}
             className="flex items-center gap-2 rounded-cgpt-bouton border border-dashed border-dj-bordure px-4 py-3 text-sm text-dj-texte-muet transition-colors hover:border-dj-bordure-forte hover:text-dj-texte"
           >
             <Upload size={15} />
-            {fichierUpload ? fichierUpload.name : "Choisir un fichier .md..."}
+            {fichierUpload
+              ? fichierUpload.name
+              : fichiersUploadLot.length > 0
+                ? `${fichiersUploadLot.length} fichiers sélectionnés`
+                : "Choisir un ou plusieurs fichiers .md..."}
           </button>
-          <input
-            value={nomUpload}
-            onChange={(e) => setNomUpload(e.target.value)}
-            placeholder="Nom du skill"
-            className="rounded-cgpt-bouton border border-dj-bordure bg-dj-fond px-4 py-2 text-sm text-dj-texte outline-none focus:border-dj-bordure-forte"
-          />
+
+          {fichiersUploadLot.length > 0 && (
+            <ul className="flex flex-col gap-1 text-xs text-dj-texte-muet">
+              {fichiersUploadLot.map((f) => (
+                <li key={f.name} className="truncate">· {f.name.replace(/\.md$/i, "")}</li>
+              ))}
+            </ul>
+          )}
+
+          {fichierUpload && (
+            <input
+              value={nomUpload}
+              onChange={(e) => setNomUpload(e.target.value)}
+              placeholder="Nom du skill"
+              className="rounded-cgpt-bouton border border-dj-bordure bg-dj-fond px-4 py-2 text-sm text-dj-texte outline-none focus:border-dj-bordure-forte"
+            />
+          )}
           <textarea
             value={descriptionUpload}
             onChange={(e) => setDescriptionUpload(e.target.value)}
-            placeholder="Décris-le en quelques mots"
+            placeholder={fichiersUploadLot.length > 0 ? "Description commune (optionnel)" : "Décris-le en quelques mots"}
             rows={3}
             className="resize-none rounded-xl border border-dj-bordure bg-dj-fond px-4 py-2 text-sm text-dj-texte outline-none focus:border-dj-bordure-forte"
           />
           <p className="text-xs text-dj-texte-muet">Publié immédiatement, visible par tout le monde.</p>
           {erreurUpload && <p className="text-xs text-[var(--dj-erreur)]">{erreurUpload}</p>}
+          {erreursUploadLot.length > 0 && (
+            <div className="flex flex-col gap-1 rounded-lg border border-[var(--dj-erreur)] px-3 py-2 text-xs text-[var(--dj-erreur)]">
+              <p className="font-medium">
+                {erreursUploadLot.length} fichier{erreursUploadLot.length > 1 ? "s n'ont" : " n'a"} pas pu être publié{erreursUploadLot.length > 1 ? "s" : ""} :
+              </p>
+              {erreursUploadLot.map((e, i) => (
+                <p key={i}>« {e.nom} » : {e.erreur}</p>
+              ))}
+            </div>
+          )}
           <div className="flex justify-end gap-2 pt-1">
             <button
               onClick={() => {
                 setFormulaireOuvert(false);
                 setFichierUpload(null);
+                setFichiersUploadLot([]);
+                setErreursUploadLot([]);
               }}
               className="rounded-cgpt-bouton border border-dj-bordure px-3 py-1.5 text-xs text-dj-texte-muet hover:text-dj-texte"
             >
               Annuler
             </button>
             <button
-              onClick={uploaderSkill}
-              disabled={!fichierUpload || !nomUpload.trim() || envoiUpload}
+              onClick={fichiersUploadLot.length > 0 ? uploaderPlusieursSkills : uploaderSkill}
+              disabled={(!fichierUpload && fichiersUploadLot.length === 0) || (!!fichierUpload && !nomUpload.trim()) || envoiUpload}
               className="rounded-cgpt-bouton bg-dj-accent-1 px-4 py-1.5 text-xs font-bold text-[#1A0D02] transition-colors hover:bg-dj-accent-2 disabled:opacity-50"
             >
-              {envoiUpload ? "Envoi…" : "Publier"}
+              {envoiUpload
+                ? "Envoi…"
+                : fichiersUploadLot.length > 0
+                  ? `Publier (${fichiersUploadLot.length})`
+                  : "Publier"}
             </button>
           </div>
         </div>
