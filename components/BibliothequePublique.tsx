@@ -88,6 +88,13 @@ export function BibliothequePublique() {
   const [nouveauNomDossier, setNouveauNomDossier] = useState("");
   const [nouveauStatutDossier, setNouveauStatutDossier] = useState<"contribution_libre" | "privee">("contribution_libre");
 
+  // 29/08/2026, demande Bourama : ligne d'onglets "Tous" / "Dossiers",
+  // le filtre de statut et la liste des dossiers ne s'affichent que
+  // dans l'onglet "Dossiers". Le parcours (entrer dans un dossier, en
+  // créer) reste inchangé une fois dedans.
+  const [ongletBiblioPublique, setOngletBiblioPublique] = useState<"tous" | "dossiers">("tous");
+  const [filtreStatutDossier, setFiltreStatutDossier] = useState<"tous" | "contribution_libre" | "privee">("tous");
+
   function charger(q?: string) {
     listerBibliothequePublique(q)
       .then(setListe)
@@ -252,7 +259,9 @@ export function BibliothequePublique() {
     return <CTACompteRequis texte="Crée un compte pour ajouter un document à la bibliothèque publique." />;
   }
 
-  const dossiersRacine = dossiers.filter((d) => !d.dossier_parent_id);
+  const dossiersRacine = dossiers
+    .filter((d) => !d.dossier_parent_id)
+    .filter((d) => filtreStatutDossier === "tous" || d.statut === filtreStatutDossier);
   const dossierActuel = dossierCourantId ? dossiers.find((d) => d.id === dossierCourantId) : null;
   const listeAffichee = dossierCourantId
     ? (liste || []).filter((e) => dossierActuel?.fichier_ids.includes(e.id))
@@ -284,76 +293,138 @@ export function BibliothequePublique() {
         />
       </div>
 
-      <div className="flex flex-wrap items-center gap-2 text-xs">
+      <div className="flex items-center gap-1 text-xs">
         <button
-          onClick={() => setDossierCourantId(null)}
+          onClick={() => {
+            setOngletBiblioPublique("tous");
+            setDossierCourantId(null);
+          }}
           className={`rounded-cgpt-bouton px-2 py-1 font-semibold transition-colors ${
-            dossierCourantId === null ? "bg-dj-surface-haute text-dj-texte" : "text-dj-texte-muet hover:text-dj-texte"
+            ongletBiblioPublique === "tous" ? "bg-dj-surface-haute text-dj-texte" : "text-dj-texte-muet hover:text-dj-texte"
           }`}
         >
           Tous
         </button>
-        {dossiersRacine.map((d) => (
-          <span key={d.id} className="flex items-center gap-1 rounded-cgpt-bouton px-2 py-1">
-            <button
-              onClick={() => setDossierCourantId(d.id)}
-              title={d.statut === "contribution_libre" ? "Contribution libre : tout le monde peut y ajouter" : "Privé : seul le créateur peut y ajouter"}
-              className={`flex items-center gap-1 font-semibold transition-colors ${
-                dossierCourantId === d.id ? "text-dj-texte" : "text-dj-texte-muet hover:text-dj-texte"
-              }`}
-            >
-              {d.statut === "contribution_libre" ? <Globe size={12} /> : <Lock size={12} />}
-              {d.nom}
-            </button>
-            <button onClick={() => supprimerDossier(d)} className="text-dj-texte-muet hover:text-[var(--dj-erreur)]" title="Supprimer le dossier">
-              <FolderX size={12} />
-            </button>
-          </span>
-        ))}
         <button
-          onClick={() => setCreationDossierOuverte((v) => !v)}
-          className="flex items-center gap-1 rounded-cgpt-bouton px-2 py-1 font-semibold text-dj-texte-muet transition-colors hover:text-dj-texte"
+          onClick={() => setOngletBiblioPublique("dossiers")}
+          className={`rounded-cgpt-bouton px-2 py-1 font-semibold transition-colors ${
+            ongletBiblioPublique === "dossiers" ? "bg-dj-surface-haute text-dj-texte" : "text-dj-texte-muet hover:text-dj-texte"
+          }`}
         >
-          <FolderPlus size={14} />
-          Nouveau dossier
+          Dossiers
         </button>
       </div>
 
-      {creationDossierOuverte && (
-        <div className="flex animate-dj-fade-in-rapide items-center gap-2">
-          <input
-            autoFocus
-            type="text"
-            value={nouveauNomDossier}
-            onChange={(e) => setNouveauNomDossier(e.target.value)}
-            onKeyDown={(e) => e.key === "Enter" && creerDossier()}
-            placeholder="Nom du dossier… (optionnel)"
-            className="flex-1 rounded-cgpt-bouton border border-dj-bordure bg-dj-fond px-3 py-1.5 text-sm text-dj-texte outline-none focus:border-dj-bordure-forte"
-          />
-          <select
-            value={nouveauStatutDossier}
-            onChange={(e) => setNouveauStatutDossier(e.target.value as "contribution_libre" | "privee")}
-            className="rounded-cgpt-bouton border border-dj-bordure bg-dj-fond px-2 py-1.5 text-xs text-dj-texte outline-none focus:border-dj-bordure-forte"
-          >
-            <option value="contribution_libre">Contribution libre</option>
-            <option value="privee">Privé (moi seul)</option>
-          </select>
-          <button
-            onClick={creerDossier}
-            className="rounded-cgpt-bouton bg-dj-accent-1 px-3 py-1.5 text-xs font-bold text-[#1A0D02] hover:bg-dj-accent-2"
-          >
-            Créer
-          </button>
-          <button
-            onClick={() => {
-              setCreationDossierOuverte(false);
-              setNouveauNomDossier("");
-            }}
-            className="text-dj-texte-muet hover:text-dj-texte"
-          >
-            <X size={16} />
-          </button>
-        </div>
+      {ongletBiblioPublique === "dossiers" && (
+        <>
+          {dossierCourantId ? (
+            <button
+              onClick={() => setDossierCourantId(null)}
+              className="flex w-fit items-center gap-1 text-xs font-medium text-dj-texte-muet hover:text-dj-texte"
+            >
+              ← Dossiers
+            </button>
+          ) : (
+            <>
+              <div className="flex items-center justify-between gap-2 text-xs">
+                <div className="flex items-center gap-1">
+                  {(
+                    [
+                      ["tous", "Tous statuts"],
+                      ["contribution_libre", "Libre"],
+                      ["privee", "Privé"],
+                    ] as const
+                  ).map(([valeur, libelle]) => (
+                    <button
+                      key={valeur}
+                      onClick={() => setFiltreStatutDossier(valeur)}
+                      className={`rounded-cgpt-bouton px-2 py-1 font-medium transition-colors ${
+                        filtreStatutDossier === valeur ? "bg-dj-surface-haute text-dj-texte" : "text-dj-texte-muet hover:text-dj-texte"
+                      }`}
+                    >
+                      {libelle}
+                    </button>
+                  ))}
+                </div>
+                <button
+                  onClick={() => setCreationDossierOuverte((v) => !v)}
+                  className="flex items-center gap-1 rounded-cgpt-bouton px-2 py-1 font-semibold text-dj-texte-muet transition-colors hover:text-dj-texte"
+                >
+                  <FolderPlus size={14} />
+                  Nouveau dossier
+                </button>
+              </div>
+
+              {dossiersRacine.length > 0 && (
+                <div className="flex flex-col gap-2">
+                  {dossiersRacine.map((d) => (
+                    <div
+                      key={d.id}
+                      className="flex items-center justify-between gap-3 rounded-xl border border-dj-bordure bg-dj-surface px-4 py-3 transition-colors"
+                    >
+                      <button
+                        onClick={() => setDossierCourantId(d.id)}
+                        title={d.statut === "contribution_libre" ? "Contribution libre : tout le monde peut y ajouter" : "Privé : seul le créateur peut y ajouter"}
+                        className="flex min-w-0 items-center gap-2 text-sm text-dj-texte hover:text-dj-texte"
+                      >
+                        {d.statut === "contribution_libre" ? (
+                          <Globe size={16} className="flex-shrink-0 text-dj-texte-muet" />
+                        ) : (
+                          <Lock size={16} className="flex-shrink-0 text-dj-texte-muet" />
+                        )}
+                        <span className="truncate font-medium">{d.nom}</span>
+                      </button>
+                      <button
+                        onClick={() => supprimerDossier(d)}
+                        className="flex-shrink-0 text-dj-texte-muet hover:text-[var(--dj-erreur)]"
+                        title="Supprimer le dossier"
+                      >
+                        <FolderX size={14} />
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </>
+          )}
+
+          {creationDossierOuverte && (
+            <div className="flex animate-dj-fade-in-rapide items-center gap-2">
+              <input
+                autoFocus
+                type="text"
+                value={nouveauNomDossier}
+                onChange={(e) => setNouveauNomDossier(e.target.value)}
+                onKeyDown={(e) => e.key === "Enter" && creerDossier()}
+                placeholder="Nom du dossier… (optionnel)"
+                className="flex-1 rounded-cgpt-bouton border border-dj-bordure bg-dj-fond px-3 py-1.5 text-sm text-dj-texte outline-none focus:border-dj-bordure-forte"
+              />
+              <select
+                value={nouveauStatutDossier}
+                onChange={(e) => setNouveauStatutDossier(e.target.value as "contribution_libre" | "privee")}
+                className="rounded-cgpt-bouton border border-dj-bordure bg-dj-fond px-2 py-1.5 text-xs text-dj-texte outline-none focus:border-dj-bordure-forte"
+              >
+                <option value="contribution_libre">Contribution libre</option>
+                <option value="privee">Privé (moi seul)</option>
+              </select>
+              <button
+                onClick={creerDossier}
+                className="rounded-cgpt-bouton bg-dj-accent-1 px-3 py-1.5 text-xs font-bold text-[#1A0D02] hover:bg-dj-accent-2"
+              >
+                Créer
+              </button>
+              <button
+                onClick={() => {
+                  setCreationDossierOuverte(false);
+                  setNouveauNomDossier("");
+                }}
+                className="text-dj-texte-muet hover:text-dj-texte"
+              >
+                <X size={16} />
+              </button>
+            </div>
+          )}
+        </>
       )}
 
       {erreursEnvoi.length > 0 && (
@@ -364,20 +435,22 @@ export function BibliothequePublique() {
         </div>
       )}
 
-      {liste === undefined && (
-        <div className="flex flex-col gap-2" aria-hidden>
-          <Skeleton className="h-14 rounded-xl border border-dj-bordure" />
-          <Skeleton className="h-14 rounded-xl border border-dj-bordure" style={{ animationDelay: "100ms" }} />
-        </div>
-      )}
-      {listeAffichee?.length === 0 && (
-        <p className="text-sm text-dj-texte-muet">
-          {recherche ? "Aucun résultat pour cette recherche." : "Rien ici pour l'instant."}
-        </p>
-      )}
-      {listeAffichee && listeAffichee.length > 0 && (
-        <div className="flex flex-col gap-2">
-          {listeAffichee.map((entree) => {
+      {(ongletBiblioPublique === "tous" || dossierCourantId) && (
+        <>
+          {liste === undefined && (
+            <div className="flex flex-col gap-2" aria-hidden>
+              <Skeleton className="h-14 rounded-xl border border-dj-bordure" />
+              <Skeleton className="h-14 rounded-xl border border-dj-bordure" style={{ animationDelay: "100ms" }} />
+            </div>
+          )}
+          {listeAffichee?.length === 0 && (
+            <p className="text-sm text-dj-texte-muet">
+              {recherche ? "Aucun résultat pour cette recherche." : "Rien ici pour l'instant."}
+            </p>
+          )}
+          {listeAffichee && listeAffichee.length > 0 && (
+            <div className="flex flex-col gap-2">
+              {listeAffichee.map((entree) => {
             const Icone = iconePourType(entree.type_mime);
             return (
               <div
@@ -431,6 +504,8 @@ export function BibliothequePublique() {
             );
           })}
         </div>
+      )}
+        </>
       )}
 
       {entreeSignalee && (
