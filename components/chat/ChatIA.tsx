@@ -239,7 +239,11 @@ export function ChatIA({
     // l'affichage, ou un gros paquet est arrivé d'un coup), on révèle
     // plusieurs mots par tick pour ne jamais laisser un décalage
     // perceptible entre le texte affiché et la vraie réponse déjà reçue.
-    const nbMots = buffer.length > 400 ? 6 : buffer.length > 120 ? 3 : 1;
+    // Rattrapage plus doux qu'avant (demande Bourama : "calmement,
+    // comme s'il respirait") -- on accepte un peu plus de retard avant
+    // d'accélérer, et on n'accélère jamais autant que le rythme de base
+    // ne se voie plus.
+    const nbMots = buffer.length > 500 ? 4 : buffer.length > 200 ? 2 : 1;
     let morceau = "";
     let reste = buffer;
     for (let i = 0; i < nbMots && reste.length > 0; i++) {
@@ -254,7 +258,7 @@ export function ChatIA({
       copie[copie.length - 1] = { ...dernier, content: dernier.content + morceau };
       return copie;
     });
-    tickerIdRef.current = setTimeout(tickAffichage, 26);
+    tickerIdRef.current = setTimeout(tickAffichage, 42);
   }
 
   function pousserTexteAffichage(texte: string) {
@@ -262,7 +266,7 @@ export function ChatIA({
     setAffichageEnCours(true);
     if (tickerActifRef.current) return;
     tickerActifRef.current = true;
-    tickerIdRef.current = setTimeout(tickAffichage, 26);
+    tickerIdRef.current = setTimeout(tickAffichage, 42);
   }
 
   function reinitialiserAffichageControle() {
