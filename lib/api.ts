@@ -467,10 +467,13 @@ export async function supprimerDeBibliothequePublique(entreeId: string) {
  * continuent quand même ; l'appelant reçoit la liste des erreurs (vide
  * si tout est passé) pour les afficher.
  */
-export async function ajouterFichiersABibliothequePublique(fichiers: File[]) {
+export async function ajouterFichiersABibliothequePublique(
+  fichiers: File[],
+  onProgres?: (envoyes: number, total: number) => void,
+) {
   const erreurs: { nom: string; erreur: string }[] = [];
   const idsAVectoriser: string[] = [];
-  for (const fichier of fichiers) {
+  for (const [index, fichier] of fichiers.entries()) {
     const nomAuto = fichier.name.replace(/\.[^/.]+$/, "");
     try {
       const ligne = await ajouterABibliothequePublique(fichier, nomAuto, "");
@@ -478,6 +481,7 @@ export async function ajouterFichiersABibliothequePublique(fichiers: File[]) {
     } catch (e) {
       erreurs.push({ nom: fichier.name, erreur: messageErreur(e) });
     }
+    onProgres?.(index + 1, fichiers.length);
   }
   return { erreurs, idsAVectoriser };
 }

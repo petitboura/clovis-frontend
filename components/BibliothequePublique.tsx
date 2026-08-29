@@ -113,6 +113,12 @@ export function BibliothequePublique() {
   const [lotVectorisation, setLotVectorisation] = useState<{ total: number; enAttente: Set<string> } | null>(null);
   const [badgeInfoId, setBadgeInfoId] = useState<string | null>(null);
 
+  // 29/08/2026 bis, demande Bourama : progression réelle de l'ENVOI
+  // lui-même (stockage), distincte de la vectorisation qui vient après
+  // -- voir EspaceBibliotheque.tsx pour le même mécanisme et son
+  // raisonnement détaillé.
+  const [progressionEnvoi, setProgressionEnvoi] = useState<{ total: number; envoyes: number } | null>(null);
+
   function suivreVectorisation(ids: string[]) {
     if (ids.length === 0) return;
     setLotVectorisation((precedent) => {
@@ -185,7 +191,9 @@ export function BibliothequePublique() {
     if (liste.length === 0) return;
     setUploadDossierEnCours(true);
     setErreursEnvoi([]);
+    setProgressionEnvoi({ total: liste.length, envoyes: 0 });
     const erreurs: { nom: string; erreur: string }[] = [];
+    const idsAVectoriser: string[] = [];
     const dossiersCrees = new Map<string, string | null>();
 
     async function obtenirDossierPourChemin(segments: string[]): Promise<string | undefined> {
@@ -216,22 +224,27 @@ export function BibliothequePublique() {
         try {
           const segmentsDossier = chemin.split("/").slice(0, -1);
           const dossierId = await obtenirDossierPourChemin(segmentsDossier);
+          let ligne;
           try {
-            await ajouterABibliothequePublique(fichier, "", "", dossierId);
+            ligne = await ajouterABibliothequePublique(fichier, "", "", dossierId);
           } catch {
-            await ajouterABibliothequePublique(fichier, "", "", dossierId);
+            ligne = await ajouterABibliothequePublique(fichier, "", "", dossierId);
           }
+          if (ligne?.statut_vectorisation === "en_attente" && ligne.id) idsAVectoriser.push(ligne.id);
         } catch (e) {
           erreurs.push({ nom: chemin, erreur: messageErreur(e) });
         }
+        setProgressionEnvoi((p) => (p ? { total: p.total, envoyes: p.envoyes + 1 } : p));
       }
       setErreursEnvoi(erreurs);
+      suivreVectorisation(idsAVectoriser);
       charger(recherche);
       chargerDossiers();
     } catch (e) {
       window.alert(messageErreur(e));
     } finally {
       setUploadDossierEnCours(false);
+      setProgressionEnvoi(null);
     }
   }
 
@@ -248,14 +261,18 @@ export function BibliothequePublique() {
     setEnvoi(true);
     setErreur(null);
     setErreursEnvoi([]);
+    if (fichiers.length > 1) setProgressionEnvoi({ total: fichiers.length, envoyes: 0 });
     try {
       if (fichiers.length === 1) {
         const ligne = await ajouterABibliothequePublique(fichiers[0], nom, description, dossierCourantId || undefined);
         if (ligne?.statut_vectorisation === "en_attente" && ligne.id) suivreVectorisation([ligne.id]);
       } else {
-        const { erreurs, idsAVectoriser } = await ajouterFichiersABibliothequePublique(fichiers);
+        const { erreurs, idsAVectoriser } = await ajouterFichiersABibliothequePublique(fichiers, (envoyes, total) =>
+          setProgressionEnvoi({ total, envoyes }),
+        );
         if (erreurs.length === fichiers.length) {
           setEnvoi(false);
+          setProgressionEnvoi(null);
           setSansCompte(true);
           return;
         }
@@ -276,6 +293,7 @@ export function BibliothequePublique() {
       }
     } finally {
       setEnvoi(false);
+      setProgressionEnvoi(null);
     }
   }
 
@@ -524,7 +542,13 @@ export function BibliothequePublique() {
                 </div>
               )}
 
-              {uploadDossierEnCours && <p className="text-xs text-dj-texte-muet">Import du dossier en cours…</p>}
+              {uploadDossierEnCours && (
+                <p className="text-xs text-dj-texte-muet">
+                  {progressionEnvoi
+                    ? `Import du dossier : ${progressionEnvoi.envoyes}/${progressionEnvoi.total} (${Math.round((progressionEnvoi.envoyes / progressionEnvoi.total) * 100)}%)`
+                    : "Import du dossier en cours…"}
+                </p>
+              )}
 
               {dossiers === undefined && (
                 <div className="flex flex-col gap-2" aria-hidden>
@@ -775,11 +799,37 @@ export function BibliothequePublique() {
         <div className="fixed inset-0 z-40" onClick={() => setMenuAjoutOuvert(false)} />
       )}
 
+      {/* Popup de progression de l'ENVOI (stockage) lui-même, distinct de
+          l'indexation plus bas -- 29/08/2026 ter, demande Bourama :
+          "flottant pour pouvoir faire autre chose en attendant". Tourne
+          dans l'onglet du navigateur (pas côté serveur comme
+          l'indexation) : fermer l'app interromprait les fichiers pas
+          encore envoyés, d'où l'avertissement -- mais on peut naviguer
+          ailleurs dans l'app pendant ce temps, le popup reste visible. */}
+      {(envoi || uploadDossierEnCours) && progressionEnvoi && progressionEnvoi.total > 1 && (
+        <div className="fixed bottom-[calc(8.25rem+var(--cap-native-navigation-bottom,0px))] right-5 z-40 flex flex-col gap-1 rounded-cgpt-bouton border border-dj-bordure bg-dj-surface px-3 py-2 text-xs text-dj-texte shadow-xl animate-dj-fade-in-rapide">
+          <div className="flex items-center gap-2">
+            <Loader2 size={14} className="animate-spin" />
+            <span>
+              Envoi : {progressionEnvoi.envoyes}/{progressionEnvoi.total} ({Math.round((progressionEnvoi.envoyes / progressionEnvoi.total) * 100)}%)
+            </span>
+          </div>
+          <p className="text-[10px] text-dj-texte-muet">Ne ferme pas l&apos;app tant que l&apos;envoi n&apos;est pas fini.</p>
+        </div>
+      )}
+
       {/* Popup de vectorisation en arrière-plan (29/08/2026) -- voir
           EspaceBibliotheque.tsx pour le raisonnement complet, même
-          mécanisme ici. */}
+          mécanisme ici. Décalé au-dessus du popup d'envoi ci-dessus
+          s'ils sont visibles en même temps. */}
       {lotVectorisation && lotVectorisation.enAttente.size > 0 && (
-        <div className="fixed bottom-[calc(8.25rem+var(--cap-native-navigation-bottom,0px))] right-5 z-40 flex flex-col gap-1 rounded-cgpt-bouton border border-dj-bordure bg-dj-surface px-3 py-2 text-xs text-dj-texte shadow-xl animate-dj-fade-in-rapide">
+        <div
+          className={`fixed right-5 z-40 flex flex-col gap-1 rounded-cgpt-bouton border border-dj-bordure bg-dj-surface px-3 py-2 text-xs text-dj-texte shadow-xl animate-dj-fade-in-rapide ${
+            (envoi || uploadDossierEnCours) && progressionEnvoi && progressionEnvoi.total > 1
+              ? "bottom-[calc(11.5rem+var(--cap-native-navigation-bottom,0px))]"
+              : "bottom-[calc(8.25rem+var(--cap-native-navigation-bottom,0px))]"
+          }`}
+        >
           <div className="flex items-center gap-2">
             <Loader2 size={14} className="animate-spin text-dj-accent-1" />
             <span>
@@ -888,6 +938,11 @@ export function BibliothequePublique() {
               </div>
             )}
             {erreur && <p className="text-xs text-[var(--dj-erreur)]">{erreur}</p>}
+            {envoi && progressionEnvoi && progressionEnvoi.total > 1 && (
+              <p className="text-xs text-dj-texte-muet">
+                Envoi : {progressionEnvoi.envoyes}/{progressionEnvoi.total} ({Math.round((progressionEnvoi.envoyes / progressionEnvoi.total) * 100)}%)
+              </p>
+            )}
             <div className="flex justify-end gap-2 pt-1">
               <button
                 onClick={() => {

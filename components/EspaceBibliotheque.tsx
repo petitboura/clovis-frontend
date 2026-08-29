@@ -172,6 +172,16 @@ export function EspaceBibliotheque() {
   // clic OU au survol -- id du fichier concerné, null si aucune.
   const [badgeInfoId, setBadgeInfoId] = useState<string | null>(null);
 
+  // 29/08/2026 bis, demande Bourama : "uploader 100 PDF prend quand même
+  // un peu de temps" -- l'ENVOI lui-même (stockage, boucle séquentielle
+  // fichier par fichier) a aussi besoin d'une vraie progression, pas
+  // seulement la vectorisation qui vient après. progressionEnvoi suit
+  // "combien de fichiers sont déjà passés" sur le lot en cours d'envoi
+  // (succès + échecs confondus -- un échec fait quand même avancer la
+  // barre, il ne bloque pas les suivants) ; réinitialisé à null une fois
+  // l'envoi terminé (voir finally de chaque fonction d'envoi).
+  const [progressionEnvoi, setProgressionEnvoi] = useState<{ total: number; envoyes: number } | null>(null);
+
   function suivreVectorisation(ids: string[]) {
     if (ids.length === 0) return;
     setLotVectorisation((precedent) => {
@@ -325,6 +335,7 @@ async function envoyerFichiersDirect(fichiersChoisis: FileList | File[]) {
     if (liste.length === 0) return;
     setEnvoi(true);
     setErreursEnvoi([]);
+    setProgressionEnvoi({ total: liste.length, envoyes: 0 });
     const erreurs: { nom: string; erreur: string }[] = [];
     const idsAVectoriser: string[] = [];
     try {
@@ -338,6 +349,7 @@ async function envoyerFichiersDirect(fichiersChoisis: FileList | File[]) {
         } catch (e) {
           erreurs.push({ nom: fichier.name, erreur: messageErreur(e) });
         }
+        setProgressionEnvoi((p) => (p ? { total: p.total, envoyes: p.envoyes + 1 } : p));
       }
       setErreursEnvoi(erreurs);
       suivreVectorisation(idsAVectoriser);
@@ -345,6 +357,7 @@ async function envoyerFichiersDirect(fichiersChoisis: FileList | File[]) {
       chargerDossiers();
     } finally {
       setEnvoi(false);
+      setProgressionEnvoi(null);
     }
   }
 
@@ -378,6 +391,7 @@ async function envoyerFichiersDirect(fichiersChoisis: FileList | File[]) {
     if (liste.length === 0) return;
     setUploadDossierEnCours(true);
     setErreursEnvoi([]);
+    setProgressionEnvoi({ total: liste.length, envoyes: 0 });
     const erreurs: { nom: string; erreur: string }[] = [];
     const idsAVectoriser: string[] = [];
     const dossiersCrees = new Map<string, string | null>();
@@ -428,6 +442,7 @@ async function envoyerFichiersDirect(fichiersChoisis: FileList | File[]) {
         } catch (e) {
           erreurs.push({ nom: chemin, erreur: messageErreur(e) });
         }
+        setProgressionEnvoi((p) => (p ? { total: p.total, envoyes: p.envoyes + 1 } : p));
       }
       setErreursEnvoi(erreurs);
       suivreVectorisation(idsAVectoriser);
@@ -437,6 +452,7 @@ async function envoyerFichiersDirect(fichiersChoisis: FileList | File[]) {
       window.alert(messageErreur(e));
     } finally {
       setUploadDossierEnCours(false);
+      setProgressionEnvoi(null);
     }
   }
 
@@ -551,9 +567,11 @@ async function envoyerFichiersDirect(fichiersChoisis: FileList | File[]) {
   async function uploaderDirectementDansDossier(fichiersChoisis: FileList | File[]) {
     if (dossierCourantId === null) return;
     setUploadDansPickerEnCours(true);
+    const liste = Array.from(fichiersChoisis);
+    setProgressionEnvoi({ total: liste.length, envoyes: 0 });
     const idsAVectoriser: string[] = [];
     try {
-      for (const fichier of Array.from(fichiersChoisis)) {
+      for (const fichier of liste) {
         try {
           const ligne = await ajouterFichierBibliothequePersonnelle(fichier, "", "");
           if (ligne?.statut_vectorisation === "en_attente" && ligne.id) idsAVectoriser.push(ligne.id);
@@ -561,12 +579,14 @@ async function envoyerFichiersDirect(fichiersChoisis: FileList | File[]) {
         } catch (e) {
           window.alert(`${fichier.name} : ${messageErreur(e)}`);
         }
+        setProgressionEnvoi((p) => (p ? { total: p.total, envoyes: p.envoyes + 1 } : p));
       }
       suivreVectorisation(idsAVectoriser);
       chargerFichiers();
       chargerDossiers();
     } finally {
       setUploadDansPickerEnCours(false);
+      setProgressionEnvoi(null);
     }
   }
 
@@ -820,10 +840,23 @@ async function envoyerFichiersDirect(fichiersChoisis: FileList | File[]) {
           même principe que --cap-native-navigation-bottom déjà présent :
           vaut 0px partout sauf sur mobile web, pour lever ces boutons
           au-dessus de BarreOngletsWeb.tsx. */}
-      {(envoi || uploadDossierEnCours) && (
-        <div className="fixed bottom-[calc(8.25rem+var(--cap-native-navigation-bottom,0px)+var(--dj-barre-onglets-web,0px))] right-5 z-40 flex items-center gap-2 rounded-cgpt-bouton border border-dj-bordure bg-dj-surface px-3 py-2 text-xs text-dj-texte shadow-xl">
-          <Loader2 size={14} className="animate-spin" />
-          Envoi…
+      {(envoi || uploadDossierEnCours || uploadDansPickerEnCours) && (
+        <div className="fixed bottom-[calc(8.25rem+var(--cap-native-navigation-bottom,0px)+var(--dj-barre-onglets-web,0px))] right-5 z-40 flex flex-col gap-1 rounded-cgpt-bouton border border-dj-bordure bg-dj-surface px-3 py-2 text-xs text-dj-texte shadow-xl">
+          <div className="flex items-center gap-2">
+            <Loader2 size={14} className="animate-spin" />
+            {progressionEnvoi && progressionEnvoi.total > 1
+              ? `Envoi : ${progressionEnvoi.envoyes}/${progressionEnvoi.total} (${Math.round((progressionEnvoi.envoyes / progressionEnvoi.total) * 100)}%)`
+              : "Envoi…"}
+          </div>
+          {/* 29/08/2026 ter, demande Bourama : contrairement au popup
+              d'indexation plus bas (qui continue côté serveur), CET
+              envoi tourne dans l'onglet du navigateur -- le fermer
+              interromprait les fichiers pas encore envoyés. Tu peux
+              naviguer ailleurs dans l'app pendant ce temps, juste pas
+              fermer l'onglet/l'app. */}
+          {progressionEnvoi && progressionEnvoi.total > 1 && (
+            <p className="text-[10px] text-dj-texte-muet">Ne ferme pas l&apos;app tant que l&apos;envoi n&apos;est pas fini.</p>
+          )}
         </div>
       )}
 
@@ -840,7 +873,7 @@ async function envoyerFichiersDirect(fichiersChoisis: FileList | File[]) {
       {lotVectorisation && lotVectorisation.enAttente.size > 0 && (
         <div
           className={`fixed right-5 z-40 flex flex-col gap-1 rounded-cgpt-bouton border border-dj-bordure bg-dj-surface px-3 py-2 text-xs text-dj-texte shadow-xl animate-dj-fade-in-rapide ${
-            envoi || uploadDossierEnCours
+            envoi || uploadDossierEnCours || uploadDansPickerEnCours
               ? "bottom-[calc(11rem+var(--cap-native-navigation-bottom,0px)+var(--dj-barre-onglets-web,0px))]"
               : "bottom-[calc(8.25rem+var(--cap-native-navigation-bottom,0px)+var(--dj-barre-onglets-web,0px))]"
           }`}
