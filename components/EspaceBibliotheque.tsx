@@ -766,7 +766,7 @@ async function envoyerFichiersDirect(fichiersChoisis: FileList | File[]) {
         />
       )}
       {menuAjoutOuvert && (
-        <div className="fixed bottom-[calc(8.25rem+var(--cap-native-navigation-bottom,0px)+var(--dj-barre-onglets-web,0px))] right-5 z-40 flex flex-col items-end gap-2">
+        <div className="fixed bottom-[calc(8.25rem+var(--cap-native-navigation-bottom,0px)+var(--dj-barre-onglets-web,0px))] right-5 z-40 flex animate-dj-fade-in-rapide flex-col items-end gap-2">
           <label
             htmlFor="ajout-fab-fichiers"
             className="flex cursor-pointer items-center gap-2 rounded-cgpt-bouton border border-dj-bordure bg-dj-surface px-4 py-2 text-sm font-medium text-dj-texte shadow-lg transition-colors hover:border-dj-bordure-forte"

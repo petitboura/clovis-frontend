@@ -489,7 +489,7 @@ export function BibliothequePublique() {
         <div className="fixed inset-0 z-40" onClick={() => setMenuAjoutOuvert(false)} />
       )}
       {menuAjoutOuvert && (
-        <div className="fixed bottom-[calc(8.25rem+var(--cap-native-navigation-bottom,0px))] right-5 z-40 flex flex-col items-end gap-2">
+        <div className="fixed bottom-[calc(8.25rem+var(--cap-native-navigation-bottom,0px))] right-5 z-40 flex animate-dj-fade-in-rapide flex-col items-end gap-2">
           <button
             onClick={() => {
               inputFichierRef.current?.click();
