@@ -3,7 +3,6 @@
 import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import {
-  ArrowLeft,
   ChevronRight,
   SlidersHorizontal,
   Lock,
@@ -19,6 +18,7 @@ import {
   Accessibility,
   type LucideIcon,
 } from "lucide-react";
+import { BoutonRetour } from "./BoutonRetour";
 import { supabase } from "@/lib/supabase";
 import { appelerApiFichier, lireMonProfil, enregistrerMonProfil, supprimerMonCompte } from "@/lib/api";
 import { messageErreur, ErreurApi } from "@/lib/erreurs";
@@ -75,13 +75,7 @@ const LIBELLES_THEME = { systeme: "Système", clair: "Clair", sombre: "Sombre" }
 function EnTete({ titre, onRetour }: { titre: string; onRetour: () => void }) {
   return (
     <div className="flex items-center gap-2">
-      <button
-        onClick={onRetour}
-        aria-label="Retour"
-        className="flex items-center gap-1 rounded-lg p-1.5 text-dj-texte-muet transition-colors hover:bg-dj-surface-haute hover:text-dj-texte"
-      >
-        <ArrowLeft size={16} />
-      </button>
+      <BoutonRetour onClick={onRetour} />
       <h2 className="font-display text-base font-bold text-dj-texte">{titre}</h2>
     </div>
   );

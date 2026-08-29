@@ -12,12 +12,12 @@ import {
   Trash2,
   Move,
   ChevronRight,
-  ChevronLeft,
   Smartphone,
 } from "lucide-react";
 import { usePluginNatif, messageErreurPlugin } from "@/lib/usePluginNatif";
 import { Skeleton } from "./Skeleton";
 import { PanneauFlottant } from "./PanneauFlottant";
+import { BoutonRetour } from "./BoutonRetour";
 import { useFermetureAnimee } from "@/lib/useFermetureAnimee";
 
 /**
@@ -210,13 +210,7 @@ export function EspaceDossiers() {
       <div className="flex items-center justify-between gap-3">
         <div className="flex min-w-0 items-center gap-1 text-sm text-dj-texte-muet">
           {pile.length > 0 && (
-            <button
-              onClick={() => setPile((p) => p.slice(0, -1))}
-              aria-label="Retour"
-              className="flex-shrink-0 rounded-lg p-1 transition-colors hover:bg-dj-surface-haute hover:text-dj-texte"
-            >
-              <ChevronLeft size={16} />
-            </button>
+            <BoutonRetour onClick={() => setPile((p) => p.slice(0, -1))} padding="p-1" />
           )}
           <span className="truncate font-medium text-dj-texte">
             {dossierCourant ? dossierCourant.nom : "Dossiers du téléphone"}
@@ -447,13 +441,13 @@ function PickerDeplacement({
     <PanneauFlottant enSortie={enSortie} onFerme={() => demarrerFermeture(onFerme)} entete={<h3 className="text-sm font-bold text-dj-texte">Déplacer vers…</h3>}>
       <div className="flex flex-col gap-2">
         {courant && (
-          <button
+          <BoutonRetour
             onClick={() => setPile((p) => p.slice(0, -1))}
-            className="flex w-fit items-center gap-1 text-xs text-dj-texte-muet hover:text-dj-texte"
-          >
-            <ChevronLeft size={14} />
-            Retour
-          </button>
+            taille={14}
+            avecTexte
+            padding="p-0"
+            className="w-fit"
+          />
         )}
         {chargement ? (
           <Skeleton className="h-24 rounded-cgpt-carte" />
