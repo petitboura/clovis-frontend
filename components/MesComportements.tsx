@@ -3,7 +3,7 @@
 import { useEffect, useState, useRef, type MouseEvent } from "react";
 import {
   Trash2, Plus, X, Check, ScrollText, FileCode2, Loader2, Link2, Unlink, Eye, Code2, Upload, ToggleLeft, ToggleRight,
-  Download, Sparkles, FileUp,
+  Download, Sparkles, FileUp, FolderUp,
 } from "lucide-react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
@@ -234,7 +234,9 @@ export function MesComportements({ agentId }: { agentId: string }) {
   // déjà ce besoin).
   const [importEnCours, setImportEnCours] = useState(false);
   const [erreurImport, setErreurImport] = useState<string | null>(null);
+  const [erreursImportLot, setErreursImportLot] = useState<{ nom: string; erreur: string }[]>([]);
   const inputImportRef = useRef<HTMLInputElement>(null);
+  const inputImportDossierRef = useRef<HTMLInputElement>(null);
 
   // 18/08/2026, voir lib/useFermetureAnimee.ts : anime la fermeture du
   // panneau au lieu de le démonter d'un coup.
@@ -297,6 +299,8 @@ export function MesComportements({ agentId }: { agentId: string }) {
     setSkillOuvert("");
     setErreurSkill(null);
     setSkillVue("texte");
+    setErreurImport(null);
+    setErreursImportLot([]);
   }
 
   // 22/08/2026, demande Bourama : extrait de ouvrirOngletSkill pour être
@@ -367,6 +371,52 @@ export function MesComportements({ agentId }: { agentId: string }) {
       }
     } finally {
       setImportEnCours(false);
+    }
+  }
+
+  // 29/08/2026, demande Bourama : plusieurs skills en une fois, y compris
+  // en uploadant un dossier entier (webkitdirectory) -- mais un dossier
+  // contient souvent bien plus que des .md (images, README, etc.), donc
+  // on filtre : seuls les fichiers se terminant par .md sont importés,
+  // le reste du dossier est ignoré silencieusement (pas une erreur, juste
+  // pas un skill). Chaque .md devient un comportement séparé, nom = nom
+  // de fichier (sans extension, sans le chemin du dossier -- même logique
+  // que ajouterFichier). Import séquentiel (comme envoyerDossierDirect
+  // dans EspaceBibliotheque.tsx) pour ne pas bombarder l'API en parallèle.
+  async function importerPlusieursFichiers(fichiersChoisis: FileList | File[]) {
+    if (!panneau || panneau.type !== "creation") return;
+    const tousLesFichiers = Array.from(fichiersChoisis);
+    const fichiersMd = tousLesFichiers.filter((f) => /\.md$/i.test(f.name));
+    if (fichiersMd.length === 0) return;
+
+    setImportEnCours(true);
+    setErreurImport(null);
+    setErreursImportLot([]);
+    const erreurs: { nom: string; erreur: string }[] = [];
+    const creees: Comportement[] = [];
+
+    for (const f of fichiersMd) {
+      const nomFichierSeul = f.name.split("/").pop() || f.name;
+      const nomDepuisFichier = nomFichierSeul.replace(/\.md$/i, "");
+      try {
+        const cree = await importerComportementDepuisFichier(agentId, f, nomDepuisFichier);
+        creees.push(cree);
+      } catch (e) {
+        if (e instanceof ErreurApi && e.statusCode === 401) {
+          setSansCompte(true);
+          break;
+        }
+        erreurs.push({ nom: nomFichierSeul, erreur: messageErreur(e) });
+      }
+    }
+
+    if (creees.length > 0) {
+      setListe((prec) => [...(prec || []), ...creees]);
+    }
+    setErreursImportLot(erreurs);
+    setImportEnCours(false);
+    if (erreurs.length === 0) {
+      demarrerFermeture(fermer);
     }
   }
 
@@ -670,26 +720,70 @@ export function MesComportements({ agentId }: { agentId: string }) {
               )}
 
               {panneau.type === "creation" && (
-                <div className="mb-3 flex items-center justify-between gap-2 rounded-lg border border-dashed border-dj-bordure px-3 py-2">
-                  <span className="text-xs text-dj-texte-muet">Déjà un skill rédigé ? Importe-le tel quel.</span>
-                  <input
-                    ref={inputImportRef}
-                    type="file"
-                    accept=".md"
-                    className="hidden"
-                    onChange={(e) => e.target.files?.[0] && importerFichier(e.target.files[0])}
-                  />
-                  <button
-                    onClick={() => inputImportRef.current?.click()}
-                    disabled={importEnCours}
-                    className="flex flex-shrink-0 items-center gap-1.5 rounded-lg border border-dj-bordure px-2.5 py-1.5 text-xs text-dj-texte transition-colors hover:border-dj-bordure-forte disabled:opacity-50"
-                  >
-                    {importEnCours ? <Loader2 size={13} className="animate-spin" /> : <FileUp size={13} />}
-                    {importEnCours ? "Import…" : "Uploader un .md"}
-                  </button>
+                <div className="mb-3 flex flex-col gap-2 rounded-lg border border-dashed border-dj-bordure px-3 py-2">
+                  <span className="text-xs text-dj-texte-muet">Déjà un ou plusieurs skills rédigés ? Importe-les tels quels.</span>
+                  <div className="flex flex-wrap items-center gap-2">
+                    <input
+                      ref={inputImportRef}
+                      type="file"
+                      accept=".md"
+                      multiple
+                      className="hidden"
+                      onChange={(e) => {
+                        const fichiers = e.target.files;
+                        if (!fichiers || fichiers.length === 0) return;
+                        if (fichiers.length === 1) {
+                          importerFichier(fichiers[0]);
+                        } else {
+                          importerPlusieursFichiers(fichiers);
+                        }
+                        e.target.value = "";
+                      }}
+                    />
+                    <button
+                      onClick={() => inputImportRef.current?.click()}
+                      disabled={importEnCours}
+                      className="flex flex-shrink-0 items-center gap-1.5 rounded-lg border border-dj-bordure px-2.5 py-1.5 text-xs text-dj-texte transition-colors hover:border-dj-bordure-forte disabled:opacity-50"
+                    >
+                      {importEnCours ? <Loader2 size={13} className="animate-spin" /> : <FileUp size={13} />}
+                      {importEnCours ? "Import…" : "Uploader des .md"}
+                    </button>
+
+                    <input
+                      ref={inputImportDossierRef}
+                      type="file"
+                      className="hidden"
+                      // @ts-expect-error -- webkitdirectory n'est pas dans le typage React standard, mais bien supporté par les navigateurs (PC + mobile web, pas l'app native)
+                      webkitdirectory=""
+                      onChange={(e) => {
+                        const fichiers = e.target.files;
+                        if (fichiers && fichiers.length > 0) importerPlusieursFichiers(fichiers);
+                        e.target.value = "";
+                      }}
+                    />
+                    <button
+                      onClick={() => inputImportDossierRef.current?.click()}
+                      disabled={importEnCours}
+                      className="flex flex-shrink-0 items-center gap-1.5 rounded-lg border border-dj-bordure px-2.5 py-1.5 text-xs text-dj-texte transition-colors hover:border-dj-bordure-forte disabled:opacity-50"
+                      title="Seuls les fichiers .md du dossier seront importés, le reste est ignoré"
+                    >
+                      {importEnCours ? <Loader2 size={13} className="animate-spin" /> : <FolderUp size={13} />}
+                      {importEnCours ? "Import…" : "Importer un dossier"}
+                    </button>
+                  </div>
                 </div>
               )}
               {erreurImport && <p className="pb-3 text-xs text-[var(--dj-erreur)]">{erreurImport}</p>}
+              {erreursImportLot.length > 0 && (
+                <div className="mb-3 flex flex-col gap-1 rounded-lg border border-[var(--dj-erreur)] px-3 py-2 text-xs text-[var(--dj-erreur)]">
+                  <p className="font-medium">
+                    {erreursImportLot.length} fichier{erreursImportLot.length > 1 ? "s n'ont" : " n'a"} pas pu être importé{erreursImportLot.length > 1 ? "s" : ""} :
+                  </p>
+                  {erreursImportLot.map((e, i) => (
+                    <p key={i}>« {e.nom} » : {e.erreur}</p>
+                  ))}
+                </div>
+              )}
 
               <textarea
                 autoFocus
