@@ -749,7 +749,25 @@ function BulleMessageInterne({
                   // modèle a écrit comme libellé du lien) reste TOUJOURS
                   // visible, même si la source ne résout pas -- juste
                   // sans interactivité dans ce cas précis.
-                  if (!source) return <span className="text-dj-accent-1">{children}</span>;
+                  if (!source) {
+                    // TEMPORAIRE (29/08, diagnostic) -- envoie l'état réel
+                    // de sourcesAplaties au backend pour le voir dans les
+                    // logs Railway, sans avoir besoin d'ouvrir la console
+                    // du navigateur. À retirer avec la route
+                    // /api/debug/citation une fois la cause trouvée.
+                    fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/debug/citation`, {
+                      method: "POST",
+                      headers: { "Content-Type": "application/json" },
+                      body: JSON.stringify({
+                        numero,
+                        nb_sources_disponibles: sourcesAplaties.length,
+                        titres_sources_disponibles: sourcesAplaties.map((s) => s.titre),
+                        href,
+                        enfants: texteBrut(children),
+                      }),
+                    }).catch(() => {});
+                    return <span className="text-dj-accent-1">{children}</span>;
+                  }
                   const libelle = source.reperage ? `${source.titre}, ${source.reperage}` : source.titre;
                   // CORRECTIF 2026-08-27 (demande Bourama : "que tout
                   // reste en popup interne, meme les sites") : toujours
