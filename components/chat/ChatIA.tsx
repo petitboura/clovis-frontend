@@ -124,9 +124,9 @@ export function ChatIA({
   // ticker (tickAffichage) le révèle mot par mot à rythme fixe, avec
   // rattrapage si le backend envoie un gros paquet d'un coup (voir plus
   // bas). affichageEnCours reste vrai tant que ce buffer n'est pas vidé,
-  // même après la fin du flux réseau (genEnCours) -- sert à piloter la
-  // pulsation "dj-chunk-pulse" de BulleMessage.tsx sur le VRAI rythme
-  // d'affichage plutôt que sur celui, brut, du réseau.
+  // même après la fin du flux réseau (genEnCours) -- sert à activer le
+  // fade mot par mot (pluginMotsFade) de BulleMessage.tsx sur le VRAI
+  // rythme d'affichage plutôt que sur celui, brut, du réseau.
   const bufferAffichageRef = useRef("");
   const tickerActifRef = useRef(false);
   const tickerIdRef = useRef<ReturnType<typeof setTimeout> | null>(null);

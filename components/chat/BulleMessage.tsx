@@ -60,6 +60,80 @@ const SCHEMA_SANITIZE = {
 
 const PLUGINS_REHYPE: PluggableList = [rehypeRaw, [rehypeSanitize, SCHEMA_SANITIZE], rehypeKatex];
 
+// Noeud HAST minimal -- on ne type que ce dont pluginMotsFade a besoin,
+// pas la forme complète de hast.Node (évite d'ajouter @types/hast comme
+// dépendance juste pour ce plugin interne).
+type NoeudHastPartiel = {
+  type: string;
+  tagName?: string;
+  value?: string;
+  properties?: Record<string, unknown>;
+  children?: NoeudHastPartiel[];
+};
+
+// Plugin rehype interne (branché UNIQUEMENT sur le message assistant en
+// cours de génération, voir estEnCoursDeGeneration dans le composant) :
+// parcourt le HAST FINAL -- donc après resolution complète du Markdown
+// par remark/rehype (gras, italique, liens, LaTeX déjà en éléments) --
+// et enveloppe chaque MOT dans un <span class="dj-mot-fade"> pour qu'il
+// fonde en fondu à sa première apparition. `seuil` = nombre de mots déjà
+// révélés lors d'un rendu précédent (voir motsDejaAnimesRef dans
+// BulleMessage) : en dessous, texte brut, jamais ré-animé.
+// `rapporterTotal` reçoit le nombre total de mots vus, pour que le
+// composant puisse mettre à jour ce seuil après le rendu.
+// Ignore le contenu de <pre>/<code> : les découper casserait
+// l'espacement/la coloration syntaxique, et le code arrive de toute
+// façon rarement de façon lisible mot par mot.
+function pluginMotsFade(options: { seuil: number; rapporterTotal: (n: number) => void }) {
+  const { seuil, rapporterTotal } = options;
+  let indexGlobal = 0;
+
+  function visiter(noeud: NoeudHastPartiel): NoeudHastPartiel | NoeudHastPartiel[] {
+    if (noeud.type === "element" && (noeud.tagName === "pre" || noeud.tagName === "code")) {
+      return noeud;
+    }
+    if (noeud.type === "text" && typeof noeud.value === "string") {
+      const morceaux = noeud.value.split(/(\s+)/).filter((p) => p.length > 0);
+      if (morceaux.length === 0) return noeud;
+      const resultat: NoeudHastPartiel[] = [];
+      for (const morceau of morceaux) {
+        if (/^\s+$/.test(morceau)) {
+          resultat.push({ type: "text", value: morceau });
+          continue;
+        }
+        const monIndex = indexGlobal;
+        indexGlobal += 1;
+        if (monIndex >= seuil) {
+          resultat.push({
+            type: "element",
+            tagName: "span",
+            properties: { className: ["dj-mot-fade"] },
+            children: [{ type: "text", value: morceau }],
+          });
+        } else {
+          resultat.push({ type: "text", value: morceau });
+        }
+      }
+      return resultat;
+    }
+    if (noeud.children) {
+      const nouveauxEnfants: NoeudHastPartiel[] = [];
+      for (const enfant of noeud.children) {
+        const r = visiter(enfant);
+        if (Array.isArray(r)) nouveauxEnfants.push(...r);
+        else nouveauxEnfants.push(r);
+      }
+      noeud.children = nouveauxEnfants;
+    }
+    return noeud;
+  }
+
+  return function transformer(tree: NoeudHastPartiel) {
+    visiter(tree);
+    rapporterTotal(indexGlobal);
+  };
+}
+
 // Extrait le texte brut d'un enfant React -- nécessaire pour récupérer le
 // contenu source d'un bloc de code (```lang ... ```) tel que ReactMarkdown
 // le structure : <pre><code className="language-xxx">texte brut</code></pre>.
@@ -306,10 +380,11 @@ function BulleMessageInterne({
   nomAgent?: string;
   enAttente?: boolean;
   // Ajouté (demande Bourama) : vrai uniquement pour le dernier message
-  // assistant pendant que sa réponse est en train d'arriver (voir
-  // ChatIA.tsx : estDernier && genEnCours). Sert uniquement à déclencher
-  // la pulsation "dj-chunk-pulse" ci-dessous à chaque nouveau morceau de
-  // texte reçu -- jamais utilisé pour un message déjà terminé/historique.
+  // assistant pendant que son affichage (voir ChatIA.tsx : buffer +
+  // ticker mot par mot, affichageEnCours) est encore en train de
+  // rattraper le texte déjà reçu. Sert à activer pluginMotsFade
+  // ci-dessous UNIQUEMENT pour ce message -- jamais pour un message déjà
+  // terminé/historique.
   estEnCoursDeGeneration?: boolean;
   raisonnement?: string;
   raisonnementEnCours?: boolean;
@@ -350,39 +425,38 @@ function BulleMessageInterne({
   const [fichiersOuverts, setFichiersOuverts] = useState(false);
   const estUtilisateur = message.role === "user";
 
-  // Fade "par bloc" du texte streamé (option retenue par Bourama après
-  // comparaison de 3 approches -- voir historique). À chaque morceau de
-  // texte reçu pour le message en cours de génération, on rejoue une
-  // courte pulsation d'opacité sur toute la bulle plutôt que d'essayer
-  // d'animer mot par mot à l'intérieur de ReactMarkdown : ce dernier
-  // reparse tout l'arbre à chaque chunk, donc cibler précisément le
-  // texte "nouveau" sans risquer de casser le rendu (gras/italique/
-  // tableaux/LaTeX/citations déjà en place) n'est pas fiable -- voir
-  // le bug encore ouvert sur Streamdown pour la même raison. Volontai-
-  // rement coarse/robuste plutôt que fin/fragile.
-  const [pulseActif, setPulseActif] = useState(false);
-  const longueurPrecedenteRef = useRef(message.content.length);
-  const pulseTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  // Fade mot par mot, formatage live conservé (demande explicite de
+  // Bourama : l'option "pulsation par bloc" tremblait et ne montrait pas
+  // de vrai fondu -- voir historique). Le découpage se fait au niveau du
+  // HAST FINAL (après remark/rehype/sanitize/katex, donc gras/italique/
+  // liens/LaTeX déjà résolus -- voir pluginMotsFade plus bas et son
+  // branchement dans PLUGINS_REHYPE). motsDejaAnimesRef retient combien
+  // de mots ont déjà été révélés lors d'un rendu précédent : seuls les
+  // mots au-delà de ce seuil reçoivent la classe d'animation pour CE
+  // rendu ; totalMotsCourantRef reçoit, pendant le traitement du
+  // Markdown, le nombre total de mots vus par le plugin -- l'effet
+  // ci-dessous le recopie dans motsDejaAnimesRef une fois le rendu
+  // commité, pour que ces mots ne se ré-animent plus au rendu suivant.
+  //
+  // Limite connue et acceptée (comme chez Streamdown, voir recherche) :
+  // un marqueur de mise en forme (ex. "**") qui se ferme EXACTEMENT au
+  // moment d'un chunk peut faire réapparaître d'un coup, sans fondu, le
+  // passage concerné -- inhérent à l'analyse Markdown incrémentale
+  // (impossible de savoir que c'est du gras avant la fermeture du
+  // marqueur), pas un bug de notre plugin.
+  const motsDejaAnimesRef = useRef(0);
+  const totalMotsCourantRef = useRef(0);
   useEffect(() => {
-    const longueurActuelle = message.content.length;
-    const aGrandi = longueurActuelle > longueurPrecedenteRef.current;
-    longueurPrecedenteRef.current = longueurActuelle;
-    if (!estEnCoursDeGeneration || !aGrandi) return;
-    // Retire puis réapplique la classe (via rAF) pour forcer le
-    // redémarrage de l'animation CSS même si un chunk précédent est
-    // arrivé il y a moins de 450ms -- sinon le navigateur ne rejoue pas
-    // une animation déjà active sur le même élément.
-    setPulseActif(false);
-    const frame = requestAnimationFrame(() => setPulseActif(true));
-    if (pulseTimeoutRef.current) clearTimeout(pulseTimeoutRef.current);
-    pulseTimeoutRef.current = setTimeout(() => setPulseActif(false), 450);
-    return () => cancelAnimationFrame(frame);
+    motsDejaAnimesRef.current = totalMotsCourantRef.current;
   }, [message.content, estEnCoursDeGeneration]);
   useEffect(() => {
-    return () => {
-      if (pulseTimeoutRef.current) clearTimeout(pulseTimeoutRef.current);
-    };
-  }, []);
+    // Nouveau message (bulle vidée puis réutilisée, ex. régénération) :
+    // repartir de zéro plutôt que de garder un seuil obsolète.
+    if (message.content.length === 0) {
+      motsDejaAnimesRef.current = 0;
+      totalMotsCourantRef.current = 0;
+    }
+  }, [message.content.length]);
 
 
   // Sélection de texte -> "expliquer ce passage" (2026-07-20). Signal
@@ -552,7 +626,7 @@ function BulleMessageInterne({
         <div
           ref={conteneurRef}
           onMouseUp={gererFinSelection}
-          className={`dj-markdown [&_ul]:list-disc [&_ul]:pl-5 [&_ol]:list-decimal [&_ol]:pl-5 [&_p]:mb-2 last:[&_p]:mb-0 [&_h1]:font-lecture [&_h1]:font-semibold [&_h1]:tracking-[-0.01em] [&_h1]:text-dj-texte [&_h1]:text-xl [&_h1]:mb-2 [&_h1]:mt-3 [&_h2]:font-lecture [&_h2]:font-semibold [&_h2]:tracking-[-0.01em] [&_h2]:text-dj-texte [&_h2]:text-lg [&_h2]:mb-2 [&_h2]:mt-3 [&_h3]:font-lecture [&_h3]:font-semibold [&_h3]:tracking-[-0.01em] [&_h3]:text-dj-texte [&_h3]:text-base [&_h3]:mb-1.5 [&_h3]:mt-2${pulseActif ? " dj-chunk-pulse" : ""}`}
+          className="dj-markdown [&_ul]:list-disc [&_ul]:pl-5 [&_ol]:list-decimal [&_ol]:pl-5 [&_p]:mb-2 last:[&_p]:mb-0 [&_h1]:font-lecture [&_h1]:font-semibold [&_h1]:tracking-[-0.01em] [&_h1]:text-dj-texte [&_h1]:text-xl [&_h1]:mb-2 [&_h1]:mt-3 [&_h2]:font-lecture [&_h2]:font-semibold [&_h2]:tracking-[-0.01em] [&_h2]:text-dj-texte [&_h2]:text-lg [&_h2]:mb-2 [&_h2]:mt-3 [&_h3]:font-lecture [&_h3]:font-semibold [&_h3]:tracking-[-0.01em] [&_h3]:text-dj-texte [&_h3]:text-base [&_h3]:mb-1.5 [&_h3]:mt-2"
         >
           {/* remarkGfm (tableaux/gras/liens) + remarkMath/rehypeKatex
               (LaTeX) tournent dans LA MÊME passe de parsing -- c'est ça
@@ -562,7 +636,29 @@ function BulleMessageInterne({
               part la normalisation des délimiteurs ci-dessus. */}
           <ReactMarkdown
             remarkPlugins={PLUGINS_REMARK}
-            rehypePlugins={PLUGINS_REHYPE}
+            rehypePlugins={
+              // pluginMotsFade UNIQUEMENT pour le message en cours de
+              // génération (voir estEnCoursDeGeneration) -- pour tous
+              // les autres (messages déjà terminés/historique), on garde
+              // la référence stable PLUGINS_REHYPE (voir le commentaire
+              // "Perf 10/08" plus haut : recréer ce tableau à chaque
+              // rendu a un coût, donc on ne le paie que là où c'est
+              // nécessaire).
+              estEnCoursDeGeneration
+                ? [
+                    ...PLUGINS_REHYPE,
+                    [
+                      pluginMotsFade,
+                      {
+                        seuil: motsDejaAnimesRef.current,
+                        rapporterTotal: (n: number) => {
+                          totalMotsCourantRef.current = n;
+                        },
+                      },
+                    ],
+                  ]
+                : PLUGINS_REHYPE
+            }
             components={{
               // Bloc de code (```lang ... ```) : ReactMarkdown structure ça
               // en <pre><code className="language-xxx">...</code></pre> --
