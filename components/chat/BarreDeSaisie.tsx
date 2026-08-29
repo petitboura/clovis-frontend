@@ -16,6 +16,7 @@ import { messageErreur } from "@/lib/erreurs";
 import { Skeleton } from "../Skeleton";
 import { PanneauFlottant } from "@/components/PanneauFlottant";
 import { useFermetureAnimee } from "@/lib/useFermetureAnimee";
+import { BoutonRetour } from "@/components/BoutonRetour";
 
 // EditeurMathsRiche (tiptap + mathlive) et EditeurFormule (mathlive) ne
 // montent que quand leur modale respective s'ouvre (voir
@@ -976,13 +977,13 @@ export function BarreDeSaisie({
     if (ecranNotion === "creer") {
       return (
         <div className="p-2">
-          <button
-            type="button"
+          <BoutonRetour
             onClick={retourRechercheNotion}
-            className="mb-2 text-xs text-dj-texte-muet transition-colors hover:text-dj-texte"
-          >
-            ← Retour
-          </button>
+            taille={14}
+            avecTexte
+            padding="p-0"
+            className="mb-2 w-fit"
+          />
           <input
             type="text"
             autoFocus
@@ -1014,13 +1015,13 @@ export function BarreDeSaisie({
       return (
         <div>
           <div className="flex items-center gap-1 px-2 pb-1 pt-1">
-            <button
-              type="button"
+            <BoutonRetour
               onClick={retourRechercheNotion}
-              className="text-xs text-dj-texte-muet transition-colors hover:text-dj-texte"
-            >
-              ← Retour
-            </button>
+              taille={14}
+              avecTexte
+              padding="p-0"
+              className="w-fit"
+            />
             <span className="truncate text-xs text-dj-texte-muet">{baseNotionChoisie.titre}</span>
           </div>
           <input
