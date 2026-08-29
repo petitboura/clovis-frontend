@@ -60,9 +60,7 @@ export default async function PageTelecharger() {
       <div className="w-full max-w-lg animate-dj-fade-up">
         <div className="mb-8 flex items-center justify-center gap-2.5">
           <Logo taille={32} />
-          <span className="font-display text-lg font-bold tracking-tight text-dj-texte">
-            <span className="text-dj-accent-1">Clovis</span>
-          </span>
+          <span className="font-display text-lg font-bold tracking-tight text-dj-texte">Clovis</span>
         </div>
 
         <div className="rounded-2xl border border-dj-bordure bg-dj-surface p-6 shadow-[0_2px_24px_rgba(0,0,0,0.35)]">

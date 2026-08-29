@@ -12,6 +12,7 @@ import { ServiceWorkerRegistration } from "@/components/ServiceWorkerRegistratio
 import { ReveilBackend } from "@/components/ReveilBackend";
 import { SplashOuverture } from "@/components/SplashOuverture";
 import { SplashPret } from "@/components/SplashPret";
+import { BoutonFlottantTelecharger } from "@/components/BoutonFlottantTelecharger";
 
 // CORRECTIF (17/08) -- Bourama a demandé de sortir de la charte
 // Djiguignè (jugée trop générique "IA" -- palette + paire de polices
@@ -168,6 +169,7 @@ export default function RacineLayout({
         <ServiceWorkerRegistration />
         <ReveilBackend />
         {children}
+        <BoutonFlottantTelecharger />
         <SplashPret />
       </body>
     </html>
