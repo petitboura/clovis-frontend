@@ -116,6 +116,21 @@ export function ChatIA({
   const collePresBasRef = useRef(true);
   const { activer: activerNotificationsPush } = useNotificationsPush();
   const [genEnCours, setGenEnCours] = useState(false);
+  // Rythme d'affichage du texte de réponse DÉCOUPLÉ de son arrivée
+  // réseau (demande Bourama : "le streaming n'est pas contrôlé, si
+  // plusieurs textes sont donnés ils s'affichent [tous d'un coup]").
+  // Le texte reçu via l'événement "reponse" est mis en attente dans
+  // bufferAffichageRef plutôt qu'ajouté directement à content ; un
+  // ticker (tickAffichage) le révèle mot par mot à rythme fixe, avec
+  // rattrapage si le backend envoie un gros paquet d'un coup (voir plus
+  // bas). affichageEnCours reste vrai tant que ce buffer n'est pas vidé,
+  // même après la fin du flux réseau (genEnCours) -- sert à piloter la
+  // pulsation "dj-chunk-pulse" de BulleMessage.tsx sur le VRAI rythme
+  // d'affichage plutôt que sur celui, brut, du réseau.
+  const bufferAffichageRef = useRef("");
+  const tickerActifRef = useRef(false);
+  const tickerIdRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const [affichageEnCours, setAffichageEnCours] = useState(false);
   const [statuts, setStatuts] = useState<{ texte: string; etat: EtatStatut }[]>([]);
   // Raisonnement interne du modèle (24/07, voir RaisonnementBulle.tsx) --
   // enCours est un flag transitoire (vrai seulement pendant que LE
@@ -201,6 +216,68 @@ export function ChatIA({
     });
   }
 
+  // Découpe le buffer en attente en un "mot" (espaces de tête inclus
+  // dans le morceau suivant, jamais révélés seuls) : révéler mot par mot
+  // reste lisible tout en limitant le nombre de re-renders par rapport à
+  // un caractère par caractère.
+  function decouperProchainMot(buffer: string): [string, string] {
+    if (buffer.length === 0) return ["", ""];
+    let i = 0;
+    while (i < buffer.length && /\s/.test(buffer[i])) i++;
+    while (i < buffer.length && !/\s/.test(buffer[i])) i++;
+    return [buffer.slice(0, i), buffer.slice(i)];
+  }
+
+  function tickAffichage() {
+    const buffer = bufferAffichageRef.current;
+    if (buffer.length === 0) {
+      tickerActifRef.current = false;
+      setAffichageEnCours(false);
+      return;
+    }
+    // Rattrapage : si le buffer s'accumule (le réseau va plus vite que
+    // l'affichage, ou un gros paquet est arrivé d'un coup), on révèle
+    // plusieurs mots par tick pour ne jamais laisser un décalage
+    // perceptible entre le texte affiché et la vraie réponse déjà reçue.
+    const nbMots = buffer.length > 400 ? 6 : buffer.length > 120 ? 3 : 1;
+    let morceau = "";
+    let reste = buffer;
+    for (let i = 0; i < nbMots && reste.length > 0; i++) {
+      const [mot, r] = decouperProchainMot(reste);
+      morceau += mot;
+      reste = r;
+    }
+    bufferAffichageRef.current = reste;
+    majMessages((prec) => {
+      const copie = [...prec];
+      const dernier = copie[copie.length - 1];
+      copie[copie.length - 1] = { ...dernier, content: dernier.content + morceau };
+      return copie;
+    });
+    tickerIdRef.current = setTimeout(tickAffichage, 26);
+  }
+
+  function pousserTexteAffichage(texte: string) {
+    bufferAffichageRef.current += texte;
+    setAffichageEnCours(true);
+    if (tickerActifRef.current) return;
+    tickerActifRef.current = true;
+    tickerIdRef.current = setTimeout(tickAffichage, 26);
+  }
+
+  function reinitialiserAffichageControle() {
+    if (tickerIdRef.current) clearTimeout(tickerIdRef.current);
+    tickerActifRef.current = false;
+    bufferAffichageRef.current = "";
+    setAffichageEnCours(false);
+  }
+
+  useEffect(() => {
+    return () => {
+      if (tickerIdRef.current) clearTimeout(tickerIdRef.current);
+    };
+  }, []);
+
   // Partagé entre l'envoi normal (envoyerMessage) et la reprise après
   // confirmation (repriseApresConfirmation) -- même flux d'événements SSE
   // dans les deux cas (voir core/main.py:chat(), docstring).
@@ -213,12 +290,7 @@ export function ChatIA({
       // voir RaisonnementBulle.tsx.
       setStatuts([]);
       setRaisonnementEnCours(false);
-      majMessages((prec) => {
-        const copie = [...prec];
-        const dernier = copie[copie.length - 1];
-        copie[copie.length - 1] = { ...dernier, content: dernier.content + evenement.texte };
-        return copie;
-      });
+      pousserTexteAffichage(evenement.texte);
     } else if (evenement.type === "raisonnement") {
       setRaisonnementEnCours(true);
       majMessages((prec) => {
@@ -403,6 +475,7 @@ export function ChatIA({
     const historiquePourApi = messages.map((m) => ({ role: m.role, content: m.content }));
 
     majMessages((prec) => [...prec, messageUtilisateur, { id: null, role: "assistant", content: "" }]);
+    reinitialiserAffichageControle();
     setGenEnCours(true);
     setStatuts([]);
     setRaisonnementEnCours(false);
@@ -567,6 +640,7 @@ export function ChatIA({
         (evenement) => traiterEvenement(evenement)
       );
     } catch (e) {
+      reinitialiserAffichageControle();
       majMessages((prec) => {
         const copie = [...prec];
         copie[copie.length - 1] = {
@@ -607,6 +681,7 @@ export function ChatIA({
   async function repriseApresConfirmation(approuve: boolean) {
     if (!confirmation) return;
     setConfirmationEnAttente(true);
+    reinitialiserAffichageControle();
     setGenEnCours(true);
     try {
       await appelerApiStream(
@@ -615,6 +690,7 @@ export function ChatIA({
         (evenement) => traiterEvenement(evenement)
       );
     } catch (e) {
+      reinitialiserAffichageControle();
       majMessages((prec) => {
         const copie = [...prec];
         copie[copie.length - 1] = {
@@ -683,7 +759,7 @@ export function ChatIA({
           )}
           <BarreDeSaisie
             onEnvoyer={envoyerMessage}
-            desactive={genEnCours}
+            desactive={genEnCours || affichageEnCours}
             agentId={agentId}
             modelesDisponibles={modelesDisponibles}
             modeleSelectionne={modeleSelectionne}
@@ -725,7 +801,7 @@ export function ChatIA({
                 statuts.length === 0 &&
                 !message.raisonnement
               }
-              estEnCoursDeGeneration={estDernier && genEnCours && message.role === "assistant"}
+              estEnCoursDeGeneration={estDernier && affichageEnCours && message.role === "assistant"}
               raisonnement={message.raisonnement}
               raisonnementEnCours={estDernier ? raisonnementEnCours : false}
               outilsResultats={message.outilsResultats}
@@ -794,7 +870,7 @@ export function ChatIA({
       <div className="px-4 [padding-bottom:calc(env(safe-area-inset-bottom)+var(--cap-native-navigation-bottom,0px)+1.5rem)]">
         <BarreDeSaisie
           onEnvoyer={envoyerMessage}
-          desactive={genEnCours}
+          desactive={genEnCours || affichageEnCours}
           agentId={agentId}
           modelesDisponibles={modelesDisponibles}
           modeleSelectionne={modeleSelectionne}
