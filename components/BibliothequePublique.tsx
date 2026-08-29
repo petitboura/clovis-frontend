@@ -755,9 +755,10 @@ export function BibliothequePublique() {
       {/* 28/08/2026, refonte "Ajouter" (demande Bourama : "le bouton +
           doit être comme en privé") : bouton flottant unique, même
           principe que EspaceBibliotheque.tsx -- Fichier(s) / Texte /
-          Lien. "Nouveau dossier" reste géré au-dessus (barre de
-          dossiers), pas dans ce menu, pour rester cohérent avec la
-          navigation par dossiers déjà affichée. */}
+          Lien. MISE À JOUR (29/08/2026) : "Nouveau dossier" ajouté ici
+          aussi, en plus du bouton déjà présent dans l'onglet Dossiers --
+          ouvre directement cet onglet avec le formulaire de création
+          prêt, à la racine. */}
       <input
         ref={inputFichierRef}
         type="file"
@@ -794,6 +795,18 @@ export function BibliothequePublique() {
 
       {menuAjoutOuvert && (
         <div className="fixed bottom-[calc(8.25rem+var(--cap-native-navigation-bottom,0px))] right-5 z-40 flex animate-dj-fade-in-rapide flex-col items-end gap-2">
+          <button
+            onClick={() => {
+              setOngletBiblioPublique("dossiers");
+              setDossierCourantId(null);
+              setCreationDossierOuverte(true);
+              setMenuAjoutOuvert(false);
+            }}
+            className="flex items-center gap-2 rounded-cgpt-bouton border border-dj-bordure bg-dj-surface px-4 py-2 text-sm font-medium text-dj-texte shadow-lg transition-colors hover:border-dj-bordure-forte"
+          >
+            Nouveau dossier
+            <FolderPlus size={15} />
+          </button>
           <button
             onClick={() => {
               inputFichierRef.current?.click();
