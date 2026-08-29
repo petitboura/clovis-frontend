@@ -244,6 +244,7 @@ export type FichierBibliothequePersonnelle = {
   description: string | null;
   url_publique: string;
   created_at: string;
+  statut_vectorisation?: string;
 };
 
 /**
@@ -353,6 +354,8 @@ export type EntreeBibliothequePublique = {
   taille_octets: number | null;
   url_publique: string | null;
   created_at: string;
+  // 29/08/2026, file d'attente de vectorisation en arrière-plan : "en_attente" / "en_cours" / "pret" / "echec".
+  statut_vectorisation?: string;
 };
 
 export async function listerBibliothequePublique(q?: string) {
@@ -466,15 +469,17 @@ export async function supprimerDeBibliothequePublique(entreeId: string) {
  */
 export async function ajouterFichiersABibliothequePublique(fichiers: File[]) {
   const erreurs: { nom: string; erreur: string }[] = [];
+  const idsAVectoriser: string[] = [];
   for (const fichier of fichiers) {
     const nomAuto = fichier.name.replace(/\.[^/.]+$/, "");
     try {
-      await ajouterABibliothequePublique(fichier, nomAuto, "");
+      const ligne = await ajouterABibliothequePublique(fichier, nomAuto, "");
+      if (ligne?.statut_vectorisation === "en_attente" && ligne.id) idsAVectoriser.push(ligne.id);
     } catch (e) {
       erreurs.push({ nom: fichier.name, erreur: messageErreur(e) });
     }
   }
-  return erreurs;
+  return { erreurs, idsAVectoriser };
 }
 
 // Copie un fichier de la bibliothèque publique vers la bibliothèque

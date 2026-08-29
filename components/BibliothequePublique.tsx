@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import {
   Search, Plus, Trash2, Paperclip, FileText, Image as IconImage, Music as IconAudio, Video as IconVideo,
-  Flag, FolderPlus, Check, Link as IconLien, Upload, FolderX, X, Globe, Lock,
+  Flag, FolderPlus, Check, Link as IconLien, Upload, FolderX, X, Globe, Lock, Loader2,
 } from "lucide-react";
 import Link from "next/link";
 import {
@@ -105,6 +105,47 @@ export function BibliothequePublique() {
   // créer) reste inchangé une fois dedans.
   const [ongletBiblioPublique, setOngletBiblioPublique] = useState<"tous" | "dossiers">("tous");
   const [filtreStatutDossier, setFiltreStatutDossier] = useState<"tous" | "contribution_libre" | "privee">("tous");
+
+  // 29/08/2026, demande Bourama : même mécanisme que EspaceBibliotheque.tsx
+  // -- voir ses commentaires détaillés pour le raisonnement complet
+  // (lotVectorisation ne suit que CE qui a été ajouté pendant cette
+  // session, pas tout le catalogue public).
+  const [lotVectorisation, setLotVectorisation] = useState<{ total: number; enAttente: Set<string> } | null>(null);
+  const [badgeInfoId, setBadgeInfoId] = useState<string | null>(null);
+
+  function suivreVectorisation(ids: string[]) {
+    if (ids.length === 0) return;
+    setLotVectorisation((precedent) => {
+      const enAttente = new Set(precedent?.enAttente ?? []);
+      ids.forEach((id) => enAttente.add(id));
+      return { total: (precedent?.total ?? 0) + ids.length, enAttente };
+    });
+  }
+
+  useEffect(() => {
+    if (!liste || !lotVectorisation || lotVectorisation.enAttente.size === 0) return;
+    const enAttenteSuivant = new Set(lotVectorisation.enAttente);
+    let modifie = false;
+    for (const entree of liste) {
+      if (
+        enAttenteSuivant.has(entree.id) &&
+        entree.statut_vectorisation !== "en_attente" &&
+        entree.statut_vectorisation !== "en_cours"
+      ) {
+        enAttenteSuivant.delete(entree.id);
+        modifie = true;
+      }
+    }
+    if (modifie) setLotVectorisation({ total: lotVectorisation.total, enAttente: enAttenteSuivant });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [liste]);
+
+  useEffect(() => {
+    if (!lotVectorisation || lotVectorisation.enAttente.size === 0) return;
+    const intervalle = setInterval(() => charger(recherche), 3000);
+    return () => clearInterval(intervalle);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [lotVectorisation?.enAttente.size]);
 
   function charger(q?: string) {
     listerBibliothequePublique(q)
@@ -209,15 +250,17 @@ export function BibliothequePublique() {
     setErreursEnvoi([]);
     try {
       if (fichiers.length === 1) {
-        await ajouterABibliothequePublique(fichiers[0], nom, description, dossierCourantId || undefined);
+        const ligne = await ajouterABibliothequePublique(fichiers[0], nom, description, dossierCourantId || undefined);
+        if (ligne?.statut_vectorisation === "en_attente" && ligne.id) suivreVectorisation([ligne.id]);
       } else {
-        const erreurs = await ajouterFichiersABibliothequePublique(fichiers);
+        const { erreurs, idsAVectoriser } = await ajouterFichiersABibliothequePublique(fichiers);
         if (erreurs.length === fichiers.length) {
           setEnvoi(false);
           setSansCompte(true);
           return;
         }
         setErreursEnvoi(erreurs);
+        suivreVectorisation(idsAVectoriser);
       }
       setFichiers([]);
       setNom("");
@@ -243,11 +286,11 @@ export function BibliothequePublique() {
     setEnvoi(true);
     setErreur(null);
     try {
-      if (modaleAjout === "lien") {
-        await ajouterLienBibliothequePublique(contenu, titre || undefined, description || undefined, dossierCourantId || undefined);
-      } else {
-        await ajouterTexteBibliothequePublique(contenu, titre || undefined, dossierCourantId || undefined);
-      }
+      const ligne =
+        modaleAjout === "lien"
+          ? await ajouterLienBibliothequePublique(contenu, titre || undefined, description || undefined, dossierCourantId || undefined)
+          : await ajouterTexteBibliothequePublique(contenu, titre || undefined, dossierCourantId || undefined);
+      if (ligne?.statut_vectorisation === "en_attente" && ligne.id) suivreVectorisation([ligne.id]);
       setTexteOuLien("");
       setNom("");
       setDescription("");
@@ -606,6 +649,38 @@ export function BibliothequePublique() {
                   </div>
                 </button>
                 <div className="flex flex-shrink-0 items-center gap-3">
+                  {(entree.statut_vectorisation === "en_attente" || entree.statut_vectorisation === "en_cours" || entree.statut_vectorisation === "echec") && (
+                    <span className="relative flex-shrink-0">
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setBadgeInfoId((id) => (id === entree.id ? null : entree.id));
+                        }}
+                        onMouseEnter={() => setBadgeInfoId(entree.id)}
+                        onMouseLeave={() => setBadgeInfoId((id) => (id === entree.id ? null : id))}
+                        title={
+                          entree.statut_vectorisation === "echec"
+                            ? "Échec du traitement -- l'IA ne peut pas retrouver ce fichier par son contenu."
+                            : "Traitement en cours : l'IA ne peut pas encore retrouver ce fichier facilement."
+                        }
+                        className={entree.statut_vectorisation === "echec" ? "text-[var(--dj-erreur)]" : "text-dj-accent-1"}
+                      >
+                        {entree.statut_vectorisation === "echec" ? (
+                          <span className="block h-2 w-2 rounded-full bg-[var(--dj-erreur)]" />
+                        ) : (
+                          <Loader2 size={12} className="animate-spin" />
+                        )}
+                      </button>
+                      {badgeInfoId === entree.id && (
+                        <div className="absolute right-0 top-full z-50 mt-1 w-56 rounded-cgpt-bouton border border-dj-bordure bg-dj-surface p-2 text-[11px] text-dj-texte shadow-xl animate-dj-fade-in-rapide">
+                          {entree.statut_vectorisation === "echec"
+                            ? "Échec du traitement -- l'IA ne peut pas retrouver ce fichier par son contenu."
+                            : "Traitement en cours : l'IA ne peut pas encore retrouver ce fichier facilement."}
+                        </div>
+                      )}
+                    </span>
+                  )}
                   {entree.url_publique && (
                     <button
                       onClick={() => copierVersBiblioPerso(entree)}
@@ -698,6 +773,25 @@ export function BibliothequePublique() {
       {menuAjoutOuvert && (
         <div className="fixed inset-0 z-40" onClick={() => setMenuAjoutOuvert(false)} />
       )}
+
+      {/* Popup de vectorisation en arrière-plan (29/08/2026) -- voir
+          EspaceBibliotheque.tsx pour le raisonnement complet, même
+          mécanisme ici. */}
+      {lotVectorisation && lotVectorisation.enAttente.size > 0 && (
+        <div className="fixed bottom-[calc(8.25rem+var(--cap-native-navigation-bottom,0px))] right-5 z-40 flex flex-col gap-1 rounded-cgpt-bouton border border-dj-bordure bg-dj-surface px-3 py-2 text-xs text-dj-texte shadow-xl animate-dj-fade-in-rapide">
+          <div className="flex items-center gap-2">
+            <Loader2 size={14} className="animate-spin text-dj-accent-1" />
+            <span>
+              Indexation : {lotVectorisation.total - lotVectorisation.enAttente.size}/{lotVectorisation.total} (
+              {Math.round(((lotVectorisation.total - lotVectorisation.enAttente.size) / lotVectorisation.total) * 100)}%)
+            </span>
+          </div>
+          <p className="text-[10px] text-dj-texte-muet">
+            Les fichiers sont déjà disponibles. Tu peux fermer l&apos;app, ça continue côté serveur.
+          </p>
+        </div>
+      )}
+
       {menuAjoutOuvert && (
         <div className="fixed bottom-[calc(8.25rem+var(--cap-native-navigation-bottom,0px))] right-5 z-40 flex animate-dj-fade-in-rapide flex-col items-end gap-2">
           <button

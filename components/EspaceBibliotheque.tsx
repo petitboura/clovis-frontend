@@ -67,6 +67,8 @@ type FichierBiblio = {
   description: string | null;
   url_publique: string;
   created_at: string;
+  // 29/08/2026, file d'attente de vectorisation en arrière-plan : "en_attente" / "en_cours" / "pret" / "echec".
+  statut_vectorisation?: string;
 };
 
 type SousOngletBiblio = "tous" | "documents" | "images" | "audio" | "videos" | "liens" | "texte";
@@ -153,6 +155,62 @@ export function EspaceBibliotheque() {
   // drag-and-drop étant inutilisable au doigt sur mobile). dossierSurvole
   // pilote juste le style de survol pendant le glisser.
   const [dossierSurvole, setDossierSurvole] = useState<string | null>(null);
+
+  // 29/08/2026, demande Bourama : "il faut stocker puis vectoriser en
+  // arrière-plan, et une barre de progression qui bouge vraiment". Le
+  // fichier est désormais stocké et disponible immédiatement (voir
+  // envoyerFichiersDirect etc.) ; sa vectorisation tourne à part côté
+  // serveur (voir core/file_attente_vectorisation.py). `lotVectorisation`
+  // suit UNIQUEMENT les fichiers ajoutés PENDANT cette session (pas tout
+  // l'historique -- sinon un lot de 3 fichiers noyé dans 500 déjà
+  // vectorisés afficherait toujours ~100%) : `total` ne diminue jamais,
+  // `enAttente` se vide au fur et à mesure (voir l'useEffect plus bas qui
+  // le confronte à `fichiers` après chaque rechargement) -- le popup
+  // disparaît de lui-même une fois `enAttente` vide.
+  const [lotVectorisation, setLotVectorisation] = useState<{ total: number; enAttente: Set<string> } | null>(null);
+  // Badge par fichier (en_attente/en_cours/echec) : info-bulle ouverte au
+  // clic OU au survol -- id du fichier concerné, null si aucune.
+  const [badgeInfoId, setBadgeInfoId] = useState<string | null>(null);
+
+  function suivreVectorisation(ids: string[]) {
+    if (ids.length === 0) return;
+    setLotVectorisation((precedent) => {
+      const enAttente = new Set(precedent?.enAttente ?? []);
+      ids.forEach((id) => enAttente.add(id));
+      return { total: (precedent?.total ?? 0) + ids.length, enAttente };
+    });
+  }
+
+  // Retire du lot suivi tout fichier qui n'est plus "en_attente"/"en_cours"
+  // dès qu'un rechargement de `fichiers` le confirme -- popup à jour sans
+  // jamais avoir besoin d'actualiser la page.
+  useEffect(() => {
+    if (!fichiers || !lotVectorisation || lotVectorisation.enAttente.size === 0) return;
+    const enAttenteSuivant = new Set(lotVectorisation.enAttente);
+    let modifie = false;
+    for (const f of fichiers) {
+      if (
+        enAttenteSuivant.has(f.id) &&
+        f.statut_vectorisation !== "en_attente" &&
+        f.statut_vectorisation !== "en_cours"
+      ) {
+        enAttenteSuivant.delete(f.id);
+        modifie = true;
+      }
+    }
+    if (modifie) setLotVectorisation({ total: lotVectorisation.total, enAttente: enAttenteSuivant });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [fichiers]);
+
+  // Tant qu'il reste des fichiers en attente/en cours, on réinterroge le
+  // serveur régulièrement (le plus simple à maintenir, cf. décision du
+  // 29/08) -- jamais de rechargement de PAGE, juste un nouvel appel API.
+  useEffect(() => {
+    if (!lotVectorisation || lotVectorisation.enAttente.size === 0) return;
+    const intervalle = setInterval(() => chargerFichiers(), 3000);
+    return () => clearInterval(intervalle);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [lotVectorisation?.enAttente.size]);
 
   async function deposerFichierDansDossier(dossierId: string, fichierId: string) {
     setDossierSurvole(null);
@@ -268,10 +326,12 @@ async function envoyerFichiersDirect(fichiersChoisis: FileList | File[]) {
     setEnvoi(true);
     setErreursEnvoi([]);
     const erreurs: { nom: string; erreur: string }[] = [];
+    const idsAVectoriser: string[] = [];
     try {
       for (const fichier of liste) {
         try {
           const ligne = await ajouterFichierBibliothequePersonnelle(fichier, "", "");
+          if (ligne?.statut_vectorisation === "en_attente" && ligne.id) idsAVectoriser.push(ligne.id);
           if (dossierCourantId && ligne?.id) {
             await rangerFichierDansDossier(dossierCourantId, ligne.id);
           }
@@ -280,6 +340,7 @@ async function envoyerFichiersDirect(fichiersChoisis: FileList | File[]) {
         }
       }
       setErreursEnvoi(erreurs);
+      suivreVectorisation(idsAVectoriser);
       chargerFichiers();
       chargerDossiers();
     } finally {
@@ -318,6 +379,7 @@ async function envoyerFichiersDirect(fichiersChoisis: FileList | File[]) {
     setUploadDossierEnCours(true);
     setErreursEnvoi([]);
     const erreurs: { nom: string; erreur: string }[] = [];
+    const idsAVectoriser: string[] = [];
     const dossiersCrees = new Map<string, string | null>();
 
     async function obtenirDossierPourChemin(segments: string[]): Promise<string | undefined> {
@@ -351,6 +413,7 @@ async function envoyerFichiersDirect(fichiersChoisis: FileList | File[]) {
           const segmentsDossier = chemin.split("/").slice(0, -1);
           const dossierId = await obtenirDossierPourChemin(segmentsDossier);
           const ligne = await ajouterFichierBibliothequePersonnelle(fichier, "", "");
+          if (ligne?.statut_vectorisation === "en_attente" && ligne.id) idsAVectoriser.push(ligne.id);
           if (ligne?.id && dossierId) {
             // Léger réessai (26/08 -- aléa réseau ponctuel observé sur
             // de longs envois séquentiels) : un fichier déjà envoyé ne
@@ -367,6 +430,7 @@ async function envoyerFichiersDirect(fichiersChoisis: FileList | File[]) {
         }
       }
       setErreursEnvoi(erreurs);
+      suivreVectorisation(idsAVectoriser);
       chargerFichiers();
       chargerDossiers();
     } catch (e) {
@@ -395,6 +459,7 @@ async function envoyerFichiersDirect(fichiersChoisis: FileList | File[]) {
       if (dossierCourantId && ligne?.id) {
         await rangerFichierDansDossier(dossierCourantId, ligne.id);
       }
+      if (ligne?.statut_vectorisation === "en_attente" && ligne.id) suivreVectorisation([ligne.id]);
       setTexteOuLien("");
       setTitreAjout("");
       setModaleAjout(null);
@@ -486,15 +551,18 @@ async function envoyerFichiersDirect(fichiersChoisis: FileList | File[]) {
   async function uploaderDirectementDansDossier(fichiersChoisis: FileList | File[]) {
     if (dossierCourantId === null) return;
     setUploadDansPickerEnCours(true);
+    const idsAVectoriser: string[] = [];
     try {
       for (const fichier of Array.from(fichiersChoisis)) {
         try {
           const ligne = await ajouterFichierBibliothequePersonnelle(fichier, "", "");
+          if (ligne?.statut_vectorisation === "en_attente" && ligne.id) idsAVectoriser.push(ligne.id);
           if (ligne?.id) await rangerFichierDansDossier(dossierCourantId, ligne.id);
         } catch (e) {
           window.alert(`${fichier.name} : ${messageErreur(e)}`);
         }
       }
+      suivreVectorisation(idsAVectoriser);
       chargerFichiers();
       chargerDossiers();
     } finally {
@@ -759,6 +827,37 @@ async function envoyerFichiersDirect(fichiersChoisis: FileList | File[]) {
         </div>
       )}
 
+      {/* Popup de vectorisation en arrière-plan (29/08/2026, demande
+          Bourama : "stocker puis vectoriser en arrière-plan, avec une
+          barre de progression qui bouge vraiment"). Distinct du spinner
+          d'envoi ci-dessus : l'upload (stockage) est déjà terminé à ce
+          stade, ce popup suit la vectorisation qui continue côté
+          SERVEUR -- fermer/quitter l'app ne l'interrompt pas, seul cet
+          affichage en dépend. Disparaît de lui-même une fois tous les
+          fichiers du lot passés à "pret"/"echec" (voir l'useEffect qui
+          maintient lotVectorisation). Décalé au-dessus du popup d'envoi
+          s'ils sont visibles en même temps. */}
+      {lotVectorisation && lotVectorisation.enAttente.size > 0 && (
+        <div
+          className={`fixed right-5 z-40 flex flex-col gap-1 rounded-cgpt-bouton border border-dj-bordure bg-dj-surface px-3 py-2 text-xs text-dj-texte shadow-xl animate-dj-fade-in-rapide ${
+            envoi || uploadDossierEnCours
+              ? "bottom-[calc(11rem+var(--cap-native-navigation-bottom,0px)+var(--dj-barre-onglets-web,0px))]"
+              : "bottom-[calc(8.25rem+var(--cap-native-navigation-bottom,0px)+var(--dj-barre-onglets-web,0px))]"
+          }`}
+        >
+          <div className="flex items-center gap-2">
+            <Loader2 size={14} className="animate-spin text-dj-accent-1" />
+            <span>
+              Indexation : {lotVectorisation.total - lotVectorisation.enAttente.size}/{lotVectorisation.total} (
+              {Math.round(((lotVectorisation.total - lotVectorisation.enAttente.size) / lotVectorisation.total) * 100)}%)
+            </span>
+          </div>
+          <p className="text-[10px] text-dj-texte-muet">
+            Les fichiers sont déjà disponibles. Tu peux fermer l&apos;app, ça continue côté serveur.
+          </p>
+        </div>
+      )}
+
       {menuAjoutOuvert && (
         <div
           className="fixed inset-0 z-40"
@@ -907,6 +1006,38 @@ async function envoyerFichiersDirect(fichiersChoisis: FileList | File[]) {
                   <span className="truncate">{f.description || f.nom_fichier}</span>
                 </button>
                 <div className="flex flex-shrink-0 items-center gap-3 text-xs text-dj-texte-muet">
+                  {(f.statut_vectorisation === "en_attente" || f.statut_vectorisation === "en_cours" || f.statut_vectorisation === "echec") && (
+                    <span className="relative flex-shrink-0">
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setBadgeInfoId((id) => (id === f.id ? null : f.id));
+                        }}
+                        onMouseEnter={() => setBadgeInfoId(f.id)}
+                        onMouseLeave={() => setBadgeInfoId((id) => (id === f.id ? null : id))}
+                        title={
+                          f.statut_vectorisation === "echec"
+                            ? "Échec du traitement -- l'IA ne peut pas retrouver ce fichier par son contenu."
+                            : "Traitement en cours : l'IA ne peut pas encore retrouver ce fichier facilement."
+                        }
+                        className={f.statut_vectorisation === "echec" ? "text-[var(--dj-erreur)]" : "text-dj-accent-1"}
+                      >
+                        {f.statut_vectorisation === "echec" ? (
+                          <span className="block h-2 w-2 rounded-full bg-[var(--dj-erreur)]" />
+                        ) : (
+                          <Loader2 size={12} className="animate-spin" />
+                        )}
+                      </button>
+                      {badgeInfoId === f.id && (
+                        <div className="absolute right-0 top-full z-50 mt-1 w-56 rounded-cgpt-bouton border border-dj-bordure bg-dj-surface p-2 text-[11px] text-dj-texte shadow-xl animate-dj-fade-in-rapide">
+                          {f.statut_vectorisation === "echec"
+                            ? "Échec du traitement -- l'IA ne peut pas retrouver ce fichier par son contenu. Essaie de le supprimer et de le réajouter."
+                            : "Traitement en cours : l'IA ne peut pas encore retrouver ce fichier facilement."}
+                        </div>
+                      )}
+                    </span>
+                  )}
                   <button
                     onClick={() => setFichierARanger(f)}
                     className="hover:text-dj-texte"
