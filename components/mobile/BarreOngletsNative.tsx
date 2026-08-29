@@ -21,11 +21,14 @@ import { useTheme } from "@/lib/useTheme";
 // Pas de methode "selectTab" separee : pour changer l'onglet actif on
 // rappelle setTabbar avec le meme tableau de tabs et un nouveau selectedId.
 //
-// Structure des 5 onglets, validee avec Bourama le 26/08 :
-// Bibliotheque, ControleSession (placeholder "bientot disponible", ecran
-// pas encore construit -- Lot 4 mobile), Chat (ouvre ChatFlottant, PAS une
-// route -- le chat n'a jamais ete une page a part), Notes, Plus (nouvelle
-// page /plus, liste groupee des sections restantes).
+// Structure des 4 onglets, validee avec Bourama le 26/08, puis mise a jour
+// le 30/08/2026 (tache 1 chantier nav mobile) : Bibliotheque,
+// ControleSession (placeholder "bientot disponible", ecran pas encore
+// construit -- Lot 4 mobile), Chat (ouvre ChatFlottant, PAS une route --
+// le chat n'a jamais ete une page a part), Personnaliser Clovis (route
+// /personnaliser, remplace l'ancien onglet Plus -- le contenu de /plus
+// n'est pas supprime, il devient accessible via le menu hamburger a la
+// tache 2 du meme chantier).
 //
 // IMPORTANT : ce fichier suppose que @capgo/capacitor-native-navigation
 // est installe (voir package.json) et que `npx cap sync` a ete relance --
@@ -45,14 +48,26 @@ const ICONES_SVG: Record<string, string> = {
   chat: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M7.9 20A9 9 0 1 0 4 16.1L2 22Z"/></svg>',
   notes:
     '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M13.4 2.6a2.1 2.1 0 1 1 3 3L7 15l-4 1 1-4Z"/><path d="M3 22h18"/></svg>',
-  plus: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="5" cy="12" r="1.5"/><circle cx="12" cy="12" r="1.5"/><circle cx="19" cy="12" r="1.5"/></svg>',
+  // Repris de l'icone Lucide Wand2 (v0.383.0, deja utilisee pour
+  // "Personnaliser Clovis" dans AppSidebar.tsx et EspacePlus.tsx -- meme
+  // convention visuelle reprise ici plutot qu'une nouvelle icone inventee,
+  // voir echange avec Bourama du 30/08/2026, tache 1 chantier nav mobile).
+  // Wand2 resout en interne vers le trace "WandSparkles" dans cette
+  // version de la lib (verifie dans node_modules), donc les traits ci
+  // dessous sont copies a l'identique de ce trace, pas approximes.
+  personnaliser:
+    '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m21.64 3.64-1.28-1.28a1.21 1.21 0 0 0-1.72 0L2.36 18.64a1.21 1.21 0 0 0 0 1.72l1.28 1.28a1.2 1.2 0 0 0 1.72 0L21.64 5.36a1.2 1.2 0 0 0 0-1.72"/><path d="m14 7 3 3"/><path d="M5 6v4"/><path d="M19 14v4"/><path d="M10 2v2"/><path d="M7 8H3"/><path d="M21 16h-4"/><path d="M11 3H9"/></svg>',
 };
 
 const ONGLETS_NATIFS = [
   { id: "bibliotheque", titre: "Bibliothèque", route: "/bibliotheque", icone: ICONES_SVG.bibliotheque },
   { id: "controle-session", titre: "Concentration", route: "/controle-session", icone: ICONES_SVG.controleSession },
   { id: "chat", titre: "Chat", route: null, icone: ICONES_SVG.chat },
-  { id: "plus", titre: "Plus", route: "/plus", icone: ICONES_SVG.plus },
+  // 30/08/2026, tache 1 chantier nav mobile (Bourama) : remplace l'ancien
+  // onglet "Plus" (route /plus). Le contenu de /plus n'est pas touche --
+  // il repart dans le menu hamburger a la tache 2 -- seule cette entree
+  // de la barre du bas change.
+  { id: "personnaliser", titre: "Personnaliser Clovis", route: "/personnaliser", icone: ICONES_SVG.personnaliser },
 ] as const;
 
 // Correctif (26/08/2026, retour "couleurs et icônes qui n'ont rien à voir
@@ -131,7 +146,8 @@ export function BarreOngletsNative() {
   }, []);
 
   // Synchronise l'onglet visuellement actif avec la route affichee (ex :
-  // ouvrir Bibliotheque depuis "Plus" doit aussi mettre a jour la barre).
+  // ouvrir Bibliotheque depuis "Personnaliser Clovis" doit aussi mettre a
+  // jour la barre).
   // Pas de methode dediee cote plugin : on rappelle setTabbar avec le
   // meme tableau de tabs, juste un nouveau selectedId. Depend aussi de
   // `resolu` (26/08/2026, correctif couleurs) : bascule clair/sombre
