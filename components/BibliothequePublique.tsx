@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import {
   Search, Plus, Trash2, Paperclip, FileText, Image as IconImage, Music as IconAudio, Video as IconVideo,
-  Flag, FolderPlus, Check, Link as IconLien, Upload, FolderX, X, Globe, Lock, Loader2,
+  Flag, FolderPlus, Check, Link as IconLien, Upload, FolderX, X, Globe, Lock, Loader2, Download,
 } from "lucide-react";
 import Link from "next/link";
 import {
@@ -691,7 +691,7 @@ export function BibliothequePublique() {
                       {copieReussie === entree.id ? (
                         <Check size={15} className="text-dj-accent-1" />
                       ) : (
-                        <FolderPlus size={15} />
+                        <Download size={15} />
                       )}
                     </button>
                   )}
