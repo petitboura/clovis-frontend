@@ -61,7 +61,7 @@ function iconePourType(typeMime: string | null) {
 // dans lib/api.ts, boucle séquentielle).
 export function BibliothequePublique() {
   const [liste, setListe] = useState<EntreeBibliothequePublique[] | undefined>(undefined);
-  const [dossiers, setDossiers] = useState<DossierCataloguePublic[]>([]);
+  const [dossiers, setDossiers] = useState<DossierCataloguePublic[] | undefined>(undefined);
   const [dossierCourantId, setDossierCourantId] = useState<string | null>(null);
   const [recherche, setRecherche] = useState("");
   const [envoi, setEnvoi] = useState(false);
@@ -87,6 +87,17 @@ export function BibliothequePublique() {
   const [creationDossierOuverte, setCreationDossierOuverte] = useState(false);
   const [nouveauNomDossier, setNouveauNomDossier] = useState("");
   const [nouveauStatutDossier, setNouveauStatutDossier] = useState<"contribution_libre" | "privee">("contribution_libre");
+
+  // 29/08/2026, demande Bourama : upload d'un dossier entier (comme en
+  // privé, voir envoyerDossierDirect dans EspaceBibliotheque.tsx) --
+  // arborescence exacte recréée via webkitRelativePath, un segment de
+  // chemin = un dossier créé une seule fois. Différence avec le privé :
+  // les dossiers publics ont un statut (libre/privée), donc on le
+  // demande une fois avant de lancer l'envoi et on l'applique à tous
+  // les dossiers créés pour cet import.
+  const inputDossierRef = useRef<HTMLInputElement>(null);
+  const [uploadDossierEnCours, setUploadDossierEnCours] = useState(false);
+  const [dossierEnAttenteStatut, setDossierEnAttenteStatut] = useState<File[] | null>(null);
 
   // 29/08/2026, demande Bourama : ligne d'onglets "Tous" / "Dossiers",
   // le filtre de statut et la liste des dossiers ne s'affichent que
@@ -126,6 +137,61 @@ export function BibliothequePublique() {
       setNom(liste[0].name.replace(/\.[^/.]+$/, "")); // nom du fichier sans extension comme point de départ, modifiable
     }
     setModaleFichierOuverte(true);
+  }
+
+  async function envoyerDossierDirect(fichiersChoisis: FileList | File[], statut: "contribution_libre" | "privee") {
+    const liste = Array.from(fichiersChoisis) as (File & { webkitRelativePath?: string })[];
+    if (liste.length === 0) return;
+    setUploadDossierEnCours(true);
+    setErreursEnvoi([]);
+    const erreurs: { nom: string; erreur: string }[] = [];
+    const dossiersCrees = new Map<string, string | null>();
+
+    async function obtenirDossierPourChemin(segments: string[]): Promise<string | undefined> {
+      if (segments.length === 0) return dossierCourantId ?? undefined;
+      const chemin = segments.join("/");
+      if (dossiersCrees.has(chemin)) {
+        const id = dossiersCrees.get(chemin);
+        if (id === null) throw new Error(`Le dossier « ${segments[segments.length - 1]} » n'a pas pu être créé`);
+        return id;
+      }
+      const parentId = await obtenirDossierPourChemin(segments.slice(0, -1));
+      const nomSegment = segments[segments.length - 1];
+      let id: string | undefined;
+      try {
+        const dossier = await creerDossierCataloguePublic(nomSegment, statut, parentId);
+        id = dossier?.id;
+      } catch {
+        id = undefined;
+      }
+      dossiersCrees.set(chemin, id ?? null);
+      if (!id) throw new Error(`Le dossier « ${nomSegment} » n'a pas pu être créé`);
+      return id;
+    }
+
+    try {
+      for (const fichier of liste) {
+        const chemin = fichier.webkitRelativePath || fichier.name;
+        try {
+          const segmentsDossier = chemin.split("/").slice(0, -1);
+          const dossierId = await obtenirDossierPourChemin(segmentsDossier);
+          try {
+            await ajouterABibliothequePublique(fichier, "", "", dossierId);
+          } catch {
+            await ajouterABibliothequePublique(fichier, "", "", dossierId);
+          }
+        } catch (e) {
+          erreurs.push({ nom: chemin, erreur: messageErreur(e) });
+        }
+      }
+      setErreursEnvoi(erreurs);
+      charger(recherche);
+      chargerDossiers();
+    } catch (e) {
+      window.alert(messageErreur(e));
+    } finally {
+      setUploadDossierEnCours(false);
+    }
   }
 
   function retirerFichier(f: File) {
@@ -259,10 +325,10 @@ export function BibliothequePublique() {
     return <CTACompteRequis texte="Crée un compte pour ajouter un document à la bibliothèque publique." />;
   }
 
-  const dossiersRacine = dossiers
+  const dossiersRacine = (dossiers ?? [])
     .filter((d) => !d.dossier_parent_id)
     .filter((d) => filtreStatutDossier === "tous" || d.statut === filtreStatutDossier);
-  const dossierActuel = dossierCourantId ? dossiers.find((d) => d.id === dossierCourantId) : null;
+  const dossierActuel = dossierCourantId ? (dossiers ?? []).find((d) => d.id === dossierCourantId) : null;
   const listeAffichee = dossierCourantId
     ? (liste || []).filter((e) => dossierActuel?.fichier_ids.includes(e.id))
     : liste;
@@ -346,16 +412,85 @@ export function BibliothequePublique() {
                     </button>
                   ))}
                 </div>
-                <button
-                  onClick={() => setCreationDossierOuverte((v) => !v)}
-                  className="flex items-center gap-1 rounded-cgpt-bouton px-2 py-1 font-semibold text-dj-texte-muet transition-colors hover:text-dj-texte"
-                >
-                  <FolderPlus size={14} />
-                  Nouveau dossier
-                </button>
+                <div className="flex items-center gap-1">
+                  <button
+                    onClick={() => setCreationDossierOuverte((v) => !v)}
+                    className="flex items-center gap-1 rounded-cgpt-bouton px-2 py-1 font-semibold text-dj-texte-muet transition-colors hover:text-dj-texte"
+                  >
+                    <FolderPlus size={14} />
+                    Nouveau dossier
+                  </button>
+                  <button
+                    onClick={() => inputDossierRef.current?.click()}
+                    className="flex items-center gap-1 rounded-cgpt-bouton px-2 py-1 font-semibold text-dj-texte-muet transition-colors hover:text-dj-texte"
+                  >
+                    <Upload size={14} />
+                    Importer un dossier
+                  </button>
+                </div>
               </div>
 
-              {dossiersRacine.length > 0 && (
+              <input
+                ref={inputDossierRef}
+                type="file"
+                className="hidden"
+                // @ts-expect-error -- webkitdirectory n'est pas dans le typage React standard, mais bien supporté par les navigateurs (PC + mobile web, pas l'app native)
+                webkitdirectory=""
+                onChange={(e) => {
+                  const fichiers = e.target.files;
+                  if (fichiers && fichiers.length > 0) setDossierEnAttenteStatut(Array.from(fichiers));
+                  e.target.value = "";
+                }}
+              />
+
+              {dossierEnAttenteStatut && (
+                <div className="flex animate-dj-fade-in-rapide flex-col gap-2 rounded-xl border border-dj-bordure bg-dj-surface px-4 py-3">
+                  <p className="text-sm text-dj-texte">
+                    Statut du dossier importé ({dossierEnAttenteStatut.length} fichier{dossierEnAttenteStatut.length > 1 ? "s" : ""}) :
+                  </p>
+                  <div className="flex items-center gap-2">
+                    <button
+                      onClick={() => {
+                        const fichiers = dossierEnAttenteStatut;
+                        setDossierEnAttenteStatut(null);
+                        if (fichiers) envoyerDossierDirect(fichiers, "contribution_libre");
+                      }}
+                      className="flex items-center gap-1 rounded-cgpt-bouton bg-dj-accent-1 px-3 py-1.5 text-xs font-bold text-[#1A0D02] hover:bg-dj-accent-2"
+                    >
+                      <Globe size={14} />
+                      Contribution libre
+                    </button>
+                    <button
+                      onClick={() => {
+                        const fichiers = dossierEnAttenteStatut;
+                        setDossierEnAttenteStatut(null);
+                        if (fichiers) envoyerDossierDirect(fichiers, "privee");
+                      }}
+                      className="flex items-center gap-1 rounded-cgpt-bouton border border-dj-bordure px-3 py-1.5 text-xs font-bold text-dj-texte hover:bg-dj-surface-haute"
+                    >
+                      <Lock size={14} />
+                      Privé (moi seul)
+                    </button>
+                    <button
+                      onClick={() => setDossierEnAttenteStatut(null)}
+                      className="ml-auto text-dj-texte-muet hover:text-dj-texte"
+                    >
+                      <X size={16} />
+                    </button>
+                  </div>
+                </div>
+              )}
+
+              {uploadDossierEnCours && <p className="text-xs text-dj-texte-muet">Import du dossier en cours…</p>}
+
+              {dossiers === undefined && (
+                <div className="flex flex-col gap-2" aria-hidden>
+                  <Skeleton className="h-12 rounded-xl border border-dj-bordure" />
+                  <Skeleton className="h-12 rounded-xl border border-dj-bordure" style={{ animationDelay: "100ms" }} />
+                </div>
+              )}
+
+              {dossiers !== undefined && dossiersRacine.length > 0 && (
                 <div className="flex flex-col gap-2">
                   {dossiersRacine.map((d) => (
                     <div
