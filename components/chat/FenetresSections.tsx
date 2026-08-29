@@ -201,10 +201,34 @@ function FenetreSection({
 // fermerToutes dans ChatFlottant.tsx).
 export function FenetresSections() {
   const { fenetres } = useFenetres();
+  // Correctif (28/08/2026, audit) : le z-index affiché n'est plus le
+  // compteur brut "z" (monotone, jamais réinitialisé -- il grandit à
+  // chaque ouverture/mise au premier plan sur toute la session, et
+  // pouvait donc finir, avec l'usage, par dépasser des popups plus
+  // prioritaires comme le compte-requis ou le feedback, qui doivent
+  // TOUJOURS rester au-dessus de ces fenêtres). Ici, on retrouve juste
+  // l'ORDRE relatif des fenêtres actuellement ouvertes (tri sur "z") et
+  // on leur redonne un rang borné : 0, 1, 2... -- au maximum (nombre de
+  // sections ouvrables - 1), soit 4 avec les 5 sections actuelles.
+  // FenetreSection ajoute encore 120 (zIndex: 120 + z, inchangé) donc le
+  // rendu final va de 120 à 124 max, jamais au-delà. Les popups qui
+  // doivent repasser au-dessus (voir CompteRequisModal dans
+  // ChatFlottant.tsx, maintenant z-[150]) ont donc toujours de la marge,
+  // quelle que soit la durée de la session.
+  const ordonnees = [...fenetres].sort((a, b) => a.z - b.z);
   return (
     <>
-      {fenetres.map((f) => (
-        <FenetreSection key={f.cle} cle={f.cle} ongletId={f.ongletId} x={f.x} y={f.y} width={f.width} height={f.height} z={f.z} />
+      {ordonnees.map((f, index) => (
+        <FenetreSection
+          key={f.cle}
+          cle={f.cle}
+          ongletId={f.ongletId}
+          x={f.x}
+          y={f.y}
+          width={f.width}
+          height={f.height}
+          z={index}
+        />
       ))}
     </>
   );

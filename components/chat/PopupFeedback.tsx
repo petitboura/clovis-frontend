@@ -81,7 +81,11 @@ export function PopupFeedback({
   }
 
   return (
-    <div className="fixed inset-0 z-[110] flex items-center justify-center bg-black/70 p-4 animate-dj-fade-in">
+    // z-[150] (relevé le 28/08/2026, ex z-[110], même correctif que
+    // CompteRequisModal dans ChatFlottant.tsx) : ce popup peut être ouvert
+    // en même temps qu'une fenêtre de section (FenetresSections.tsx,
+    // bornée à 120-124), qui passait alors devant.
+    <div className="fixed inset-0 z-[150] flex items-center justify-center bg-black/70 p-4 animate-dj-fade-in">
       <div className="w-full max-w-md rounded-2xl border border-dj-bordure bg-dj-surface p-6">
         <h2 className="text-lg font-bold text-dj-texte">
           Donner un retour {type === "positif" ? "positif" : "négatif"}

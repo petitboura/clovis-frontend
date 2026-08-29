@@ -438,12 +438,19 @@ export function ChatFlottant({
         // passait DERRIÈRE le chat plein écran (z-[110] plus haut dans ce
         // même fichier) -- le popup "compte requis" devenait invisible,
         // présent dans le DOM mais inaccessible, si déclenché pendant que
-        // le chat est en plein écran. z-[120] pour rester au-dessus dans
-        // les deux états (mini z-40 et plein écran z-[110]).
+        // le chat est en plein écran.
+        // z-[150] (relevé le 28/08/2026, ex z-[120]) : les fenêtres de
+        // section (FenetresSections.tsx) montent aussi jusqu'à 120+,
+        // z-[120] ne suffisait donc plus dès qu'une fenêtre de section
+        // était ouverte en même temps. Ces fenêtres sont maintenant
+        // bornées à 120-124 max (voir le correctif dans
+        // FenetresSections.tsx) -- z-[150] garde une marge large et
+        // durable au-dessus, quel que soit le nombre de fenêtres
+        // ouvertes ou la durée de la session.
         <CompteRequisModal
           texte="Crée un compte pour continuer."
           onFerme={() => setCompteRequis(false)}
-          zIndex="z-[120]"
+          zIndex="z-[150]"
         />
       )}
     </div>
