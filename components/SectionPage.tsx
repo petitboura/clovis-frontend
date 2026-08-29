@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { ChevronRight } from "lucide-react";
+import { BoutonRetour } from "./BoutonRetour";
 
 // Conteneur partagé par les sections de l'app (refonte "Mon espace =
 // l'app", 15/08/2026). Remplace le conteneur à onglets d'EspaceClovis.tsx
@@ -60,6 +61,7 @@ export function SectionPage({
   return (
     <div className="mx-auto w-full max-w-5xl animate-dj-fade-in px-4 pb-24 pt-6 md:pt-8">
       <div className="mb-1 flex items-center gap-1.5 text-sm text-dj-texte-muet">
+        <BoutonRetour href={groupe.href} padding="p-0.5" className="-ml-0.5" />
         <Link href={groupe.href} className="transition-colors hover:text-dj-texte">
           {groupe.label}
         </Link>
