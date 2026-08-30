@@ -400,11 +400,11 @@ export function BibliothequePublique() {
         Un catalogue de documents partagé par tout le monde : ajoute un fichier, un lien ou une note avec un nom et
         une description pour que les autres le retrouvent facilement. En publiant, tu garantis détenir les droits sur
         ce contenu, voir les{" "}
-        <Link href="/cgu" className="text-dj-texte-muet hover:text-dj-texte hover:underline">
+        <Link href="/cgu" className="text-dj-texte-muet underline hover:text-dj-texte">
           CGU
         </Link>{" "}
         et la{" "}
-        <Link href="/copyright" className="text-dj-texte-muet hover:text-dj-texte hover:underline">
+        <Link href="/copyright" className="text-dj-texte-muet underline hover:text-dj-texte">
           politique de copyright
         </Link>
         .

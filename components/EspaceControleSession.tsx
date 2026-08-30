@@ -1,9 +1,10 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import { ShieldCheck, Settings2, Play, Square, Smartphone } from "lucide-react";
+import { ShieldCheck, Settings2, Play, Square } from "lucide-react";
 import { usePluginNatif, messageErreurPlugin } from "@/lib/usePluginNatif";
 import { Skeleton } from "./Skeleton";
+import { BandeauTelechargerApp } from "./BandeauTelechargerApp";
 
 /**
  * Écran autonome pour le plugin natif ControleSession (Lot 3B Partie 3
@@ -104,12 +105,13 @@ export function EspaceControleSession() {
   }
 
   if (!natif) {
-    return (
-      <div className="flex animate-dj-fade-in-rapide flex-col items-center gap-2 rounded-cgpt-carte border border-dj-bordure bg-dj-surface p-6 text-center">
-        <Smartphone size={22} className="text-dj-texte-muet" />
-        <p className="text-sm text-dj-texte-muet">Contrôle de session est disponible uniquement depuis l&apos;app mobile.</p>
-      </div>
-    );
+    // 30/08/2026, audit navigation web mobile vs natif, étape 4 :
+    // couvre PC ET navigateur mobile (usePluginNatif ne distingue pas
+    // les deux), conformément à la décision de Bourama de verrouiller
+    // les 2 sous-écrans de Concentration sur PC (pas de partie
+    // "consultation" côté serveur pour Contrôle de session, contrairement
+    // à Temps d'écran, voir EspaceTempsEcran.tsx).
+    return <BandeauTelechargerApp titre="Contrôle de session" />;
   }
 
   return (
