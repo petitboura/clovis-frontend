@@ -53,7 +53,19 @@ export function EspaceEquipe() {
     <section className="rounded-2xl border border-dj-bordure bg-dj-surface p-5">
       <h2 className="font-display text-base font-semibold text-dj-texte">Mon équipe</h2>
 
-      {chargement && <Skeleton className="mt-4 h-14 rounded-xl border border-dj-bordure" />}
+      {chargement && (
+        <div className="mt-4 flex flex-col gap-2" aria-hidden>
+          {["w-24", "w-32"].map((largeur, i) => (
+            <div
+              key={i}
+              className="flex items-center justify-between rounded-xl border border-dj-bordure bg-dj-surface-haute px-3 py-2.5"
+            >
+              <Skeleton className={`h-3.5 ${largeur} rounded`} style={{ animationDelay: `${i * 100}ms` }} />
+              <Skeleton className="h-4 w-4 flex-shrink-0 rounded" style={{ animationDelay: `${i * 100 + 40}ms` }} />
+            </div>
+          ))}
+        </div>
+      )}
 
       {erreur && <p className="mt-3 animate-dj-fade-in-rapide text-sm text-[var(--dj-erreur)]">{erreur}</p>}
 
@@ -81,7 +93,17 @@ export function EspaceEquipe() {
 
               {ouvert === c.id && (
                 <div className="animate-dj-fade-in-rapide border-t border-dj-bordure px-3 py-2.5">
-                  {chargementReceveurs === c.id && <Skeleton className="h-8 rounded-lg" />}
+                  {chargementReceveurs === c.id && (
+                    <div className="flex flex-col gap-1.5" aria-hidden>
+                      {["w-28", "w-36", "w-20"].map((largeur, i) => (
+                        <Skeleton
+                          key={i}
+                          className={`h-3.5 ${largeur} rounded`}
+                          style={{ animationDelay: `${i * 80}ms` }}
+                        />
+                      ))}
+                    </div>
+                  )}
                   {chargementReceveurs !== c.id && (receveurs[c.id]?.length ?? 0) === 0 && (
                     <p className="text-xs text-dj-texte-muet">Personne n'a encore entré ce code.</p>
                   )}

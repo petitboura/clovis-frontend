@@ -79,7 +79,13 @@ export function EspaceInviter() {
         l'enregistrement, partage-le, il débloque exactement ce texte pour celui qui l'entre.
       </p>
 
-      {chargement && <Skeleton className="mt-4 h-24 rounded-xl border border-dj-bordure" />}
+      {chargement && (
+        <div className="mt-4 flex flex-col gap-3" aria-hidden>
+          <Skeleton className="h-9 rounded-lg border border-dj-bordure" />
+          <Skeleton className="h-[116px] rounded-xl border border-dj-bordure" style={{ animationDelay: "80ms" }} />
+          <Skeleton className="h-9 w-48 rounded-cgpt-bouton" style={{ animationDelay: "160ms" }} />
+        </div>
+      )}
 
       {erreur && <p className="mt-3 animate-dj-fade-in-rapide text-sm text-[var(--dj-erreur)]">{erreur}</p>}
 

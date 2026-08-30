@@ -85,7 +85,7 @@ export function EspaceDiffuser() {
         Ajouté à la bibliothèque personnelle de chacun de ceux qui ont entré ce code précis, privé à ce lien.
       </p>
 
-      {chargementContenus && <Skeleton className="mt-4 h-10 rounded-xl border border-dj-bordure" />}
+      {chargementContenus && <Skeleton className="mt-4 h-9 rounded-lg border border-dj-bordure" />}
 
       {!chargementContenus && contenus.length === 0 && (
         <p className="mt-3 animate-dj-fade-in-rapide text-sm text-dj-texte-muet">

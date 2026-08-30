@@ -57,9 +57,30 @@ export function EspaceAdminSignalements() {
       {erreur && <p className="text-sm text-[var(--dj-erreur)]">{erreur}</p>}
 
       {liste === undefined && (
-        <div className="flex flex-col gap-2" aria-hidden>
-          <Skeleton className="h-20 rounded-xl border border-dj-bordure" />
-          <Skeleton className="h-20 rounded-xl border border-dj-bordure" style={{ animationDelay: "100ms" }} />
+        <div className="flex flex-col gap-3" aria-hidden>
+          {[0, 1].map((i) => (
+            <div key={i} className="flex flex-col gap-2 rounded-xl border border-dj-bordure bg-dj-surface p-4">
+              <div className="flex items-center justify-between gap-2">
+                <Skeleton className="h-3.5 w-40 rounded" style={{ animationDelay: `${i * 100}ms` }} />
+                <Skeleton
+                  className="h-4 w-28 flex-shrink-0 rounded-full border border-dj-bordure"
+                  style={{ animationDelay: `${i * 100 + 40}ms` }}
+                />
+              </div>
+              <Skeleton className="h-3.5 w-full rounded" style={{ animationDelay: `${i * 100 + 80}ms` }} />
+              <Skeleton className="h-3 w-48 rounded" style={{ animationDelay: `${i * 100 + 120}ms` }} />
+              <div className="flex justify-end gap-2 pt-1">
+                <Skeleton
+                  className="h-6 w-16 rounded-cgpt-bouton"
+                  style={{ animationDelay: `${i * 100 + 160}ms` }}
+                />
+                <Skeleton
+                  className="h-6 w-32 rounded-cgpt-bouton"
+                  style={{ animationDelay: `${i * 100 + 200}ms` }}
+                />
+              </div>
+            </div>
+          ))}
         </div>
       )}
       {liste?.length === 0 && <p className="text-sm text-dj-texte-muet">Aucun signalement en attente.</p>}

@@ -92,9 +92,16 @@ export function CommentairesAgent({ agentId }: { agentId: string }) {
 
       <div className="flex flex-col gap-3">
         {commentaires === null && (
-          <div className="flex flex-col gap-2" aria-hidden>
-            <Skeleton className="h-14 rounded-xl border border-dj-bordure" />
-            <Skeleton className="h-14 rounded-xl border border-dj-bordure" style={{ animationDelay: "100ms" }} />
+          <div className="flex flex-col gap-3" aria-hidden>
+            {["w-4/5", "w-2/3", "w-full", "w-1/2"].map((largeur, i) => (
+              <div key={i} className="rounded-xl border border-dj-bordure bg-dj-surface px-4 py-3">
+                <Skeleton className="h-3 w-24 rounded" style={{ animationDelay: `${i * 100}ms` }} />
+                <Skeleton
+                  className={`mt-1 h-3.5 ${largeur} rounded`}
+                  style={{ animationDelay: `${i * 100 + 60}ms` }}
+                />
+              </div>
+            ))}
           </div>
         )}
         {commentaires?.length === 0 && (
