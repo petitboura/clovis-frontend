@@ -1,9 +1,10 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import { ShieldCheck, Settings2, Plus, X, Smartphone, ScrollText } from "lucide-react";
+import { ShieldCheck, Settings2, Plus, X, ScrollText } from "lucide-react";
 import { usePluginNatif, messageErreurPlugin } from "@/lib/usePluginNatif";
 import { Skeleton } from "./Skeleton";
+import { BandeauTelechargerApp } from "./BandeauTelechargerApp";
 
 /**
  * Écran autonome pour le plugin natif Accessibilite (Lot 3B Partie 3 mobile,
@@ -184,12 +185,9 @@ export function EspaceAccessibilite() {
   }
 
   if (!natif) {
-    return (
-      <div className="flex animate-dj-fade-in-rapide flex-col items-center gap-2 rounded-cgpt-carte border border-dj-bordure bg-dj-surface p-6 text-center">
-        <Smartphone size={22} className="text-dj-texte-muet" />
-        <p className="text-sm text-dj-texte-muet">Accessibilité est disponible uniquement depuis l&apos;app mobile.</p>
-      </div>
-    );
+    // 30/08/2026, audit navigation web mobile vs natif, étape 4 : couvre
+    // PC ET navigateur mobile (usePluginNatif ne distingue pas les deux).
+    return <BandeauTelechargerApp titre="Accessibilité" />;
   }
 
   if (!disponibleSurCeBuild) {

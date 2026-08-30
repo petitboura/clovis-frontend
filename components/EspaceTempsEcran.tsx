@@ -1,10 +1,11 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import { Clock3, Settings2, Smartphone } from "lucide-react";
+import { Clock3, Settings2 } from "lucide-react";
 import { usePluginNatif, messageErreurPlugin } from "@/lib/usePluginNatif";
 import { synchroniserUsage, obtenirUsage, type LigneUsage } from "@/lib/api";
 import { Skeleton } from "./Skeleton";
+import { BandeauTelechargerApp } from "./BandeauTelechargerApp";
 
 /**
  * Écran autonome pour le plugin natif TempsEcran (Android uniquement :
@@ -113,12 +114,16 @@ export function EspaceTempsEcran() {
   }
 
   if (!natif) {
-    return (
-      <div className="flex animate-dj-fade-in-rapide flex-col items-center gap-2 rounded-cgpt-carte border border-dj-bordure bg-dj-surface p-6 text-center">
-        <Smartphone size={22} className="text-dj-texte-muet" />
-        <p className="text-sm text-dj-texte-muet">Temps d&apos;écran est disponible uniquement depuis l&apos;app mobile Android.</p>
-      </div>
-    );
+    // 30/08/2026, audit navigation web mobile vs natif, étape 4 :
+    // l'historique (7 derniers jours) est bien stocké côté serveur et
+    // pourrait techniquement être consulté sans le plugin, mais
+    // aujourd'hui son chargement est entièrement imbriqué dans le flux
+    // de permission natif (voir l'useEffect plus haut), en construire
+    // un vrai découplé pour PC/web est un vrai chantier à part, pas une
+    // simple étape de verrouillage. Bourama a tranché : verrouiller ce
+    // sous-écran comme Contrôle de session pour l'instant, plutôt que de
+    // construire cette vue à la volée ici.
+    return <BandeauTelechargerApp titre="Temps d'écran" />;
   }
 
   const totalAujourdhui = (appsAujourdhui ?? []).reduce((s, a) => s + a.dureeSecondes, 0);
