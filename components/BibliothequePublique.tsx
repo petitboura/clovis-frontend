@@ -550,10 +550,31 @@ export function BibliothequePublique() {
                 </p>
               )}
 
+              {/* Skeleton précis (30/08, suite audit) : icône plate 16px
+                  (Globe/Lock, sans rond coloré -- contrairement à la
+                  bibliothèque privée qui a un conteneur tonal), une seule
+                  ligne (le nom, pas de sous-titre ici), 1 bouton d'action
+                  à droite (suppression). 4 lignes pour remplir l'espace
+                  au lieu de 2 fixes. */}
               {dossiers === undefined && (
                 <div className="flex flex-col gap-2" aria-hidden>
-                  <Skeleton className="h-12 rounded-xl border border-dj-bordure" />
-                  <Skeleton className="h-12 rounded-xl border border-dj-bordure" style={{ animationDelay: "100ms" }} />
+                  {[
+                    { largeur: "w-2/5", delai: "0ms" },
+                    { largeur: "w-1/2", delai: "100ms" },
+                    { largeur: "w-1/3", delai: "200ms" },
+                    { largeur: "w-3/5", delai: "300ms" },
+                  ].map(({ largeur, delai }, i) => (
+                    <div
+                      key={i}
+                      className="flex items-center justify-between gap-3 rounded-xl border border-dj-bordure bg-dj-surface px-4 py-3"
+                    >
+                      <div className="flex min-w-0 flex-1 items-center gap-2">
+                        <Skeleton className="h-4 w-4 flex-shrink-0 rounded" style={{ animationDelay: delai }} />
+                        <Skeleton className={`h-3.5 rounded ${largeur}`} style={{ animationDelay: delai }} />
+                      </div>
+                      <Skeleton className="h-3.5 w-3.5 flex-shrink-0 rounded" style={{ animationDelay: delai }} />
+                    </div>
+                  ))}
                 </div>
               )}
 
@@ -639,10 +660,39 @@ export function BibliothequePublique() {
 
       {(ongletBiblioPublique === "tous" || dossierCourantId) && (
         <>
+          {/* Skeleton précis (30/08, suite audit) : icône plate 16px + 2
+              lignes (titre + sous-titre, contrairement au privé qui n'en
+              a qu'une -- ici la description est un vrai second élément
+              visuel), 2 boutons d'action à droite (signaler + retirer,
+              toujours présents ; copier/statut sont conditionnels donc
+              pas représentés ici). 5 lignes pour remplir l'espace au lieu
+              de 2 fixes. */}
           {liste === undefined && (
             <div className="flex flex-col gap-2" aria-hidden>
-              <Skeleton className="h-14 rounded-xl border border-dj-bordure" />
-              <Skeleton className="h-14 rounded-xl border border-dj-bordure" style={{ animationDelay: "100ms" }} />
+              {[
+                { titre: "w-1/2", soustitre: "w-1/3", delai: "0ms" },
+                { titre: "w-3/5", soustitre: "w-2/5", delai: "100ms" },
+                { titre: "w-2/5", soustitre: "w-1/4", delai: "200ms" },
+                { titre: "w-3/4", soustitre: "w-1/2", delai: "300ms" },
+                { titre: "w-1/3", soustitre: "w-1/5", delai: "400ms" },
+              ].map(({ titre, soustitre, delai }, i) => (
+                <div
+                  key={i}
+                  className="flex items-center justify-between gap-3 rounded-xl border border-dj-bordure bg-dj-surface px-4 py-3"
+                >
+                  <div className="flex min-w-0 flex-1 items-center gap-3">
+                    <Skeleton className="h-4 w-4 flex-shrink-0 rounded" style={{ animationDelay: delai }} />
+                    <div className="flex min-w-0 flex-1 flex-col gap-1.5">
+                      <Skeleton className={`h-3.5 rounded ${titre}`} style={{ animationDelay: delai }} />
+                      <Skeleton className={`h-2.5 rounded ${soustitre}`} style={{ animationDelay: delai }} />
+                    </div>
+                  </div>
+                  <div className="flex flex-shrink-0 items-center gap-3">
+                    <Skeleton className="h-3.5 w-3.5 rounded" style={{ animationDelay: delai }} />
+                    <Skeleton className="h-3.5 w-3.5 rounded" style={{ animationDelay: delai }} />
+                  </div>
+                </div>
+              ))}
             </div>
           )}
           {listeAffichee?.length === 0 && (
