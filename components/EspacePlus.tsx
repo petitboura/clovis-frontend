@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { Wand2, Plug, Settings, Briefcase, Share2, Star, Compass, ChevronRight, type LucideIcon } from "lucide-react";
+import { Wand2, Plug, Settings, Share2, Star, Compass, ChevronRight, type LucideIcon } from "lucide-react";
 import { NoteAgent } from "@/components/NoteAgent";
 import { CommentairesAgent } from "@/components/CommentairesAgent";
 import { useOuvrirCatalogue } from "@/lib/contexteCatalogue";
@@ -53,11 +53,15 @@ const SECTION_PERSONNALISER: { icone: LucideIcon; titre: string; sousTitre?: str
 
 // Exporté (pas seulement local) : MenuHamburgerNatif.tsx (30/08/2026)
 // réutilise ce même tableau tel quel, pour ne jamais avoir une deuxième
-// liste de "Connecter Claude / Bureau / Paramètres" qui pourrait diverger
-// de celle-ci au fil du temps.
+// liste qui pourrait diverger de celle-ci au fil du temps.
+//
+// Partie 1 navigation mobile (29-30/08/2026) : Bureau retiré d'ici --
+// devient un onglet direct des deux barres mobiles (native ET web, voir
+// BarreOngletsNative.tsx/BarreOngletsWeb.tsx), ne serait plus listé
+// qu'en double sinon (déjà le cas côté web, qui avait Bureau en onglet
+// direct ET dans /plus).
 export const SECTIONS_BASE: { icone: LucideIcon; titre: string; sousTitre?: string; href: string }[] = [
   { icone: Plug, titre: "Connecter Claude", sousTitre: "Utiliser Clovis dans Claude", href: "/connecter-claude" },
-  { icone: Briefcase, titre: "Bureau", href: "/bureau" },
   { icone: Settings, titre: "Paramètres", sousTitre: "Profil, confidentialité, capacités du téléphone...", href: "/parametres" },
 ];
 

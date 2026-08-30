@@ -72,16 +72,27 @@ const ICONES_SVG: Record<string, string> = {
   // dessous sont copies a l'identique de ce trace, pas approximes.
   personnaliser:
     '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m21.64 3.64-1.28-1.28a1.21 1.21 0 0 0-1.72 0L2.36 18.64a1.21 1.21 0 0 0 0 1.72l1.28 1.28a1.2 1.2 0 0 0 1.72 0L21.64 5.36a1.2 1.2 0 0 0 0-1.72"/><path d="m14 7 3 3"/><path d="M5 6v4"/><path d="M19 14v4"/><path d="M10 2v2"/><path d="M7 8H3"/><path d="M21 16h-4"/><path d="M11 3H9"/></svg>',
+  // Repris de l'icone Lucide Briefcase (deja utilisee pour "Bureau" dans
+  // BarreOngletsWeb.tsx et l'ancien EspacePlus.tsx), meme convention
+  // visuelle que "personnaliser" ci-dessus (icone Lucide existante
+  // recopiee, pas inventee) -- Partie 1 navigation mobile, 29-30/08/2026.
+  bureau:
+    '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M16 20V4a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"/><rect x="2" y="6" width="20" height="14" rx="2"/></svg>',
 };
 
+// Partie 1 navigation mobile (29-30/08/2026) : ajoute Bureau comme 5e
+// onglet direct (jusque-la seulement accessible via le menu hamburger,
+// voir EspacePlus.tsx/MenuHamburgerNatif.tsx) -- ne retire rien de la
+// tache 1 du 30/08 (Personnaliser Clovis reste un onglet direct, le
+// hamburger reste en place pour Connecter Claude/Parametres). Chat
+// reste au centre exact (3e sur 5), Bureau juste a cote (4e), les deux
+// dans la zone la plus atteignable au pouce -- voir audit UX mobile
+// 29/08/2026, partie 2.3.
 const ONGLETS_NATIFS = [
   { id: "bibliotheque", titre: "Bibliothèque", route: "/bibliotheque", icone: ICONES_SVG.bibliotheque },
   { id: "controle-session", titre: "Concentration", route: "/controle-session", icone: ICONES_SVG.controleSession },
   { id: "chat", titre: "Chat", route: null, icone: ICONES_SVG.chat },
-  // 30/08/2026, tache 1 chantier nav mobile (Bourama) : remplace l'ancien
-  // onglet "Plus" (route /plus). Le contenu de /plus n'est pas touche --
-  // il repart dans le menu hamburger a la tache 2 -- seule cette entree
-  // de la barre du bas change.
+  { id: "bureau", titre: "Bureau", route: "/bureau", icone: ICONES_SVG.bureau },
   { id: "personnaliser", titre: "Personnaliser Clovis", route: "/personnaliser", icone: ICONES_SVG.personnaliser },
 ] as const;
 
