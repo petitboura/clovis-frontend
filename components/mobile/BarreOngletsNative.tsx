@@ -178,7 +178,7 @@ export function BarreOngletsNative() {
         const onglet = ONGLETS_NATIFS.find((o) => o.id === id);
         if (!onglet) return;
         if (onglet.id === "chat") {
-          ouvrirChat();
+          ouvrirChat("plein_ecran");
           return;
         }
         if (onglet.route) router.push(onglet.route);

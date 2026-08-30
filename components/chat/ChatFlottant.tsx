@@ -231,10 +231,13 @@ export function ChatFlottant({
     return true;
   }
 
-  // Bulle fermée : toujours affichée (sauf pendant le tout premier
-  // chargement, pour ne jamais montrer un bouton qui échouerait au clic),
-  // sauf en app native où l'onglet "Chat" de la barre système fait déjà
-  // ce rôle (voir prop `natif` ci-dessus).
+  // Bulle fermée : affichée sur desktop uniquement, seul endroit où
+  // elle sert encore, faute d'un onglet "Chat" dédié là-bas. Masquée en
+  // app native (l'onglet "Chat" de la barre système fait déjà ce rôle,
+  // voir prop `natif` ci-dessus) ET, depuis le 30/08/2026 (demande
+  // Bourama, une fois BarreOngletsWeb.tsx alignée sur le natif avec son
+  // propre onglet "Chat"), sur web mobile aussi, la bulle y faisait
+  // doublon par-dessus cet onglet.
   if (etat === "fermee") {
     if (natif) return null;
     return (
@@ -243,10 +246,11 @@ export function ChatFlottant({
         aria-label="Ouvrir le chat"
         // 28/08/2026, chantier "web mobile façon appli" : levée au-dessus
         // de BarreOngletsWeb (voir components/mobile/BarreOngletsWeb.tsx)
-        // via --dj-barre-onglets-web, qui vaut 0px sur desktop -- pas de
-        // ternaire sur `natif` ici, ce bloc n'est de toute façon jamais
-        // atteint en natif (voir `if (natif) return null` juste au-dessus).
-        className="group fixed bottom-[calc(1.25rem+var(--dj-barre-onglets-web,0px))] right-5 z-40 flex h-12 w-12 items-center justify-center rounded-cgpt-bouton bg-dj-accent-1 text-[#1A0D02] shadow-[0_4px_20px_rgba(0,0,0,0.35)] transition-colors hover:bg-dj-accent-2"
+        // via --dj-barre-onglets-web -- conservé même si la bulle est
+        // maintenant masquée sur mobile web (md:hidden), pour ne pas
+        // casser le calc() si elle redevenait visible un jour en-dessous
+        // du point de rupture md.
+        className="group fixed bottom-[calc(1.25rem+var(--dj-barre-onglets-web,0px))] right-5 z-40 hidden h-12 w-12 items-center justify-center rounded-cgpt-bouton bg-dj-accent-1 text-[#1A0D02] shadow-[0_4px_20px_rgba(0,0,0,0.35)] transition-colors hover:bg-dj-accent-2 md:flex"
       >
         <Bird size={20} className="transition-transform duration-200 group-hover:-rotate-12 group-hover:scale-110" />
       </button>

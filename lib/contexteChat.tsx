@@ -18,5 +18,13 @@ export const ContexteChat = createContext<ContexteChatValeur | null>(null);
 
 export function useOuvrirChat() {
   const ctx = useContext(ContexteChat);
-  return () => ctx?.setEtat("mini");
+  // 30/08/2026, demande Bourama : sur mobile (natif et web), l'onglet
+  // "Chat" de la barre du bas doit ouvrir directement le plein écran,
+  // plus de petit popup "mini" intermédiaire, ce format n'a plus de sens
+  // maintenant que les deux plateformes ont leur propre onglet dédié
+  // (voir BarreOngletsNative.tsx/BarreOngletsWeb.tsx). Reste "mini" par
+  // défaut pour les autres déclencheurs (bulle flottante desktop,
+  // bouton "Ouvrir le chat" de EcranAccueil.tsx), non concernés par
+  // cette demande.
+  return (etat: EtatChat = "mini") => ctx?.setEtat(etat);
 }

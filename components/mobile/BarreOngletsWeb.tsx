@@ -62,7 +62,7 @@ export function BarreOngletsWeb() {
             <button
               key="chat"
               type="button"
-              onClick={ouvrirChat}
+              onClick={() => ouvrirChat("plein_ecran")}
               className="group flex flex-1 flex-col items-center justify-center gap-0.5 text-dj-texte-muet transition-colors"
             >
               <o.Icone size={20} className="flex-shrink-0" />
