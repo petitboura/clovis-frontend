@@ -120,6 +120,17 @@ export function EspaceBibliotheque() {
   // Bourama). L'arborescence exacte du dossier importé (sous-dossiers
   // compris) est recréée dans Clovis -- voir envoyerDossierDirect plus
   // bas pour le détail et son historique de correctifs.
+  //
+  // 30/08/2026, audit navigation web mobile vs natif, étape 3 : le bouton
+  // s'affichait pourtant sans condition, y compris dans l'app, où
+  // `webkitdirectory` ouvre un sélecteur qui ne permet PAS de choisir un
+  // dossier entier (juste un tas de fichiers plats, sans arborescence),
+  // ce n'est pas juste inutile, ça casse silencieusement la promesse du
+  // bouton. `natifDetecte` (simple détection, pas de plugin à
+  // enregistrer ici, voir BoutonFlottantTelecharger.tsx pour le même
+  // schéma léger) permet de verrouiller ce cas précis sans toucher au
+  // reste de l'écran.
+  const [natifDetecte, setNatifDetecte] = useState(false);
   const [uploadDossierEnCours, setUploadDossierEnCours] = useState(false);
   // Visiteur sans compte (refonte "Mon espace = l'app") -- section
   // auparavant inatteignable sans compte, même détection que
@@ -190,6 +201,19 @@ export function EspaceBibliotheque() {
       return { total: (precedent?.total ?? 0) + ids.length, enAttente };
     });
   }
+
+  // 30/08/2026, étape 3 (voir commentaire sur natifDetecte plus haut) :
+  // détection légère au montage, jamais mise à jour ensuite (pas besoin,
+  // la plateforme ne change pas en cours de session).
+  useEffect(() => {
+    let annule = false;
+    import("@capacitor/core").then(({ Capacitor }) => {
+      if (!annule && Capacitor.isNativePlatform()) setNatifDetecte(true);
+    });
+    return () => {
+      annule = true;
+    };
+  }, []);
 
   // Retire du lot suivi tout fichier qui n'est plus "en_attente"/"en_cours"
   // dès qu'un rechargement de `fichiers` le confirme -- popup à jour sans
@@ -941,13 +965,39 @@ async function envoyerFichiersDirect(fichiersChoisis: FileList | File[]) {
             Importer des fichiers
             <Upload size={15} />
           </label>
-          <label
-            htmlFor="ajout-fab-dossier"
-            className="flex cursor-pointer items-center gap-2 rounded-cgpt-bouton border border-dj-bordure bg-dj-surface px-4 py-2 text-sm font-medium text-dj-texte shadow-lg transition-colors hover:border-dj-bordure-forte"
-          >
-            Importer un dossier
-            <IconDossier size={15} />
-          </label>
+          {/* 30/08/2026, étape 3 : en natif, `webkitdirectory` ne permet
+              pas de choisir un dossier entier (voir commentaire sur
+              natifDetecte plus haut), ce n'est plus un <label> qui
+              ouvre l'input caché mais un bouton qui prévient clairement,
+              via le même bandeau d'erreur que l'envoi de fichiers
+              (erreursEnvoi), plutôt qu'un sélecteur qui échoue en
+              silence. */}
+          {natifDetecte ? (
+            <button
+              type="button"
+              onClick={() => {
+                setErreursEnvoi([
+                  {
+                    nom: "Importer un dossier",
+                    erreur: "Pas encore disponible dans l'app. Utilise clovis.com depuis un navigateur en attendant.",
+                  },
+                ]);
+                setMenuAjoutOuvert(false);
+              }}
+              className="flex cursor-pointer items-center gap-2 rounded-cgpt-bouton border border-dj-bordure bg-dj-surface px-4 py-2 text-sm font-medium text-dj-texte shadow-lg transition-colors hover:border-dj-bordure-forte"
+            >
+              Importer un dossier
+              <IconDossier size={15} />
+            </button>
+          ) : (
+            <label
+              htmlFor="ajout-fab-dossier"
+              className="flex cursor-pointer items-center gap-2 rounded-cgpt-bouton border border-dj-bordure bg-dj-surface px-4 py-2 text-sm font-medium text-dj-texte shadow-lg transition-colors hover:border-dj-bordure-forte"
+            >
+              Importer un dossier
+              <IconDossier size={15} />
+            </label>
+          )}
           <button
             onClick={() => {
               setModaleAjout("texte");
