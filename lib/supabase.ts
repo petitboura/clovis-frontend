@@ -29,6 +29,14 @@ if (typeof window !== "undefined") {
   import("@capacitor/core").then(({ Capacitor, registerPlugin }) => {
     if (!Capacitor.isNativePlatform()) return;
 
+    // Ajouté le 30/08/2026, Lot 1 "Exploration de dossier en temps réel" :
+    // canal WebSocket bidirectionnel, uniquement côté natif (voir
+    // lib/canalTempsReel.ts). Chargé en dynamique comme le reste de ce
+    // bloc, pour ne rien exécuter sur le déploiement web (Vercel).
+    import("./canalTempsReel").then(({ initialiserCanalTempsReel }) => {
+      initialiserCanalTempsReel();
+    });
+
     const PontNatif = registerPlugin<{
       enregistrerToken(options: { token: string }): Promise<void>;
       deconnexion(): Promise<void>;
