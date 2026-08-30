@@ -119,9 +119,40 @@ export function MesCodes() {
 
   if (codes === undefined) {
     return (
-      <section className="rounded-cgpt-carte border border-dj-bordure bg-dj-surface p-5">
-        <Skeleton className="h-6 w-32 rounded" />
-        <Skeleton className="mt-3 h-14 rounded-xl" />
+      <section className="rounded-cgpt-carte border border-dj-bordure bg-dj-surface p-5" aria-hidden>
+        {/* Skeleton précis (30/08, audit) : en-tête (titre + description
+            2 lignes + bouton "Nouveau code") distinct de la liste des
+            codes en dessous (pastille de statut + nom + badge code +
+            chevron), au lieu d'un titre suivi d'un seul bloc plein qui ne
+            représentait ni l'un ni l'autre. */}
+        <div className="flex items-center justify-between gap-3">
+          <div className="flex min-w-0 flex-1 flex-col gap-1.5">
+            <Skeleton className="h-5 w-28 rounded" />
+            <Skeleton className="h-3 w-full rounded" style={{ animationDelay: "80ms" }} />
+            <Skeleton className="h-3 w-4/5 rounded" style={{ animationDelay: "160ms" }} />
+          </div>
+          <Skeleton className="h-8 w-32 flex-shrink-0 rounded-cgpt-bouton" style={{ animationDelay: "240ms" }} />
+        </div>
+        <div className="mt-4 flex flex-col gap-2">
+          {[
+            { largeur: "w-1/3", delai: "0ms" },
+            { largeur: "w-1/2", delai: "80ms" },
+            { largeur: "w-2/5", delai: "160ms" },
+            { largeur: "w-1/4", delai: "240ms" },
+          ].map(({ largeur, delai }, i) => (
+            <div
+              key={i}
+              className="flex items-center justify-between gap-2 rounded-xl border border-dj-bordure bg-dj-surface-haute px-3 py-2.5"
+            >
+              <div className="flex min-w-0 flex-1 items-center gap-2">
+                <Skeleton className="h-1.5 w-1.5 flex-shrink-0 rounded-full" style={{ animationDelay: delai }} />
+                <Skeleton className={`h-3.5 rounded ${largeur}`} style={{ animationDelay: delai }} />
+                <Skeleton className="h-4 w-14 flex-shrink-0 rounded-md" style={{ animationDelay: delai }} />
+              </div>
+              <Skeleton className="h-4 w-4 flex-shrink-0 rounded" style={{ animationDelay: delai }} />
+            </div>
+          ))}
+        </div>
       </section>
     );
   }
