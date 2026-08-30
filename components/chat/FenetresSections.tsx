@@ -10,6 +10,7 @@ import { MesComportements } from "@/components/MesComportements";
 import { EspaceBibliotheque } from "@/components/EspaceBibliotheque";
 import { MaMemoire } from "@/components/MaMemoire";
 import { EspaceConnecterClaude } from "@/components/EspaceConnecterClaude";
+import { EspaceConcentration } from "@/components/EspaceConcentration";
 
 const AGENT_ID = "clovis";
 
@@ -28,6 +29,10 @@ const CONTENU_PAR_ONGLET: Record<OngletId, React.ReactNode> = {
   bibliotheque: <EspaceBibliotheque />,
   memoire: <MaMemoire />,
   claude: <EspaceConnecterClaude />,
+  // 30/08/2026, audit navigation web mobile vs natif, étape 2 : Concentration
+  // ajoutée à ONGLETS (AppSidebar.tsx), donc obligatoire ici aussi (Record
+  // exhaustif sur OngletId).
+  "controle-session": <EspaceConcentration />,
 };
 
 const LABEL_PAR_ONGLET: Record<OngletId, { label: string; Icone: (typeof ONGLETS)[number]["Icone"] }> =

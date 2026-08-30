@@ -2,25 +2,33 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Home, Briefcase, Library, MessageSquare, MoreHorizontal, type LucideIcon } from "lucide-react";
+import { Library, Hourglass, MessageCircle, Briefcase, Wand2, type LucideIcon } from "lucide-react";
 import { useOuvrirChat } from "@/lib/contexteChat";
 
-// Créé le 28/08/2026, Bourama : chantier "web mobile façon appli" --
+// Créé le 28/08/2026, Bourama : chantier "web mobile façon appli",
 // remplace le menu hamburger + tiroir (AppSidebar en mode mobile, masqué
 // pour de bon désormais via masquerChromeMobile, voir AppShell.tsx) par
 // une vraie barre d'onglets fixe en bas, pour le SITE/PWA dans le
 // navigateur uniquement (jamais dans l'appli native Capacitor, qui a sa
 // propre barre système, voir components/mobile/BarreOngletsNative.tsx).
 //
-// Partie 1 navigation mobile (29-30/08/2026) : ajoute Chat comme 3e
-// onglet (au centre exact des 5), pour rester cohérent avec la barre
-// native qui a désormais Chat + Bureau tous les deux (voir
-// BarreOngletsNative.tsx) -- ce chantier ne touche PAS au menu Plus
-// (reste la page /plus existante, catch-all pour Personnaliser Clovis/
-// Connecter Claude/Paramètres, jamais transformé en hamburger côté web,
-// contrairement au natif -- pas retouché ici). Chat ouvre l'overlay
-// flottant existant (useOuvrirChat), pas une route à part, même logique
-// que côté natif.
+// 30/08/2026, audit navigation web mobile vs natif, étape 1 (demande
+// Bourama : faire converger vers le natif partout où c'est possible) :
+// les 5 onglets sont désormais identiques à BarreOngletsNative.tsx, même
+// ordre, mêmes icônes (Bibliothèque, Concentration, Chat, Bureau,
+// Personnaliser Clovis). Accueil et Plus, qui occupaient deux onglets
+// directs ici mais n'existaient pas côté natif, rejoignent le menu Plus
+// unifié (voir MenuHamburgerWeb.tsx, nouveau, même mécanique que le
+// natif, remplace l'ancienne page /plus, désormais une redirection).
+// Concentration pointe vers /controle-session, resté inatteignable côté
+// web jusqu'ici (écran orphelin signalé par Bourama).
+//
+// Icônes reprises à l'identique des tracés utilisés côté natif
+// (ICONES_SVG dans BarreOngletsNative.tsx, qui doivent rester du SVG brut
+// pour le plugin Capacitor), ici en composants Lucide directs
+// (Hourglass = même tracé que "controleSession", MessageCircle = même
+// tracé que "chat"), pour un rendu visuel identique sans dupliquer le SVG
+// à la main.
 //
 // Rendu en CSS/React pur, jamais visible au-delà du point de rupture md
 // (768px, rail desktop prend le relais) -- voir --dj-barre-onglets-web
@@ -31,24 +39,16 @@ const ONGLETS_WEB: (
   | { type: "lien"; href: string; label: string; Icone: LucideIcon }
   | { type: "chat"; label: string; Icone: LucideIcon }
 )[] = [
-  { type: "lien", href: "/", label: "Accueil", Icone: Home },
   { type: "lien", href: "/bibliotheque", label: "Bibliothèque", Icone: Library },
-  { type: "chat", label: "Chat", Icone: MessageSquare },
+  { type: "lien", href: "/controle-session", label: "Concentration", Icone: Hourglass },
+  { type: "chat", label: "Chat", Icone: MessageCircle },
   { type: "lien", href: "/bureau", label: "Bureau", Icone: Briefcase },
-  { type: "lien", href: "/plus", label: "Plus", Icone: MoreHorizontal },
+  { type: "lien", href: "/personnaliser", label: "Personnaliser Clovis", Icone: Wand2 },
 ];
 
 export function BarreOngletsWeb() {
   const pathname = usePathname();
   const ouvrirChat = useOuvrirChat();
-  // "Plus" agit comme catch-all : actif dès qu'on n'est sur AUCUNE des
-  // 3 autres routes directes -- volontairement pas une liste figée de
-  // sous-routes (personnaliser/connecter-claude/parametres/...), qui
-  // aurait besoin d'être tenue à jour à chaque nouvelle page ajoutée
-  // sous Plus. Tout ce qui n'est pas explicitement Accueil/Bibliothèque/
-  // Bureau tombe dans Plus, par construction.
-  const routesDirectes = new Set(["/", "/bibliotheque", "/bureau"]);
-  const ongletActifHref = routesDirectes.has(pathname) ? pathname : "/plus";
 
   return (
     <nav
@@ -70,7 +70,7 @@ export function BarreOngletsWeb() {
             </button>
           );
         }
-        const actif = o.href === ongletActifHref;
+        const actif = pathname === o.href || pathname.startsWith(o.href + "/");
         return (
           <Link
             key={o.href}

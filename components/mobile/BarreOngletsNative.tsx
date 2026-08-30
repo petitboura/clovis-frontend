@@ -23,8 +23,11 @@ import { useTheme } from "@/lib/useTheme";
 //
 // Structure des 4 onglets, validee avec Bourama le 26/08, puis mise a jour
 // le 30/08/2026 (tache 1 chantier nav mobile) : Bibliotheque,
-// ControleSession (placeholder "bientot disponible", ecran pas encore
-// construit -- Lot 4 mobile), Chat (ouvre ChatFlottant, PAS une route --
+// ControleSession (route /controle-session, ecran Concentration,
+// EspaceConcentration.tsx, deja construit et fonctionnel, pas un
+// placeholder ; commentaire corrige le 30/08/2026, audit navigation
+// etape 2, l'ancienne mention "pas encore construit" etait perimee),
+// Chat (ouvre ChatFlottant, PAS une route --
 // le chat n'a jamais ete une page a part), Personnaliser Clovis (route
 // /personnaliser, remplace l'ancien onglet Plus -- le contenu de /plus
 // n'est pas supprime, il devient accessible via le menu hamburger a la

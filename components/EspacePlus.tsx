@@ -2,67 +2,61 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { Wand2, Plug, Settings, Share2, Star, Compass, ChevronRight, type LucideIcon } from "lucide-react";
+import { Home, Plug, Settings, Bell, Share2, Star, Compass, ChevronRight, type LucideIcon } from "lucide-react";
 import { NoteAgent } from "@/components/NoteAgent";
 import { CommentairesAgent } from "@/components/CommentairesAgent";
 import { useOuvrirCatalogue } from "@/lib/contexteCatalogue";
 
-// Créé le 26/08/2026, Bourama : refonte navigation mobile native. Écran
-// derrière l'onglet "Plus" de la barre du bas (voir components/mobile/
-// BarreOngletsNative.tsx) -- regroupe tout ce qui n'a pas sa place dans
-// les 5 onglets principaux, même esprit que la sidebar desktop
-// (Personnaliser Clovis / Scolarité déjà groupées là-bas, voir
-// AppSidebar.tsx) mais présenté comme une vraie liste de réglages mobile
-// (même composants Liste/LigneListe que EspaceParametres.tsx).
+// Créé le 26/08/2026, Bourama : refonte navigation mobile native. Contenu
+// du menu "Plus", partagé entre l'appli native et le web mobile.
 //
-// Portée de ce chantier (26/08, confirmé par Bourama) : on ne fait que
-// ranger l'existant, on ne construit aucun écran qui n'existe pas encore.
-// "Admin" n'a été ajouté nulle part ici -- vérifié dans AppSidebar.tsx,
+// 30/08/2026, audit navigation web mobile vs natif, étape 1 : web mobile
+// et natif ont désormais exactement les mêmes 5 onglets directs
+// (Bibliothèque, Concentration, Chat, Bureau, Personnaliser Clovis, voir
+// BarreOngletsNative.tsx et BarreOngletsWeb.tsx), donc Personnaliser
+// Clovis n'a plus besoin d'une place à part ici (SECTION_PERSONNALISER
+// supprimée, elle vivait dans ce fichier depuis la tâche du même jour sur
+// le menu hamburger natif). Accueil, qui n'avait de son côté aucun accès
+// dans l'appli native (orphelin, signalé par Bourama), rejoint
+// SECTIONS_BASE : le menu Plus est maintenant strictement identique des
+// deux côtés, un seul et même contenu défini ici (BlocsMenuPlus), utilisé
+// par MenuHamburgerNatif.tsx (natif) et MenuHamburgerWeb.tsx (web mobile,
+// nouveau, remplace l'ancienne page /plus, désormais une simple
+// redirection, voir app/(app)/plus/page.tsx).
+//
+// "Admin" n'a été ajouté nulle part ici, vérifié dans AppSidebar.tsx,
 // ce lien n'existe déjà dans AUCUNE navigation actuelle (ni desktop ni
 // mobile), donc l'ajouter maintenant serait construire du neuf, pas
 // ranger. À trancher avec Bourama avant de l'ajouter.
 //
-// 28/08/2026, chantier "web mobile façon appli" : cet écran sert
-// désormais AUSSI l'onglet "Plus" de BarreOngletsWeb.tsx (nouvelle barre
-// du bas web mobile), qui remplace l'ancien tiroir mobile d'AppSidebar.tsx.
-// Ce tiroir contenait Partager, Avis sur Clovis et "Pourquoi Clovis ?"
-// (dans son dropdown "Plus"), jamais repris ici lors du chantier natif du
-// 26/08 -- ajoutés ce jour pour que ces trois actions restent atteignables
-// sur mobile (natif ET web), pas seulement sur desktop. "Pourquoi
-// Clovis ?" ouvre CatalogueClovis via lib/contexteCatalogue.tsx (créé ce
-// jour, même schéma que ContexteChat) plutôt qu'un state local à
-// AppShell.tsx comme avant -- c'est ce contexte qui manquait le 28/08
-// pour l'ajouter plus tôt.
-//
-// 30/08/2026, tâche 2 (menu hamburger natif) : la section Personnaliser
-// Clovis est désormais séparée (SECTION_PERSONNALISER) plutôt que codée
-// en dur dans SECTIONS_BASE -- BlocsMenuPlus (ci-dessous) est le SEUL
-// endroit qui construit le rendu réel (icônes, sous-titres, Partager,
-// Avis, Pourquoi Clovis), réutilisé à l'identique par EspacePlus (route
-// /plus, garde Personnaliser Clovis, inchangé pour le web) ET par
-// MenuHamburgerNatif.tsx (nouveau, sans Personnaliser Clovis puisque
-// c'est déjà un onglet de la barre du bas native, voir tâche 1). Objectif
-// : un seul endroit qui définit ce que fait chaque lien, jamais deux
-// copies qui pourraient diverger.
-const SECTION_PERSONNALISER: { icone: LucideIcon; titre: string; sousTitre?: string; href: string } = {
-  icone: Wand2,
-  titre: "Personnaliser Clovis",
-  sousTitre: "Mes skills, ma mémoire",
-  href: "/personnaliser",
-};
+// Partager, Avis sur Clovis et "Pourquoi Clovis ?" restent dans le bloc
+// d'actions ci-dessous (ajoutés le 28/08/2026 pour rester atteignables
+// sur mobile, natif ET web, pas seulement sur desktop). "Pourquoi
+// Clovis ?" ouvre CatalogueClovis via lib/contexteCatalogue.tsx.
 
-// Exporté (pas seulement local) : MenuHamburgerNatif.tsx (30/08/2026)
-// réutilise ce même tableau tel quel, pour ne jamais avoir une deuxième
-// liste qui pourrait diverger de celle-ci au fil du temps.
+// Exporté (pas seulement local) : MenuHamburgerNatif.tsx et
+// MenuHamburgerWeb.tsx réutilisent ce même tableau tel quel, pour ne
+// jamais avoir une deuxième liste qui pourrait diverger de celle-ci au
+// fil du temps.
 //
-// Partie 1 navigation mobile (29-30/08/2026) : Bureau retiré d'ici --
-// devient un onglet direct des deux barres mobiles (native ET web, voir
-// BarreOngletsNative.tsx/BarreOngletsWeb.tsx), ne serait plus listé
-// qu'en double sinon (déjà le cas côté web, qui avait Bureau en onglet
-// direct ET dans /plus).
+// Partie 1 navigation mobile (29-30/08/2026) : Bureau retiré d'ici,
+// devenu un onglet direct des deux barres mobiles (native ET web, voir
+// BarreOngletsNative.tsx/BarreOngletsWeb.tsx).
+//
+// 30/08/2026, audit navigation, étape 1 : Accueil ajouté (n'avait aucun
+// accès côté natif jusqu'ici, signalé par Bourama comme écran orphelin).
+// 30/08/2026, étape 2 : Rappels ajouté (EspaceRappels.tsx, écran fini
+// mais jusque-là inatteignable nulle part, natif comme web, signalé par
+// Bourama). Fonctionnalité dépendante d'un plugin natif (notifications
+// programmées) : n'a donc de sens que dans ce menu mobile (natif + web
+// mobile), jamais sur PC, où ce menu n'est de toute façon jamais rendu
+// (voir MenuHamburgerNatif.tsx/MenuHamburgerWeb.tsx, tous deux
+// exclusivement mobiles).
 export const SECTIONS_BASE: { icone: LucideIcon; titre: string; sousTitre?: string; href: string }[] = [
+  { icone: Home, titre: "Accueil", sousTitre: "Mon espace", href: "/" },
   { icone: Plug, titre: "Connecter Claude", sousTitre: "Utiliser Clovis dans Claude", href: "/connecter-claude" },
   { icone: Settings, titre: "Paramètres", sousTitre: "Profil, confidentialité, capacités du téléphone...", href: "/parametres" },
+  { icone: Bell, titre: "Rappels", sousTitre: "Notifications programmées", href: "/rappels" },
 ];
 
 function LigneSection({ icone: Icone, titre, sousTitre, onClick }: { icone: LucideIcon; titre: string; sousTitre?: string; onClick: () => void }) {
@@ -92,10 +86,9 @@ function LigneSection({ icone: Icone, titre, sousTitre, onClick }: { icone: Luci
 const AGENT_ID = "clovis";
 
 // Rendu réel des deux blocs (navigation + actions), partagé entre
-// EspacePlus (page /plus) et MenuHamburgerNatif (30/08/2026). Le seul
-// paramètre est la liste des sections du bloc 1 : EspacePlus lui passe
-// Personnaliser Clovis + le reste, le menu hamburger natif lui passe le
-// reste seul.
+// MenuHamburgerNatif.tsx (natif) et MenuHamburgerWeb.tsx (web mobile).
+// Les deux lui passent la même liste (SECTIONS_BASE), désormais
+// identique des deux côtés (étape 1 de l'audit navigation, 30/08/2026).
 export function BlocsMenuPlus({ sectionsNavigation }: { sectionsNavigation: typeof SECTIONS_BASE }) {
   const router = useRouter();
   const [copie, setCopie] = useState(false);
@@ -169,14 +162,6 @@ export function BlocsMenuPlus({ sectionsNavigation }: { sectionsNavigation: type
           </button>
         </div>
       </div>
-    </div>
-  );
-}
-
-export function EspacePlus() {
-  return (
-    <div className="mx-auto max-w-2xl p-4">
-      <BlocsMenuPlus sectionsNavigation={[SECTION_PERSONNALISER, ...SECTIONS_BASE]} />
     </div>
   );
 }
