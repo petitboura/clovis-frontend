@@ -65,7 +65,7 @@ export function NoteAgent({ agentId }: { agentId: string }) {
             onClick={() => noter(n)}
             aria-label={`Noter ${n} étoile${n > 1 ? "s" : ""}`}
             className={`text-2xl leading-none transition-transform hover:scale-110 disabled:cursor-not-allowed ${
-              n <= noteAffichee ? "text-dj-accent-1" : "text-dj-inactif"
+              n <= noteAffichee ? "text-dj-accent-1-texte" : "text-dj-inactif"
             }`}
           >
             ★

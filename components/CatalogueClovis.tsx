@@ -100,7 +100,7 @@ export function CatalogueClovis({ onFerme }: { onFerme: () => void }) {
       >
         <div className="flex flex-shrink-0 items-start justify-between border-b border-dj-bordure px-6 py-4">
           <div className="flex items-center gap-2.5">
-            <span className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-full bg-dj-accent-1/10 text-dj-accent-1">
+            <span className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-full bg-dj-accent-1/10 text-dj-accent-1-texte">
               <Compass size={18} />
             </span>
             <h2 className="font-display text-lg font-bold tracking-[-0.01em] text-dj-texte">Ce qui différencie Clovis</h2>

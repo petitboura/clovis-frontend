@@ -89,7 +89,7 @@ function ExtraitPuce({ source }: { source: Source }) {
                   typeMime: source.type_mime,
                 });
               }}
-              className="mt-2 inline-block text-dj-accent-1 hover:underline"
+              className="mt-2 inline-block text-dj-accent-1-texte hover:underline"
             >
               Ouvrir à cet endroit
             </button>

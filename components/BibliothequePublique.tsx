@@ -688,7 +688,7 @@ export function BibliothequePublique() {
                             ? "Échec du traitement -- l'IA ne peut pas retrouver ce fichier par son contenu."
                             : "Traitement en cours : l'IA ne peut pas encore retrouver ce fichier facilement."
                         }
-                        className={entree.statut_vectorisation === "echec" ? "text-[var(--dj-erreur)]" : "text-dj-accent-1"}
+                        className={entree.statut_vectorisation === "echec" ? "text-[var(--dj-erreur)]" : "text-dj-accent-1-texte"}
                       >
                         {entree.statut_vectorisation === "echec" ? (
                           <span className="block h-2 w-2 rounded-full bg-[var(--dj-erreur)]" />
@@ -713,7 +713,7 @@ export function BibliothequePublique() {
                       className="text-dj-texte-muet transition-colors hover:text-dj-texte disabled:opacity-50"
                     >
                       {copieReussie === entree.id ? (
-                        <Check size={15} className="text-dj-accent-1" />
+                        <Check size={15} className="text-dj-accent-1-texte" />
                       ) : (
                         <Download size={15} />
                       )}
@@ -831,7 +831,7 @@ export function BibliothequePublique() {
           }`}
         >
           <div className="flex items-center gap-2">
-            <Loader2 size={14} className="animate-spin text-dj-accent-1" />
+            <Loader2 size={14} className="animate-spin text-dj-accent-1-texte" />
             <span>
               Indexation : {lotVectorisation.total - lotVectorisation.enAttente.size}/{lotVectorisation.total} (
               {Math.round(((lotVectorisation.total - lotVectorisation.enAttente.size) / lotVectorisation.total) * 100)}%)

@@ -67,7 +67,7 @@ export function SelectPersonnalise({
                 setOuvert(false);
               }}
               className={`flex w-full items-center gap-1.5 rounded-md px-2.5 py-1.5 text-left text-sm transition-colors hover:bg-dj-surface ${
-                o.id === valeur ? "text-dj-accent-1" : "text-dj-texte"
+                o.id === valeur ? "text-dj-accent-1-texte" : "text-dj-texte"
               }`}
             >
               <span className="min-w-0 truncate">{tronquer(o.label)}</span>

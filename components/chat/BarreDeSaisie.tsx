@@ -1071,7 +1071,7 @@ export function BarreDeSaisie({
         <button
           type="button"
           onClick={ouvrirCreationNotion}
-          className={`mb-1 block w-full rounded-lg px-3 py-2 text-left text-sm text-dj-accent-1 transition-colors hover:${fondHover}`}
+          className={`mb-1 block w-full rounded-lg px-3 py-2 text-left text-sm text-dj-accent-1-texte transition-colors hover:${fondHover}`}
         >
           + Créer une page
         </button>
@@ -1720,7 +1720,7 @@ export function BarreDeSaisie({
                 className={
                   "relative rounded-cgpt-bouton p-1 transition-colors " +
                   (sansEnseignant
-                    ? "bg-dj-accent-1/10 text-dj-accent-1"
+                    ? "bg-dj-accent-1/10 text-dj-accent-1-texte"
                     : "text-dj-texte-muet hover:text-dj-texte")
                 }
               >
@@ -1747,7 +1747,7 @@ export function BarreDeSaisie({
                 className={
                   "relative rounded-cgpt-bouton p-1 transition-colors " +
                   (menuUtilitairesOuvert || outilsUtilitairesPourAgent.some((o) => estOutilActif(o.nom))
-                    ? "bg-dj-accent-1/10 text-dj-accent-1"
+                    ? "bg-dj-accent-1/10 text-dj-accent-1-texte"
                     : "text-dj-texte-muet hover:text-dj-texte")
                 }
               >
@@ -1772,7 +1772,7 @@ export function BarreDeSaisie({
                         onClick={() => executerActionOutil(nom)}
                         className={
                           "flex w-full items-center gap-2 rounded-xl px-2 py-1.5 text-left text-xs transition-colors " +
-                          (actif ? "bg-dj-accent-1/10 text-dj-accent-1" : "text-dj-texte hover:bg-dj-surface-haute")
+                          (actif ? "bg-dj-accent-1/10 text-dj-accent-1-texte" : "text-dj-texte hover:bg-dj-surface-haute")
                         }
                       >
                         <Icone size={14} />
@@ -1919,7 +1919,7 @@ export function BarreDeSaisie({
                     }}
                     className={
                       "flex w-full items-center justify-between rounded-xl px-2 py-1.5 text-left text-xs transition-colors hover:bg-dj-surface-haute " +
-                      (!modeleSelectionne ? "text-dj-accent-1" : "text-dj-texte")
+                      (!modeleSelectionne ? "text-dj-accent-1-texte" : "text-dj-texte")
                     }
                   >
                     Auto
@@ -1944,7 +1944,7 @@ export function BarreDeSaisie({
                             }}
                             className={
                               "flex w-full items-center justify-between rounded-xl px-2 py-1.5 text-left text-xs transition-colors hover:bg-dj-surface-haute " +
-                              (modeleSelectionne === m.modele_id ? "text-dj-accent-1" : "text-dj-texte")
+                              (modeleSelectionne === m.modele_id ? "text-dj-accent-1-texte" : "text-dj-texte")
                             }
                           >
                             {m.label}
@@ -1995,7 +1995,7 @@ export function BarreDeSaisie({
                     }}
                     className={
                       "flex w-full items-center justify-between rounded-xl px-2 py-1.5 text-left text-xs transition-colors hover:bg-dj-surface-haute " +
-                      (longueur === valeur ? "text-dj-accent-1" : "text-dj-texte")
+                      (longueur === valeur ? "text-dj-accent-1-texte" : "text-dj-texte")
                     }
                   >
                     {LABELS_LONGUEUR[valeur]}
@@ -2319,7 +2319,7 @@ export function BarreDeSaisie({
                   className={
                     "flex h-11 w-11 flex-shrink-0 items-center justify-center rounded-cgpt-bouton transition-colors " +
                     (actif
-                      ? "bg-dj-surface text-dj-accent-1"
+                      ? "bg-dj-surface text-dj-accent-1-texte"
                       : "text-dj-texte-muet hover:bg-dj-surface hover:text-dj-texte")
                   }
                 >
@@ -2392,7 +2392,7 @@ export function BarreDeSaisie({
                     onClick={() => executerActionOutil(nom)}
                     className={
                       "flex w-full items-center gap-2 rounded-xl px-3 py-2.5 text-left text-sm transition-colors " +
-                      (actif ? "bg-dj-accent-1/10 text-dj-accent-1" : "text-dj-texte hover:bg-dj-surface-haute")
+                      (actif ? "bg-dj-accent-1/10 text-dj-accent-1-texte" : "text-dj-texte hover:bg-dj-surface-haute")
                     }
                   >
                     <Icone size={16} />

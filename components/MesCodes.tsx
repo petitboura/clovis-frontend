@@ -185,7 +185,7 @@ export function MesCodes() {
                       onClick={() => toggleActif(c)}
                       className={
                         "ml-auto rounded-lg px-2 py-1 text-xs font-semibold transition-colors " +
-                        (c.actif ? "text-dj-texte-muet hover:text-dj-texte" : "text-dj-accent-1")
+                        (c.actif ? "text-dj-texte-muet hover:text-dj-texte" : "text-dj-accent-1-texte")
                       }
                     >
                       {c.actif ? "Désactiver" : "Réactiver"}

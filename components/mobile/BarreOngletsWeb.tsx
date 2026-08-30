@@ -76,7 +76,7 @@ export function BarreOngletsWeb() {
             key={o.href}
             href={o.href}
             className={`group flex flex-1 flex-col items-center justify-center gap-0.5 transition-colors ${
-              actif ? "text-dj-accent-1" : "text-dj-texte-muet"
+              actif ? "text-dj-accent-1-texte" : "text-dj-texte-muet"
             }`}
           >
             <o.Icone size={20} className="flex-shrink-0" />

@@ -177,7 +177,7 @@ function EcranConsentement() {
                     {scopes.map((s) => (
                       <li key={s} className="flex items-start gap-2">
                         <svg
-                          className="mt-0.5 h-4 w-4 flex-shrink-0 text-dj-accent-1"
+                          className="mt-0.5 h-4 w-4 flex-shrink-0 text-dj-accent-1-texte"
                           viewBox="0 0 20 20"
                           fill="currentColor"
                           aria-hidden="true"

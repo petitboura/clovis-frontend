@@ -43,7 +43,7 @@ math-field {
 .hljs-selector-tag,
 .hljs-literal,
 .hljs-type {
-  color: var(--dj-accent-1);
+  color: var(--dj-accent-1-texte);
 }
 .hljs-string,
 .hljs-attr,
@@ -101,6 +101,18 @@ math-field {
   --dj-bordure: rgba(28, 26, 22, 0.08);
   --dj-bordure-forte: rgba(184, 134, 11, 0.35);
   --dj-accent-1: #b8860b;
+  /* Correctif contraste (29/08, audit UX partie 3) -- --dj-accent-1 sert
+     aussi de fond de bouton (texte fixe #1A0D02 dessus, 5.85:1, ok), donc
+     on ne peut pas le foncer sans casser ce contraste-là. En mode clair,
+     --dj-accent-1 utilisé comme COULEUR DE TEXTE (onglet actif, liens,
+     mots-clés code) ne passe pas 4.5:1 sur --dj-fond (3.07:1 mesuré).
+     --dj-accent-1-texte reprend donc la valeur de --dj-accent-2 (couleur
+     déjà existante dans la palette, utilisée pour le hover) uniquement
+     pour ces usages texte en clair -- 4.76:1, aucune nouvelle teinte
+     introduite. En sombre, --dj-accent-1 passait déjà large (11.13:1) :
+     --dj-accent-1-texte y reste identique à --dj-accent-1, rien ne change
+     visuellement pour le mode sombre. */
+  --dj-accent-1-texte: var(--dj-accent-2);
   --dj-accent-2: #8a6a1f;
   --dj-texte: #1c1a16;
   --dj-texte-muet: #6b675e;
@@ -127,6 +139,7 @@ math-field {
     --dj-bordure: rgba(245, 240, 230, 0.08);
     --dj-bordure-forte: rgba(227, 179, 65, 0.35);
     --dj-accent-1: #e8bf60;
+    --dj-accent-1-texte: var(--dj-accent-1);
     --dj-accent-2: #da9f0d;
     --dj-texte: #f5f0e6;
     --dj-texte-muet: #9a9184;
@@ -153,6 +166,7 @@ math-field {
   --dj-bordure: rgba(245, 240, 230, 0.08);
   --dj-bordure-forte: rgba(227, 179, 65, 0.35);
   --dj-accent-1: #e8bf60;
+  --dj-accent-1-texte: var(--dj-accent-1);
   --dj-accent-2: #da9f0d;
   --dj-texte: #f5f0e6;
   --dj-texte-muet: #9a9184;

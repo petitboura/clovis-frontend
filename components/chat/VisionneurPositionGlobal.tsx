@@ -61,7 +61,7 @@ function VisionneurPdf({ url, page }: { url: string; page: number }) {
             <button
               type="button"
               onClick={() => telecharger(url, "document.pdf")}
-              className="flex items-center gap-1 text-dj-accent-1 hover:underline"
+              className="flex items-center gap-1 text-dj-accent-1-texte hover:underline"
             >
               <Download size={14} /> Télécharger
             </button>

@@ -754,7 +754,7 @@ export function ChatIA({
                   ) : iconeUrl ? (
                     <Image src={iconeUrl} alt="" fill className="object-cover" sizes="48px" />
                   ) : (
-                    <IconeGenerique className="h-9 w-9 text-dj-accent-1" />
+                    <IconeGenerique className="h-9 w-9 text-dj-accent-1-texte" />
                   )}
                 </span>
                 <h1 className="font-display text-3xl font-bold tracking-[-0.01em] text-dj-texte sm:text-4xl">{titreRevele}</h1>

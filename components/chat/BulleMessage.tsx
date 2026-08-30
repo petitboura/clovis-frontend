@@ -774,7 +774,7 @@ function BulleMessageInterne({
                         enfants: texteBrut(children),
                       }),
                     }).catch(() => {});
-                    return <span className="text-dj-accent-1">{children}</span>;
+                    return <span className="text-dj-accent-1-texte">{children}</span>;
                   }
                   const libelle = source.reperage ? `${source.titre}, ${source.reperage}` : source.titre;
                   // CORRECTIF 2026-08-27 (demande Bourama : "que tout
@@ -795,7 +795,7 @@ function BulleMessageInterne({
                         })
                       }
                       title={libelle}
-                      className="mx-0.5 rounded border border-dj-bordure px-1.5 py-0.5 align-middle text-[11px] font-medium text-dj-accent-1 no-underline hover:underline"
+                      className="mx-0.5 rounded border border-dj-bordure px-1.5 py-0.5 align-middle text-[11px] font-medium text-dj-accent-1-texte no-underline hover:underline"
                     >
                       {libelle}
                     </button>
@@ -973,7 +973,7 @@ function BulleMessageInterne({
               <button
                 onClick={lireAVoixHaute}
                 aria-label={enLecture ? "Arrêter la lecture" : "Lire à voix haute"}
-                className={`rounded-md p-1.5 hover:text-dj-texte ${enLecture ? "text-dj-accent-1" : "text-dj-texte-muet"}`}
+                className={`rounded-md p-1.5 hover:text-dj-texte ${enLecture ? "text-dj-accent-1-texte" : "text-dj-texte-muet"}`}
               >
                 <Volume2 size={14} />
               </button>

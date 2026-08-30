@@ -22,7 +22,7 @@ export function ConfirmationOutil({
   return (
     <div className="my-2 max-w-[80%] animate-dj-fade-in rounded-xl border border-dj-bordure-forte bg-dj-surface p-3.5">
       <div className="flex items-start gap-2.5">
-        <AlertTriangle size={16} className="mt-0.5 shrink-0 text-dj-accent-1" />
+        <AlertTriangle size={16} className="mt-0.5 shrink-0 text-dj-accent-1-texte" />
         <div className="min-w-0 flex-1">
           <p className="text-sm text-dj-texte">
             {/* Sujet = l'AGENT, pas l'outil (2026-07-23, demande de

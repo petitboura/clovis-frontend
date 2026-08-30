@@ -326,7 +326,7 @@ function MenuGroupe({
           }
         }}
         className={`group flex w-full items-center gap-2 rounded-xl transition-colors ${
-          actif ? "text-dj-accent-1" : ouvert ? "text-dj-texte" : "text-dj-texte-muet hover:bg-dj-surface-haute hover:text-dj-texte"
+          actif ? "text-dj-accent-1-texte" : ouvert ? "text-dj-texte" : "text-dj-texte-muet hover:bg-dj-surface-haute hover:text-dj-texte"
         } ${mobile ? "px-2 py-2" : ""}`}
       >
         <span className="flex h-10 w-10 flex-shrink-0 items-center justify-center">
@@ -356,7 +356,7 @@ function MenuGroupe({
                   }
                 }}
                 className={`flex w-full items-center gap-2.5 rounded-lg px-2.5 py-2 text-left text-sm transition-colors ${
-                  estActif ? "text-dj-accent-1" : "text-dj-texte-muet hover:bg-dj-surface-haute hover:text-dj-texte"
+                  estActif ? "text-dj-accent-1-texte" : "text-dj-texte-muet hover:bg-dj-surface-haute hover:text-dj-texte"
                 }`}
               >
                 <o.Icone size={16} className="flex-shrink-0" />
@@ -650,7 +650,7 @@ export function AppSidebar({
                           onClick={() => !estActive && onSelectionnerConversation?.(fil)}
                           disabled={estActive}
                           className={`block w-full truncate rounded-lg px-2.5 py-2 text-left text-sm transition-colors ${
-                            estActive ? "text-dj-accent-1" : "text-dj-texte hover:bg-dj-surface-haute"
+                            estActive ? "text-dj-accent-1-texte" : "text-dj-texte hover:bg-dj-surface-haute"
                           }`}
                         >
                           {estActive ? "● " : ""}
@@ -723,7 +723,7 @@ export function AppSidebar({
                           }
                         }}
                         className={`group relative flex w-full items-center gap-2 rounded-lg px-2 py-2 text-left text-sm transition-colors ${
-                          actif ? "text-dj-accent-1" : "text-dj-texte-muet hover:bg-dj-surface-haute hover:text-dj-texte"
+                          actif ? "text-dj-accent-1-texte" : "text-dj-texte-muet hover:bg-dj-surface-haute hover:text-dj-texte"
                         }`}
                       >
                         <o.Icone size={16} className="flex-shrink-0" />
@@ -854,7 +854,7 @@ export function AppSidebar({
                               onClick={() => !estActive && onSelectionnerConversation?.(fil)}
                               disabled={estActive}
                               className={`truncate border-b border-white/[0.06] px-2 py-2 text-left text-sm last:border-b-0 ${
-                                estActive ? "text-dj-accent-1" : "text-dj-texte hover:text-dj-texte"
+                                estActive ? "text-dj-accent-1-texte" : "text-dj-texte hover:text-dj-texte"
                               }`}
                             >
                               {estActive ? "● " : ""}
@@ -935,7 +935,7 @@ export function AppSidebar({
                           }
                         }}
                         className={`group relative flex w-full items-center gap-2 rounded-lg px-2 py-2 text-left text-sm transition-colors ${
-                          actif ? "text-dj-accent-1" : "text-dj-texte-muet hover:bg-dj-surface-haute hover:text-dj-texte"
+                          actif ? "text-dj-accent-1-texte" : "text-dj-texte-muet hover:bg-dj-surface-haute hover:text-dj-texte"
                         }`}
                       >
                         <o.Icone size={16} />

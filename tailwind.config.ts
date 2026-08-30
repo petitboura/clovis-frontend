@@ -40,6 +40,7 @@ const config: Config = {
           bordure: "var(--dj-bordure)",
           "bordure-forte": "var(--dj-bordure-forte)",
           "accent-1": "var(--dj-accent-1)",
+          "accent-1-texte": "var(--dj-accent-1-texte)",
           "accent-2": "var(--dj-accent-2)",
           texte: "var(--dj-texte)",
           "texte-muet": "var(--dj-texte-muet)",
