@@ -189,9 +189,24 @@ export function EspaceDossiers() {
 
   if (natif === null) {
     return (
-      <div className="flex flex-col gap-2 p-4">
-        <Skeleton className="h-12 rounded-cgpt-carte" />
-        <Skeleton className="h-12 rounded-cgpt-carte" />
+      <div className="flex flex-col gap-3 p-4" aria-hidden>
+        <div className="flex items-center justify-between gap-3">
+          <Skeleton className="h-3.5 w-36 rounded" />
+          <Skeleton className="h-7 w-20 flex-shrink-0 rounded-lg" />
+        </div>
+        <div className="overflow-hidden rounded-cgpt-carte border border-dj-bordure bg-dj-surface">
+          <div className="divide-y divide-dj-bordure">
+            {["w-32", "w-44", "w-28", "w-36"].map((largeur, i) => (
+              <div key={i} className="flex items-center gap-2 px-4 py-3">
+                <Skeleton className="h-[18px] w-[18px] flex-shrink-0 rounded" />
+                <div className="flex-1 overflow-hidden">
+                  <Skeleton className={`h-3.5 ${largeur} rounded`} />
+                </div>
+                <Skeleton className="h-[28px] w-[28px] flex-shrink-0 rounded-lg" />
+              </div>
+            ))}
+          </div>
+        </div>
       </div>
     );
   }
@@ -251,10 +266,41 @@ export function EspaceDossiers() {
       </div>
 
       {chargement ? (
-        <div className="flex flex-col gap-2">
-          <Skeleton className="h-12 rounded-cgpt-carte" />
-          <Skeleton className="h-12 rounded-cgpt-carte" />
-        </div>
+        !dossierCourant ? (
+          <div className="overflow-hidden rounded-cgpt-carte border border-dj-bordure bg-dj-surface" aria-hidden>
+            <div className="divide-y divide-dj-bordure">
+              {["w-32", "w-44", "w-28", "w-36"].map((largeur, i) => (
+                <div key={i} className="flex items-center gap-2 px-4 py-3">
+                  <Skeleton className="h-[18px] w-[18px] flex-shrink-0 rounded" />
+                  <div className="flex-1 overflow-hidden">
+                    <Skeleton className={`h-3.5 ${largeur} rounded`} />
+                  </div>
+                  <Skeleton className="h-[28px] w-[28px] flex-shrink-0 rounded-lg" />
+                </div>
+              ))}
+            </div>
+          </div>
+        ) : (
+          <div className="overflow-hidden rounded-cgpt-carte border border-dj-bordure bg-dj-surface" aria-hidden>
+            <div className="divide-y divide-dj-bordure">
+              {[
+                { largeur: "w-36", taille: false },
+                { largeur: "w-28", taille: true },
+                { largeur: "w-44", taille: false },
+                { largeur: "w-32", taille: true },
+              ].map((el, i) => (
+                <div key={i} className="flex items-center gap-2 px-4 py-3">
+                  <Skeleton className="h-[18px] w-[18px] flex-shrink-0 rounded" />
+                  <div className="flex min-w-0 flex-1 flex-col gap-1">
+                    <Skeleton className={`h-3.5 ${el.largeur} rounded`} />
+                    {el.taille && <Skeleton className="h-2.5 w-12 rounded" />}
+                  </div>
+                  <Skeleton className="h-[28px] w-[28px] flex-shrink-0 rounded-lg" />
+                </div>
+              ))}
+            </div>
+          </div>
+        )
       ) : !dossierCourant ? (
         (dossiersDesignes ?? []).length === 0 ? (
           <p className="p-2 text-sm text-dj-texte-muet">Aucun dossier désigné pour l&apos;instant.</p>
@@ -450,7 +496,15 @@ function PickerDeplacement({
           />
         )}
         {chargement ? (
-          <Skeleton className="h-24 rounded-cgpt-carte" />
+          <div className="flex flex-col gap-1" aria-hidden>
+            {["w-28", "w-36", "w-24"].map((largeur, i) => (
+              <div key={i} className="flex items-center gap-2 px-2 py-1.5">
+                <Skeleton className="h-4 w-4 flex-shrink-0 rounded" />
+                <Skeleton className={`h-3.5 ${largeur} rounded`} />
+                <Skeleton className="ml-auto h-3.5 w-3.5 flex-shrink-0 rounded" />
+              </div>
+            ))}
+          </div>
         ) : (items ?? []).length === 0 ? (
           <p className="text-sm text-dj-texte-muet">Aucun sous-dossier ici.</p>
         ) : (
