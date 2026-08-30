@@ -107,8 +107,48 @@ export function EspaceTempsEcran() {
 
   if (natif === null) {
     return (
-      <div className="flex flex-col gap-3 p-4">
-        <Skeleton className="h-24 rounded-cgpt-carte" />
+      <div className="flex flex-col gap-4 p-4" aria-hidden>
+        <div>
+          <Skeleton className="h-4 w-32 rounded" />
+          <Skeleton className="mt-1 h-3 w-full rounded" style={{ animationDelay: "60ms" }} />
+          <Skeleton className="h-3 w-2/3 rounded" style={{ animationDelay: "120ms" }} />
+        </div>
+
+        <div className="flex flex-col items-center gap-1 rounded-cgpt-carte border border-dj-bordure bg-dj-surface p-4">
+          <Skeleton className="h-7 w-24 rounded" style={{ animationDelay: "180ms" }} />
+          <Skeleton className="mt-1 h-3 w-56 rounded" style={{ animationDelay: "240ms" }} />
+        </div>
+
+        <div className="overflow-hidden rounded-cgpt-carte border border-dj-bordure bg-dj-surface">
+          <div className="divide-y divide-dj-bordure">
+            {["w-32", "w-40", "w-24"].map((largeur, i) => (
+              <div key={i} className="flex items-center justify-between gap-3 px-4 py-2.5">
+                <Skeleton className={`h-3.5 ${largeur} rounded`} style={{ animationDelay: `${300 + i * 80}ms` }} />
+                <Skeleton
+                  className="h-3 w-10 flex-shrink-0 rounded"
+                  style={{ animationDelay: `${300 + i * 80 + 20}ms` }}
+                />
+              </div>
+            ))}
+          </div>
+        </div>
+
+        <div className="flex flex-col gap-1.5">
+          <Skeleton className="h-3 w-24 rounded" style={{ animationDelay: "540ms" }} />
+          <div className="overflow-hidden rounded-cgpt-carte border border-dj-bordure bg-dj-surface">
+            <div className="divide-y divide-dj-bordure">
+              {["w-20", "w-24", "w-16"].map((largeur, i) => (
+                <div key={i} className="flex items-center justify-between gap-3 px-4 py-2">
+                  <Skeleton className={`h-3.5 ${largeur} rounded`} style={{ animationDelay: `${620 + i * 80}ms` }} />
+                  <Skeleton
+                    className="h-3 w-10 flex-shrink-0 rounded"
+                    style={{ animationDelay: `${620 + i * 80 + 20}ms` }}
+                  />
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
       </div>
     );
   }
@@ -140,7 +180,43 @@ export function EspaceTempsEcran() {
       </div>
 
       {chargementPermission ? (
-        <Skeleton className="h-20 rounded-cgpt-carte" />
+        <div className="flex flex-col gap-4" aria-hidden>
+          <div className="flex flex-col items-center gap-1 rounded-cgpt-carte border border-dj-bordure bg-dj-surface p-4">
+            <Skeleton className="h-7 w-24 rounded" />
+            <Skeleton className="mt-1 h-3 w-56 rounded" style={{ animationDelay: "60ms" }} />
+          </div>
+
+          <div className="overflow-hidden rounded-cgpt-carte border border-dj-bordure bg-dj-surface">
+            <div className="divide-y divide-dj-bordure">
+              {["w-32", "w-40", "w-24"].map((largeur, i) => (
+                <div key={i} className="flex items-center justify-between gap-3 px-4 py-2.5">
+                  <Skeleton className={`h-3.5 ${largeur} rounded`} style={{ animationDelay: `${120 + i * 80}ms` }} />
+                  <Skeleton
+                    className="h-3 w-10 flex-shrink-0 rounded"
+                    style={{ animationDelay: `${120 + i * 80 + 20}ms` }}
+                  />
+                </div>
+              ))}
+            </div>
+          </div>
+
+          <div className="flex flex-col gap-1.5">
+            <Skeleton className="h-3 w-24 rounded" style={{ animationDelay: "360ms" }} />
+            <div className="overflow-hidden rounded-cgpt-carte border border-dj-bordure bg-dj-surface">
+              <div className="divide-y divide-dj-bordure">
+                {["w-20", "w-24", "w-16"].map((largeur, i) => (
+                  <div key={i} className="flex items-center justify-between gap-3 px-4 py-2">
+                    <Skeleton className={`h-3.5 ${largeur} rounded`} style={{ animationDelay: `${440 + i * 80}ms` }} />
+                    <Skeleton
+                      className="h-3 w-10 flex-shrink-0 rounded"
+                      style={{ animationDelay: `${440 + i * 80 + 20}ms` }}
+                    />
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        </div>
       ) : !permissionAccordee ? (
         <div className="flex flex-col gap-3 rounded-cgpt-carte border border-dj-bordure bg-dj-surface p-4">
           <div className="flex items-start gap-3">
@@ -161,9 +237,42 @@ export function EspaceTempsEcran() {
           </button>
         </div>
       ) : chargementUsage ? (
-        <div className="flex flex-col gap-2">
-          <Skeleton className="h-12 rounded-cgpt-carte" />
-          <Skeleton className="h-12 rounded-cgpt-carte" />
+        <div className="flex flex-col gap-4" aria-hidden>
+          <div className="flex flex-col items-center gap-1 rounded-cgpt-carte border border-dj-bordure bg-dj-surface p-4">
+            <Skeleton className="h-7 w-24 rounded" />
+            <Skeleton className="mt-1 h-3 w-56 rounded" style={{ animationDelay: "60ms" }} />
+          </div>
+
+          <div className="overflow-hidden rounded-cgpt-carte border border-dj-bordure bg-dj-surface">
+            <div className="divide-y divide-dj-bordure">
+              {["w-32", "w-40", "w-24"].map((largeur, i) => (
+                <div key={i} className="flex items-center justify-between gap-3 px-4 py-2.5">
+                  <Skeleton className={`h-3.5 ${largeur} rounded`} style={{ animationDelay: `${120 + i * 80}ms` }} />
+                  <Skeleton
+                    className="h-3 w-10 flex-shrink-0 rounded"
+                    style={{ animationDelay: `${120 + i * 80 + 20}ms` }}
+                  />
+                </div>
+              ))}
+            </div>
+          </div>
+
+          <div className="flex flex-col gap-1.5">
+            <Skeleton className="h-3 w-24 rounded" style={{ animationDelay: "360ms" }} />
+            <div className="overflow-hidden rounded-cgpt-carte border border-dj-bordure bg-dj-surface">
+              <div className="divide-y divide-dj-bordure">
+                {["w-20", "w-24", "w-16"].map((largeur, i) => (
+                  <div key={i} className="flex items-center justify-between gap-3 px-4 py-2">
+                    <Skeleton className={`h-3.5 ${largeur} rounded`} style={{ animationDelay: `${440 + i * 80}ms` }} />
+                    <Skeleton
+                      className="h-3 w-10 flex-shrink-0 rounded"
+                      style={{ animationDelay: `${440 + i * 80 + 20}ms` }}
+                    />
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
         </div>
       ) : (
         <>

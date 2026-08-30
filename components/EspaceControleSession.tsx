@@ -98,8 +98,17 @@ export function EspaceControleSession() {
 
   if (natif === null) {
     return (
-      <div className="flex flex-col gap-3 p-4">
-        <Skeleton className="h-24 rounded-cgpt-carte" />
+      <div className="flex flex-col gap-4 p-4" aria-hidden>
+        <div>
+          <Skeleton className="h-4 w-44 rounded" />
+          <Skeleton className="mt-1 h-3 w-full rounded" style={{ animationDelay: "60ms" }} />
+          <Skeleton className="h-3 w-3/4 rounded" style={{ animationDelay: "120ms" }} />
+        </div>
+        <div className="flex flex-col items-center gap-4 rounded-cgpt-carte border border-dj-bordure bg-dj-surface p-6">
+          <Skeleton className="h-3 w-3 rounded-full" style={{ animationDelay: "180ms" }} />
+          <Skeleton className="h-3.5 w-40 rounded" style={{ animationDelay: "240ms" }} />
+          <Skeleton className="h-8 w-44 rounded-lg" style={{ animationDelay: "300ms" }} />
+        </div>
       </div>
     );
   }
@@ -124,7 +133,14 @@ export function EspaceControleSession() {
       </div>
 
       {chargementPermission ? (
-        <Skeleton className="h-20 rounded-cgpt-carte" />
+        <div
+          className="flex flex-col items-center gap-4 rounded-cgpt-carte border border-dj-bordure bg-dj-surface p-6"
+          aria-hidden
+        >
+          <Skeleton className="h-3 w-3 rounded-full" />
+          <Skeleton className="h-3.5 w-40 rounded" style={{ animationDelay: "80ms" }} />
+          <Skeleton className="h-8 w-44 rounded-lg" style={{ animationDelay: "160ms" }} />
+        </div>
       ) : !permissionAccordee ? (
         <div className="flex flex-col gap-3 rounded-cgpt-carte border border-dj-bordure bg-dj-surface p-4">
           <div className="flex items-start gap-3">

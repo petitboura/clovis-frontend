@@ -9,6 +9,7 @@ import { mettreAJourMonProfil } from "@/lib/api";
 import { messageErreur } from "@/lib/erreurs";
 import { Logo } from "@/components/Logo";
 import { Bouton } from "@/components/Bouton";
+import { Skeleton } from "@/components/Skeleton";
 import { ChampMotDePasse } from "@/components/ChampMotDePasse";
 import { ChampTelephone } from "@/components/ChampTelephone";
 
@@ -93,7 +94,38 @@ export default function PageInscription() {
   if (verificationSession) {
     return (
       <main className="flex min-h-screen items-center justify-center px-4">
-        <div className="h-8 w-8 animate-spin rounded-full border-2 border-dj-bordure border-t-dj-texte-muet" />
+        <div className="w-full max-w-sm" aria-hidden>
+          <div className="mb-8 flex items-center justify-center gap-2.5">
+            <Logo taille={32} />
+            <span className="font-display text-lg font-bold tracking-tight text-dj-texte">
+              <span className="text-dj-accent-1-texte">Clovis</span>
+            </span>
+          </div>
+
+          <div className="rounded-2xl border border-dj-bordure bg-dj-surface p-6 shadow-[0_2px_24px_rgba(0,0,0,0.35)]">
+            <Skeleton className="h-6 w-40 rounded-lg" />
+
+            <Skeleton className="mt-4 h-9 rounded-cgpt-bouton" style={{ animationDelay: "80ms" }} />
+
+            <div className="mt-4 flex flex-col gap-4">
+              <div>
+                <Skeleton className="h-3.5 w-16 rounded" style={{ animationDelay: "160ms" }} />
+                <Skeleton className="mt-1.5 h-10 rounded-lg" style={{ animationDelay: "200ms" }} />
+              </div>
+              <div>
+                <Skeleton className="h-3.5 w-16 rounded" style={{ animationDelay: "240ms" }} />
+                <Skeleton className="mt-1.5 h-10 rounded-lg" style={{ animationDelay: "280ms" }} />
+              </div>
+              <div>
+                <Skeleton className="h-3.5 w-28 rounded" style={{ animationDelay: "320ms" }} />
+                <Skeleton className="mt-1.5 h-10 rounded-lg" style={{ animationDelay: "360ms" }} />
+              </div>
+              <Skeleton className="h-11 w-full rounded-cgpt-bouton" style={{ animationDelay: "400ms" }} />
+            </div>
+          </div>
+
+          <Skeleton className="mx-auto mt-5 h-3.5 w-48 rounded" style={{ animationDelay: "440ms" }} />
+        </div>
       </main>
     );
   }

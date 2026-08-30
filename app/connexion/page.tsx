@@ -5,6 +5,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { connecter } from "@/lib/authFallback";
 import { Logo } from "@/components/Logo";
+import { Skeleton } from "@/components/Skeleton";
 import { Bouton } from "@/components/Bouton";
 import { ChampMotDePasse } from "@/components/ChampMotDePasse";
 import { ChampTelephone } from "@/components/ChampTelephone";
@@ -32,7 +33,40 @@ function cheminRetourSur(valeur: string | null): string {
 // sinon `next build` échoue ("should be wrapped in a suspense boundary").
 export default function PageConnexion() {
   return (
-    <Suspense fallback={null}>
+    <Suspense
+      fallback={
+        <main className="flex min-h-screen items-center justify-center px-4">
+          <div className="w-full max-w-sm" aria-hidden>
+            <div className="mb-8 flex items-center justify-center gap-2.5">
+              <Logo taille={32} />
+              <span className="font-display text-lg font-bold tracking-tight text-dj-texte">
+                <span className="text-dj-accent-1-texte">Clovis</span>
+              </span>
+            </div>
+
+            <div className="rounded-2xl border border-dj-bordure bg-dj-surface p-6 shadow-[0_2px_24px_rgba(0,0,0,0.35)]">
+              <Skeleton className="h-6 w-36 rounded-lg" />
+
+              <Skeleton className="mt-4 h-9 rounded-cgpt-bouton" style={{ animationDelay: "80ms" }} />
+
+              <div className="mt-4 flex flex-col gap-4">
+                <div>
+                  <Skeleton className="h-3.5 w-16 rounded" style={{ animationDelay: "160ms" }} />
+                  <Skeleton className="mt-1.5 h-10 rounded-lg" style={{ animationDelay: "200ms" }} />
+                </div>
+                <div>
+                  <Skeleton className="h-3.5 w-28 rounded" style={{ animationDelay: "240ms" }} />
+                  <Skeleton className="mt-1.5 h-10 rounded-lg" style={{ animationDelay: "280ms" }} />
+                </div>
+                <Skeleton className="h-11 w-full rounded-cgpt-bouton" style={{ animationDelay: "320ms" }} />
+              </div>
+            </div>
+
+            <Skeleton className="mx-auto mt-5 h-3.5 w-48 rounded" style={{ animationDelay: "360ms" }} />
+          </div>
+        </main>
+      }
+    >
       <FormulaireConnexion />
     </Suspense>
   );

@@ -5,6 +5,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { supabase } from "@/lib/supabase";
 import { Logo } from "@/components/Logo";
 import { Bouton } from "@/components/Bouton";
+import { Skeleton } from "@/components/Skeleton";
 
 /**
  * Écran de consentement OAuth 2.1 (voir Authentication > OAuth Server dans
@@ -56,7 +57,27 @@ function libelleScope(scope: string): string {
 // sinon `next build` échoue ("should be wrapped in a suspense boundary").
 export default function PageConsentementOAuth() {
   return (
-    <Suspense fallback={null}>
+    <Suspense
+      fallback={
+        <main className="flex min-h-screen items-center justify-center px-4">
+          <div className="w-full max-w-sm" aria-hidden>
+            <div className="mb-8 flex items-center justify-center gap-2.5">
+              <Logo taille={32} />
+              <span className="font-display text-lg font-bold tracking-tight text-dj-texte">Clovis</span>
+            </div>
+            <div className="rounded-2xl border border-dj-bordure bg-dj-surface p-6 shadow-[0_2px_24px_rgba(0,0,0,0.35)]">
+              <Skeleton className="h-6 w-3/4 rounded-lg" />
+              <Skeleton className="mt-2 h-3.5 w-full rounded" style={{ animationDelay: "60ms" }} />
+              <Skeleton className="mt-6 h-24 rounded-xl" style={{ animationDelay: "120ms" }} />
+              <div className="mt-6 flex gap-3">
+                <Skeleton className="h-11 flex-1 rounded-cgpt-bouton" style={{ animationDelay: "180ms" }} />
+                <Skeleton className="h-11 flex-1 rounded-cgpt-bouton" style={{ animationDelay: "240ms" }} />
+              </div>
+            </div>
+          </div>
+        </main>
+      }
+    >
       <EcranConsentement />
     </Suspense>
   );
@@ -147,7 +168,33 @@ function EcranConsentement() {
 
         <div className="rounded-2xl border border-dj-bordure bg-dj-surface p-6 shadow-[0_2px_24px_rgba(0,0,0,0.35)]">
           {chargement && (
-            <p className="text-sm text-dj-texte-muet">Chargement de la demande d'accès…</p>
+            <div className="flex flex-col gap-2" aria-hidden>
+              <Skeleton className="h-6 w-3/4 rounded-lg" />
+              <Skeleton className="mt-1 h-3.5 w-full rounded" style={{ animationDelay: "60ms" }} />
+
+              <div className="mt-4 rounded-xl border border-dj-bordure bg-dj-surface-haute p-3">
+                <Skeleton className="h-3 w-28 rounded" style={{ animationDelay: "120ms" }} />
+                <div className="mt-2 flex flex-col gap-2.5">
+                  {["w-40", "w-32"].map((largeur, i) => (
+                    <div key={i} className="flex items-start gap-2">
+                      <Skeleton
+                        className="mt-0.5 h-4 w-4 flex-shrink-0 rounded"
+                        style={{ animationDelay: `${180 + i * 60}ms` }}
+                      />
+                      <Skeleton
+                        className={`h-3.5 ${largeur} rounded`}
+                        style={{ animationDelay: `${180 + i * 60 + 20}ms` }}
+                      />
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              <div className="mt-6 flex gap-3">
+                <Skeleton className="h-11 flex-1 rounded-cgpt-bouton" style={{ animationDelay: "320ms" }} />
+                <Skeleton className="h-11 flex-1 rounded-cgpt-bouton" style={{ animationDelay: "380ms" }} />
+              </div>
+            </div>
           )}
 
           {!chargement && erreur && (
