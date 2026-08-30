@@ -145,8 +145,40 @@ export function EspaceAccessibilite() {
 
   if (natif === null || chargementEtat) {
     return (
-      <div className="flex flex-col gap-3 p-4">
-        <Skeleton className="h-24 rounded-cgpt-carte" />
+      <div className="flex animate-dj-fade-in-rapide flex-col gap-4 p-4" aria-hidden>
+        <div>
+          <Skeleton className="h-4 w-32 rounded" />
+          <Skeleton className="mt-2 h-3 w-64 rounded" />
+        </div>
+
+        <div className="flex gap-1 rounded-lg bg-dj-surface-haute p-1">
+          <div className="flex-1 px-2 py-1.5">
+            <Skeleton className="mx-auto h-3 w-3/4 rounded" />
+          </div>
+          <div className="flex-1 px-2 py-1.5">
+            <Skeleton className="mx-auto h-3 w-3/4 rounded" />
+          </div>
+          <div className="flex-1 px-2 py-1.5">
+            <Skeleton className="mx-auto h-3 w-3/4 rounded" />
+          </div>
+        </div>
+
+        <div className="flex flex-col gap-3">
+          <div className="flex gap-2">
+            <Skeleton className="h-9 flex-1 rounded-lg border border-dj-bordure" />
+            <Skeleton className="h-8 w-24 flex-shrink-0 rounded-lg" />
+          </div>
+          <div className="overflow-hidden rounded-cgpt-carte border border-dj-bordure bg-dj-surface">
+            <div className="divide-y divide-dj-bordure">
+              {["w-40", "w-32", "w-48", "w-36"].map((largeur, i) => (
+                <div key={i} className="flex items-center justify-between gap-3 px-4 py-2.5">
+                  <Skeleton className={`h-3.5 ${largeur} rounded`} />
+                  <Skeleton className="h-[26px] w-[26px] flex-shrink-0 rounded-lg" />
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
       </div>
     );
   }
@@ -264,7 +296,20 @@ export function EspaceAccessibilite() {
 
           {onglet === "lectures" &&
             (journalLectures === null ? (
-              <Skeleton className="h-20 rounded-cgpt-carte" />
+              <div className="overflow-hidden rounded-cgpt-carte border border-dj-bordure bg-dj-surface" aria-hidden>
+                <div className="divide-y divide-dj-bordure">
+                  {["w-32", "w-40", "w-24", "w-36", "w-28"].map((largeur, i) => (
+                    <div key={i} className="flex items-center gap-3 px-4 py-2.5">
+                      <Skeleton className="h-[14px] w-[14px] flex-shrink-0 rounded" />
+                      <div className="flex min-w-0 flex-1 flex-col gap-1">
+                        <Skeleton className={`h-3.5 ${largeur} rounded`} />
+                        <Skeleton className="h-2.5 w-24 rounded" />
+                      </div>
+                      <Skeleton className="h-2.5 w-8 flex-shrink-0 rounded" />
+                    </div>
+                  ))}
+                </div>
+              </div>
             ) : journalLectures.length === 0 ? (
               <p className="p-2 text-sm text-dj-texte-muet">Aucune lecture récente.</p>
             ) : (
@@ -288,7 +333,20 @@ export function EspaceAccessibilite() {
 
           {onglet === "actions" &&
             (journalActions === null ? (
-              <Skeleton className="h-20 rounded-cgpt-carte" />
+              <div className="overflow-hidden rounded-cgpt-carte border border-dj-bordure bg-dj-surface" aria-hidden>
+                <div className="divide-y divide-dj-bordure">
+                  {["w-36", "w-28", "w-44", "w-32", "w-40"].map((largeur, i) => (
+                    <div key={i} className="flex items-center gap-3 px-4 py-2.5">
+                      <Skeleton className="h-2 w-2 flex-shrink-0 rounded-full" />
+                      <div className="flex min-w-0 flex-1 flex-col gap-1">
+                        <Skeleton className={`h-3.5 ${largeur} rounded`} />
+                        <Skeleton className="h-2.5 w-28 rounded" />
+                      </div>
+                      <Skeleton className="h-2.5 w-8 flex-shrink-0 rounded" />
+                    </div>
+                  ))}
+                </div>
+              </div>
             ) : journalActions.length === 0 ? (
               <p className="p-2 text-sm text-dj-texte-muet">Aucune action récente.</p>
             ) : (
