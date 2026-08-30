@@ -88,16 +88,28 @@ export function MaMemoire() {
       </p>
 
       {/* Skeleton précis (30/08, ré-analyse minutieuse demandée par
-          Bourama) : le vrai contenu n'est PAS du texte de paragraphe --
+          Bourama) : le vrai contenu n'est PAS du texte de paragraphe nu --
           c'est une carte à bordure contenant une zone de texte éditable
-          (textarea, 10 lignes) et 2 boutons en dessous. L'ancien skeleton
-          (3 lignes de texte, sans cadre) ne représentait pas ça du tout. */}
+          (textarea, 10 lignes) et 2 boutons en dessous. Correctif suite
+          retour Bourama : le premier essai remplissait la zone d'un seul
+          bloc plein uniforme -- ça ne représentait pas le texte qui sera
+          réellement écrit à l'intérieur. Ici, de vraies lignes de largeurs
+          variables DANS la zone bordée qui a exactement le style de la
+          vraie textarea (rounded-lg border bg-dj-surface-haute px-3 py-2). */}
       {chargement && (
         <div className="flex flex-col gap-4 rounded-cgpt-carte border border-dj-bordure bg-dj-surface p-6" aria-hidden>
-          <Skeleton className="h-52 w-full rounded-lg" />
+          <div className="flex flex-col gap-2 rounded-lg border border-dj-bordure bg-dj-surface-haute px-3 py-2">
+            {[100, 96, 88, 60, 100, 92, 84, 40].map((largeur, i) => (
+              <Skeleton
+                key={i}
+                className="h-3.5 rounded"
+                style={{ width: `${largeur}%`, animationDelay: `${i * 60}ms` }}
+              />
+            ))}
+          </div>
           <div className="flex flex-wrap items-center gap-3">
-            <Skeleton className="h-9 w-28 rounded-cgpt-bouton" style={{ animationDelay: "100ms" }} />
-            <Skeleton className="h-9 w-32 rounded-cgpt-bouton" style={{ animationDelay: "200ms" }} />
+            <Skeleton className="h-9 w-28 rounded-cgpt-bouton" style={{ animationDelay: "500ms" }} />
+            <Skeleton className="h-9 w-32 rounded-cgpt-bouton" style={{ animationDelay: "580ms" }} />
           </div>
         </div>
       )}

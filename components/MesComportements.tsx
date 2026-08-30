@@ -572,11 +572,19 @@ export function MesComportements({ agentId }: { agentId: string }) {
           <div className="flex flex-wrap gap-2">
             {[
               { largeur: 128, delai: "0ms" },
-              { largeur: 176, delai: "80ms" },
-              { largeur: 96, delai: "160ms" },
-              { largeur: 224, delai: "240ms" },
-              { largeur: 144, delai: "320ms" },
-              { largeur: 112, delai: "400ms" },
+              { largeur: 176, delai: "60ms" },
+              { largeur: 96, delai: "120ms" },
+              { largeur: 224, delai: "180ms" },
+              { largeur: 144, delai: "240ms" },
+              { largeur: 112, delai: "300ms" },
+              { largeur: 152, delai: "360ms" },
+              { largeur: 88, delai: "420ms" },
+              { largeur: 208, delai: "480ms" },
+              { largeur: 120, delai: "540ms" },
+              { largeur: 168, delai: "600ms" },
+              { largeur: 104, delai: "660ms" },
+              { largeur: 184, delai: "720ms" },
+              { largeur: 136, delai: "780ms" },
             ].map(({ largeur, delai }, i) => (
               <div
                 key={i}
