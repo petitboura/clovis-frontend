@@ -84,6 +84,43 @@ export function EspaceEntrerCode() {
     return <CTACompteRequis texte="Crée un compte pour entrer un code reçu." />;
   }
 
+  if (chargement) {
+    return (
+      <section className="rounded-cgpt-carte border border-dj-bordure bg-dj-surface p-5" aria-hidden>
+        <Skeleton className="h-5 w-40 rounded" />
+        <Skeleton className="mt-2 h-3 w-full rounded" style={{ animationDelay: "80ms" }} />
+        <Skeleton className="h-3 w-3/4 rounded" style={{ animationDelay: "160ms" }} />
+
+        <div className="mt-4 flex items-center gap-2">
+          <Skeleton className="h-[52px] flex-1 rounded-xl" style={{ animationDelay: "240ms" }} />
+          <Skeleton className="h-11 w-24 flex-shrink-0 rounded-cgpt-bouton" style={{ animationDelay: "320ms" }} />
+        </div>
+
+        <div className="mt-4 flex flex-col gap-2 border-t border-dj-bordure pt-3">
+          <Skeleton className="h-3 w-20 rounded" style={{ animationDelay: "400ms" }} />
+          {[
+            { largeur: "w-2/3", delai: "480ms" },
+            { largeur: "w-1/2", delai: "560ms" },
+          ].map(({ largeur, delai }, i) => (
+            <div
+              key={i}
+              className="flex items-center justify-between gap-2 rounded-xl border border-dj-bordure bg-dj-surface-haute px-3 py-2"
+            >
+              <div className="flex min-w-0 flex-1 flex-col gap-1.5">
+                <Skeleton className={`h-3.5 rounded ${largeur}`} style={{ animationDelay: delai }} />
+                <div className="flex flex-wrap gap-1">
+                  <Skeleton className="h-3.5 w-10 rounded-md" style={{ animationDelay: delai }} />
+                  <Skeleton className="h-3.5 w-16 rounded-md" style={{ animationDelay: delai }} />
+                </div>
+              </div>
+              <Skeleton className="h-3.5 w-3.5 flex-shrink-0 rounded" style={{ animationDelay: delai }} />
+            </div>
+          ))}
+        </div>
+      </section>
+    );
+  }
+
   return (
     <section className="rounded-cgpt-carte border border-dj-bordure bg-dj-surface p-5">
       <h2 className="font-display text-base font-semibold text-dj-texte">Entrer un code</h2>
@@ -112,36 +149,7 @@ export function EspaceEntrerCode() {
       {messageOk && <p className="mt-3 animate-dj-fade-in-rapide text-sm text-dj-succes">{messageOk}</p>}
       {erreur && <p className="mt-3 animate-dj-fade-in-rapide text-sm text-[var(--dj-erreur)]">{erreur}</p>}
 
-      {/* Skeleton précis (30/08, audit) : reproduit une ligne "code reçu"
-          -- nom+description sur une ligne, badges (Skill/Bibliothèque/
-          Texte) en dessous, bouton retirer à droite -- au lieu d'un seul
-          bloc plein qui ne représentait ni le label ni la composition
-          réelle. */}
-      {chargement && (
-        <div className="mt-4 flex flex-col gap-2 border-t border-dj-bordure pt-3" aria-hidden>
-          <Skeleton className="h-3 w-20 rounded" />
-          {[
-            { largeur: "w-2/3", delai: "80ms" },
-            { largeur: "w-1/2", delai: "160ms" },
-          ].map(({ largeur, delai }, i) => (
-            <div
-              key={i}
-              className="flex items-center justify-between gap-2 rounded-xl border border-dj-bordure bg-dj-surface-haute px-3 py-2"
-            >
-              <div className="flex min-w-0 flex-1 flex-col gap-1.5">
-                <Skeleton className={`h-3.5 rounded ${largeur}`} style={{ animationDelay: delai }} />
-                <div className="flex flex-wrap gap-1">
-                  <Skeleton className="h-3 w-10 rounded-md" style={{ animationDelay: delai }} />
-                  <Skeleton className="h-3 w-16 rounded-md" style={{ animationDelay: delai }} />
-                </div>
-              </div>
-              <Skeleton className="h-3.5 w-3.5 flex-shrink-0 rounded" style={{ animationDelay: delai }} />
-            </div>
-          ))}
-        </div>
-      )}
-
-      {!chargement && rattachements.length > 0 && (
+      {rattachements.length > 0 && (
         <div className="mt-4 animate-dj-fade-in-rapide space-y-2 border-t border-dj-bordure pt-3">
           <p className="text-xs font-semibold text-dj-texte-muet">Codes reçus</p>
           {rattachements.map((r) => (
@@ -170,7 +178,7 @@ export function EspaceEntrerCode() {
         </div>
       )}
 
-      {!chargement && avecTexteLibre.length > 0 && (
+      {avecTexteLibre.length > 0 && (
         <div className="mt-4 animate-dj-fade-in-rapide space-y-2 border-t border-dj-bordure pt-3">
           <p className="text-xs font-semibold text-dj-texte-muet">Reçu</p>
           {avecTexteLibre.map((r) => (
