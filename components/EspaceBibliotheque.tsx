@@ -737,10 +737,39 @@ async function envoyerFichiersDirect(fichiersChoisis: FileList | File[]) {
         </div>
       )}
 
+      {/* Skeleton précis (30/08/2026, audit Bourama) : reproduit la vraie
+          composition de chaque ligne (dossier ET fichier partagent le même
+          gabarit -- voir plus bas) plutôt qu'un bloc plein qui "avale"
+          tout -- rond d'icône h-7 w-7 identique au vrai conteneur tonal,
+          une seule ligne de texte (le contenu réel n'en a qu'une ici,
+          contrairement à la bibliothèque publique), largeur différente à
+          chaque ligne pour ne pas se répéter à l'identique, et une zone
+          de droite représentant les boutons d'action réels. 5 lignes
+          plutôt que 2 fixes : remplit l'espace visible au lieu de sauter
+          brutalement à une vraie liste plus longue une fois chargée. */}
       {fichiersAffiches === null && (
         <div className="flex flex-col gap-2" aria-hidden>
-          <Skeleton className="h-14 rounded-xl border border-dj-bordure" />
-          <Skeleton className="h-14 rounded-xl border border-dj-bordure" style={{ animationDelay: "100ms" }} />
+          {[
+            { largeur: "w-3/5", delai: "0ms" },
+            { largeur: "w-2/5", delai: "100ms" },
+            { largeur: "w-4/5", delai: "200ms" },
+            { largeur: "w-1/2", delai: "300ms" },
+            { largeur: "w-3/4", delai: "400ms" },
+          ].map(({ largeur, delai }, i) => (
+            <div
+              key={i}
+              className="flex items-center justify-between gap-3 rounded-xl border border-dj-bordure bg-dj-surface px-4 py-3"
+            >
+              <div className="flex min-w-0 flex-1 items-center gap-2">
+                <Skeleton className="h-7 w-7 flex-shrink-0 rounded-full" style={{ animationDelay: delai }} />
+                <Skeleton className={`h-3.5 rounded ${largeur}`} style={{ animationDelay: delai }} />
+              </div>
+              <div className="flex flex-shrink-0 items-center gap-3">
+                <Skeleton className="h-3.5 w-3.5 rounded" style={{ animationDelay: delai }} />
+                <Skeleton className="h-3.5 w-3.5 rounded" style={{ animationDelay: delai }} />
+              </div>
+            </div>
+          ))}
         </div>
       )}
 
