@@ -87,11 +87,18 @@ export function MaMemoire() {
         ou l&apos;effacer toi-même ici.
       </p>
 
+      {/* Skeleton précis (30/08, ré-analyse minutieuse demandée par
+          Bourama) : le vrai contenu n'est PAS du texte de paragraphe --
+          c'est une carte à bordure contenant une zone de texte éditable
+          (textarea, 10 lignes) et 2 boutons en dessous. L'ancien skeleton
+          (3 lignes de texte, sans cadre) ne représentait pas ça du tout. */}
       {chargement && (
-        <div className="flex flex-col gap-2" aria-hidden>
-          <Skeleton className="h-3.5 w-full rounded" />
-          <Skeleton className="h-3.5 w-11/12 rounded" style={{ animationDelay: "100ms" }} />
-          <Skeleton className="h-3.5 w-2/3 rounded" style={{ animationDelay: "200ms" }} />
+        <div className="flex flex-col gap-4 rounded-cgpt-carte border border-dj-bordure bg-dj-surface p-6" aria-hidden>
+          <Skeleton className="h-52 w-full rounded-lg" />
+          <div className="flex flex-wrap items-center gap-3">
+            <Skeleton className="h-9 w-28 rounded-cgpt-bouton" style={{ animationDelay: "100ms" }} />
+            <Skeleton className="h-9 w-32 rounded-cgpt-bouton" style={{ animationDelay: "200ms" }} />
+          </div>
         </div>
       )}
 

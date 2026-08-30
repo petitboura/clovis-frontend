@@ -275,10 +275,37 @@ export function ComportementsPublics({ onActive }: { onActive: () => void }) {
 
       {erreur && <p className="text-sm text-[var(--dj-erreur)]">{erreur}</p>}
 
+      {/* Skeleton précis (30/08, audit) : ici c'est bien une ligne pleine
+          largeur (contrairement à "Mes comportements" qui sont des
+          pilules) -- icône plate 16px + titre + sous-titre (description
+          + nombre d'activations, 2 lignes) + 2 boutons à droite (Activer,
+          Télécharger). 5 lignes au lieu de 2 fixes. */}
       {liste === undefined && (
         <div className="flex flex-col gap-2" aria-hidden>
-          <Skeleton className="h-16 rounded-xl border border-dj-bordure" />
-          <Skeleton className="h-16 rounded-xl border border-dj-bordure" style={{ animationDelay: "100ms" }} />
+          {[
+            { titre: "w-1/2", soustitre: "w-2/5", delai: "0ms" },
+            { titre: "w-3/5", soustitre: "w-1/3", delai: "100ms" },
+            { titre: "w-2/5", soustitre: "w-1/2", delai: "200ms" },
+            { titre: "w-3/4", soustitre: "w-1/4", delai: "300ms" },
+            { titre: "w-1/3", soustitre: "w-2/5", delai: "400ms" },
+          ].map(({ titre, soustitre, delai }, i) => (
+            <div
+              key={i}
+              className="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-dj-bordure bg-dj-surface px-4 py-3"
+            >
+              <div className="flex min-w-0 flex-1 items-center gap-3">
+                <Skeleton className="h-4 w-4 flex-shrink-0 rounded" style={{ animationDelay: delai }} />
+                <div className="flex min-w-0 flex-1 flex-col gap-1.5">
+                  <Skeleton className={`h-3.5 rounded ${titre}`} style={{ animationDelay: delai }} />
+                  <Skeleton className={`h-2.5 rounded ${soustitre}`} style={{ animationDelay: delai }} />
+                </div>
+              </div>
+              <div className="flex flex-shrink-0 items-center gap-2">
+                <Skeleton className="h-7 w-20 rounded-cgpt-bouton border border-dj-bordure" style={{ animationDelay: delai }} />
+                <Skeleton className="h-7 w-7 rounded-cgpt-bouton border border-dj-bordure" style={{ animationDelay: delai }} />
+              </div>
+            </div>
+          ))}
         </div>
       )}
 

@@ -557,9 +557,38 @@ export function MesComportements({ agentId }: { agentId: string }) {
       {vue === "public" ? (
         <ComportementsPublics onActive={charger} />
       ) : liste === undefined ? (
-        <div className="flex flex-col gap-2" aria-hidden>
-          <Skeleton className="h-14 rounded-xl border border-dj-bordure" />
-          <Skeleton className="h-14 rounded-xl border border-dj-bordure" style={{ animationDelay: "100ms" }} />
+        /* Skeleton précis (30/08, audit) : le vrai contenu n'est pas une
+           liste de lignes pleine largeur mais des PILULES qui s'enroulent
+           (flex-wrap) -- rounded-full, icône 14px + nom + interrupteur
+           18px -- précédées du texte d'intro et du bouton "Nouveau
+           comportement". L'ancien skeleton (2 blocs rectangulaires
+           pleins) ne ressemblait à aucun des deux. */
+        <div className="flex flex-col gap-4" aria-hidden>
+          <div className="flex flex-col gap-1.5">
+            <Skeleton className="h-3.5 w-full rounded" />
+            <Skeleton className="h-3.5 w-4/5 rounded" style={{ animationDelay: "80ms" }} />
+          </div>
+          <Skeleton className="h-9 w-44 rounded-full border border-dj-bordure" style={{ animationDelay: "160ms" }} />
+          <div className="flex flex-wrap gap-2">
+            {[
+              { largeur: 128, delai: "0ms" },
+              { largeur: 176, delai: "80ms" },
+              { largeur: 96, delai: "160ms" },
+              { largeur: 224, delai: "240ms" },
+              { largeur: 144, delai: "320ms" },
+              { largeur: 112, delai: "400ms" },
+            ].map(({ largeur, delai }, i) => (
+              <div
+                key={i}
+                style={{ width: `${largeur}px` }}
+                className="flex items-center gap-2 rounded-full border border-dj-bordure bg-dj-surface px-3.5 py-2"
+              >
+                <Skeleton className="h-3.5 w-3.5 flex-shrink-0 rounded-full" style={{ animationDelay: delai }} />
+                <Skeleton className="h-3.5 flex-1 rounded" style={{ animationDelay: delai }} />
+                <Skeleton className="h-[18px] w-[18px] flex-shrink-0 rounded-full" style={{ animationDelay: delai }} />
+              </div>
+            ))}
+          </div>
         </div>
       ) : (
         <div className="flex animate-dj-fade-in-rapide flex-col gap-4">
