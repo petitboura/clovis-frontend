@@ -252,6 +252,14 @@ export interface MessageAffiche {
   // (FichierChip.tsx) à la fin du message, une entrée par appel d'outil,
   // dans l'ordre chronologique réel (même logique que outilsResultats).
   fichiersGeneres?: { nomOutil: string; fichiers: { url: string; nom: string }[] }[];
+  // Ajouté 30/08/2026 (audit UX mobile, partie 5 : "pas de chemin de
+  // récupération après une erreur") : la génération a échoué avant la
+  // moindre réponse persistée -- message.id reste donc null pour
+  // toujours (voir commentaire sur les boutons d'action plus bas), ce
+  // qui masquait silencieusement le bouton Régénérer justement quand
+  // l'utilisateur en a le plus besoin. Ce flag découple "action possible"
+  // de "réponse persistée en base".
+  erreur?: boolean;
 }
 
 // Ajouté le 2026-07-23 (bug repéré par Bourama : en rechargeant un fil de
@@ -891,6 +899,29 @@ function BulleMessageInterne({
         </div>
       )}
 
+      {/* Ajouté 30/08/2026 (audit UX mobile, partie 5) : jusqu'ici, une
+          génération en échec affichait un texte clair ("Une erreur est
+          survenue...") mais AUCUN moyen visible de relancer -- le bouton
+          Régénérer existait dans le code mais restait cousu à
+          `message.id !== null` (voir plus haut), or message.id ne se
+          remplit jamais pour un message qui a échoué avant sauvegarde.
+          En plus de réparer cette condition, ce bandeau rend l'action
+          immédiatement visible (pas seulement au survol -- sur mobile,
+          il n'y a pas de survol) plutôt que cachée dans la barre
+          d'actions qui n'apparaît qu'au hover. */}
+      {!estUtilisateur && message.erreur && (
+        <div className="my-1.5 flex w-fit items-center gap-2 rounded-lg border border-dj-bordure bg-dj-surface px-3 py-2 text-[13px] text-dj-texte">
+          <button
+            onClick={onRegenerer}
+            aria-label="Réessayer"
+            className="flex min-h-[44px] items-center gap-1.5 rounded-md px-1 py-1 font-medium text-dj-accent-1 transition-colors hover:text-dj-accent-2"
+          >
+            <RotateCw size={14} />
+            Réessayer
+          </button>
+        </div>
+      )}
+
       {!estUtilisateur && message.qualiteReduite && (
         <div className="my-1.5 flex w-fit items-start gap-2 rounded-lg border border-dj-accent-2/40 bg-dj-accent-2/10 px-3 py-2 text-[13px] text-dj-texte">
           <AlertTriangle size={16} className="mt-0.5 shrink-0 text-dj-accent-2" />
@@ -918,7 +949,7 @@ function BulleMessageInterne({
           étaient cliquables pendant que le texte s'écrivait encore.
           Côté utilisateur, pas de streaming à attendre -- toujours
           affichés au survol comme avant. */}
-      {(estUtilisateur || message.id !== null) && (
+      {(estUtilisateur || message.id !== null || message.erreur) && (
         <div className="mt-1 flex gap-1 opacity-0 transition-opacity group-hover:opacity-100">
           <button onClick={copier} aria-label="Copier" className="rounded-md p-1.5 text-dj-texte-muet hover:text-dj-texte">
             {copie ? <Check size={14} /> : <Copy size={14} />}

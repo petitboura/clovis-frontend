@@ -2115,7 +2115,13 @@ export function BarreDeSaisie({
         {/* Deuxième ligne (14/08, demande Bourama : forme carte en deux
             lignes empilées comme la référence Claude fournie, au lieu
             d'une seule ligne "pilule" plate -- texte au-dessus, icônes
-            actions en dessous, "+" à gauche / micro-envoi à droite). */}
+            actions en dessous, "+" à gauche / micro-envoi à droite).
+            30/08/2026 (audit UX mobile, partie 5) : les 5 boutons
+            d'action de cette barre mobile (+, dictée, arrêter dictée,
+            envoyer, slot outil/appli) étaient tous en h-10 w-10 (40px),
+            sous le minimum recommandé Material/Apple/WCAG pour une
+            cible tactile principale (44-48px) -- relevés à h-11 w-11
+            (44px), sans changer leur position ni leur icône. */}
         <div className="flex items-center justify-between gap-1">
         <div className="relative flex-shrink-0">
           <button
@@ -2124,7 +2130,7 @@ export function BarreDeSaisie({
             onClick={() => setMenuPlusOuvert((v) => !v)}
             aria-label="Plus d'options"
             className={
-              "flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-cgpt-bouton transition-colors " +
+              "flex h-11 w-11 flex-shrink-0 items-center justify-center rounded-cgpt-bouton transition-colors " +
               (menuPlusOuvert
                 ? "bg-dj-surface text-dj-texte"
                 : "text-dj-texte-muet hover:bg-dj-surface hover:text-dj-texte")
@@ -2216,7 +2222,7 @@ export function BarreDeSaisie({
           <button
             onClick={arreterDictee}
             aria-label="Arrêter la dictée"
-            className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-cgpt-bouton bg-dj-accent-2 text-white"
+            className="flex h-11 w-11 flex-shrink-0 items-center justify-center rounded-cgpt-bouton bg-dj-accent-2 text-white"
           >
             <Square size={14} />
           </button>
@@ -2225,7 +2231,7 @@ export function BarreDeSaisie({
             onClick={envoyer}
             disabled={desactive}
             aria-label="Envoyer"
-            className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-cgpt-bouton bg-dj-accent-1 text-[#1A0D02] disabled:opacity-60"
+            className="flex h-11 w-11 flex-shrink-0 items-center justify-center rounded-cgpt-bouton bg-dj-accent-1 text-[#1A0D02] disabled:opacity-60"
           >
             <ArrowUp size={16} />
           </button>
@@ -2235,7 +2241,7 @@ export function BarreDeSaisie({
               onClick={demarrerDictee}
               disabled={transcriptionEnCours}
               aria-label="Dictée vocale"
-              className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-cgpt-bouton text-dj-texte-muet transition-colors hover:bg-dj-surface hover:text-dj-texte disabled:opacity-60"
+              className="flex h-11 w-11 flex-shrink-0 items-center justify-center rounded-cgpt-bouton text-dj-texte-muet transition-colors hover:bg-dj-surface hover:text-dj-texte disabled:opacity-60"
             >
               <Mic size={16} />
             </button>
@@ -2311,7 +2317,7 @@ export function BarreDeSaisie({
                   aria-label={candidat.label}
                   title={candidat.label}
                   className={
-                    "flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-cgpt-bouton transition-colors " +
+                    "flex h-11 w-11 flex-shrink-0 items-center justify-center rounded-cgpt-bouton transition-colors " +
                     (actif
                       ? "bg-dj-surface text-dj-accent-1"
                       : "text-dj-texte-muet hover:bg-dj-surface hover:text-dj-texte")

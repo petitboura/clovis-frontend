@@ -650,6 +650,7 @@ export function ChatIA({
         copie[copie.length - 1] = {
           ...copie[copie.length - 1],
           content: "Une erreur est survenue, réessaie dans un instant.",
+          erreur: true,
         };
         return copie;
       });
@@ -700,6 +701,7 @@ export function ChatIA({
         copie[copie.length - 1] = {
           ...copie[copie.length - 1],
           content: "Une erreur est survenue, réessaie dans un instant.",
+          erreur: true,
         };
         return copie;
       });
