@@ -13,6 +13,7 @@ import { ReveilBackend } from "@/components/ReveilBackend";
 import { SplashOuverture } from "@/components/SplashOuverture";
 import { SplashPret } from "@/components/SplashPret";
 import { BoutonFlottantTelecharger } from "@/components/BoutonFlottantTelecharger";
+import { PopupExplorationDossier } from "@/components/PopupExplorationDossier";
 
 // CORRECTIF (17/08) -- Bourama a demandé de sortir de la charte
 // Djiguignè (jugée trop générique "IA" -- palette + paire de polices
@@ -170,6 +171,7 @@ export default function RacineLayout({
         <ReveilBackend />
         {children}
         <BoutonFlottantTelecharger />
+        <PopupExplorationDossier />
         <SplashPret />
       </body>
     </html>
