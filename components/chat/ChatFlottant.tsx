@@ -13,6 +13,7 @@ import { useHauteurVisuelle } from "@/lib/useHauteurVisuelle";
 import type { EtatChat } from "@/lib/contexteChat";
 import { useFenetres } from "@/lib/contexteFenetres";
 import { texteAccueilSelonHeure } from "@/lib/salutations";
+import { Skeleton } from "@/components/Skeleton";
 
 // Chat flottant global (refonte "Mon espace = l'app", 15/08/2026, demande
 // Bourama : "il faut un bouton pour ouvrir le chat en plein écran"). Avant
@@ -89,6 +90,12 @@ export function ChatFlottant({
   const [nbMessages, setNbMessages] = useState(0);
   const [compteRequis, setCompteRequis] = useState(false);
   const [historiqueOuvert, setHistoriqueOuvert] = useState(false);
+  // Absent jusqu'ici (audit Bourama 30/08) : rien ne signalait le
+  // chargement en cours quand on rouvre une conversation passée --
+  // l'ancien fil restait affiché tel quel jusqu'à l'arrivée brutale du
+  // nouveau. Ajouté pour piloter le skeleton de la zone de messages
+  // (voir plus bas, juste avant le rendu de ChatIA).
+  const [chargementFilConversation, setChargementFilConversation] = useState(false);
   const [outilsActifsAgent, setOutilsActifsAgent] = useState<{
     outils: string[];
     actions_locales: string[];
@@ -159,6 +166,7 @@ export function ChatFlottant({
 
   async function selectionnerConversation(fil: FilConversation) {
     if (!agent) return;
+    setChargementFilConversation(true);
     try {
       const cheminId = fil.conversation_id ?? "legacy";
       const lignes: {
@@ -206,6 +214,8 @@ export function ChatFlottant({
     } catch {
       // Échec de rechargement : on garde le fil courant plutôt que de
       // casser tout le widget.
+    } finally {
+      setChargementFilConversation(false);
     }
   }
 
@@ -392,7 +402,38 @@ export function ChatFlottant({
           />
         )}
 
-        <div onMouseDownCapture={fermerFenetresAuClic} className="min-h-0 flex-1">
+        <div onMouseDownCapture={fermerFenetresAuClic} className="relative min-h-0 flex-1">
+          {/* Comble le trou identifié dans l'audit (30/08) : avant, rien
+              ne s'affichait entre le clic sur une conversation passée et
+              l'arrivée de la réponse -- l'ancien fil restait figé à
+              l'écran puis sautait d'un coup. Reproduit la vraie
+              alternance de bulles : utilisateur = carte alignée à droite
+              (rounded-cgpt-carte bg-dj-surface, comme le vrai message),
+              assistant = simple texte sans cadre aligné à gauche, sur
+              plusieurs lignes de largeurs différentes (comme le vrai
+              texte de lecture). */}
+          {chargementFilConversation && (
+            <div className="absolute inset-0 z-10 overflow-hidden bg-dj-fond">
+              <div className="mx-auto flex h-full w-full max-w-3xl flex-col gap-5 px-4 py-6" aria-hidden>
+                <div className="flex flex-col items-end">
+                  <Skeleton className="h-9 w-2/5 rounded-cgpt-carte" />
+                </div>
+                <div className="flex flex-col items-start gap-2">
+                  <Skeleton className="h-4 w-11/12 rounded" style={{ animationDelay: "80ms" }} />
+                  <Skeleton className="h-4 w-4/5 rounded" style={{ animationDelay: "160ms" }} />
+                  <Skeleton className="h-4 w-3/5 rounded" style={{ animationDelay: "240ms" }} />
+                </div>
+                <div className="flex flex-col items-end">
+                  <Skeleton className="h-9 w-1/3 rounded-cgpt-carte" style={{ animationDelay: "320ms" }} />
+                </div>
+                <div className="flex flex-col items-start gap-2">
+                  <Skeleton className="h-4 w-4/5 rounded" style={{ animationDelay: "400ms" }} />
+                  <Skeleton className="h-4 w-2/3 rounded" style={{ animationDelay: "480ms" }} />
+                </div>
+              </div>
+            </div>
+          )}
+
           {chargement === "chargement" && (
             <div className="flex h-full items-center justify-center">
               <div className="h-6 w-6 animate-spin rounded-full border-2 border-dj-bordure border-t-dj-texte-muet" />
