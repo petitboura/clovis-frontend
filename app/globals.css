@@ -114,6 +114,14 @@ math-field {
      visuellement pour le mode sombre. */
   --dj-accent-1-texte: var(--dj-accent-2);
   --dj-accent-2: #8a6a1f;
+  /* Ajouté 30/08/2026 (tâche 3, Material 3 Expressive) : conteneur "tonal"
+     -- fond translucide de --dj-accent-1, pour donner un vrai fond coloré
+     aux icônes/blocs importants (containment M3E) sans introduire de
+     nouvelle teinte ni assombrir --dj-accent-1 lui même (qui reste utilisé
+     tel quel en fond plein de bouton, voir correctif contraste ci-dessus).
+     Même opacité que --dj-bordure-forte (même accent, juste une surface
+     au lieu d'un trait) pour rester cohérent avec ce qui existait déjà. */
+  --dj-accent-1-conteneur: rgba(184, 134, 11, 0.14);
   --dj-texte: #1c1a16;
   --dj-texte-muet: #6b675e;
   --dj-succes: #15803d;
@@ -140,6 +148,7 @@ math-field {
     --dj-bordure-forte: rgba(227, 179, 65, 0.35);
     --dj-accent-1: #e8bf60;
     --dj-accent-1-texte: var(--dj-accent-1);
+    --dj-accent-1-conteneur: rgba(232, 191, 96, 0.16);
     --dj-accent-2: #da9f0d;
     --dj-texte: #f5f0e6;
     --dj-texte-muet: #9a9184;
@@ -167,6 +176,7 @@ math-field {
   --dj-bordure-forte: rgba(227, 179, 65, 0.35);
   --dj-accent-1: #e8bf60;
   --dj-accent-1-texte: var(--dj-accent-1);
+  --dj-accent-1-conteneur: rgba(232, 191, 96, 0.16);
   --dj-accent-2: #da9f0d;
   --dj-texte: #f5f0e6;
   --dj-texte-muet: #9a9184;

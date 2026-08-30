@@ -71,7 +71,15 @@ function LigneSection({ icone: Icone, titre, sousTitre, onClick }: { icone: Luci
       onClick={onClick}
       className="flex w-full items-center gap-3 px-4 py-3 text-left transition-colors hover:bg-dj-surface-haute"
     >
-      <Icone size={18} className="flex-shrink-0 text-dj-texte-muet" />
+      {/* Conteneur tonal (30/08/2026, tâche 3, Material 3 Expressive) :
+          l'icône avait juste une couleur atténuée sur fond transparent,
+          sans "containment" -- remplacé par un vrai fond coloré (voir
+          --dj-accent-1-conteneur, globals.css) pour signaler visuellement
+          que chaque ligne est une action, sans changer la structure de la
+          liste ni son comportement. */}
+      <span className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-full bg-dj-accent-1-conteneur">
+        <Icone size={17} className="text-dj-accent-1-texte" />
+      </span>
       <div className="flex-1 overflow-hidden">
         <div className="truncate text-sm text-dj-texte">{titre}</div>
         {sousTitre && <div className="truncate text-xs text-dj-texte-muet">{sousTitre}</div>}
@@ -130,14 +138,18 @@ export function BlocsMenuPlus({ sectionsNavigation }: { sectionsNavigation: type
             onClick={partager}
             className="flex w-full items-center gap-3 px-4 py-3 text-left transition-colors hover:bg-dj-surface-haute"
           >
-            <Share2 size={18} className="flex-shrink-0 text-dj-texte-muet" />
+            <span className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-full bg-dj-accent-1-conteneur">
+              <Share2 size={17} className="text-dj-accent-1-texte" />
+            </span>
             <span className="flex-1 text-sm text-dj-texte">{copie ? "Copié !" : "Partager"}</span>
           </button>
           <button
             onClick={() => setAvisDeplie((v) => !v)}
             className="flex w-full items-center gap-3 px-4 py-3 text-left transition-colors hover:bg-dj-surface-haute"
           >
-            <Star size={18} className="flex-shrink-0 text-dj-texte-muet" />
+            <span className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-full bg-dj-accent-1-conteneur">
+              <Star size={17} className="text-dj-accent-1-texte" />
+            </span>
             <span className="flex-1 text-sm text-dj-texte">Avis sur Clovis</span>
           </button>
           {avisDeplie && (
@@ -150,7 +162,9 @@ export function BlocsMenuPlus({ sectionsNavigation }: { sectionsNavigation: type
             onClick={ouvrirCatalogue}
             className="flex w-full items-center gap-3 px-4 py-3 text-left transition-colors hover:bg-dj-surface-haute"
           >
-            <Compass size={18} className="flex-shrink-0 text-dj-texte-muet" />
+            <span className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-full bg-dj-accent-1-conteneur">
+              <Compass size={17} className="text-dj-accent-1-texte" />
+            </span>
             <span className="flex-1 text-sm text-dj-texte">Pourquoi Clovis ?</span>
           </button>
         </div>

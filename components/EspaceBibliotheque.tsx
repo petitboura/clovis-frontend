@@ -777,7 +777,13 @@ async function envoyerFichiersDirect(fichiersChoisis: FileList | File[]) {
                   onClick={() => setPileDossiers((p) => [...p, { id: d.id, nom: d.nom }])}
                   className="flex min-w-0 items-center gap-2 text-sm text-dj-texte hover:text-dj-texte"
                 >
-                  <IconDossier size={16} className="flex-shrink-0 text-dj-texte-muet" />
+                  {/* Conteneur tonal (30/08/2026, tâche 3, Material 3
+                      Expressive) : même traitement que EspacePlus.tsx --
+                      un vrai fond coloré derrière l'icône plutôt qu'une
+                      icône simplement grisée sur fond transparent. */}
+                  <span className="flex h-7 w-7 flex-shrink-0 items-center justify-center rounded-full bg-dj-accent-1-conteneur">
+                    <IconDossier size={14} className="text-dj-accent-1-texte" />
+                  </span>
                   <span className="truncate font-medium">{d.nom}</span>
                 </button>
               )}
@@ -1035,7 +1041,12 @@ async function envoyerFichiersDirect(fichiersChoisis: FileList | File[]) {
                   onClick={() => setFichierOuvert(f)}
                   className="flex min-w-0 items-center gap-2 text-sm text-dj-texte hover:underline"
                 >
-                  <Icone size={14} className="flex-shrink-0" />
+                  {/* Conteneur tonal (30/08/2026, tâche 3, Material 3
+                      Expressive) : même traitement que les dossiers
+                      juste au dessus et que EspacePlus.tsx. */}
+                  <span className="flex h-7 w-7 flex-shrink-0 items-center justify-center rounded-full bg-dj-accent-1-conteneur">
+                    <Icone size={14} className="text-dj-accent-1-texte" />
+                  </span>
                   <span className="truncate">{f.description || f.nom_fichier}</span>
                 </button>
                 <div className="flex flex-shrink-0 items-center gap-3 text-xs text-dj-texte-muet">

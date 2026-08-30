@@ -41,6 +41,9 @@ const config: Config = {
           "bordure-forte": "var(--dj-bordure-forte)",
           "accent-1": "var(--dj-accent-1)",
           "accent-1-texte": "var(--dj-accent-1-texte)",
+          // Ajouté 30/08/2026 (tâche 3, Material 3 Expressive) : voir le
+          // commentaire sur --dj-accent-1-conteneur dans globals.css.
+          "accent-1-conteneur": "var(--dj-accent-1-conteneur)",
           "accent-2": "var(--dj-accent-2)",
           texte: "var(--dj-texte)",
           "texte-muet": "var(--dj-texte-muet)",
