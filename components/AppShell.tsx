@@ -20,9 +20,12 @@ import { MenuHamburgerNatif } from "@/components/mobile/MenuHamburgerNatif";
 // - la nav principale (AppSidebar)
 // - le chat flottant (ChatFlottant), jamais démonté en changeant de
 //   section -- sinon la conversation en cours serait perdue
-// - le catalogue "Pourquoi Clovis ?", qui garde son comportement
-//   d'ouverture automatique à la toute première visite (14/08, demande
-//   Bourama), indépendamment de la section sur laquelle on atterrit.
+// - le catalogue "Pourquoi Clovis ?", plus ouvert automatiquement à la
+//   première visite depuis le 30/08 (chantier onboarding -- raccourcir le
+//   chemin vers le premier message envoyé, voir audit-ux-mobile-2026).
+//   Reste ouvrable à tout moment via AppSidebar, ChatFlottant et
+//   PaletteCommandes (onOuvrirCatalogue), rien n'est perdu en
+//   accessibilité, juste plus imposé par défaut.
 export function AppShell({ children }: { children: React.ReactNode }) {
   const [connecte, setConnecte] = useState(false);
   const [catalogueOuvert, setCatalogueOuvert] = useState(false);
@@ -51,12 +54,6 @@ export function AppShell({ children }: { children: React.ReactNode }) {
     return () => {
       annule = true;
     };
-  }, []);
-
-  useEffect(() => {
-    if (localStorage.getItem("clovis_catalogue_vu")) return;
-    localStorage.setItem("clovis_catalogue_vu", "1");
-    setCatalogueOuvert(true);
   }, []);
 
   useEffect(() => {
