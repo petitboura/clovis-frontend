@@ -139,6 +139,32 @@ math-field {
   --dj-erreur: #dc2626;
 }
 
+/* Zones de securite unifiees (tache 4, 30/08/2026, edge to edge obligatoire
+   des Android 15/API 35 -- cible actuelle du projet : API 36, voir
+   android/variables.gradle, donc aucune derogation possible cote Android).
+   Chaine de repli recommandee par la doc officielle Capacitor (System Bars
+   API, "insetsHandling: css") : var(--safe-area-inset-*) est la variable
+   injectee par Capacitor lui meme (corrige un bug de webview Android <140
+   ou cette info n'etait pas fiable via env() seul) ; env(safe-area-inset-*)
+   est la valeur standard (iOS, web, Android recent) utilisee si Capacitor
+   n'a rien injecte (donc web/desktop). Un seul jeu de variables ici,
+   utilise PARTOUT dans le projet a la place d'un env() ecrit en dur a
+   chaque endroit (avant cette tache : 6 fichiers le faisaient chacun de
+   son cote, aucun avec ce filet de secours). Ne concerne QUE le contexte
+   web/PWA et les elements communs (ex. l'entete plein ecran du chat,
+   atteignable aussi bien en natif qu'en web) -- ne remplace PAS
+   --cap-native-navigation-top/bottom, qui reste la source pour tout ce qui
+   est strictement dans le layout natif (voir AppShell.tsx) : ce plugin
+   fait deja lui meme sa propre remontee de safe area ("safe-area
+   reporting", doc @capgo/capacitor-native-navigation), les additionner
+   aux deux endroits reviendrait a compter deux fois le meme espace. */
+:root {
+  --safe-top: var(--safe-area-inset-top, env(safe-area-inset-top, 0px));
+  --safe-right: var(--safe-area-inset-right, env(safe-area-inset-right, 0px));
+  --safe-bottom: var(--safe-area-inset-bottom, env(safe-area-inset-bottom, 0px));
+  --safe-left: var(--safe-area-inset-left, env(safe-area-inset-left, 0px));
+}
+
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) {
     --dj-fond: #0f0d0b;
@@ -265,7 +291,7 @@ body {
 }
 @media (max-width: 767px) {
   :root:not([data-natif="true"]) {
-    --dj-barre-onglets-web: calc(4rem + env(safe-area-inset-bottom));
+    --dj-barre-onglets-web: calc(4rem + var(--safe-bottom));
   }
 }
 

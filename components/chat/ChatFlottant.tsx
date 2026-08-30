@@ -315,7 +315,7 @@ export function ChatFlottant({
         // nécessaire), pas de concernement en mode mini (jamais ancré
         // en haut d'écran, voir bottom-5 right-5 ci-dessus).
         className={`flex flex-shrink-0 items-center gap-2 border-b border-dj-bordure px-3 pb-2.5 ${
-          pleinEcran ? "pt-[calc(0.625rem+env(safe-area-inset-top))]" : "pt-2.5"
+          pleinEcran ? "pt-[calc(0.625rem+var(--safe-top))]" : "pt-2.5"
         }`}
       >
         <Logo taille={20} />

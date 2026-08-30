@@ -110,11 +110,11 @@ export function AppShell({ children }: { children: React.ReactNode }) {
               app/manifest.ts) font tourner le site edge-to-edge dès
               qu'il est ouvert en PWA installée : le contenu du tout
               haut de chaque page se retrouvait sous l'encoche sur
-              téléphone à encoche/île dynamique. env(safe-area-inset-top)
-              vaut 0px sur desktop/appareil sans encoche, donc sans effet
-              là où ce n'est pas nécessaire, même logique que le
-              padding-bottom déjà posé sur la barre de saisie
-              (ChatIA.tsx). */}
+              téléphone à encoche/île dynamique. var(--safe-top) (durci
+              tâche 4 le 30/08/2026, voir app/globals.css) vaut 0px sur
+              desktop/appareil sans encoche, donc sans effet là où ce
+              n'est pas nécessaire, même logique que le padding-bottom
+              déjà posé sur la barre de saisie (ChatIA.tsx). */}
           <main
             className="flex-1 overflow-y-auto"
             style={
@@ -124,7 +124,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                     paddingBottom: "var(--cap-native-navigation-bottom, 0px)",
                   }
                 : {
-                    paddingTop: "env(safe-area-inset-top)",
+                    paddingTop: "var(--safe-top)",
                     // Réserve l'espace de BarreOngletsWeb (0px sur
                     // desktop et hors mobile, voir --dj-barre-onglets-web
                     // dans app/globals.css) pour que le bas de chaque

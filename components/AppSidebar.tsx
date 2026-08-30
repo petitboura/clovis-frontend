@@ -588,7 +588,7 @@ export function AppSidebar({
         <button
           onClick={() => setOuverte((v) => !v)}
           aria-label={ouverte ? "Replier le panneau" : "Déplier le panneau"}
-          className="group fixed left-2 top-[calc(0.5rem+env(safe-area-inset-top))] z-40 flex h-8 w-8 items-center justify-center rounded-md bg-black/35 text-white hover:bg-black/50 md:hidden"
+          className="group fixed left-2 top-[calc(0.5rem+var(--safe-top))] z-40 flex h-8 w-8 items-center justify-center rounded-md bg-black/35 text-white hover:bg-black/50 md:hidden"
         >
           <PanelLeft size={16} className="transition-transform duration-200 group-hover:scale-95" />
         </button>
@@ -820,7 +820,7 @@ export function AppSidebar({
             profilDeplie ? "overflow-visible" : "overflow-y-auto overflow-x-hidden"
           }`}
         >
-          <div className="mt-[calc(2rem+env(safe-area-inset-top))]">
+          <div className="mt-[calc(2rem+var(--safe-top))]">
             {contexteChat && (
               <>
                 {aDesMessages && (

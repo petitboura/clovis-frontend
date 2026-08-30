@@ -53,7 +53,7 @@ export function BarreOngletsWeb() {
   return (
     <nav
       className="fixed inset-x-0 bottom-0 z-30 flex h-16 items-stretch justify-around border-t border-dj-bordure bg-dj-fond md:hidden"
-      style={{ paddingBottom: "env(safe-area-inset-bottom)" }}
+      style={{ paddingBottom: "var(--safe-bottom)" }}
       aria-label="Navigation principale"
     >
       {ONGLETS_WEB.map((o) => {

@@ -17,6 +17,19 @@ const config: CapacitorConfig = {
   appId: "com.clovis.app",
   appName: "Clovis",
   webDir: "out",
+  // Tache 4 (30/08/2026, zones de securite) : "css" est deja la valeur
+  // par defaut du plugin System Bars (bundle dans @capacitor/core depuis
+  // Capacitor 8), mais on la fixe explicitement ici plutot que de
+  // dependre d'un defaut qui pourrait changer plus tard -- c'est ce
+  // parametre qui fait que Capacitor injecte --safe-area-inset-* en CSS
+  // (voir app/globals.css, --safe-top/--safe-bottom), indispensable sur
+  // Android 15+/API 35+ (edge to edge obligatoire, cible actuelle du
+  // projet : API 36).
+  plugins: {
+    SystemBars: {
+      insetsHandling: "css",
+    },
+  },
 };
 
 export default config;

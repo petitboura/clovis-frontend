@@ -860,20 +860,23 @@ export function ChatIA({
         <div ref={finDesMessagesRef} />
       </div>
 
-      {/* pb-[env(safe-area-inset-bottom)] (2026-07-30) : marge pour la
-          barre d'accueil iOS (encoche du bas) en plus du pb-6 existant --
-          s'additionne, ne le remplace pas (viewport-fit=cover posé dans
-          app/layout.tsx rend cette variable non nulle sur iPhone).
-          + var(--cap-native-navigation-bottom, 0px) (26/08/2026, retour
-          "boutons qui se cachent derrière" en app native) : la barre
-          d'onglets native (BarreOngletsNative.tsx) est un vrai calque
-          natif par-dessus la WebView (contentInsetMode:"css"), pas un
-          élément qui redimensionne la page, sans cette variable, le
-          champ de saisie et le bouton d'envoi se retrouvaient sous elle
-          en mode plein écran natif. Vaut 0px sur le web (voir
-          AppShell.tsx), donc purement additif, sans effet hors app
-          native. */}
-      <div className="px-4 [padding-bottom:calc(env(safe-area-inset-bottom)+var(--cap-native-navigation-bottom,0px)+1.5rem)]">
+      {/* pb via var(--safe-bottom) (2026-07-30, durci tâche 4 le
+          30/08/2026) : marge pour la barre d'accueil iOS (encoche du bas)
+          en plus du pb-6 existant -- s'additionne, ne le remplace pas
+          (viewport-fit=cover posé dans app/layout.tsx rend cette variable
+          non nulle sur iPhone, et sur Android via l'injection Capacitor,
+          voir app/globals.css). + var(--cap-native-navigation-bottom, 0px)
+          (26/08/2026, retour "boutons qui se cachent derrière" en app
+          native) : la barre d'onglets native (BarreOngletsNative.tsx) est
+          un vrai calque natif par-dessus la WebView (contentInsetMode:
+          "css"), pas un élément qui redimensionne la page, sans cette
+          variable, le champ de saisie et le bouton d'envoi se
+          retrouvaient sous elle en mode plein écran natif. Vaut 0px sur
+          le web (voir AppShell.tsx), donc purement additif, sans effet
+          hors app native -- pas de double comptage avec --safe-bottom,
+          qui couvre un espace différent (la vraie zone système, pas la
+          barre d'onglets elle-même). */}
+      <div className="px-4 [padding-bottom:calc(var(--safe-bottom)+var(--cap-native-navigation-bottom,0px)+1.5rem)]">
         <BarreDeSaisie
           onEnvoyer={envoyerMessage}
           desactive={genEnCours || affichageEnCours}
