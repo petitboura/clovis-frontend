@@ -12,6 +12,7 @@ import { ContexteCatalogue } from "@/lib/contexteCatalogue";
 import { ContexteFenetres, useFournirFenetres } from "@/lib/contexteFenetres";
 import { BarreOngletsNative } from "@/components/mobile/BarreOngletsNative";
 import { BarreOngletsWeb } from "@/components/mobile/BarreOngletsWeb";
+import { MenuHamburgerNatif } from "@/components/mobile/MenuHamburgerNatif";
 
 // Coquille de l'app entière (refonte "Mon espace = l'app", 15/08/2026).
 // Monte UNE SEULE FOIS, au niveau du layout (voir app/(app)/layout.tsx) :
@@ -82,6 +83,12 @@ export function AppShell({ children }: { children: React.ReactNode }) {
       <ContexteFenetres.Provider value={fenetres}>
         <div className="flex h-dvh">
           {natif && <BarreOngletsNative />}
+          {/* 30/08/2026, tâche 2 (menu hamburger) : reprend Connecter
+              Claude/Bureau/Paramètres/Partager/Avis/Pourquoi Clovis, tout
+              ce que l'onglet Plus portait avant la tâche 1. Natif
+              uniquement -- BarreOngletsWeb ci-dessous a déjà son propre
+              onglet Plus (page /plus), rien à ajouter côté web. */}
+          {natif && <MenuHamburgerNatif />}
           {!natif && <BarreOngletsWeb />}
           <AppSidebar
             connecte={connecte}

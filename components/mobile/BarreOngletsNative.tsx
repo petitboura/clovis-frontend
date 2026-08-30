@@ -1,8 +1,8 @@
 "use client";
 
-import { useEffect, useRef } from "react";
+import { useContext, useEffect, useRef } from "react";
 import { usePathname, useRouter } from "next/navigation";
-import { useOuvrirChat } from "@/lib/contexteChat";
+import { ContexteChat, useOuvrirChat } from "@/lib/contexteChat";
 import { useTheme } from "@/lib/useTheme";
 
 // Cree le 26/08/2026, Bourama : refonte navigation mobile (chantier
@@ -35,6 +35,21 @@ import { useTheme } from "@/lib/useTheme";
 // impossible a verifier depuis ce sandbox (pas d'Android Studio/Xcode ici,
 // meme avertissement que clovis-mobile/README.md). A tester sur appareil
 // reel avant de considerer ce chantier termine.
+//
+// 30/08/2026, tache 2 partie B (Bourama) : masquer la barre native
+// pendant le chat plein ecran (ChatFlottant.tsx, etat "plein_ecran"),
+// pour la meme raison que la barre web est deja recouverte par son
+// z-[110] -- la barre native, elle, est hors de la webview, le z-index
+// du chat n'a aucune prise dessus. API verifiee dans les types du
+// plugin installe (package.json : ^8.3.1, verifie via node_modules/
+// @capgo/capacitor-native-navigation/dist/esm/definitions.d.ts) : pas
+// de methode hide()/show() separee, setTabbar accepte un champ booleen
+// `hidden` directement dans NativeNavigationTabbarOptions -- reappele
+// avec le meme tableau de tabs/couleurs/selectedId a chaque fois (voir
+// commentaire plus bas sur l'absence de "selectTab"), donc fusionne ici
+// dans le meme effet que la synchronisation d'onglet actif plutot qu'un
+// effet separe, pour eviter deux appels concurrents qui pourraient se
+// doubler et scintiller.
 
 // Icones en SVG brut (contrainte du plugin : doivent etre serialisables,
 // un composant Lucide ne peut pas etre envoye au natif tel quel) --
@@ -97,6 +112,24 @@ export function BarreOngletsNative() {
   const pathname = usePathname();
   const ouvrirChat = useOuvrirChat();
   const { resolu } = useTheme();
+  // Tache 2 partie B (30/08/2026) : etat du chat, deja porte par
+  // ContexteChat (voir lib/contexteChat.tsx, remonte dans AppShell.tsx).
+  // Pas de hook dedie expose pour LIRE l'etat (seulement useOuvrirChat,
+  // qui ne fait que l'ouvrir) -- le contexte est exporte, donc lu ici
+  // directement plutot que d'ajouter un hook pour un seul appelant.
+  const ctxChat = useContext(ContexteChat);
+  const etatChat = ctxChat?.etat ?? "fermee";
+  // Tache 2 partie B : avant cette tache, l'effet de sync ignorait
+  // purement et simplement les routes qui ne correspondent a aucun
+  // onglet (`if (actif)` -- ex. /connecter-claude, /bureau, /parametres,
+  // atteintes uniquement depuis l'ancien onglet Plus). Le plugin garde
+  // alors tout seul le dernier selectedId connu, jamais reinitialise a
+  // "bibliotheque". Depuis cette tache, l'effet doit AUSSI tourner sur
+  // ces routes-la pour mettre a jour `hidden` quand le chat change
+  // d'etat -- ce ref reproduit donc le meme comportement de memoire que
+  // le plugin assurait implicitement avant, plutot que de forcer
+  // "bibliotheque" a chaque fois.
+  const dernierOngletRef = useRef("bibliotheque");
   // Ref pour eviter de reconfigurer le plugin a chaque changement de route
   // (montage unique) tout en gardant acces a la derniere version de
   // router/ouvrirChat dans le listener 'tabSelect'.
@@ -118,6 +151,7 @@ export function BarreOngletsNative() {
 
       await NativeNavigation.configure({ contentInsetMode: "css", colors: couleursTabbar(resoluRef.current) });
       await NativeNavigation.setTabbar({
+        hidden: false,
         selectedId: "bibliotheque",
         labelVisibilityMode: "labeled",
         icons: true,
@@ -147,28 +181,34 @@ export function BarreOngletsNative() {
 
   // Synchronise l'onglet visuellement actif avec la route affichee (ex :
   // ouvrir Bibliotheque depuis "Personnaliser Clovis" doit aussi mettre a
-  // jour la barre).
-  // Pas de methode dediee cote plugin : on rappelle setTabbar avec le
-  // meme tableau de tabs, juste un nouveau selectedId. Depend aussi de
-  // `resolu` (26/08/2026, correctif couleurs) : bascule clair/sombre
-  // (bouton ThemeToggle ou changement système) doit recolorer la barre
-  // native en direct, pas seulement au prochain changement de route.
+  // jour la barre), ET masque/affiche la barre selon l'etat du chat
+  // (tache 2 partie B, 30/08/2026 : plein_ecran doit la faire disparaitre,
+  // mini/fermee doit la faire revenir). Un seul effet pour les deux --
+  // dans les deux cas on rappelle setTabbar avec le meme tableau complet
+  // (tabs, couleurs, selectedId), voir le commentaire d'en-tete sur
+  // l'absence de "selectTab" et de "hide"/"show" dedies. Les fusionner
+  // evite que le retour de plein_ecran (qui touche `hidden`) et un
+  // changement de route simultane (qui touche `selectedId`) ne se
+  // percutent en deux appels setTabbar concurrents, potentiellement
+  // desynchronises. Depend aussi de `resolu` (26/08/2026, correctif
+  // couleurs) : bascule clair/sombre doit recolorer la barre native en
+  // direct.
   useEffect(() => {
     import("@capacitor/core").then(async ({ Capacitor }) => {
       if (!Capacitor.isNativePlatform()) return;
       const { NativeNavigation } = await import("@capgo/capacitor-native-navigation");
       const actif = ONGLETS_NATIFS.find((o) => o.route && pathname.startsWith(o.route));
-      if (actif) {
-        await NativeNavigation.setTabbar({
-          selectedId: actif.id,
-          labelVisibilityMode: "labeled",
-          icons: true,
-          colors: couleursTabbar(resolu),
-          tabs: definitionOnglets(),
-        });
-      }
+      if (actif) dernierOngletRef.current = actif.id;
+      await NativeNavigation.setTabbar({
+        hidden: etatChat === "plein_ecran",
+        selectedId: dernierOngletRef.current,
+        labelVisibilityMode: "labeled",
+        icons: true,
+        colors: couleursTabbar(resolu),
+        tabs: definitionOnglets(),
+      });
     });
-  }, [pathname, resolu]);
+  }, [pathname, resolu, etatChat]);
 
   return null;
 }

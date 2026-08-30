@@ -33,8 +33,29 @@ import { useOuvrirCatalogue } from "@/lib/contexteCatalogue";
 // jour, même schéma que ContexteChat) plutôt qu'un state local à
 // AppShell.tsx comme avant -- c'est ce contexte qui manquait le 28/08
 // pour l'ajouter plus tôt.
-const SECTIONS: { icone: LucideIcon; titre: string; sousTitre?: string; href: string }[] = [
-  { icone: Wand2, titre: "Personnaliser Clovis", sousTitre: "Mes skills, ma mémoire", href: "/personnaliser" },
+//
+// 30/08/2026, tâche 2 (menu hamburger natif) : la section Personnaliser
+// Clovis est désormais séparée (SECTION_PERSONNALISER) plutôt que codée
+// en dur dans SECTIONS_BASE -- BlocsMenuPlus (ci-dessous) est le SEUL
+// endroit qui construit le rendu réel (icônes, sous-titres, Partager,
+// Avis, Pourquoi Clovis), réutilisé à l'identique par EspacePlus (route
+// /plus, garde Personnaliser Clovis, inchangé pour le web) ET par
+// MenuHamburgerNatif.tsx (nouveau, sans Personnaliser Clovis puisque
+// c'est déjà un onglet de la barre du bas native, voir tâche 1). Objectif
+// : un seul endroit qui définit ce que fait chaque lien, jamais deux
+// copies qui pourraient diverger.
+const SECTION_PERSONNALISER: { icone: LucideIcon; titre: string; sousTitre?: string; href: string } = {
+  icone: Wand2,
+  titre: "Personnaliser Clovis",
+  sousTitre: "Mes skills, ma mémoire",
+  href: "/personnaliser",
+};
+
+// Exporté (pas seulement local) : MenuHamburgerNatif.tsx (30/08/2026)
+// réutilise ce même tableau tel quel, pour ne jamais avoir une deuxième
+// liste de "Connecter Claude / Bureau / Paramètres" qui pourrait diverger
+// de celle-ci au fil du temps.
+export const SECTIONS_BASE: { icone: LucideIcon; titre: string; sousTitre?: string; href: string }[] = [
   { icone: Plug, titre: "Connecter Claude", sousTitre: "Utiliser Clovis dans Claude", href: "/connecter-claude" },
   { icone: Briefcase, titre: "Bureau", href: "/bureau" },
   { icone: Settings, titre: "Paramètres", sousTitre: "Profil, confidentialité, capacités du téléphone...", href: "/parametres" },
@@ -58,7 +79,12 @@ function LigneSection({ icone: Icone, titre, sousTitre, onClick }: { icone: Luci
 
 const AGENT_ID = "clovis";
 
-export function EspacePlus() {
+// Rendu réel des deux blocs (navigation + actions), partagé entre
+// EspacePlus (page /plus) et MenuHamburgerNatif (30/08/2026). Le seul
+// paramètre est la liste des sections du bloc 1 : EspacePlus lui passe
+// Personnaliser Clovis + le reste, le menu hamburger natif lui passe le
+// reste seul.
+export function BlocsMenuPlus({ sectionsNavigation }: { sectionsNavigation: typeof SECTIONS_BASE }) {
   const router = useRouter();
   const [copie, setCopie] = useState(false);
   const [avisDeplie, setAvisDeplie] = useState(false);
@@ -85,10 +111,10 @@ export function EspacePlus() {
   }
 
   return (
-    <div className="mx-auto flex max-w-2xl flex-col gap-4 p-4">
+    <div className="flex flex-col gap-4">
       <div className="overflow-hidden rounded-cgpt-carte border border-dj-bordure bg-dj-surface">
         <div className="divide-y divide-dj-bordure">
-          {SECTIONS.map((s) => (
+          {sectionsNavigation.map((s) => (
             <LigneSection key={s.href} icone={s.icone} titre={s.titre} sousTitre={s.sousTitre} onClick={() => router.push(s.href)} />
           ))}
         </div>
@@ -125,6 +151,14 @@ export function EspacePlus() {
           </button>
         </div>
       </div>
+    </div>
+  );
+}
+
+export function EspacePlus() {
+  return (
+    <div className="mx-auto max-w-2xl p-4">
+      <BlocsMenuPlus sectionsNavigation={[SECTION_PERSONNALISER, ...SECTIONS_BASE]} />
     </div>
   );
 }
