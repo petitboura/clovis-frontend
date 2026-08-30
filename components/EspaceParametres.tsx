@@ -264,9 +264,66 @@ export function EspaceParametres() {
 
   if (chargement) {
     return (
-      <div className="flex flex-col gap-2" aria-hidden>
-        <Skeleton className="h-14 w-full rounded-cgpt-carte" />
-        <Skeleton className="h-48 w-full rounded-cgpt-carte" />
+      <div className="flex flex-col gap-4" aria-hidden>
+        {/* Carte profil -- avatar rond + nom + sous-titre + chevron */}
+        <div className="flex w-full items-center gap-3 rounded-cgpt-carte border border-dj-bordure bg-dj-surface px-4 py-3.5">
+          <Skeleton className="h-11 w-11 flex-shrink-0 rounded-full border border-dj-bordure" />
+          <div className="flex-1 overflow-hidden">
+            <div className="flex flex-col gap-1.5">
+              <Skeleton className="h-3.5 w-28 rounded" />
+              <Skeleton className="h-2.5 w-20 rounded" />
+            </div>
+          </div>
+          <Skeleton className="h-4 w-4 flex-shrink-0 rounded" />
+        </div>
+
+        {/* Groupe 1 -- Préférences / Confidentialité et sécurité / Aide et support / À propos */}
+        <div className="overflow-hidden rounded-cgpt-carte border border-dj-bordure bg-dj-surface">
+          <div className="divide-y divide-dj-bordure">
+            {["w-24", "w-44", "w-28", "w-16"].map((largeur, i) => (
+              <div key={i} className="flex w-full items-center gap-3 px-4 py-3">
+                <Skeleton className="h-[18px] w-[18px] flex-shrink-0 rounded" />
+                <div className="flex-1 overflow-hidden">
+                  <Skeleton className={`h-3.5 ${largeur} rounded`} />
+                </div>
+                <Skeleton className="h-4 w-4 flex-shrink-0 rounded" />
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* Groupe 2 -- Capacités du téléphone (titre + sous-titre) / Accessibilité (titre seul) */}
+        <div className="overflow-hidden rounded-cgpt-carte border border-dj-bordure bg-dj-surface">
+          <div className="divide-y divide-dj-bordure">
+            <div className="flex w-full items-center gap-3 px-4 py-3">
+              <Skeleton className="h-[18px] w-[18px] flex-shrink-0 rounded" />
+              <div className="flex-1 overflow-hidden">
+                <div className="flex flex-col gap-1.5">
+                  <Skeleton className="h-3.5 w-36 rounded" />
+                  <Skeleton className="h-2.5 w-32 rounded" />
+                </div>
+              </div>
+              <Skeleton className="h-4 w-4 flex-shrink-0 rounded" />
+            </div>
+            <div className="flex w-full items-center gap-3 px-4 py-3">
+              <Skeleton className="h-[18px] w-[18px] flex-shrink-0 rounded" />
+              <div className="flex-1 overflow-hidden">
+                <Skeleton className="h-3.5 w-24 rounded" />
+              </div>
+              <Skeleton className="h-4 w-4 flex-shrink-0 rounded" />
+            </div>
+          </div>
+        </div>
+
+        {/* Groupe 3 -- Supprimer mon compte (danger, pas de chevron dans le vrai contenu) */}
+        <div className="overflow-hidden rounded-cgpt-carte border border-dj-bordure bg-dj-surface">
+          <div className="flex w-full items-center gap-3 px-4 py-3">
+            <Skeleton className="h-[18px] w-[18px] flex-shrink-0 rounded" />
+            <div className="flex-1 overflow-hidden">
+              <Skeleton className="h-3.5 w-32 rounded" />
+            </div>
+          </div>
+        </div>
       </div>
     );
   }
