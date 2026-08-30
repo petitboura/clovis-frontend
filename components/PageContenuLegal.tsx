@@ -46,9 +46,25 @@ export function PageContenuLegal({ cle }: { cle: "cgu" | "copyright" }) {
         </div>
 
         {contenu === undefined && (
-          <div className="flex flex-col gap-2" aria-hidden>
+          <div className="flex flex-col gap-3" aria-hidden>
             <Skeleton className="h-6 w-1/2 rounded-lg" />
-            <Skeleton className="h-32 rounded-xl" />
+            <div className="flex flex-col gap-2">
+              <Skeleton className="h-3.5 w-full rounded" />
+              <Skeleton className="h-3.5 w-11/12 rounded" />
+              <Skeleton className="h-3.5 w-2/3 rounded" />
+            </div>
+            <Skeleton className="mt-2 h-4 w-1/3 rounded" />
+            <div className="flex flex-col gap-2">
+              <Skeleton className="h-3.5 w-full rounded" />
+              <Skeleton className="h-3.5 w-full rounded" />
+              <Skeleton className="h-3.5 w-3/4 rounded" />
+            </div>
+            <Skeleton className="mt-2 h-4 w-1/4 rounded" />
+            <div className="flex flex-col gap-2">
+              <Skeleton className="h-3.5 w-full rounded" />
+              <Skeleton className="h-3.5 w-5/6 rounded" />
+              <Skeleton className="h-3.5 w-1/2 rounded" />
+            </div>
           </div>
         )}
         {contenu === null && <p className="text-sm text-dj-texte-muet">Ce contenu n&apos;est pas disponible pour l&apos;instant.</p>}
