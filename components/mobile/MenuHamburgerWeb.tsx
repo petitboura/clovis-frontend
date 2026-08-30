@@ -1,6 +1,7 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import { usePathname } from "next/navigation";
 import { PanneauFlottant } from "@/components/PanneauFlottant";
 import { BlocsMenuPlus, SECTIONS_BASE } from "@/components/EspacePlus";
 
@@ -38,6 +39,21 @@ function IconeMenu() {
 
 export function MenuHamburgerWeb() {
   const [ouvert, setOuvert] = useState(false);
+  const pathname = usePathname();
+
+  // Correctif (30/08/2026, Bourama : "tu clique sur une section ça
+  // change mais tu ne vois pas") : les liens de BlocsMenuPlus naviguent
+  // via router.push (voir EspacePlus.tsx), qui ne referme jamais ce
+  // panneau -- PanneauFlottant est un fond noir plein écran (z-50), donc
+  // la nouvelle page se chargeait bien derrière mais restait invisible,
+  // cachée par le panneau resté ouvert. Fermeture automatique dès que le
+  // chemin change (couvre aussi bien un lien direct qu'un retour
+  // arrière/avant navigateur), sans toucher Partager/Avis (Deplie via
+  // state local dans BlocsMenuPlus, jamais une navigation, donc jamais
+  // concernés par ce changement de pathname).
+  useEffect(() => {
+    setOuvert(false);
+  }, [pathname]);
 
   return (
     <>

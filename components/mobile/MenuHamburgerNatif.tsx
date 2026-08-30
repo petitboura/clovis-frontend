@@ -1,6 +1,7 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import { usePathname } from "next/navigation";
 import { PanneauFlottant } from "@/components/PanneauFlottant";
 import { BlocsMenuPlus, SECTIONS_BASE } from "@/components/EspacePlus";
 
@@ -43,6 +44,15 @@ function IconeEscalier() {
 
 export function MenuHamburgerNatif() {
   const [ouvert, setOuvert] = useState(false);
+  const pathname = usePathname();
+
+  // Correctif (30/08/2026) : meme bug que MenuHamburgerWeb.tsx (voir son
+  // commentaire) -- BlocsMenuPlus navigue via router.push, qui ne
+  // refermait jamais ce panneau plein ecran (PanneauFlottant, z-50),
+  // cachant la nouvelle page pourtant bien chargee derriere.
+  useEffect(() => {
+    setOuvert(false);
+  }, [pathname]);
 
   return (
     <>
