@@ -196,11 +196,29 @@ export function EcranAccueil() {
           Activité récente
         </h2>
 
+        {/* Skeleton précis (30/08, audit) : le vrai contenu n'a pas de
+            cadre (juste hover:bg-dj-surface), icône plate 16px (pas de
+            rond), une seule ligne de nom + une date courte à droite,
+            hauteur naturelle (px-3 py-2.5) plutôt qu'un h-12 fixe qui ne
+            correspondait à rien de réel. 5 lignes plutôt que 3 -- le vrai
+            contenu va jusqu'à 8 éléments (items.slice(0, 8)). */}
         {activite === null && (
-          <div className="flex flex-col gap-2">
-            <Skeleton className="h-12 rounded-xl" />
-            <Skeleton className="h-12 rounded-xl" />
-            <Skeleton className="h-12 rounded-xl" />
+          <div className="flex flex-col gap-1" aria-hidden>
+            {[
+              { largeur: "w-2/5", delai: "0ms" },
+              { largeur: "w-3/5", delai: "80ms" },
+              { largeur: "w-1/3", delai: "160ms" },
+              { largeur: "w-1/2", delai: "240ms" },
+              { largeur: "w-2/3", delai: "320ms" },
+            ].map(({ largeur, delai }, i) => (
+              <div key={i} className="flex items-center gap-3 rounded-xl px-3 py-2.5">
+                <Skeleton className="h-4 w-4 flex-shrink-0 rounded" style={{ animationDelay: delai }} />
+                <div className="min-w-0 flex-1">
+                  <Skeleton className={`h-3.5 rounded ${largeur}`} style={{ animationDelay: delai }} />
+                </div>
+                <Skeleton className="h-3 w-10 flex-shrink-0 rounded" style={{ animationDelay: delai }} />
+              </div>
+            ))}
           </div>
         )}
 
