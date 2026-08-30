@@ -13,6 +13,7 @@
 // a Screen Time (voir README.md), UIDocumentPickerViewController fonctionne
 // sur un compte Apple Developer standard.
 import Foundation
+import UniformTypeIdentifiers
 
 private let CLE_BOOKMARKS = "dossiers_designes_bookmarks"
 
@@ -26,6 +27,15 @@ struct ElementDossier: Identifiable {
     let url: URL
     let nom: String
     let estDossier: Bool
+    let tailleOctets: Int64
+}
+
+// Ajoute le 30/08/2026 (correctif Claude chat) : voir DossiersDesignesRepository.kt
+// cote Android pour le role exact, meme structure des deux cotes.
+struct ContenuFichier {
+    let contenuBase64: String
+    let typeMime: String
+    let nomFichier: String
     let tailleOctets: Int64
 }
 
@@ -130,5 +140,22 @@ enum DossiersDesignesRepository {
             let destination = nouveauParent.appendingPathComponent(element.lastPathComponent)
             try FileManager.default.moveItem(at: element, to: destination)
         } != nil
+    }
+
+    // Ajoute le 30/08/2026 (correctif Claude chat, meme role que la version
+    // Android, voir son en-tete) : contenu brut d'un fichier deja repere,
+    // encode en base64 pour transiter par le canal temps reel WebSocket.
+    static func lireFichier(_ element: URL) -> ContenuFichier? {
+        avecAcces(element.deletingLastPathComponent()) {
+            let data = try Data(contentsOf: element)
+            let typeMime = UTType(filenameExtension: element.pathExtension)?.preferredMIMEType
+                ?? "application/octet-stream"
+            return ContenuFichier(
+                contenuBase64: data.base64EncodedString(),
+                typeMime: typeMime,
+                nomFichier: element.lastPathComponent,
+                tailleOctets: Int64(data.count)
+            )
+        }
     }
 }

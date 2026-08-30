@@ -21,6 +21,7 @@ import android.content.Context
 import android.content.Intent
 import android.net.Uri
 import android.provider.DocumentsContract
+import android.util.Base64
 import androidx.documentfile.provider.DocumentFile
 
 private const val PREFS_NOM = "dossiers_designes"
@@ -32,6 +33,19 @@ data class ElementDossier(
     val uri: Uri,
     val nom: String,
     val estDossier: Boolean,
+    val tailleOctets: Long
+)
+
+// Ajoute le 30/08/2026 (correctif Claude chat, branchement lire_fichier /
+// chercher_par_contenu, voir core/exploration_dossier_mobile.py cote
+// clovis-backend et 04-lecture-contenu.md / 05-recherche-contenu-app-fermee.md
+// a la racine de ce depot) : contenu brut d'un fichier, encode en base64,
+// tel qu'attendu par core/lecture_fichier_mobile.py (qui applique lui-meme
+// les seuils de taille par type et decide du traitement, rien a filtrer ici).
+data class ContenuFichier(
+    val contenuBase64: String,
+    val typeMime: String,
+    val nomFichier: String,
     val tailleOctets: Long
 )
 
@@ -101,6 +115,34 @@ class DossiersDesignesRepository(private val context: Context) {
     fun creerFichier(parentUri: Uri, nom: String, typeMime: String = "text/plain"): Boolean {
         val parent = DocumentFile.fromTreeUri(context, parentUri) ?: return false
         return parent.createFile(typeMime, nom) != null
+    }
+
+    /**
+     * Lit le contenu brut d'un fichier deja repere (via listerContenu ou
+     * une recherche), encode en base64 pour transiter par le canal temps
+     * reel WebSocket (JSON, pas de binaire brut). Renvoie null si le
+     * fichier est introuvable/illisible (deplace/supprime entre-temps,
+     * permission perdue) : l'appelant traduit ca en erreur explicite,
+     * jamais de silence.
+     */
+    fun lireFichier(elementUri: Uri): ContenuFichier? {
+        val doc = DocumentFile.fromSingleUri(context, elementUri) ?: return null
+        if (!doc.exists() || !doc.isFile) return null
+        val nom = doc.name ?: return null
+        val typeMime = doc.type ?: "application/octet-stream"
+        return try {
+            context.contentResolver.openInputStream(elementUri)?.use { flux ->
+                val octets = flux.readBytes()
+                ContenuFichier(
+                    contenuBase64 = Base64.encodeToString(octets, Base64.NO_WRAP),
+                    typeMime = typeMime,
+                    nomFichier = nom,
+                    tailleOctets = octets.size.toLong()
+                )
+            }
+        } catch (e: Exception) {
+            null
+        }
     }
 
     fun renommer(elementUri: Uri, nouveauNom: String): Boolean {
