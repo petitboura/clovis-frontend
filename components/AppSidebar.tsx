@@ -23,6 +23,7 @@ import {
   PanelLeft,
   Settings,
   Wand2,
+  Hourglass,
 } from "lucide-react";
 import { supabase } from "@/lib/supabase";
 import { lireMonProfil } from "@/lib/api";
@@ -80,20 +81,28 @@ export type OngletId =
   | "comportements"
   | "bibliotheque"
   | "memoire"
-  | "claude";
+  | "claude"
+  | "controle-session";
 
 export const ONGLETS: { id: OngletId; href: string; label: string; Icone: typeof Briefcase }[] = [
   { id: "bureau", href: "/bureau", label: "Bureau", Icone: Briefcase },
-  // Texte affiché "Mes skills" (21/08/2026, demande Bourama) -- en
+  // Texte affiché "Mes skills" (21/08/2026, demande Bourama) : en
   // interne (route, code, BDD, outils MCP) ça reste "comportement",
   // voir la note dans lib/api.ts. Seul le mot vu par l'utilisateur change.
   { id: "comportements", href: "/comportements", label: "Mes skills", Icone: ScrollText },
   { id: "bibliotheque", href: "/bibliotheque", label: "Bibliothèque", Icone: Library },
   { id: "memoire", href: "/memoire", label: "Ma mémoire", Icone: Brain },
-  // Guide "Utiliser Clovis dans Claude" (18/08, demande Bourama) --
+  // Guide "Utiliser Clovis dans Claude" (18/08, demande Bourama) :
   // icône Plug ("branchement", demande explicite Bourama) plutôt que le
   // logo Claude, propriété d'Anthropic.
   { id: "claude", href: "/connecter-claude", label: "Utiliser Clovis dans Claude", Icone: Plug },
+  // 30/08/2026, audit navigation web mobile vs natif, étape 2 : Concentration
+  // (Contrôle de session + Temps d'écran, voir EspaceConcentration.tsx)
+  // était un onglet direct côté natif et web mobile mais totalement
+  // inatteignable sur PC (signalé par Bourama comme écran orphelin).
+  // Ajouté ici pour que le PC ait, au minimum, le même accès de
+  // consultation que les deux autres plateformes.
+  { id: "controle-session", href: "/controle-session", label: "Concentration", Icone: Hourglass },
 ];
 
 // Regroupement du rail par similarité d'usage (refonte sidebar,
@@ -559,17 +568,19 @@ export function AppSidebar({
     );
   }
 
-  // Accès direct sur le rail : Bureau, Bibliothèque, Notes (usage
+  // Accès direct sur le rail : Bureau, Bibliothèque, Concentration (usage
   // quotidien). Mes skills, Ma mémoire et Plugins vivent sous le groupe
   // "Personnaliser Clovis" ; Mon programme et Audits sous "Scolarité"
   // (voir GROUPES plus haut). "Utiliser Clovis dans Claude" vit dans le
-  // menu "Plus". En contexte chat plein écran, Bureau descend aussi dans
-  // "Plus" (place prise par Nouvelle conversation + Historique, élargi
-  // le 22/08/2026, demande Bourama).
+  // menu "Plus". En contexte chat plein écran, Bureau et Concentration
+  // descendent aussi dans "Plus" (place prise par Nouvelle conversation +
+  // Historique, élargi le 22/08/2026, demande Bourama) : même traitement
+  // pour Concentration (30/08/2026, audit navigation, étape 2) que pour
+  // Bureau, ajouté ce jour-là au rail desktop.
   const idsDirects: OngletId[] = contexteChat
     ? ["bibliotheque"]
-    : ["bureau", "bibliotheque"];
-  const idsPlusFlat: OngletId[] = contexteChat ? ["bureau", "claude"] : ["claude"];
+    : ["bureau", "bibliotheque", "controle-session"];
+  const idsPlusFlat: OngletId[] = contexteChat ? ["bureau", "controle-session", "claude"] : ["claude"];
   const ongletsDirects = ONGLETS.filter((o) => idsDirects.includes(o.id));
   const ongletsDansActions = ONGLETS.filter((o) => idsPlusFlat.includes(o.id));
   const navComplete = [{ href: "/", label: "Accueil", Icone: Home }, ...ongletsDirects];

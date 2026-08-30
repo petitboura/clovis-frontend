@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { Home, Plug, Settings, Share2, Star, Compass, ChevronRight, type LucideIcon } from "lucide-react";
+import { Home, Plug, Settings, Bell, Share2, Star, Compass, ChevronRight, type LucideIcon } from "lucide-react";
 import { NoteAgent } from "@/components/NoteAgent";
 import { CommentairesAgent } from "@/components/CommentairesAgent";
 import { useOuvrirCatalogue } from "@/lib/contexteCatalogue";
@@ -45,10 +45,18 @@ import { useOuvrirCatalogue } from "@/lib/contexteCatalogue";
 //
 // 30/08/2026, audit navigation, étape 1 : Accueil ajouté (n'avait aucun
 // accès côté natif jusqu'ici, signalé par Bourama comme écran orphelin).
+// 30/08/2026, étape 2 : Rappels ajouté (EspaceRappels.tsx, écran fini
+// mais jusque-là inatteignable nulle part, natif comme web, signalé par
+// Bourama). Fonctionnalité dépendante d'un plugin natif (notifications
+// programmées) : n'a donc de sens que dans ce menu mobile (natif + web
+// mobile), jamais sur PC, où ce menu n'est de toute façon jamais rendu
+// (voir MenuHamburgerNatif.tsx/MenuHamburgerWeb.tsx, tous deux
+// exclusivement mobiles).
 export const SECTIONS_BASE: { icone: LucideIcon; titre: string; sousTitre?: string; href: string }[] = [
   { icone: Home, titre: "Accueil", sousTitre: "Mon espace", href: "/" },
   { icone: Plug, titre: "Connecter Claude", sousTitre: "Utiliser Clovis dans Claude", href: "/connecter-claude" },
   { icone: Settings, titre: "Paramètres", sousTitre: "Profil, confidentialité, capacités du téléphone...", href: "/parametres" },
+  { icone: Bell, titre: "Rappels", sousTitre: "Notifications programmées", href: "/rappels" },
 ];
 
 function LigneSection({ icone: Icone, titre, sousTitre, onClick }: { icone: LucideIcon; titre: string; sousTitre?: string; onClick: () => void }) {
