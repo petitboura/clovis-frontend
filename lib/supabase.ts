@@ -34,7 +34,7 @@ if (typeof window !== "undefined") {
     // lib/canalTempsReel.ts). Chargé en dynamique comme le reste de ce
     // bloc, pour ne rien exécuter sur le déploiement web (Vercel).
     import("./canalTempsReel").then(({ initialiserCanalTempsReel }) => {
-      initialiserCanalTempsReel();
+      initialiserCanalTempsReel(registerPlugin);
     });
 
     const PontNatif = registerPlugin<{

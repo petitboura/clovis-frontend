@@ -12,10 +12,24 @@ import { supabase } from "./supabase";
 // PontNatif deja en place. Sur le web (Vercel), il n'y a pas de
 // telephone a explorer : rien de tout ceci ne s'execute.
 //
-// Pour ce lot, aucun traitement reel des questions recues : on repond
-// juste "oui" a n'importe quelle question, pour valider le tuyau de
-// bout en bout. Le vrai routage (lister un dossier, lire un fichier...)
-// arrive aux lots 2 a 5.
+// Lot 1 : aucun traitement reel, on repondait "oui" a n'importe quelle
+// question ("es-tu la ?") pour valider le tuyau de bout en bout.
+//
+// Lot 2 (30/08/2026, voir 02-outil-exploration.md) : premier vrai
+// routage. La "question" recue n'est plus forcement une simple chaine :
+// elle peut etre un objet structure {"action": "lister_contenu",
+// "dossier_nom": ...}, brancherPlugin ci-dessous decide quoi faire selon
+// sa forme. Reutilise le plugin Capacitor Dossiers deja existant
+// (android/.../dossiers/DossiersPlugin.kt, meme type PluginDossiers que
+// components/EspaceDossiers.tsx) plutot que d'en reconstruire un.
+
+type DossierDesigne = { uri: string; nom: string };
+type ElementDossier = { uri: string; nom: string; estDossier: boolean; tailleOctets: number };
+
+type PluginDossiers = {
+  listerDossiersDesignes(): Promise<{ dossiers: DossierDesigne[] }>;
+  listerContenu(options: { uri: string }): Promise<{ elements: ElementDossier[] }>;
+};
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL;
 
@@ -23,6 +37,7 @@ let socket: WebSocket | null = null;
 let tentativeReconnexion: ReturnType<typeof setTimeout> | null = null;
 let fermetureVoulue = false;
 let dejaInitialise = false;
+let pluginDossiers: PluginDossiers | null = null;
 
 function urlWebSocket(token: string): string | null {
   if (!API_URL) return null;
@@ -30,9 +45,59 @@ function urlWebSocket(token: string): string | null {
   return `${base}/api/canal-temps-reel/ws?token=${encodeURIComponent(token)}`;
 }
 
-function repondreTest(id: string) {
+function envoyerReponse(id: string, reponse: unknown) {
   if (!socket || socket.readyState !== WebSocket.OPEN) return;
-  socket.send(JSON.stringify({ id, reponse: "oui" }));
+  socket.send(JSON.stringify({ id, reponse }));
+}
+
+/**
+ * Lot 2 : traite une question "lister_contenu" -- retrouve l'uri du
+ * dossier désigné correspondant à `dossier_nom` (le backend ne connaît
+ * et ne manipule jamais d'uri, voir core/dossiers_designes_mobile.py côté
+ * clovis-backend), liste son contenu via le plugin natif Dossiers déjà
+ * existant, puis répond avec les éléments (nom, type, taille -- jamais
+ * l'uri, qui n'a aucun sens côté serveur).
+ */
+async function repondreListerContenu(id: string, dossierNom: string) {
+  if (!pluginDossiers) {
+    envoyerReponse(id, { erreur: "Plugin Dossiers indisponible sur cet appareil." });
+    return;
+  }
+  try {
+    const { dossiers } = await pluginDossiers.listerDossiersDesignes();
+    const dossier = dossiers.find((d) => d.nom === dossierNom);
+    if (!dossier) {
+      envoyerReponse(id, { erreur: `Dossier désigné "${dossierNom}" introuvable sur cet appareil.` });
+      return;
+    }
+    const { elements } = await pluginDossiers.listerContenu({ uri: dossier.uri });
+    envoyerReponse(id, {
+      elements: elements.map((e) => ({
+        nom: e.nom,
+        estDossier: e.estDossier,
+        tailleOctets: e.estDossier ? null : e.tailleOctets,
+      })),
+    });
+  } catch (e) {
+    envoyerReponse(id, { erreur: e instanceof Error ? e.message : "Erreur inconnue." });
+  }
+}
+
+function traiterQuestion(id: string, question: unknown) {
+  // Lot 1 : question texte simple ("es-tu là ?"), aucun vrai traitement.
+  if (typeof question === "string") {
+    envoyerReponse(id, "oui");
+    return;
+  }
+  // Lot 2 : question structurée.
+  if (question && typeof question === "object") {
+    const { action, dossier_nom: dossierNom } = question as { action?: string; dossier_nom?: string };
+    if (action === "lister_contenu" && dossierNom) {
+      repondreListerContenu(id, dossierNom);
+      return;
+    }
+  }
+  envoyerReponse(id, { erreur: "Question non reconnue par l'app." });
 }
 
 function planifierReconnexion() {
@@ -63,8 +128,8 @@ async function ouvrirCanal() {
   ws.onmessage = (evenement) => {
     try {
       const message = JSON.parse(evenement.data);
-      if (message?.id && message?.question) {
-        repondreTest(message.id);
+      if (message?.id && message?.question !== undefined) {
+        traiterQuestion(message.id, message.question);
       }
     } catch {
       // Message mal forme : ignore, pas de traitement a l'aveugle
@@ -96,14 +161,18 @@ function fermerCanal() {
 }
 
 /**
- * A appeler une seule fois, uniquement cote natif (voir lib/supabase.ts).
+ * A appeler une seule fois, uniquement cote natif (voir lib/supabase.ts,
+ * qui fournit `registerPlugin` -- deja resolu la-bas via l'import
+ * dynamique de @capacitor/core, pas la peine de le reimporter ici).
  * Ouvre le canal a l'ouverture/reprise de l'app (visibilitychange +
  * retour reseau) et le ferme quand l'app passe en arriere-plan, avec
  * reconnexion automatique en cas de coupure.
  */
-export function initialiserCanalTempsReel() {
+export function initialiserCanalTempsReel(registerPlugin: <T>(name: string) => T) {
   if (dejaInitialise || typeof window === "undefined") return;
   dejaInitialise = true;
+
+  pluginDossiers = registerPlugin<PluginDossiers>("Dossiers");
 
   document.addEventListener("visibilitychange", () => {
     if (document.visibilityState === "visible") {
