@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { FileText } from "lucide-react";
 import { BlocExpansible } from "./BlocExpansible";
+import { Skeleton } from "@/components/Skeleton";
 
 // Carte "note texte" pour les notes de la bibliothèque personnelle
 // (voir api/bibliotheque_utilisateur.py:ajouter_texte -- stockées comme
@@ -54,7 +55,15 @@ export function NoteTexteChip({ href, nom }: { href: string; nom: string }) {
         enErreur ? (
           <p className="p-3 text-sm text-dj-texte-muet">Impossible de charger cette note.</p>
         ) : texte === null ? (
-          <p className="p-3 text-sm text-dj-texte-muet">Chargement…</p>
+          // Corrigé (audit 30/08) : texte statique "Chargement…" sans
+          // animation remplacé par un skeleton de lignes -- le vrai
+          // contenu est un bloc de texte (<pre>), pas une phrase courte.
+          <div className="flex flex-col gap-2 p-3" aria-hidden>
+            <Skeleton className="h-3.5 w-full rounded" />
+            <Skeleton className="h-3.5 w-11/12 rounded" style={{ animationDelay: "100ms" }} />
+            <Skeleton className="h-3.5 w-4/5 rounded" style={{ animationDelay: "200ms" }} />
+            <Skeleton className="h-3.5 w-2/3 rounded" style={{ animationDelay: "300ms" }} />
+          </div>
         ) : (
           <pre className="whitespace-pre-wrap break-words p-3 font-sans text-sm text-dj-texte">{texte}</pre>
         )

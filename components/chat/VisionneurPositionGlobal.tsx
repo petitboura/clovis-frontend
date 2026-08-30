@@ -6,6 +6,7 @@ import { X, ChevronLeft, ChevronRight, ExternalLink, Download } from "lucide-rea
 import "react-pdf/dist/Page/AnnotationLayer.css";
 import "react-pdf/dist/Page/TextLayer.css";
 import { LinkPreview } from "./LinkPreview";
+import { Skeleton } from "@/components/Skeleton";
 import {
   TYPES_MIME_OFFICE,
   estTypeTexteLisible,
@@ -74,7 +75,15 @@ function VisionneurPdf({ url, page }: { url: string; page: number }) {
               setPageCourante(Math.min(Math.max(page, 1), numPages));
             }}
             onLoadError={() => setErreur(true)}
-            loading={<p className="p-4 text-center text-dj-texte-muet">Chargement du PDF...</p>}
+            loading={
+              // Corrigé (audit 30/08) : texte statique "Chargement du
+              // PDF..." sans animation remplacé par un rectangle au
+              // format page (proportion A4), centré comme la vraie page
+              // rendue juste après.
+              <div className="flex justify-center p-4" aria-hidden>
+                <Skeleton className="rounded-lg" style={{ width: "min(100%, 640px)", aspectRatio: "1 / 1.414" }} />
+              </div>
+            }
             className="flex justify-center"
           >
             <Page pageNumber={pageCourante} width={Math.min(window.innerWidth - 48, 640)} />
