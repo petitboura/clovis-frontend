@@ -96,7 +96,20 @@ export function ConnecteurNotionCarte() {
   }
 
   if (natif === null || chargement) {
-    return <Skeleton className="h-16 rounded-cgpt-carte" />;
+    return (
+      <div className="flex flex-col gap-2 rounded-cgpt-carte border border-dj-bordure bg-dj-surface p-4" aria-hidden>
+        <div className="flex items-center justify-between gap-4">
+          <div className="flex items-center gap-3">
+            <Skeleton className="h-[18px] w-[18px] flex-shrink-0 rounded" />
+            <div className="flex flex-col gap-0.5">
+              <Skeleton className="h-3.5 w-14 rounded" />
+              <Skeleton className="h-2.5 w-24 rounded" />
+            </div>
+          </div>
+          <Skeleton className="h-6 w-20 flex-shrink-0 rounded-lg" />
+        </div>
+      </div>
+    );
   }
 
   if (!natif) {
