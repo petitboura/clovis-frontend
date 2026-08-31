@@ -10,10 +10,12 @@ import { PaletteCommandes } from "@/components/PaletteCommandes";
 import { ContexteChat, useFournirContexteChat } from "@/lib/contexteChat";
 import { ContexteCatalogue } from "@/lib/contexteCatalogue";
 import { ContexteFenetres, useFournirFenetres } from "@/lib/contexteFenetres";
+import { ContexteRetour, useEmpilerRetour, useFournirRetour } from "@/lib/contexteRetour";
 import { BarreOngletsNative } from "@/components/mobile/BarreOngletsNative";
 import { BarreOngletsWeb } from "@/components/mobile/BarreOngletsWeb";
 import { MenuHamburgerNatif } from "@/components/mobile/MenuHamburgerNatif";
 import { MenuHamburgerWeb } from "@/components/mobile/MenuHamburgerWeb";
+import { GestionRetourNatif } from "@/components/mobile/GestionRetourNatif";
 
 // Coquille de l'app entière (refonte "Mon espace = l'app", 15/08/2026).
 // Monte UNE SEULE FOIS, au niveau du layout (voir app/(app)/layout.tsx) :
@@ -51,6 +53,18 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   // Fenêtres flottantes de sections par-dessus le chat plein écran
   // (22/08/2026, demande Bourama -- voir lib/contexteFenetres.tsx).
   const fenetres = useFournirFenetres();
+  // Pile de fermeture pour le bouton retour matériel (31/08/2026, voir
+  // lib/contexteRetour.tsx) : panneaux/popups/chat plein écran s'y
+  // empilent eux-mêmes via useEmpilerRetour. Seul cas géré ici plutôt
+  // que dans son propre fichier : les fenêtres flottantes de sections,
+  // qui n'ont pas de composant "propriétaire" unique (plusieurs peuvent
+  // être ouvertes en même temps, voir lib/contexteFenetres.tsx) -- un
+  // retour ferme celle du dessus (z le plus haut), pas toutes d'un coup.
+  const retour = useFournirRetour();
+  useEmpilerRetour(fenetres.fenetres.length > 0, () => {
+    const dessus = fenetres.fenetres.reduce((a, b) => (b.z > a.z ? b : a));
+    fenetres.fermer(dessus.cle);
+  });
 
   useEffect(() => {
     let annule = false;
@@ -84,8 +98,10 @@ export function AppShell({ children }: { children: React.ReactNode }) {
     <ContexteChat.Provider value={contexteChatValeur}>
     <ContexteCatalogue.Provider value={{ ouvrir: () => setCatalogueOuvert(true) }}>
       <ContexteFenetres.Provider value={fenetres}>
+        <ContexteRetour.Provider value={retour}>
         <div className="flex h-dvh">
           {natif && <BarreOngletsNative />}
+          {natif && <GestionRetourNatif />}
           {/* 30/08/2026, menu hamburger : reprend Accueil/Connecter
               Claude/Paramètres/Partager/Avis/Pourquoi Clovis, tout ce qui
               n'a pas de place dans les 5 onglets directs. Étape 1 de
@@ -129,11 +145,30 @@ export function AppShell({ children }: { children: React.ReactNode }) {
             style={
               natif
                 ? {
-                    paddingTop: "var(--cap-native-navigation-top, 0px)",
-                    paddingBottom: "var(--cap-native-navigation-bottom, 0px)",
+                    // Correctif (31/08/2026, Bourama : "l'appli deborde
+                    // du haut") : --cap-native-navigation-top est pose
+                    // par @capgo/capacitor-native-navigation (voir
+                    // BarreOngletsNative.tsx), qui echoue silencieusement
+                    // tant que le plugin n'est pas synchronise cote
+                    // Android (voir android/capacitor.settings.gradle,
+                    // ne le liste pas encore) -- la variable ne valait
+                    // alors jamais rien et retombait sur 0px, collant le
+                    // contenu sous la barre de statut. Repli sur
+                    // --safe-top (deja fiable, injecte par le plugin
+                    // SystemBars natif de @capacitor/core, indépendant de
+                    // native-navigation) plutot que 0px : une fois
+                    // native-navigation reellement synchronise, sa valeur
+                    // (plus precise, tient compte de la tabbar) reprend
+                    // le dessus normalement, ce repli ne s'applique que
+                    // si elle est absente. Meme correctif en paddingBottom
+                    // avec --safe-bottom. --dj-hamburger-espace : voir
+                    // commentaire dans app/globals.css (reserve la
+                    // hauteur du bouton hamburger flottant).
+                    paddingTop: "calc(var(--cap-native-navigation-top, var(--safe-top)) + var(--dj-hamburger-espace))",
+                    paddingBottom: "var(--cap-native-navigation-bottom, var(--safe-bottom))",
                   }
                 : {
-                    paddingTop: "var(--safe-top)",
+                    paddingTop: "calc(var(--safe-top) + var(--dj-hamburger-espace))",
                     // Réserve l'espace de BarreOngletsWeb (0px sur
                     // desktop et hors mobile, voir --dj-barre-onglets-web
                     // dans app/globals.css) pour que le bas de chaque
@@ -162,6 +197,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           />
           {catalogueOuvert && <CatalogueClovis onFerme={() => setCatalogueOuvert(false)} />}
         </div>
+        </ContexteRetour.Provider>
       </ContexteFenetres.Provider>
     </ContexteCatalogue.Provider>
     </ContexteChat.Provider>

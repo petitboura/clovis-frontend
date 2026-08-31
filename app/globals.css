@@ -165,6 +165,26 @@ math-field {
   --safe-left: var(--safe-area-inset-left, env(safe-area-inset-left, 0px));
 }
 
+/* Correctif (31/08/2026, Bourama : "l'hamburger est par dessus des textes") :
+   MenuHamburgerNatif.tsx, MenuHamburgerWeb.tsx et le bouton mobile de
+   AppSidebar.tsx (chat plein ecran) flottent tous en position fixed a
+   top: calc(0.5rem + var(--safe-top)), hauteur 2rem (h-8) -- mais aucun
+   contenu ne reservait cet espace, le texte de chaque ecran demarrait donc
+   exactement dessous, cache par le bouton. Valeur = 0.5rem (decalage du
+   bouton) + 2rem (sa hauteur) + 0.75rem (marge de respiration) = 3.25rem,
+   ajoutee (pas remplacee) au safe-top existant partout ou un de ces trois
+   boutons flotte. A 0px des le point de rupture md (768px) : desktop n'a
+   jamais ce bouton (voir md:hidden sur les trois), donc rien a reserver
+   la-bas. */
+:root {
+  --dj-hamburger-espace: 3.25rem;
+}
+@media (min-width: 768px) {
+  :root {
+    --dj-hamburger-espace: 0px;
+  }
+}
+
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) {
     --dj-fond: #0f0d0b;

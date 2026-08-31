@@ -161,29 +161,42 @@ export function BarreOngletsNative() {
     import("@capacitor/core").then(async ({ Capacitor }) => {
       if (annule || !Capacitor.isNativePlatform()) return;
 
-      const { NativeNavigation } = await import("@capgo/capacitor-native-navigation");
+      try {
+        const { NativeNavigation } = await import("@capgo/capacitor-native-navigation");
 
-      await NativeNavigation.configure({ contentInsetMode: "css", colors: couleursTabbar(resoluRef.current) });
-      await NativeNavigation.setTabbar({
-        hidden: false,
-        selectedId: "bibliotheque",
-        labelVisibilityMode: "labeled",
-        icons: true,
-        colors: couleursTabbar(resoluRef.current),
-        tabs: definitionOnglets(),
-      });
+        await NativeNavigation.configure({ contentInsetMode: "css", colors: couleursTabbar(resoluRef.current) });
+        await NativeNavigation.setTabbar({
+          hidden: false,
+          selectedId: "bibliotheque",
+          labelVisibilityMode: "labeled",
+          icons: true,
+          colors: couleursTabbar(resoluRef.current),
+          tabs: definitionOnglets(),
+        });
 
-      const abonnement = await NativeNavigation.addListener("tabSelect", ({ id }: { id: string }) => {
-        const { router, ouvrirChat } = gestionnaireRef.current;
-        const onglet = ONGLETS_NATIFS.find((o) => o.id === id);
-        if (!onglet) return;
-        if (onglet.id === "chat") {
-          ouvrirChat("plein_ecran");
-          return;
-        }
-        if (onglet.route) router.push(onglet.route);
-      });
-      nettoyerEcoute = () => abonnement.remove();
+        const abonnement = await NativeNavigation.addListener("tabSelect", ({ id }: { id: string }) => {
+          const { router, ouvrirChat } = gestionnaireRef.current;
+          const onglet = ONGLETS_NATIFS.find((o) => o.id === id);
+          if (!onglet) return;
+          if (onglet.id === "chat") {
+            ouvrirChat("plein_ecran");
+            return;
+          }
+          if (onglet.route) router.push(onglet.route);
+        });
+        nettoyerEcoute = () => abonnement.remove();
+      } catch (e) {
+        // Correctif (31/08/2026, Bourama : "l'appli deborde du haut") :
+        // avant, une erreur ici (ex. plugin pas encore synchronise cote
+        // Android, voir android/capacitor.settings.gradle) disparaissait
+        // silencieusement -- configure()/setTabbar() echouaient, aucune
+        // des deux CSS var (--cap-native-navigation-top/bottom) n'etait
+        // jamais posee, et rien ne le signalait. AppShell.tsx a maintenant
+        // un repli sur --safe-top/--safe-bottom pour ce cas (voir son
+        // commentaire), mais ce console.error reste necessaire pour
+        // qu'un echec futur soit visible au lieu de redevenir invisible.
+        console.error("BarreOngletsNative : echec de configuration de la barre native", e);
+      }
     });
 
     return () => {

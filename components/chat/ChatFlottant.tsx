@@ -426,7 +426,14 @@ export function ChatFlottant({
           // sous la barre de statut. Seulement pour ce cas précis
           // (md:pt-0 annule sur desktop, où l'en-tête est toujours là et
           // gère déjà l'encoche lui-même).
-          className={`relative min-h-0 flex-1 ${pleinEcran ? "pt-[var(--safe-top)] md:pt-0" : ""}`}
+          //
+          // Correctif (31/08/2026, meme bug hamburger que AppShell.tsx) :
+          // AppSidebar rendue juste au-dessus (contexteChat, donc son
+          // propre bouton hamburger mobile, voir AppSidebar.tsx ~L647)
+          // flotte aussi par-dessus ce conteneur -- ajout de
+          // --dj-hamburger-espace (voir app/globals.css) au safe-top deja
+          // present, vaut 0px sur desktop donc md:pt-0 reste inchange.
+          className={`relative min-h-0 flex-1 ${pleinEcran ? "pt-[calc(var(--safe-top)+var(--dj-hamburger-espace))] md:pt-0" : ""}`}
         >
           {/* Comble le trou identifié dans l'audit (30/08) : avant, rien
               ne s'affichait entre le clic sur une conversation passée et
