@@ -28,3 +28,18 @@ export function useOuvrirChat() {
   // cette demande.
   return (etat: EtatChat = "mini") => ctx?.setEtat(etat);
 }
+
+// 30/08/2026, tiroir mobile du chat plein écran (AppSidebar.tsx,
+// contexteChat=true) : les liens du "Plus" repris de BlocsMenuPlus qui
+// n'ont pas d'id de section (Accueil, Paramètres, Rappels -- pas
+// d'équivalent OngletId, donc pas de fenêtre flottante possible via
+// ouvrirFenetre) doivent fermer le chat avant de naviguer, sinon la
+// page cible se charge derrière le chat toujours ouvert (fixed inset-0
+// z-[110]) et reste invisible. Ferme directement (pas de fondu, cette
+// fonction vit hors de ChatFlottant qui gère seul son animation de
+// sortie via fermerAvecFondu) -- acceptable ici puisque la navigation
+// qui suit fait de toute façon disparaître tout le contexte visuel.
+export function useFermerChat() {
+  const ctx = useContext(ContexteChat);
+  return () => ctx?.setEtat("fermee");
+}

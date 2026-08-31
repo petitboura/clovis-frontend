@@ -89,11 +89,27 @@ const AGENT_ID = "clovis";
 // MenuHamburgerNatif.tsx (natif) et MenuHamburgerWeb.tsx (web mobile).
 // Les deux lui passent la même liste (SECTIONS_BASE), désormais
 // identique des deux côtés (étape 1 de l'audit navigation, 30/08/2026).
-export function BlocsMenuPlus({ sectionsNavigation }: { sectionsNavigation: typeof SECTIONS_BASE }) {
+// 30/08/2026, réutilisé maintenant aussi dans le tiroir mobile du chat
+// plein écran (AppSidebar.tsx, contexteChat=true), en plus de
+// MenuHamburgerNatif.tsx/MenuHamburgerWeb.tsx -- ce troisième appelant a
+// besoin de traiter le clic différemment (fenêtre flottante par-dessus
+// le chat pour "Connecter Claude", fermeture du chat avant de naviguer
+// pour les autres, voir useFermerChat dans lib/contexteChat.tsx) plutôt
+// que le router.push direct qui suffit aux deux premiers. onNaviguer
+// optionnel : si fourni, remplace le router.push interne ; sinon,
+// comportement inchangé pour les appelants existants.
+export function BlocsMenuPlus({
+  sectionsNavigation,
+  onNaviguer,
+}: {
+  sectionsNavigation: typeof SECTIONS_BASE;
+  onNaviguer?: (href: string) => void;
+}) {
   const router = useRouter();
   const [copie, setCopie] = useState(false);
   const [avisDeplie, setAvisDeplie] = useState(false);
   const ouvrirCatalogue = useOuvrirCatalogue();
+  const naviguer = onNaviguer ?? ((href: string) => router.push(href));
 
   // Repris à l'identique de la fonction `partager` d'AppSidebar.tsx.
   async function partager() {
@@ -120,7 +136,7 @@ export function BlocsMenuPlus({ sectionsNavigation }: { sectionsNavigation: type
       <div className="overflow-hidden rounded-cgpt-carte border border-dj-bordure bg-dj-surface">
         <div className="divide-y divide-dj-bordure">
           {sectionsNavigation.map((s) => (
-            <LigneSection key={s.href} icone={s.icone} titre={s.titre} sousTitre={s.sousTitre} onClick={() => router.push(s.href)} />
+            <LigneSection key={s.href} icone={s.icone} titre={s.titre} sousTitre={s.sousTitre} onClick={() => naviguer(s.href)} />
           ))}
         </div>
       </div>

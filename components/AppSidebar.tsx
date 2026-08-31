@@ -30,6 +30,8 @@ import { lireMonProfil } from "@/lib/api";
 import { NoteAgent } from "@/components/NoteAgent";
 import { CommentairesAgent } from "@/components/CommentairesAgent";
 import { BoutonInstaller } from "@/components/BoutonInstaller";
+import { BlocsMenuPlus, SECTIONS_BASE } from "@/components/EspacePlus";
+import { useFermerChat } from "@/lib/contexteChat";
 
 // Nav principale de l'app (refonte "Mon espace = l'app", 15/08/2026,
 // demande Bourama : "faut changer l'affichage même de mon espace, son
@@ -424,6 +426,7 @@ export function AppSidebar({
 }) {
   const pathname = usePathname();
   const router = useRouter();
+  const fermerChat = useFermerChat();
   // 22/08/2026, demande Bourama : remplace le comportement précédent
   // (fermer le chat plein écran au clic sur une section, cf. commit du
   // même jour) -- désormais le clic ouvre la section dans une fenêtre
@@ -584,6 +587,36 @@ export function AppSidebar({
   const ongletsDirects = ONGLETS.filter((o) => idsDirects.includes(o.id));
   const ongletsDansActions = ONGLETS.filter((o) => idsPlusFlat.includes(o.id));
   const navComplete = [{ href: "/", label: "Accueil", Icone: Home }, ...ongletsDirects];
+
+  // 30/08/2026, demande Bourama : le tiroir mobile du chat (plus bas,
+  // ouverte && !masquerChromeMobile) doit reprendre les mêmes 4 boutons
+  // que la barre d'onglets mobile -- Bibliothèque, Concentration,
+  // Bureau, Personnaliser Clovis (celui-ci via GROUPES, déjà rendu plus
+  // bas, pas repris ici) -- sans Accueil (rejoint le "Plus" unifié) ni
+  // Chat (on y est déjà). Mobile uniquement : ne touche pas
+  // navComplete/idsDirects ci-dessus, qui restent la version desktop
+  // inchangée (rendue ligne ~700).
+  const ongletsMobileDirects = (["bibliotheque", "controle-session", "bureau"] as OngletId[])
+    .map((id) => ONGLETS.find((o) => o.id === id))
+    .filter((o): o is (typeof ONGLETS)[number] => Boolean(o));
+
+  // Navigation depuis le "Plus" unifié du tiroir mobile (BlocsMenuPlus
+  // + SECTIONS_BASE, voir plus bas) : "Connecter Claude" a un vrai id
+  // de section (claude), donc s'ouvre en fenêtre flottante par-dessus
+  // le chat comme les autres (même mécanique que LienOnglet). Les
+  // autres (Accueil, Paramètres, Rappels) n'ont pas d'id de section
+  // (pas de fenêtre flottante possible) : le chat doit d'abord se
+  // fermer, sinon la page cible se charge derrière lui et reste
+  // invisible (fixed inset-0 z-[110]).
+  function naviguerDepuisPlusMobile(href: string) {
+    setOuverte(false);
+    if (href === "/connecter-claude") {
+      ouvrirFenetre("claude");
+      return;
+    }
+    fermerChat();
+    router.push(href);
+  }
 
   return (
     <>
@@ -898,7 +931,7 @@ export function AppSidebar({
               </>
             )}
 
-            {navComplete.map((o) => (
+            {ongletsMobileDirects.map((o) => (
               <LienOnglet key={o.href} onglet={o} mouvement={MOUVEMENT_NAV} mobile />
             ))}
 
@@ -935,6 +968,20 @@ export function AppSidebar({
             <BoutonInstaller />
           </div>
 
+          {/* 30/08/2026, demande Bourama : "il n'y a qu'un plus" -- ce
+              "Plus" reprenait avant son propre contenu (Bureau,
+              Concentration, Claude, Partager, Avis, Pourquoi Clovis),
+              divergent de celui du menu principal mobile (SECTIONS_BASE,
+              voir EspacePlus.tsx). Bureau et Concentration ont rejoint
+              les boutons directs juste au dessus (ongletsMobileDirects) ;
+              pour le reste, ce bloc réutilise maintenant BlocsMenuPlus
+              tel quel (même composant que MenuHamburgerNatif.tsx/
+              MenuHamburgerWeb.tsx), pour ne plus jamais avoir deux
+              listes "Plus" qui divergent. Corrige au passage Rappels,
+              absent d'ici jusque là. onNaviguer personnalisé (voir plus
+              haut) : nécessaire ici uniquement, pour gérer fenêtre
+              flottante/fermeture du chat, contrairement aux deux autres
+              appelants qui restent sur le router.push par défaut. */}
           <div className="mt-2 rounded-xl px-2">
             <button
               onClick={() => setActionsDeplie((v) => !v)}
@@ -946,63 +993,8 @@ export function AppSidebar({
               Plus
             </button>
             {actionsDeplie && (
-              <div className="flex flex-col gap-2 pb-2">
-                {ongletsDansActions.map((o) => {
-                    const actif = pathname === o.href;
-                    return (
-                      <Link
-                        key={o.href}
-                        href={o.href}
-                        onClick={(e) => {
-                          setActionsDeplie(false);
-                          setOuverte(false);
-                          if (contexteChat) {
-                            e.preventDefault();
-                            ouvrirFenetre(o.id);
-                          }
-                        }}
-                        className={`group relative flex w-full items-center gap-2 rounded-lg px-2 py-2 text-left text-sm transition-colors ${
-                          actif ? "text-dj-accent-1-texte" : "text-dj-texte-muet hover:bg-dj-surface-haute hover:text-dj-texte"
-                        }`}
-                      >
-                        <o.Icone size={16} />
-                        {o.label}
-                      </Link>
-                    );
-                  })}
-
-                <button
-                  onClick={partager}
-                  className="group flex w-full items-center gap-2 rounded-lg px-2 py-2 text-left text-sm text-dj-texte-muet transition-colors hover:bg-dj-surface-haute hover:text-dj-texte"
-                >
-                  <Share2 size={16} className="transition-transform duration-200 group-hover:-rotate-12" />
-                  {copie ? "Copié !" : "Partager"}
-                </button>
-                <button
-                  onClick={() => setAvisDeplie((v) => !v)}
-                  className={`group flex w-full items-center gap-2 rounded-lg px-2 py-2 text-sm transition-colors ${
-                    avisDeplie ? "text-dj-texte" : "text-dj-texte-muet"
-                  }`}
-                >
-                  <Star size={16} className="transition-transform duration-200 group-hover:rotate-12 group-hover:scale-110" />
-                  Avis sur Clovis
-                </button>
-                {avisDeplie && (
-                  <div className="flex flex-col gap-4 px-2 pb-2">
-                    <NoteAgent agentId={AGENT_ID} />
-                    <CommentairesAgent agentId={AGENT_ID} />
-                  </div>
-                )}
-                <button
-                  onClick={() => {
-                    onOuvrirCatalogue();
-                    setOuverte(false);
-                  }}
-                  className="group flex w-full items-center gap-2 rounded-lg px-2 py-2 text-left text-sm text-dj-texte-muet transition-colors hover:bg-dj-surface-haute hover:text-dj-texte"
-                >
-                  <Compass size={16} className="transition-transform duration-300 group-hover:rotate-45" />
-                  Pourquoi Clovis ?
-                </button>
+              <div className="pb-2">
+                <BlocsMenuPlus sectionsNavigation={SECTIONS_BASE} onNaviguer={naviguerDepuisPlusMobile} />
               </div>
             )}
           </div>
