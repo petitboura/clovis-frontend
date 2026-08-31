@@ -30,6 +30,7 @@ import { ComportementsRecus } from "@/components/ComportementsRecus";
 import { ComportementsPublics } from "@/components/ComportementsPublics";
 import { PanneauFlottant } from "@/components/PanneauFlottant";
 import { Skeleton } from "./Skeleton";
+import { OngletsSegment } from "./OngletsSegment";
 
 // Section "Mes comportements" (06/08/2026, demande Bourama : "on peut en
 // mettre plusieurs hein, pas juste un") : PLUSIEURS instructions perso
@@ -531,28 +532,17 @@ export function MesComportements({ agentId }: { agentId: string }) {
 
   return (
     <div className="flex flex-col gap-4">
-      <div className="flex w-full gap-1 border-b border-dj-bordure">
-        <button
-          onClick={() => setVue("mes-comportements")}
-          className={`border-b-2 px-3 py-2 text-sm font-medium transition-colors ${
-            vue === "mes-comportements"
-              ? "border-dj-accent-1 text-dj-texte"
-              : "border-transparent text-dj-texte-muet hover:text-dj-texte"
-          }`}
-        >
-          Mes comportements
-        </button>
-        <button
-          onClick={() => setVue("public")}
-          className={`border-b-2 px-3 py-2 text-sm font-medium transition-colors ${
-            vue === "public"
-              ? "border-dj-accent-1 text-dj-texte"
-              : "border-transparent text-dj-texte-muet hover:text-dj-texte"
-          }`}
-        >
-          Public
-        </button>
-      </div>
+      {/* Onglets passés en composant partagé OngletsSegment le 31/08/2026,
+          voir OngletsSegment.tsx (fini le pattern soulignement web). */}
+      <OngletsSegment
+        ariaLabel="Section des comportements"
+        valeur={vue}
+        onChange={(v) => setVue(v as typeof vue)}
+        onglets={[
+          { valeur: "mes-comportements", libelle: "Mes comportements" },
+          { valeur: "public", libelle: "Public" },
+        ]}
+      />
 
       {vue === "public" ? (
         <ComportementsPublics onActive={charger} />
@@ -688,30 +678,25 @@ export function MesComportements({ agentId }: { agentId: string }) {
             </div>
           }
         >
-          <div className="mb-3 flex w-full flex-shrink-0 gap-1 border-b border-dj-bordure">
-            <button
-              onClick={() => setOnglet("texte")}
-              className={`border-b-2 px-3 py-2 text-sm font-medium transition-colors ${
-                onglet === "texte"
-                  ? "border-dj-accent-1 text-dj-texte"
-                  : "border-transparent text-dj-texte-muet hover:text-dj-texte"
-              }`}
-            >
-              Texte
-            </button>
-            {panneau.type === "edition" && (
-              <button
-                onClick={ouvrirOngletSkill}
-                className={`flex items-center gap-1.5 border-b-2 px-3 py-2 text-sm font-medium transition-colors ${
-                  onglet === "skill"
-                    ? "border-dj-accent-1 text-dj-texte"
-                    : "border-transparent text-dj-texte-muet hover:text-dj-texte"
-                }`}
-              >
-                <FileCode2 size={14} />
-                Voir le skill généré
-              </button>
-            )}
+          {/* Onglets passés en composant partagé OngletsSegment le
+              31/08/2026, voir OngletsSegment.tsx (fini le pattern
+              soulignement web). onClick de "skill" gardé distinct
+              (ouvrirOngletSkill fait plus que juste changer l'onglet,
+              voir sa définition) plutôt que passé par onChange direct. */}
+          <div className="mb-3 flex-shrink-0">
+            <OngletsSegment
+              ariaLabel="Vue du skill"
+              valeur={onglet}
+              onChange={(v) => (v === "skill" ? ouvrirOngletSkill() : setOnglet(v as typeof onglet))}
+              onglets={
+                panneau.type === "edition"
+                  ? [
+                      { valeur: "texte", libelle: "Texte" },
+                      { valeur: "skill", libelle: "Voir le skill généré", icone: FileCode2 },
+                    ]
+                  : [{ valeur: "texte", libelle: "Texte" }]
+              }
+            />
           </div>
 
           {onglet === "texte" ? (
