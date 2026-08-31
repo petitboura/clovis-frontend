@@ -31,6 +31,8 @@ class AccessibilitePlugin : Plugin() {
     @PluginMethod
     fun listerAppsAutorisees(call: PluginCall) = refuser(call)
     @PluginMethod
+    fun listerAppsInstallees(call: PluginCall) = refuser(call)
+    @PluginMethod
     fun autoriserApp(call: PluginCall) = refuser(call)
     @PluginMethod
     fun revoquerApp(call: PluginCall) = refuser(call)

@@ -6,8 +6,20 @@
     Lot 3B (lots 6-7 portes depuis clovis-mobile/android-legacy-natif) avec
     la declaration reelle du service d'accessibilite, sans changement de
     logique (voir ServiceAccessibiliteClovis.kt).
+    31/08/2026 : ajout du bloc <queries> (visibilite des paquets, Android
+    11+) pour que ResolveurApps.listerAppsInstallees() (nouveau selecteur
+    d'apps du plugin Accessibilite) voie les autres apps lancables. Portee
+    au flavor "externe" uniquement, car c'est le seul a exposer cette
+    methode (le stub "play" la rejette sans jamais l'appeler reellement).
 -->
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
+    <queries>
+        <intent>
+            <action android:name="android.intent.action.MAIN" />
+            <category android:name="android.intent.category.LAUNCHER" />
+        </intent>
+    </queries>
+
     <application>
         <service
             android:name=".accessibilite.ServiceAccessibiliteClovis"

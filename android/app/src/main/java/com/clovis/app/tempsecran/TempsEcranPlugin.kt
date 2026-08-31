@@ -9,7 +9,7 @@
 //   const TempsEcran = registerPlugin<any>('TempsEcran');
 //   await TempsEcran.permissionAccordee();      // { accordee: bool }
 //   await TempsEcran.ouvrirReglagesPermission(); // ouvre les Reglages systeme (PACKAGE_USAGE_STATS)
-//   await TempsEcran.usageAujourdhui();          // { apps: [{ nomPaquet, dureeSecondes }] }
+//   await TempsEcran.usageAujourdhui();          // { apps: [{ nomPaquet, nomAffiche, icone, dureeSecondes }] }
 //   await TempsEcran.appActuellementActive();    // { nomPaquet: string | null }
 //
 // La synchronisation vers clovis-backend (POST /api/appareils-mobiles/usage)
@@ -24,6 +24,13 @@
 // pas encore) + un target d'extension Xcode separe : voir
 // clovis-mobile/ios-legacy-natif/.../UsageScreen.swift pour le detail deja
 // documente. Signale a Bourama plutot que devine/simule.
+//
+// 31/08/2026 : usageAujourdhui() renvoyait seulement nomPaquet (package
+// brut, ex. "com.whatsapp"), affiche tel quel cote web. Ajout de
+// nomAffiche + icone via ResolveurApps (util partage, voir
+// com.clovis.app.util.ResolveurApps), nomPaquet garde en plus pour la
+// synchronisation backend (lib/api.ts) qui continue de cle sur le nom de
+// paquet, inchangee.
 package com.clovis.app.tempsecran
 
 import android.app.AppOpsManager
@@ -33,6 +40,7 @@ import android.content.Context
 import android.content.Intent
 import android.os.Process
 import android.provider.Settings
+import com.clovis.app.util.ResolveurApps
 import com.getcapacitor.JSArray
 import com.getcapacitor.JSObject
 import com.getcapacitor.Plugin
@@ -90,9 +98,12 @@ class TempsEcranPlugin : Plugin() {
             .filter { it.totalTimeInForeground > 0 }
             .sortedByDescending { it.totalTimeInForeground }
             .forEach {
+                val resolue = ResolveurApps.resoudre(context, it.packageName)
                 tableau.put(
                     JSObject()
                         .put("nomPaquet", it.packageName)
+                        .put("nomAffiche", resolue.nomAffiche)
+                        .put("icone", resolue.icone)
                         .put("dureeSecondes", it.totalTimeInForeground / 1000)
                 )
             }

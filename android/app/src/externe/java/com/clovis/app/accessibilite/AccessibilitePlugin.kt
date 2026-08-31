@@ -20,10 +20,19 @@
 //   await Accessibilite.journalActions();                  // dernieres tentatives d'action
 //   await Accessibilite.cliquerParTexte({ texteCible });
 //   await Accessibilite.saisirTexteParCible({ texteCible, valeur });
+//   await Accessibilite.listerAppsInstallees();             // { apps: [{ nomPaquet, nomAffiche, icone }] }
+//
+// 31/08/2026 : listerAppsAutorisees()/journalAccessibilite()/journalActions()
+// ne renvoyaient que nomPaquet brut, affiche tel quel cote web, et il
+// n'existait aucun moyen de choisir une app installee (saisie manuelle du
+// nom de paquet uniquement). Ajout de nomAffiche/icone (via ResolveurApps,
+// util partage) sur les trois, et de listerAppsInstallees() pour un vrai
+// selecteur cote web (voir <queries> ajoute dans le manifest "externe").
 package com.clovis.app.accessibilite
 
 import android.content.Intent
 import android.provider.Settings
+import com.clovis.app.util.ResolveurApps
 import com.getcapacitor.JSArray
 import com.getcapacitor.JSObject
 import com.getcapacitor.Plugin
@@ -61,8 +70,30 @@ class AccessibilitePlugin : Plugin() {
     @PluginMethod
     fun listerAppsAutorisees(call: PluginCall) {
         val tableau = JSArray()
-        AppsAutorisees.autorisees.value.forEach { tableau.put(it) }
-        call.resolve(JSObject().put("paquets", tableau))
+        AppsAutorisees.autorisees.value.forEach { nomPaquet ->
+            val resolue = ResolveurApps.resoudre(context, nomPaquet)
+            tableau.put(
+                JSObject()
+                    .put("nomPaquet", nomPaquet)
+                    .put("nomAffiche", resolue.nomAffiche)
+                    .put("icone", resolue.icone)
+            )
+        }
+        call.resolve(JSObject().put("apps", tableau))
+    }
+
+    @PluginMethod
+    fun listerAppsInstallees(call: PluginCall) {
+        val tableau = JSArray()
+        ResolveurApps.listerAppsInstallees(context).forEach { app ->
+            tableau.put(
+                JSObject()
+                    .put("nomPaquet", app.nomPaquet)
+                    .put("nomAffiche", app.nomAffiche)
+                    .put("icone", app.icone)
+            )
+        }
+        call.resolve(JSObject().put("apps", tableau))
     }
 
     @PluginMethod
@@ -91,9 +122,12 @@ class AccessibilitePlugin : Plugin() {
     fun journalAccessibilite(call: PluginCall) {
         val tableau = JSArray()
         JournalAccessibilite.entrees.value.forEach {
+            val resolue = ResolveurApps.resoudre(context, it.nomPaquet)
             tableau.put(
                 JSObject()
                     .put("nomPaquet", it.nomPaquet)
+                    .put("nomAffiche", resolue.nomAffiche)
+                    .put("icone", resolue.icone)
                     .put("typeEvenement", it.typeEvenement)
                     .put("nombreNoeudsLus", it.nombreNoeudsLus)
                     .put("horodatage", it.horodatage)
@@ -106,9 +140,12 @@ class AccessibilitePlugin : Plugin() {
     fun journalActions(call: PluginCall) {
         val tableau = JSArray()
         JournalActions.entrees.value.forEach {
+            val resolue = ResolveurApps.resoudre(context, it.nomPaquet)
             tableau.put(
                 JSObject()
                     .put("nomPaquet", it.nomPaquet)
+                    .put("nomAffiche", resolue.nomAffiche)
+                    .put("icone", resolue.icone)
                     .put("cible", it.cible)
                     .put("succes", it.succes)
                     .put("message", it.message)

@@ -23,7 +23,11 @@ import { BandeauTelechargerApp } from "./BandeauTelechargerApp";
  * dur en français.
  */
 
-type AppUsage = { nomPaquet: string; dureeSecondes: number };
+// 31/08/2026 : nomAffiche/icone ajoutés côté plugin (TempsEcranPlugin.kt,
+// via ResolveurApps) pour ne plus afficher le nom de paquet technique brut
+// (ex. "com.whatsapp"). nomPaquet gardé pour la synchronisation backend
+// (lib/api.ts, inchangée) et comme clé React stable.
+type AppUsage = { nomPaquet: string; nomAffiche: string; icone: string | null; dureeSecondes: number };
 
 type PluginTempsEcran = {
   permissionAccordee(): Promise<{ accordee: boolean }>;
@@ -286,7 +290,15 @@ export function EspaceTempsEcran() {
               <div className="divide-y divide-dj-bordure">
                 {(appsAujourdhui ?? []).map((a) => (
                   <div key={a.nomPaquet} className="flex items-center justify-between gap-3 px-4 py-2.5">
-                    <span className="truncate text-sm text-dj-texte">{a.nomPaquet}</span>
+                    <div className="flex min-w-0 items-center gap-2.5">
+                      {a.icone ? (
+                        // eslint-disable-next-line @next/next/no-img-element
+                        <img src={a.icone} alt="" className="h-6 w-6 flex-shrink-0 rounded-md" />
+                      ) : (
+                        <div className="h-6 w-6 flex-shrink-0 rounded-md bg-dj-surface-haute" aria-hidden />
+                      )}
+                      <span className="truncate text-sm text-dj-texte">{a.nomAffiche}</span>
+                    </div>
                     <span className="flex-shrink-0 text-xs text-dj-texte-muet">{formaterDuree(a.dureeSecondes)}</span>
                   </div>
                 ))}

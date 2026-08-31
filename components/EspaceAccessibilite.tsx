@@ -22,23 +22,26 @@ import { BandeauTelechargerApp } from "./BandeauTelechargerApp";
  * Connecteurs), pas des actions que l'utilisateur déclenche depuis cet
  * écran de réglages.
  *
- * Pas de méthode pour lister les apps installées côté plugin (seulement
- * autoriser/revoquer par nom de paquet) : pas de sélecteur d'apps ici,
- * juste un champ texte pour le nom de paquet. À signaler à Bourama si un
- * vrai sélecteur d'apps installées est souhaité plus tard.
+ * 31/08/2026 : ajout d'un vrai sélecteur d'apps installées (icône + nom
+ * affiché, recherche par nom) à la place de la saisie manuelle du nom de
+ * paquet — nouvelle méthode plugin listerAppsInstallees(). nomAffiche/icone
+ * ajoutés aussi sur listerAppsAutorisees()/journalAccessibilite()/
+ * journalActions() (avant : nom de paquet technique brut affiché partout).
  *
  * Pas de mécanisme i18n branché (voir EspaceParametres.tsx) : textes en
  * dur en français.
  */
 
-type EntreeAccessibilite = { nomPaquet: string; typeEvenement: string; nombreNoeudsLus: number; horodatage: number };
-type EntreeActions = { nomPaquet: string; cible: string; succes: boolean; message: string; horodatage: number };
+type InfoApp = { nomPaquet: string; nomAffiche: string; icone: string | null };
+type EntreeAccessibilite = InfoApp & { typeEvenement: string; nombreNoeudsLus: number; horodatage: number };
+type EntreeActions = InfoApp & { cible: string; succes: boolean; message: string; horodatage: number };
 
 type PluginAccessibilite = {
   disponible(): Promise<{ disponible: boolean }>;
   serviceActif(): Promise<{ actif: boolean }>;
   ouvrirReglagesService(): Promise<void>;
-  listerAppsAutorisees(): Promise<{ paquets: string[] }>;
+  listerAppsAutorisees(): Promise<{ apps: InfoApp[] }>;
+  listerAppsInstallees(): Promise<{ apps: InfoApp[] }>;
   autoriserApp(options: { nomPaquet: string }): Promise<void>;
   revoquerApp(options: { nomPaquet: string }): Promise<void>;
   journalAccessibilite(): Promise<{ entrees: EntreeAccessibilite[] }>;
@@ -56,10 +59,17 @@ export function EspaceAccessibilite() {
   const [disponibleSurCeBuild, setDisponibleSurCeBuild] = useState(false);
   const [serviceActif, setServiceActif] = useState(false);
 
-  const [paquets, setPaquets] = useState<string[]>([]);
-  const [nouveauPaquet, setNouveauPaquet] = useState("");
+  const [appsAutorisees, setAppsAutorisees] = useState<InfoApp[]>([]);
   const [action, setAction] = useState(false);
   const [erreur, setErreur] = useState<string | null>(null);
+
+  // Sélecteur d'apps installées (remplace la saisie manuelle du nom de
+  // paquet) : chargé à la demande, une seule fois, quand l'utilisateur
+  // ouvre le panneau "Ajouter une app".
+  const [pickerOuvert, setPickerOuvert] = useState(false);
+  const [appsInstallees, setAppsInstallees] = useState<InfoApp[] | null>(null);
+  const [chargementAppsInstallees, setChargementAppsInstallees] = useState(false);
+  const [recherche, setRecherche] = useState("");
 
   const [onglet, setOnglet] = useState<"apps" | "lectures" | "actions">("apps");
   const [journalLectures, setJournalLectures] = useState<EntreeAccessibilite[] | null>(null);
@@ -93,8 +103,19 @@ export function EspaceAccessibilite() {
 
   useEffect(() => {
     if (!plugin || !serviceActif) return;
-    plugin.listerAppsAutorisees().then((r) => setPaquets(r.paquets));
+    plugin.listerAppsAutorisees().then((r) => setAppsAutorisees(r.apps));
   }, [plugin, serviceActif]);
+
+  function ouvrirPicker() {
+    setPickerOuvert(true);
+    if (!plugin || appsInstallees !== null) return;
+    setChargementAppsInstallees(true);
+    plugin
+      .listerAppsInstallees()
+      .then((r) => setAppsInstallees(r.apps))
+      .catch((e) => setErreur(messageErreurPlugin(e)))
+      .finally(() => setChargementAppsInstallees(false));
+  }
 
   useEffect(() => {
     if (!plugin || !serviceActif) return;
@@ -115,14 +136,15 @@ export function EspaceAccessibilite() {
     }
   }
 
-  async function autoriser() {
-    if (!plugin || !nouveauPaquet.trim()) return;
+  async function autoriser(app: InfoApp) {
+    if (!plugin || appsAutorisees.some((a) => a.nomPaquet === app.nomPaquet)) return;
     setAction(true);
     setErreur(null);
     try {
-      await plugin.autoriserApp({ nomPaquet: nouveauPaquet.trim() });
-      setPaquets((p) => [...p, nouveauPaquet.trim()]);
-      setNouveauPaquet("");
+      await plugin.autoriserApp({ nomPaquet: app.nomPaquet });
+      setAppsAutorisees((p) => [...p, app]);
+      setPickerOuvert(false);
+      setRecherche("");
     } catch (e) {
       setErreur(messageErreurPlugin(e));
     } finally {
@@ -136,7 +158,7 @@ export function EspaceAccessibilite() {
     setErreur(null);
     try {
       await plugin.revoquerApp({ nomPaquet });
-      setPaquets((p) => p.filter((x) => x !== nomPaquet));
+      setAppsAutorisees((p) => p.filter((x) => x.nomPaquet !== nomPaquet));
     } catch (e) {
       setErreur(messageErreurPlugin(e));
     } finally {
@@ -251,33 +273,92 @@ export function EspaceAccessibilite() {
 
           {onglet === "apps" && (
             <div className="flex flex-col gap-3">
-              <div className="flex gap-2">
-                <input
-                  value={nouveauPaquet}
-                  onChange={(e) => setNouveauPaquet(e.target.value)}
-                  onKeyDown={(e) => e.key === "Enter" && autoriser()}
-                  placeholder="Nom du paquet (ex : com.whatsapp)"
-                  className="flex-1 rounded-lg border border-dj-bordure bg-dj-surface-haute px-3 py-2 text-sm text-dj-texte outline-none focus:border-dj-accent-1"
-                />
+              {!pickerOuvert ? (
                 <button
-                  onClick={autoriser}
-                  disabled={action || !nouveauPaquet.trim()}
-                  className="flex flex-shrink-0 items-center gap-1.5 rounded-lg bg-dj-accent-1 px-3 py-2 text-xs font-bold text-[#1A0D02] transition-colors hover:bg-dj-accent-2 disabled:opacity-50"
+                  onClick={ouvrirPicker}
+                  className="flex w-fit items-center gap-1.5 self-start rounded-lg bg-dj-accent-1 px-3 py-1.5 text-xs font-bold text-[#1A0D02] transition-colors hover:bg-dj-accent-2"
                 >
                   <Plus size={14} />
-                  Autoriser
+                  Ajouter une app
                 </button>
-              </div>
-              {paquets.length === 0 ? (
+              ) : (
+                <div className="flex flex-col gap-2 rounded-cgpt-carte border border-dj-bordure bg-dj-surface p-2">
+                  <div className="flex items-center gap-2">
+                    <input
+                      autoFocus
+                      value={recherche}
+                      onChange={(e) => setRecherche(e.target.value)}
+                      placeholder="Rechercher une app…"
+                      className="flex-1 rounded-lg border border-dj-bordure bg-dj-surface-haute px-3 py-2 text-sm text-dj-texte outline-none focus:border-dj-accent-1"
+                    />
+                    <button
+                      onClick={() => {
+                        setPickerOuvert(false);
+                        setRecherche("");
+                      }}
+                      aria-label="Fermer"
+                      className="flex-shrink-0 rounded-lg p-1.5 text-dj-texte-muet transition-colors hover:bg-dj-surface-haute hover:text-dj-texte"
+                    >
+                      <X size={16} />
+                    </button>
+                  </div>
+
+                  {chargementAppsInstallees ? (
+                    <div className="flex flex-col gap-1" aria-hidden>
+                      {["w-32", "w-40", "w-24"].map((largeur, i) => (
+                        <div key={i} className="flex items-center gap-2.5 px-2 py-1.5">
+                          <Skeleton className="h-6 w-6 flex-shrink-0 rounded-md" />
+                          <Skeleton className={`h-3.5 ${largeur} rounded`} />
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <div className="max-h-64 overflow-y-auto">
+                      {(appsInstallees ?? [])
+                        .filter(
+                          (a) =>
+                            a.nomAffiche.toLowerCase().includes(recherche.trim().toLowerCase()) &&
+                            !appsAutorisees.some((p) => p.nomPaquet === a.nomPaquet)
+                        )
+                        .map((a) => (
+                          <button
+                            key={a.nomPaquet}
+                            onClick={() => autoriser(a)}
+                            disabled={action}
+                            className="flex w-full items-center gap-2.5 rounded-lg px-2 py-1.5 text-left transition-colors hover:bg-dj-surface-haute disabled:opacity-50"
+                          >
+                            {a.icone ? (
+                              // eslint-disable-next-line @next/next/no-img-element
+                              <img src={a.icone} alt="" className="h-6 w-6 flex-shrink-0 rounded-md" />
+                            ) : (
+                              <div className="h-6 w-6 flex-shrink-0 rounded-md bg-dj-surface-haute" aria-hidden />
+                            )}
+                            <span className="truncate text-sm text-dj-texte">{a.nomAffiche}</span>
+                          </button>
+                        ))}
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {appsAutorisees.length === 0 ? (
                 <p className="p-2 text-sm text-dj-texte-muet">Aucune app autorisée pour l&apos;instant.</p>
               ) : (
                 <div className="overflow-hidden rounded-cgpt-carte border border-dj-bordure bg-dj-surface">
                   <div className="divide-y divide-dj-bordure">
-                    {paquets.map((p) => (
-                      <div key={p} className="flex items-center justify-between gap-3 px-4 py-2.5">
-                        <span className="truncate text-sm text-dj-texte">{p}</span>
+                    {appsAutorisees.map((a) => (
+                      <div key={a.nomPaquet} className="flex items-center justify-between gap-3 px-4 py-2.5">
+                        <div className="flex min-w-0 items-center gap-2.5">
+                          {a.icone ? (
+                            // eslint-disable-next-line @next/next/no-img-element
+                            <img src={a.icone} alt="" className="h-6 w-6 flex-shrink-0 rounded-md" />
+                          ) : (
+                            <div className="h-6 w-6 flex-shrink-0 rounded-md bg-dj-surface-haute" aria-hidden />
+                          )}
+                          <span className="truncate text-sm text-dj-texte">{a.nomAffiche}</span>
+                        </div>
                         <button
-                          onClick={() => revoquer(p)}
+                          onClick={() => revoquer(a.nomPaquet)}
                           disabled={action}
                           aria-label="Révoquer"
                           className="flex-shrink-0 rounded-lg p-1.5 text-dj-texte-muet transition-colors hover:bg-dj-surface-haute hover:text-[var(--dj-erreur)] disabled:opacity-50"
@@ -315,9 +396,14 @@ export function EspaceAccessibilite() {
                 <div className="divide-y divide-dj-bordure">
                   {journalLectures.map((e, i) => (
                     <div key={i} className="flex items-center gap-3 px-4 py-2.5">
-                      <ScrollText size={14} className="flex-shrink-0 text-dj-texte-muet" />
+                      {e.icone ? (
+                        // eslint-disable-next-line @next/next/no-img-element
+                        <img src={e.icone} alt="" className="h-[18px] w-[18px] flex-shrink-0 rounded" />
+                      ) : (
+                        <ScrollText size={14} className="flex-shrink-0 text-dj-texte-muet" />
+                      )}
                       <div className="flex min-w-0 flex-1 flex-col">
-                        <span className="truncate text-sm text-dj-texte">{e.nomPaquet}</span>
+                        <span className="truncate text-sm text-dj-texte">{e.nomAffiche}</span>
                         <span className="text-xs text-dj-texte-muet">
                           {e.typeEvenement} · {e.nombreNoeudsLus} nœuds
                         </span>
@@ -356,9 +442,13 @@ export function EspaceAccessibilite() {
                         className={`h-2 w-2 flex-shrink-0 rounded-full ${e.succes ? "bg-dj-succes" : "bg-[var(--dj-erreur)]"}`}
                         aria-hidden
                       />
+                      {e.icone ? (
+                        // eslint-disable-next-line @next/next/no-img-element
+                        <img src={e.icone} alt="" className="h-[18px] w-[18px] flex-shrink-0 rounded" />
+                      ) : null}
                       <div className="flex min-w-0 flex-1 flex-col">
                         <span className="truncate text-sm text-dj-texte">
-                          {e.nomPaquet} · {e.cible}
+                          {e.nomAffiche} · {e.cible}
                         </span>
                         <span className="truncate text-xs text-dj-texte-muet">{e.message}</span>
                       </div>
