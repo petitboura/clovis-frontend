@@ -328,7 +328,19 @@ export function ChatFlottant({
         // appareil sans encoche, donc sans effet là où ce n'est pas
         // nécessaire), pas de concernement en mode mini (jamais ancré
         // en haut d'écran, voir bottom-5 right-5 ci-dessus).
-        className={`flex flex-shrink-0 items-center gap-2 border-b border-dj-bordure px-3 pb-2.5 ${
+        //
+        // 30/08/2026, demande Bourama : plus de bouton Réduire qui ait
+        // un sens sur mobile (le mode mini est un widget flottant
+        // desktop, jamais atteignable depuis mobile, voir
+        // BarreOngletsNative.tsx/BarreOngletsWeb.tsx qui appellent
+        // toujours ouvrirChat("plein_ecran") directement) -- logo/titre,
+        // Réduire et Fermer retirés d'un coup en masquant tout l'en-tête
+        // sur mobile (hidden md:flex), plutôt que de garder une barre
+        // vide avec juste sa bordure. Desktop plein écran (atteint en
+        // agrandissant le mini widget) inchangé, même en-tête qu'avant.
+        // Le padding de sécurité (encoche) qui vivait ici sur mobile est
+        // du coup déplacé sur le conteneur du contenu juste en dessous.
+        className={`${pleinEcran ? "hidden md:flex" : "flex"} flex-shrink-0 items-center gap-2 border-b border-dj-bordure px-3 pb-2.5 ${
           pleinEcran ? "pt-[calc(0.625rem+var(--safe-top))]" : "pt-2.5"
         }`}
       >
@@ -406,7 +418,16 @@ export function ChatFlottant({
           />
         )}
 
-        <div onMouseDownCapture={fermerFenetresAuClic} className="relative min-h-0 flex-1">
+        <div
+          onMouseDownCapture={fermerFenetresAuClic}
+          // 30/08/2026 : reprend le padding de sécurité (encoche) que
+          // l'en-tête portait avant sur mobile plein écran, maintenant
+          // masqué (hidden md:flex) -- sans ça le contenu remonterait
+          // sous la barre de statut. Seulement pour ce cas précis
+          // (md:pt-0 annule sur desktop, où l'en-tête est toujours là et
+          // gère déjà l'encoche lui-même).
+          className={`relative min-h-0 flex-1 ${pleinEcran ? "pt-[var(--safe-top)] md:pt-0" : ""}`}
+        >
           {/* Comble le trou identifié dans l'audit (30/08) : avant, rien
               ne s'affichait entre le clic sur une conversation passée et
               l'arrivée de la réponse -- l'ancien fil restait figé à
