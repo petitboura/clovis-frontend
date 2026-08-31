@@ -1,4 +1,5 @@
 import { createClient } from "@supabase/supabase-js";
+import type { LockFunc } from "@supabase/supabase-js";
 
 // Décision d'architecture (voir api/PLAN.md, point 1) : Next.js parle
 // DIRECTEMENT à Supabase Auth via ce client JS. Le backend FastAPI ne gère
@@ -13,10 +14,31 @@ if (!url || !cleAnon) {
   );
 }
 
+// Correctif du 31/08/2026 (Bourama : "le chat ne répond pas sur l'appli
+// installée, rien du tout, ni côté serveur ni erreur affichée") :
+// supabase-js utilise par défaut navigator.locks (Web Locks API) pour
+// sérialiser les appels d'auth (getSession, refresh...) entre onglets.
+// Sur certaines WebView natives (Capacitor/Android), ce verrou peut
+// rester bloqué indéfiniment sans jamais rejeter la promesse -- l'appel
+// `await supabase.auth.getSession()` dans appelerApiStream (lib/api.ts)
+// ne se termine alors jamais, donc AUCUNE requête ne part vers
+// clovis-backend et aucune erreur n'est levée (bug connu, ex.
+// supabase/supabase-js#1594, #2013 -- pas propre à ce dépôt). Ici, une
+// seule WebView par appareil (pas de multi-onglets à coordonner comme
+// sur le web) : un simple verrou en mémoire suffit et ne peut pas rester
+// bloqué au-delà de la fonction elle-même.
+const verrouEnMemoire: LockFunc = async (_nom, _delaiAcquisition, fn) => {
+  return await fn();
+};
+
 // Un seul client, réutilisé partout — évite de recréer une connexion à
 // chaque appel et garde la session (stockée par supabase-js) cohérente
 // entre les pages.
-export const supabase = createClient(url, cleAnon);
+export const supabase = createClient(url, cleAnon, {
+  auth: {
+    lock: verrouEnMemoire,
+  },
+});
 
 // Ajouté le 25/08/2026, Bourama : Lot 3B (fusion Capacitor) -- transmet le
 // token d'accès au plugin natif PontNatif à chaque connexion/déconnexion/
