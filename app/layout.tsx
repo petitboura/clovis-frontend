@@ -74,7 +74,7 @@ const sourceSerif = Source_Serif_4({
 });
 
 export const metadata: Metadata = {
-  metadataBase: new URL(process.env.APP_URL || "http://localhost:3000"),
+  metadataBase: new URL(process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000"),
   title: "Clovis",
   description: "Ton compagnon d'études pour la classe.",
   appleWebApp: { capable: true, statusBarStyle: "black-translucent", title: "Clovis" },

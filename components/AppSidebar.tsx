@@ -501,11 +501,18 @@ export function AppSidebar({
     return () => document.removeEventListener("mousedown", onClicExterieur);
   }, [actionsDeplie]);
 
+  // Corrigé le 31/08/2026, Bourama : partageait window.location.origin,
+  // qui vaut "https://localhost" dans l'app mobile Capacitor (la WebView
+  // sert le site depuis un serveur local interne, pas le vrai domaine),
+  // donc le lien partagé/copié était inutilisable. On partage maintenant
+  // le vrai lien de téléchargement de l'app (page /telecharger, voir
+  // app/telecharger/page.tsx), construit à partir de NEXT_PUBLIC_APP_URL
+  // (fixe, correct sur toutes les plateformes, web ET mobile).
   async function partager() {
-    const url = window.location.origin;
+    const url = `${process.env.NEXT_PUBLIC_APP_URL}/telecharger`;
     if (typeof navigator !== "undefined" && navigator.share) {
       try {
-        await navigator.share({ title: "Clovis", url });
+        await navigator.share({ title: "Télécharger Clovis", url });
       } catch {
         // Annulé par la personne.
       }

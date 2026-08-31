@@ -112,11 +112,15 @@ export function BlocsMenuPlus({
   const naviguer = onNaviguer ?? ((href: string) => router.push(href));
 
   // Repris à l'identique de la fonction `partager` d'AppSidebar.tsx.
+  // Corrigé le 31/08/2026 (même raison qu'AppSidebar.tsx) : partage
+  // maintenant le vrai lien de téléchargement (/telecharger) construit
+  // depuis NEXT_PUBLIC_APP_URL, au lieu de window.location.origin qui
+  // vaut "localhost" dans l'app mobile Capacitor.
   async function partager() {
-    const url = window.location.origin;
+    const url = `${process.env.NEXT_PUBLIC_APP_URL}/telecharger`;
     if (typeof navigator !== "undefined" && navigator.share) {
       try {
-        await navigator.share({ title: "Clovis", url });
+        await navigator.share({ title: "Télécharger Clovis", url });
       } catch {
         // Annulé par la personne.
       }
