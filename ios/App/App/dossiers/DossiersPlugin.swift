@@ -33,6 +33,7 @@ public class DossiersPlugin: CAPPlugin, CAPBridgedPlugin, UIDocumentPickerDelega
         CAPPluginMethod(name: "listerDossiersDesignes", returnType: CAPPluginReturnPromise),
         CAPPluginMethod(name: "retirerDossierDesigne", returnType: CAPPluginReturnPromise),
         CAPPluginMethod(name: "listerContenu", returnType: CAPPluginReturnPromise),
+        CAPPluginMethod(name: "lireFichier", returnType: CAPPluginReturnPromise),
         CAPPluginMethod(name: "creerSousDossier", returnType: CAPPluginReturnPromise),
         CAPPluginMethod(name: "creerFichier", returnType: CAPPluginReturnPromise),
         CAPPluginMethod(name: "renommer", returnType: CAPPluginReturnPromise),
@@ -144,6 +145,25 @@ public class DossiersPlugin: CAPPlugin, CAPBridgedPlugin, UIDocumentPickerDelega
         }
         let elements = DossiersDesignesRepository.listerContenu(url).map { elementJson($0) }
         call.resolve(["elements": elements])
+    }
+
+    // Ajoute le 30/08/2026 (correctif Claude chat) : meme role que la
+    // version Android, voir son en-tete pour le contexte complet.
+    @objc func lireFichier(_ call: CAPPluginCall) {
+        guard let uri = call.getString("uri"), let url = resoudreUrl(uri) else {
+            call.reject("Parametre 'uri' manquant ou invalide.")
+            return
+        }
+        guard let contenu = DossiersDesignesRepository.lireFichier(url) else {
+            call.reject("Fichier introuvable ou illisible.")
+            return
+        }
+        call.resolve([
+            "contenuBase64": contenu.contenuBase64,
+            "typeMime": contenu.typeMime,
+            "nomFichier": contenu.nomFichier,
+            "tailleOctets": contenu.tailleOctets
+        ])
     }
 
     @objc func creerSousDossier(_ call: CAPPluginCall) {

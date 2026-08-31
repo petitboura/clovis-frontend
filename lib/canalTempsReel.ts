@@ -36,9 +36,12 @@ type ElementDossier = { uri: string; nom: string; estDossier: boolean; tailleOct
 type ElementFormatte = { nom: string; estDossier: boolean; tailleOctets: number | null };
 type ResultatRecherche = ElementFormatte & { chemin: string[] };
 
+type ContenuFichierNatif = { contenuBase64: string; typeMime: string; nomFichier: string; tailleOctets: number };
+
 type PluginDossiers = {
   listerDossiersDesignes(): Promise<{ dossiers: DossierDesigne[] }>;
   listerContenu(options: { uri: string }): Promise<{ elements: ElementDossier[] }>;
+  lireFichier(options: { uri: string }): Promise<ContenuFichierNatif>;
 };
 
 // Meme principe que PROFONDEUR_MAX cote accessibilite
@@ -202,6 +205,113 @@ async function repondreChercherParNom(id: string, dossierNom: string, termeReche
   }
 }
 
+/**
+ * Ajoute le 30/08/2026 (correctif Claude chat) : resout dossier_nom +
+ * chemin vers l'uri de l'ELEMENT FINAL (fichier ou dossier), contrairement
+ * a resoudreCheminUri ci-dessus qui exige que chaque segment soit un
+ * dossier (utile pour ouvrir_sous_dossier, pas pour lire un fichier situe
+ * au bout du chemin).
+ */
+async function resoudreCheminUriElement(
+  dossierNom: string,
+  chemin: string[]
+): Promise<{ uri: string } | { erreur: string }> {
+  if (!pluginDossiers) return { erreur: "Plugin Dossiers indisponible sur cet appareil." };
+  if (chemin.length === 0) return { erreur: "Chemin vide." };
+
+  const { dossiers } = await pluginDossiers.listerDossiersDesignes();
+  const racine = dossiers.find((d) => d.nom === dossierNom);
+  if (!racine) return { erreur: `Dossier désigné "${dossierNom}" introuvable sur cet appareil.` };
+
+  let uriCourant = racine.uri;
+  for (let i = 0; i < chemin.length - 1; i++) {
+    const { elements } = await pluginDossiers.listerContenu({ uri: uriCourant });
+    const enfant = elements.find((e) => e.estDossier && e.nom === chemin[i]);
+    if (!enfant) return { erreur: `Sous-dossier "${chemin[i]}" introuvable dans ce chemin.` };
+    uriCourant = enfant.uri;
+  }
+  const { elements } = await pluginDossiers.listerContenu({ uri: uriCourant });
+  const dernierSegment = chemin[chemin.length - 1];
+  const cible = elements.find((e) => e.nom === dernierSegment);
+  if (!cible) return { erreur: `Élément "${dernierSegment}" introuvable dans ce chemin.` };
+  return { uri: cible.uri };
+}
+
+/**
+ * Lot 4 (30/08/2026, voir 04-lecture-contenu.md) : lit le contenu brut
+ * d'un fichier deja repere via un listing/une recherche precedente.
+ */
+async function repondreLireFichier(id: string, dossierNom: string, chemin: string[]) {
+  if (!pluginDossiers) {
+    envoyerReponse(id, { erreur: "Plugin Dossiers indisponible sur cet appareil." });
+    return;
+  }
+  try {
+    const resolu = await resoudreCheminUriElement(dossierNom, chemin);
+    if ("erreur" in resolu) {
+      envoyerReponse(id, resolu);
+      return;
+    }
+    const lecture = await pluginDossiers.lireFichier({ uri: resolu.uri });
+    envoyerReponse(id, {
+      contenu_base64: lecture.contenuBase64,
+      type_mime: lecture.typeMime,
+      nom_fichier: lecture.nomFichier,
+      tailleOctets: lecture.tailleOctets,
+    });
+  } catch (e) {
+    envoyerReponse(id, { erreur: e instanceof Error ? e.message : "Erreur inconnue." });
+  }
+}
+
+/** Parcours recursif profondeur-plafonnee, collecte TOUS les fichiers (jamais les dossiers). */
+async function collecterTousFichiers(
+  uri: string,
+  chemin: string[],
+  profondeur: number,
+  resultats: ResultatRecherche[]
+): Promise<void> {
+  if (profondeur > PROFONDEUR_MAX_RECHERCHE || !pluginDossiers) return;
+
+  const { elements } = await pluginDossiers.listerContenu({ uri });
+  for (const element of elements) {
+    const cheminElement = [...chemin, element.nom];
+    if (element.estDossier) {
+      await collecterTousFichiers(element.uri, cheminElement, profondeur + 1, resultats);
+    } else {
+      resultats.push({ ...formatterElement(element), chemin: cheminElement });
+    }
+  }
+}
+
+/**
+ * Lot 5 (30/08/2026, voir 05-recherche-contenu-app-fermee.md) : liste
+ * tous les fichiers de l'arborescence, usage interne cote backend
+ * (chercher_par_contenu), jamais expose directement comme action agent.
+ */
+async function repondreListerTousFichiers(id: string, dossierNom: string) {
+  if (!pluginDossiers) {
+    envoyerReponse(id, { erreur: "Plugin Dossiers indisponible sur cet appareil." });
+    return;
+  }
+  signalerExploration({ enCours: true, dossierNom });
+  try {
+    const { dossiers } = await pluginDossiers.listerDossiersDesignes();
+    const racine = dossiers.find((d) => d.nom === dossierNom);
+    if (!racine) {
+      envoyerReponse(id, { erreur: `Dossier désigné "${dossierNom}" introuvable sur cet appareil.` });
+      return;
+    }
+    const resultats: ResultatRecherche[] = [];
+    await collecterTousFichiers(racine.uri, [], 0, resultats);
+    envoyerReponse(id, { elements: resultats });
+  } catch (e) {
+    envoyerReponse(id, { erreur: e instanceof Error ? e.message : "Erreur inconnue." });
+  } finally {
+    signalerExploration({ enCours: false });
+  }
+}
+
 function traiterQuestion(id: string, question: unknown) {
   // Lot 1 : question texte simple ("es-tu là ?"), aucun vrai traitement.
   if (typeof question === "string") {
@@ -226,6 +336,18 @@ function traiterQuestion(id: string, question: unknown) {
     }
     if (q.action === "chercher_par_nom" && q.dossier_nom && q.terme_recherche) {
       repondreChercherParNom(id, q.dossier_nom, q.terme_recherche);
+      return;
+    }
+    // Ajoute le 30/08/2026 (correctif Claude chat) : Lot 4/5, jusque-la
+    // codes cote backend (core/exploration_dossier_mobile.py) mais sans
+    // reponse possible cote app -- lire_fichier et chercher_par_contenu
+    // echouaient silencieusement (repondaient "Question non reconnue").
+    if (q.action === "lire_fichier" && q.dossier_nom && Array.isArray(q.chemin)) {
+      repondreLireFichier(id, q.dossier_nom, q.chemin);
+      return;
+    }
+    if (q.action === "lister_tous_fichiers" && q.dossier_nom) {
+      repondreListerTousFichiers(id, q.dossier_nom);
       return;
     }
   }

@@ -139,7 +139,7 @@ export function EcranAccueil() {
             <p className="mt-2 text-base text-dj-texte-muet">Ton compagnon d&apos;études, à tes côtés.</p>
           </div>
           <button
-            onClick={ouvrirChat}
+            onClick={() => ouvrirChat()}
             className="group flex items-center gap-2 rounded-xl bg-dj-gradient px-5 py-3 text-sm font-bold text-[#1A0D02] shadow-[0_4px_20px_rgba(184,134,11,0.25)] transition-transform duration-200 ease-cgpt-geste hover:scale-[1.02] active:scale-[0.98]"
           >
             <Bird size={18} className="transition-transform duration-200 group-hover:-rotate-12 group-hover:scale-110" />
@@ -232,7 +232,7 @@ export function EcranAccueil() {
               item.href === "#chat" ? (
                 <button
                   key={item.id}
-                  onClick={ouvrirChat}
+                  onClick={() => ouvrirChat()}
                   className="group flex items-center gap-3 rounded-xl px-3 py-2.5 text-left transition-colors hover:bg-dj-surface"
                 >
                   <item.Icone size={16} className="flex-shrink-0 text-dj-texte transition-transform group-hover:scale-110" />

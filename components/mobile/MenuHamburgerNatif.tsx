@@ -1,6 +1,7 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import { usePathname } from "next/navigation";
 import { PanneauFlottant } from "@/components/PanneauFlottant";
 import { BlocsMenuPlus, SECTIONS_BASE } from "@/components/EspacePlus";
 
@@ -18,39 +19,47 @@ import { BlocsMenuPlus, SECTIONS_BASE } from "@/components/EspacePlus";
 //
 // Forme de l'icône, exigence précise de Bourama (pas les 3 barres
 // classiques de même longueur) : 3 barres horizontales alignées à
-// gauche, de longueur décroissante, empilées comme un escalier --
-// aperçu visuel montré le 30/08/2026, retour de Bourama pris en compte
-// (voir dimensions resserrées dans IconeEscalier ci-dessous).
+// gauche, de longueur décroissante, empilées comme un escalier.
 //
 // N'est rendu que côté natif (voir AppShell.tsx, condition `natif`) :
 // sur le web/PWA mobile, BarreOngletsWeb.tsx a déjà son propre onglet
 // Plus qui mène à la page /plus, jamais touché par ce chantier natif.
-// 30/08/2026, retour de Bourama après aperçu visuel : barres trop
-// longues et trop espacées dans la première version -- resserrées
-// (ecart vertical reduit de 6 a 3 unites sur 24) et raccourcies (14/10/6
-// au lieu de 18/12/6), rendu aussi a une taille plus petite (16px au
-// lieu de 18px) sur le bouton.
+// 30/08/2026, nouvelle demande de Bourama après référence visuelle de
+// l'appli ChatGPT (aperçus validés avant code) : barres passées de
+// traits fins à des barres pleines en capsule (rx arrondi), rendues
+// plus grandes (24px) et plus espacées (écart vertical 5 sur 24) pour
+// ne plus paraître floues/petites. Badge de fond noir arrondi retiré
+// (pas la norme demandée) : l'icône flotte seule au dessus du contenu,
+// donc sa couleur suit désormais le thème (text-dj-texte) au lieu d'un
+// blanc fixe, sinon invisible sur le fond clair de l'app (#faf8f5).
 function IconeEscalier() {
   return (
-    <svg viewBox="0 0 24 24" width={16} height={16} aria-hidden="true" className="transition-transform duration-200 group-hover:scale-95">
-      <g stroke="currentColor" strokeWidth={2} strokeLinecap="round">
-        <line x1="4" y1="9" x2="18" y2="9" />
-        <line x1="4" y1="12" x2="14" y2="12" />
-        <line x1="4" y1="15" x2="10" y2="15" />
-      </g>
+    <svg viewBox="0 0 24 24" width={24} height={24} aria-hidden="true" className="transition-transform duration-200 group-hover:scale-95">
+      <rect x="3" y="6" width="18" height="3" rx="1.5" fill="currentColor" />
+      <rect x="3" y="11" width="12" height="3" rx="1.5" fill="currentColor" />
+      <rect x="3" y="16" width="6" height="3" rx="1.5" fill="currentColor" />
     </svg>
   );
 }
 
 export function MenuHamburgerNatif() {
   const [ouvert, setOuvert] = useState(false);
+  const pathname = usePathname();
+
+  // Correctif (30/08/2026) : meme bug que MenuHamburgerWeb.tsx (voir son
+  // commentaire) -- BlocsMenuPlus navigue via router.push, qui ne
+  // refermait jamais ce panneau plein ecran (PanneauFlottant, z-50),
+  // cachant la nouvelle page pourtant bien chargee derriere.
+  useEffect(() => {
+    setOuvert(false);
+  }, [pathname]);
 
   return (
     <>
       <button
         onClick={() => setOuvert(true)}
         aria-label="Ouvrir le menu"
-        className="group fixed left-2 top-[calc(0.5rem+var(--cap-native-navigation-top,0px))] z-40 flex h-8 w-8 items-center justify-center rounded-md bg-black/35 text-white hover:bg-black/50"
+        className="group fixed left-2 top-[calc(0.5rem+var(--cap-native-navigation-top,0px))] z-40 flex h-8 w-8 items-center justify-center text-dj-texte"
       >
         <IconeEscalier />
       </button>

@@ -10,6 +10,7 @@
 //   await Dossiers.choisirDossier();               // ouvre le selecteur systeme
 //   await Dossiers.listerDossiersDesignes();
 //   await Dossiers.listerContenu({ uri });
+//   await Dossiers.lireFichier({ uri });            // ajoute 30/08/2026, contenu brut base64
 //   await Dossiers.creerSousDossier({ parentUri, nom });
 //   await Dossiers.creerFichier({ parentUri, nom, typeMime });
 //   await Dossiers.renommer({ elementUri, nouveauNom });
@@ -138,6 +139,33 @@ class DossiersPlugin : Plugin() {
         val tableau = JSArray()
         repo.listerContenu(Uri.parse(uri)).forEach { tableau.put(it.toJson()) }
         call.resolve(JSObject().put("elements", tableau))
+    }
+
+    // Ajoute le 30/08/2026 (correctif Claude chat) : lire_fichier /
+    // chercher_par_contenu (core/exploration_dossier_mobile.py cote
+    // clovis-backend) envoyaient deja cette question au telephone via le
+    // canal temps reel, mais aucune methode native ne savait y repondre --
+    // ce plugin s'arretait a lister le contenu, jamais a le lire.
+    @PluginMethod
+    fun lireFichier(call: PluginCall) {
+        val uri = call.getString("uri")
+        if (uri == null) {
+            call.reject("Parametre 'uri' manquant.")
+            return
+        }
+        val lecture = repo.lireFichier(Uri.parse(uri))
+        if (lecture == null) {
+            call.reject("Fichier introuvable ou illisible.")
+            return
+        }
+        call.resolve(
+            JSObject().apply {
+                put("contenuBase64", lecture.contenuBase64)
+                put("typeMime", lecture.typeMime)
+                put("nomFichier", lecture.nomFichier)
+                put("tailleOctets", lecture.tailleOctets)
+            }
+        )
     }
 
     @PluginMethod

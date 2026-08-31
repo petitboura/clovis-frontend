@@ -595,13 +595,29 @@ export function AppSidebar({
         />
       )}
 
+      {/* 30/08/2026, revu après le chantier hamburger natif/web (voir
+          MenuHamburgerNatif.tsx) : cette instance-ci d'AppSidebar (chat
+          plein écran, contexteChat=true, masquerChromeMobile=false)
+          n'avait pas été touchée par ce chantier et gardait encore
+          l'icône PanelLeft copiée du rail desktop (bouton "Replier le
+          panneau" plus bas) sur fond noir arrondi. Remplacée par la même
+          icône capsule que MenuHamburgerNatif/MenuHamburgerWeb pour la
+          cohérence visuelle, même fond retiré, même couleur suivant le
+          thème (text-dj-texte). Comportement au clic volontairement
+          inchangé (Bourama : garder le tiroir latéral tel quel), donc
+          `ouverte`/`setOuverte` et le tiroir plus bas ne sont pas
+          touchés, seuls l'icône et le style du bouton changent. */}
       {!masquerChromeMobile && (
         <button
           onClick={() => setOuverte((v) => !v)}
           aria-label={ouverte ? "Replier le panneau" : "Déplier le panneau"}
-          className="group fixed left-2 top-[calc(0.5rem+var(--safe-top))] z-40 flex h-8 w-8 items-center justify-center rounded-md bg-black/35 text-white hover:bg-black/50 md:hidden"
+          className="group fixed left-2 top-[calc(0.5rem+var(--safe-top))] z-40 flex h-8 w-8 items-center justify-center text-dj-texte md:hidden"
         >
-          <PanelLeft size={16} className="transition-transform duration-200 group-hover:scale-95" />
+          <svg viewBox="0 0 24 24" width={24} height={24} aria-hidden="true" className="transition-transform duration-200 group-hover:scale-95">
+            <rect x="3" y="6" width="18" height="3" rx="1.5" fill="currentColor" />
+            <rect x="3" y="11" width="12" height="3" rx="1.5" fill="currentColor" />
+            <rect x="3" y="16" width="6" height="3" rx="1.5" fill="currentColor" />
+          </svg>
         </button>
       )}
 
