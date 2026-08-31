@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
+import { Capacitor } from "@capacitor/core";
 import { appelerApi } from "@/lib/api";
 import { messageErreur } from "./erreurs";
 
@@ -179,6 +180,20 @@ const CLE_DEJA_PROPOSE = "djiguigne_notif_push_proposee";
 
 export function proposerNotificationsPushUneFois(activer: () => Promise<boolean>) {
   if (typeof window === "undefined") return;
+  // Correctif du 31/08/2026 (Bourama : "le chat n'envoie plus rien sur
+  // l'app installée, message effacé mais rien n'apparaît, aucune erreur
+  // visible"). Cause réelle : ce système est celui des notifications Push
+  // du NAVIGATEUR (Web Push API), pensé pour le site dans un onglet Chrome.
+  // L'app installée (WebView Capacitor) a son propre canal séparé et déjà
+  // câblé pour les notifications natives (Firebase, voir
+  // ClovisFirebaseMessagingService.kt côté Android) -- ce système web n'a
+  // rien à faire là. Or la WebView Capacitor ne fournit pas l'objet
+  // `Notification` du navigateur : la ligne plus bas y accédait sans
+  // protection, plantait silencieusement (aucun catch, appelée sans await
+  // depuis BarreDeSaisie.tsx), avant même que le message de l'utilisateur
+  // soit affiché à l'écran ou qu'une requête parte vers le backend. Sortie
+  // immédiate en natif, avant tout accès à `Notification`.
+  if (Capacitor.isNativePlatform()) return;
   if (window.localStorage.getItem(CLE_DEJA_PROPOSE)) return;
   if (Notification.permission !== "default") return; // déjà répondu avant
   window.localStorage.setItem(CLE_DEJA_PROPOSE, "true");
