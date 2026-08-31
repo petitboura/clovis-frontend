@@ -7,6 +7,7 @@ import { supabase } from "@/lib/supabase";
 import { inscrireOuConnecter } from "@/lib/authFallback";
 import { mettreAJourMonProfil } from "@/lib/api";
 import { messageErreur } from "@/lib/erreurs";
+import { EcranAutonome } from "@/components/EcranAutonome";
 import { Logo } from "@/components/Logo";
 import { Bouton } from "@/components/Bouton";
 import { Skeleton } from "@/components/Skeleton";
@@ -93,7 +94,7 @@ export default function PageInscription() {
 
   if (verificationSession) {
     return (
-      <main className="flex min-h-screen items-center justify-center px-4">
+      <EcranAutonome className="flex min-h-screen items-center justify-center px-4">
         <div className="w-full max-w-sm" aria-hidden>
           <div className="mb-8 flex items-center justify-center gap-2.5">
             <Logo taille={32} />
@@ -126,12 +127,12 @@ export default function PageInscription() {
 
           <Skeleton className="mx-auto mt-5 h-3.5 w-48 rounded" style={{ animationDelay: "440ms" }} />
         </div>
-      </main>
+      </EcranAutonome>
     );
   }
 
   return (
-    <main className="flex min-h-screen items-center justify-center px-4">
+    <EcranAutonome className="flex min-h-screen items-center justify-center px-4">
       <div className="w-full max-w-sm animate-dj-fade-up">
         <div className="mb-8 flex items-center justify-center gap-2.5">
           <Logo taille={32} />
@@ -225,6 +226,6 @@ export default function PageInscription() {
           </Link>
         </p>
       </div>
-    </main>
+    </EcranAutonome>
   );
 }

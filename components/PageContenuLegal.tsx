@@ -8,6 +8,7 @@ import { lireContenuLegal, type ContenuLegal } from "@/lib/api";
 import { Logo } from "@/components/Logo";
 import { Skeleton } from "@/components/Skeleton";
 import { BoutonRetour } from "@/components/BoutonRetour";
+import { EcranAutonome } from "@/components/EcranAutonome";
 
 // Pages publiques /cgu et /copyright (22/08, chantier "rendre la
 // bibliothèque plus sérieuse", guide Notion "Guide pour droit
@@ -36,7 +37,7 @@ export function PageContenuLegal({ cle }: { cle: "cgu" | "copyright" }) {
   }, [cle]);
 
   return (
-    <div className="min-h-screen bg-dj-fond px-4 py-10">
+    <EcranAutonome className="min-h-screen bg-dj-fond px-4 py-10">
       <div className="mx-auto flex max-w-2xl flex-col gap-6">
         <div className="flex items-center gap-2">
           <BoutonRetour onClick={() => router.back()} padding="p-1" className="-ml-1" />
@@ -92,6 +93,6 @@ export function PageContenuLegal({ cle }: { cle: "cgu" | "copyright" }) {
           </article>
         )}
       </div>
-    </div>
+    </EcranAutonome>
   );
 }

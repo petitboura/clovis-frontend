@@ -4,6 +4,7 @@ import { Suspense, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { connecter } from "@/lib/authFallback";
+import { EcranAutonome } from "@/components/EcranAutonome";
 import { Logo } from "@/components/Logo";
 import { Skeleton } from "@/components/Skeleton";
 import { Bouton } from "@/components/Bouton";
@@ -35,7 +36,7 @@ export default function PageConnexion() {
   return (
     <Suspense
       fallback={
-        <main className="flex min-h-screen items-center justify-center px-4">
+        <EcranAutonome className="flex min-h-screen items-center justify-center px-4">
           <div className="w-full max-w-sm" aria-hidden>
             <div className="mb-8 flex items-center justify-center gap-2.5">
               <Logo taille={32} />
@@ -64,7 +65,7 @@ export default function PageConnexion() {
 
             <Skeleton className="mx-auto mt-5 h-3.5 w-48 rounded" style={{ animationDelay: "360ms" }} />
           </div>
-        </main>
+        </EcranAutonome>
       }
     >
       <FormulaireConnexion />
@@ -107,7 +108,7 @@ function FormulaireConnexion() {
   }
 
   return (
-    <main className="flex min-h-screen items-center justify-center px-4">
+    <EcranAutonome className="flex min-h-screen items-center justify-center px-4">
       <div className="w-full max-w-sm animate-dj-fade-up">
         <div className="mb-8 flex items-center justify-center gap-2.5">
           <Logo taille={32} />
@@ -181,6 +182,6 @@ function FormulaireConnexion() {
           </Link>
         </p>
       </div>
-    </main>
+    </EcranAutonome>
   );
 }

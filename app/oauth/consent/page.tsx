@@ -3,6 +3,7 @@
 import { Suspense, useEffect, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { supabase } from "@/lib/supabase";
+import { EcranAutonome } from "@/components/EcranAutonome";
 import { Logo } from "@/components/Logo";
 import { Bouton } from "@/components/Bouton";
 import { Skeleton } from "@/components/Skeleton";
@@ -59,7 +60,7 @@ export default function PageConsentementOAuth() {
   return (
     <Suspense
       fallback={
-        <main className="flex min-h-screen items-center justify-center px-4">
+        <EcranAutonome className="flex min-h-screen items-center justify-center px-4">
           <div className="w-full max-w-sm" aria-hidden>
             <div className="mb-8 flex items-center justify-center gap-2.5">
               <Logo taille={32} />
@@ -75,7 +76,7 @@ export default function PageConsentementOAuth() {
               </div>
             </div>
           </div>
-        </main>
+        </EcranAutonome>
       }
     >
       <EcranConsentement />
@@ -157,7 +158,7 @@ function EcranConsentement() {
   const scopes = details?.scope?.trim() ? details.scope.trim().split(/\s+/) : [];
 
   return (
-    <main className="flex min-h-screen items-center justify-center px-4">
+    <EcranAutonome className="flex min-h-screen items-center justify-center px-4">
       <div className="w-full max-w-sm animate-dj-fade-up">
         <div className="mb-8 flex items-center justify-center gap-2.5">
           <Logo taille={32} />
@@ -267,6 +268,6 @@ function EcranConsentement() {
           )}
         </div>
       </div>
-    </main>
+    </EcranAutonome>
   );
 }
