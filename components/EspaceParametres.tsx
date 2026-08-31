@@ -19,6 +19,7 @@ import {
   type LucideIcon,
 } from "lucide-react";
 import { BoutonRetour } from "./BoutonRetour";
+import { ChampMotDePasse } from "./ChampMotDePasse";
 import { supabase } from "@/lib/supabase";
 import { appelerApiFichier, lireMonProfil, enregistrerMonProfil, supprimerMonCompte } from "@/lib/api";
 import { messageErreur, ErreurApi } from "@/lib/erreurs";
@@ -576,32 +577,20 @@ export function EspaceParametres() {
           className="flex flex-col gap-3 rounded-cgpt-carte border border-dj-bordure bg-dj-surface p-4"
         >
           <p className="text-sm text-dj-texte-muet">Change le mot de passe de ton compte.</p>
-          <div className="flex flex-col gap-1.5">
-            <label htmlFor="nouveau-mdp" className="text-sm font-medium text-dj-texte">
-              Nouveau mot de passe
-            </label>
-            <input
-              id="nouveau-mdp"
-              type="password"
-              autoComplete="new-password"
-              value={motDePasse}
-              onChange={(e) => setMotDePasse(e.target.value)}
-              className="w-full rounded-lg border border-dj-bordure bg-dj-surface-haute px-3 py-2 text-sm text-dj-texte outline-none focus:border-dj-bordure-forte"
-            />
-          </div>
-          <div className="flex flex-col gap-1.5">
-            <label htmlFor="confirmation-mdp" className="text-sm font-medium text-dj-texte">
-              Confirme le mot de passe
-            </label>
-            <input
-              id="confirmation-mdp"
-              type="password"
-              autoComplete="new-password"
-              value={confirmationMotDePasse}
-              onChange={(e) => setConfirmationMotDePasse(e.target.value)}
-              className="w-full rounded-lg border border-dj-bordure bg-dj-surface-haute px-3 py-2 text-sm text-dj-texte outline-none focus:border-dj-bordure-forte"
-            />
-          </div>
+          <ChampMotDePasse
+            id="nouveau-mdp"
+            label="Nouveau mot de passe"
+            value={motDePasse}
+            onChange={setMotDePasse}
+            autoComplete="new-password"
+          />
+          <ChampMotDePasse
+            id="confirmation-mdp"
+            label="Confirme le mot de passe"
+            value={confirmationMotDePasse}
+            onChange={setConfirmationMotDePasse}
+            autoComplete="new-password"
+          />
           <div className="flex flex-wrap items-center gap-3">
             <button
               type="submit"
