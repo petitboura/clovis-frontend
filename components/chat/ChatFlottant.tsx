@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useContext, useEffect, useRef, useState } from "react";
 import { Bird, X, Maximize2, Minimize2, MessageSquarePlus, History } from "lucide-react";
 import { appelerApi, lireOutilsChatAgent } from "@/lib/api";
 import { messageErreur } from "@/lib/erreurs";
@@ -10,7 +10,7 @@ import { MessageAffiche, nettoyerMessageHistorique } from "./BulleMessage";
 import { CompteRequisModal } from "@/components/CompteRequisModal";
 import { Logo } from "@/components/Logo";
 import { useHauteurVisuelle } from "@/lib/useHauteurVisuelle";
-import type { EtatChat } from "@/lib/contexteChat";
+import { ContexteChat, type EtatChat } from "@/lib/contexteChat";
 import { useFenetres } from "@/lib/contexteFenetres";
 import { texteAccueilSelonHeure } from "@/lib/salutations";
 import { Skeleton } from "@/components/Skeleton";
@@ -105,8 +105,14 @@ export function ChatFlottant({
   // ... brut, j'aime pas"). La fermeture change etat vers "fermee", ce qui
   // démonte immédiatement tout le panneau (voir le early return juste en
   // dessous) -- sans ce délai, aucune animation de sortie n'est possible.
-  // On retarde donc le vrai changement d'état de la durée de l'animation.
-  const [enFermeture, setEnFermeture] = useState(false);
+  // Correctif (30/08/2026, audit "fermeture brutale") : ce mécanisme
+  // vivait avant en local ici (useState + setTimeout). Remonté dans
+  // ContexteChat (lib/contexteChat.tsx) pour que useFermerChat
+  // (AppSidebar.tsx, tiroir mobile) déclenche exactement le même fondu au
+  // lieu de fermer sec -- ctxChat reste défensif (?? ) au cas où ce
+  // composant serait un jour rendu hors de ContexteChat.Provider.
+  const ctxChat = useContext(ContexteChat);
+  const enFermeture = ctxChat?.enFermeture ?? false;
   useHauteurVisuelle();
 
   // Chargé dès le montage du layout (pas seulement à l'ouverture du
@@ -142,13 +148,7 @@ export function ChatFlottant({
     };
   }, []);
 
-  function fermerAvecFondu() {
-    setEnFermeture(true);
-    window.setTimeout(() => {
-      setEtat("fermee");
-      setEnFermeture(false);
-    }, 200);
-  }
+  const fermerAvecFondu = ctxChat?.fermerAvecFondu ?? (() => setEtat("fermee"));
 
   function nouvelleConversation() {
     setCle(crypto.randomUUID());

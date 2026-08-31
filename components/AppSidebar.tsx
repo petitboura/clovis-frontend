@@ -32,6 +32,7 @@ import { CommentairesAgent } from "@/components/CommentairesAgent";
 import { BoutonInstaller } from "@/components/BoutonInstaller";
 import { BlocsMenuPlus, SECTIONS_BASE } from "@/components/EspacePlus";
 import { useFermerChat } from "@/lib/contexteChat";
+import { useFermetureAnimee } from "@/lib/useFermetureAnimee";
 
 // Nav principale de l'app (refonte "Mon espace = l'app", 15/08/2026,
 // demande Bourama : "faut changer l'affichage même de mon espace, son
@@ -436,6 +437,15 @@ export function AppSidebar({
   // sa vraie navigation classique par route).
   const { ouvrir: ouvrirFenetre } = useFenetres();
   const [ouverte, setOuverte] = useState(false);
+  // Fondu de fermeture du tiroir mobile (30/08/2026, audit "aucune
+  // transition" -- même mécanisme que le chat lui-même et les popups de
+  // sections, voir useFermetureAnimee.ts). `ouverte` reste vrai pendant
+  // tout le fondu (180ms) -- ne concerne QUE les fermetures déclenchées
+  // depuis l'intérieur du tiroir mobile lui-même (fond noir, hamburger,
+  // liens, "Plus", profil) ; le rail desktop (même state `ouverte`, voir
+  // plus bas "Replier"/md:w-14) continue de se refermer directement, pas
+  // concerné par ce fondu.
+  const { enSortie: tiroirEnSortie, demarrerFermeture: fermerTiroirMobile } = useFermetureAnimee();
   const [actionsDeplie, setActionsDeplie] = useState(false);
   const [groupeOuvertId, setGroupeOuvertId] = useState<string | null>(null);
   const [avisDeplie, setAvisDeplie] = useState(false);
@@ -556,7 +566,7 @@ export function AppSidebar({
       <Link
         href={onglet.href}
         onClick={(e) => {
-          if (mobile) setOuverte(false);
+          if (mobile) fermerTiroirMobile(() => setOuverte(false));
           // En contexteChat=true, une vraie "section" (id présent --
           // "Accueil" n'en a pas, cf. navComplete plus bas, et garde sa
           // navigation classique) s'ouvre en fenêtre flottante par-dessus
@@ -616,7 +626,7 @@ export function AppSidebar({
   // fermer, sinon la page cible se charge derrière lui et reste
   // invisible (fixed inset-0 z-[110]).
   function naviguerDepuisPlusMobile(href: string) {
-    setOuverte(false);
+    fermerTiroirMobile(() => setOuverte(false));
     if (href === "/connecter-claude") {
       ouvrirFenetre("claude");
       return;
@@ -627,10 +637,15 @@ export function AppSidebar({
 
   return (
     <>
-      {ouverte && !masquerChromeMobile && (
+      {(ouverte || tiroirEnSortie) && !masquerChromeMobile && (
         <div
-          className="fixed inset-0 z-30 bg-black/50 md:hidden"
-          onClick={() => setOuverte(false)}
+          className={
+            "fixed inset-0 z-30 bg-black/50 md:hidden" +
+            (tiroirEnSortie
+              ? " pointer-events-none opacity-0 transition-opacity duration-200 ease-cgpt-doux"
+              : " animate-dj-fade-in-rapide transition-opacity duration-200 ease-cgpt-doux")
+          }
+          onClick={() => fermerTiroirMobile(() => setOuverte(false))}
           aria-hidden="true"
         />
       )}
@@ -646,10 +661,15 @@ export function AppSidebar({
           thème (text-dj-texte). Comportement au clic volontairement
           inchangé (Bourama : garder le tiroir latéral tel quel), donc
           `ouverte`/`setOuverte` et le tiroir plus bas ne sont pas
-          touchés, seuls l'icône et le style du bouton changent. */}
+          touchés, seuls l'icône et le style du bouton changent.
+          30/08/2026, audit "aucune transition" : ouvrir reste instantané
+          (setOuverte(true) direct, l'entrée est portée par l'animation
+          CSS au montage) -- seule la fermeture passe par le fondu partagé
+          fermerTiroirMobile, pour laisser le temps à l'animation de
+          sortie de jouer avant le vrai démontage. */}
       {!masquerChromeMobile && (
         <button
-          onClick={() => setOuverte((v) => !v)}
+          onClick={() => (ouverte ? fermerTiroirMobile(() => setOuverte(false)) : setOuverte(true))}
           aria-label={ouverte ? "Replier le panneau" : "Déplier le panneau"}
           className="group fixed left-2 top-[calc(0.5rem+var(--safe-top))] z-40 flex h-8 w-8 items-center justify-center text-dj-texte md:hidden"
         >
@@ -880,12 +900,20 @@ export function AppSidebar({
       </div>
 
       {/* Panneau plein écran mobile, même logique que desktop -- masqué
-          dans l'appli native, remplacé par BarreOngletsNative.tsx. */}
-      {ouverte && !masquerChromeMobile && (
+          dans l'appli native, remplacé par BarreOngletsNative.tsx.
+          30/08/2026, audit "aucune transition" : reste monté pendant
+          tiroirEnSortie (même principe que le fond noir juste au-dessus)
+          pour laisser jouer le fondu de sortie avant le vrai démontage. */}
+      {(ouverte || tiroirEnSortie) && !masquerChromeMobile && (
         <div
-          className={`fixed inset-y-0 left-0 z-40 flex w-72 flex-col border-r border-dj-bordure bg-dj-fond px-2 py-3 md:hidden ${
-            profilDeplie ? "overflow-visible" : "overflow-y-auto overflow-x-hidden"
-          }`}
+          className={
+            `fixed inset-y-0 left-0 z-40 flex w-72 flex-col border-r border-dj-bordure bg-dj-fond px-2 py-3 md:hidden ${
+              profilDeplie ? "overflow-visible" : "overflow-y-auto overflow-x-hidden"
+            }` +
+            (tiroirEnSortie
+              ? " pointer-events-none translate-x-2 opacity-0 transition-all duration-200 ease-cgpt-doux"
+              : " animate-cgpt-entree-modal transition-all duration-200 ease-cgpt-doux")
+          }
         >
           <div className="mt-[calc(2rem+var(--safe-top))]">
             {contexteChat && (
@@ -957,7 +985,7 @@ export function AppSidebar({
                   onOuvrir={() => setGroupeOuvertId(g.id)}
                   onFermer={() => setGroupeOuvertId((v) => (v === g.id ? null : v))}
                   onBasculer={() => setGroupeOuvertId((v) => (v === g.id ? null : g.id))}
-                  onNaviguer={() => setOuverte(false)}
+                  onNaviguer={() => fermerTiroirMobile(() => setOuverte(false))}
                 />
               ) : (
                 <LienOnglet
@@ -1001,7 +1029,7 @@ export function AppSidebar({
             </button>
             {actionsDeplie && (
               <div className="pb-2">
-                <BlocsMenuPlus sectionsNavigation={SECTIONS_BASE} onNaviguer={naviguerDepuisPlusMobile} />
+                <BlocsMenuPlus sectionsNavigation={SECTIONS_BASE} onNaviguer={naviguerDepuisPlusMobile} plat />
               </div>
             )}
           </div>
@@ -1025,7 +1053,7 @@ export function AppSidebar({
                 onFermerMenu={() => setProfilDeplie(false)}
                 onNaviguerVersParametres={() => {
                   setProfilDeplie(false);
-                  setOuverte(false);
+                  fermerTiroirMobile(() => setOuverte(false));
                   router.push("/parametres");
                 }}
                 onSeDeconnecter={seDeconnecter}

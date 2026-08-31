@@ -7,7 +7,7 @@ import { ChatFlottant } from "@/components/chat/ChatFlottant";
 import { FenetresSections } from "@/components/chat/FenetresSections";
 import { CatalogueClovis } from "@/components/CatalogueClovis";
 import { PaletteCommandes } from "@/components/PaletteCommandes";
-import { ContexteChat, type EtatChat } from "@/lib/contexteChat";
+import { ContexteChat, useFournirContexteChat } from "@/lib/contexteChat";
 import { ContexteCatalogue } from "@/lib/contexteCatalogue";
 import { ContexteFenetres, useFournirFenetres } from "@/lib/contexteFenetres";
 import { BarreOngletsNative } from "@/components/mobile/BarreOngletsNative";
@@ -38,7 +38,12 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   // Remonté ici depuis ChatFlottant.tsx (16/08/2026) pour pouvoir être
   // ouvert depuis d'autres écrans -- voir lib/contexteChat.tsx et le
   // bouton "Ouvrir le chat" de l'écran d'accueil.
-  const [etatChat, setEtatChat] = useState<EtatChat>("fermee");
+  // 30/08/2026, audit "fermeture brutale" : etat/setEtat ET le fondu de
+  // fermeture (enFermeture/fermerAvecFondu, avant local à ChatFlottant.tsx)
+  // viennent maintenant tous de ce même fournisseur -- voir
+  // lib/contexteChat.tsx.
+  const contexteChatValeur = useFournirContexteChat();
+  const { etat: etatChat, setEtat: setEtatChat } = contexteChatValeur;
   // Ref pont entre ChatFlottant (propriétaire de nouvelleConversation) et
   // PaletteCommandes (composant frère, 22/08/2026, chantier "grandes
   // applis") -- voir les deux fichiers.
@@ -76,7 +81,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   }, []);
 
   return (
-    <ContexteChat.Provider value={{ etat: etatChat, setEtat: setEtatChat }}>
+    <ContexteChat.Provider value={contexteChatValeur}>
     <ContexteCatalogue.Provider value={{ ouvrir: () => setCatalogueOuvert(true) }}>
       <ContexteFenetres.Provider value={fenetres}>
         <div className="flex h-dvh">

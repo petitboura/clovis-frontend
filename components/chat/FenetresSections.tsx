@@ -1,9 +1,12 @@
 "use client";
 
 import { useRef } from "react";
-import { X } from "lucide-react";
+import { useRouter } from "next/navigation";
+import { X, ExternalLink } from "lucide-react";
 import { ONGLETS, type OngletId } from "@/components/AppSidebar";
 import { useFenetres, TAILLE_MIN } from "@/lib/contexteFenetres";
+import { useFermerChat } from "@/lib/contexteChat";
+import { useFermetureAnimee } from "@/lib/useFermetureAnimee";
 import { MesCodes } from "@/components/MesCodes";
 import { EspaceEntrerCode } from "@/components/EspaceEntrerCode";
 import { MesComportements } from "@/components/MesComportements";
@@ -35,10 +38,13 @@ const CONTENU_PAR_ONGLET: Record<OngletId, React.ReactNode> = {
   "controle-session": <EspaceConcentration />,
 };
 
-const LABEL_PAR_ONGLET: Record<OngletId, { label: string; Icone: (typeof ONGLETS)[number]["Icone"] }> =
-  Object.fromEntries(ONGLETS.map((o) => [o.id, { label: o.label, Icone: o.Icone }])) as Record<
+// Reprend label, icône ET route réelle de chaque section (href, déjà
+// présent dans ONGLETS) -- href ajouté le 30/08/2026 (audit navigation)
+// pour le bouton "ouvrir en vraie page" de l'en-tête, voir plus bas.
+const INFOS_PAR_ONGLET: Record<OngletId, { label: string; href: string; Icone: (typeof ONGLETS)[number]["Icone"] }> =
+  Object.fromEntries(ONGLETS.map((o) => [o.id, { label: o.label, href: o.href, Icone: o.Icone }])) as Record<
     OngletId,
-    { label: string; Icone: (typeof ONGLETS)[number]["Icone"] }
+    { label: string; href: string; Icone: (typeof ONGLETS)[number]["Icone"] }
   >;
 
 // Les 8 poignées de redimensionnement (22/08/2026, demande Bourama :
@@ -74,8 +80,18 @@ function FenetreSection({
   z: number;
 }) {
   const { fermer, monterAuPremierPlan, deplacer, redimensionner } = useFenetres();
+  const router = useRouter();
+  const fermerChat = useFermerChat();
   const glissement = useRef<{ x: number; y: number; fx: number; fy: number } | null>(null);
-  const { label, Icone } = LABEL_PAR_ONGLET[ongletId];
+  const { label, href, Icone } = INFOS_PAR_ONGLET[ongletId];
+  // Fondu d'apparition/disparition (30/08/2026, audit "aucune transition"
+  // -- même mécanisme que le chat lui-même, voir useFermetureAnimee.ts et
+  // fermerAvecFondu dans lib/contexteChat.tsx). Ne couvre que la fermeture
+  // via le propre bouton Fermer de CETTE fenêtre -- "fermer toutes" (clic
+  // dans le chat, voir ChatFlottant.tsx) reste un vidage immédiat de tout
+  // le tableau de fenêtres, comportement distinct non concerné par cet
+  // audit.
+  const { enSortie, demarrerFermeture } = useFermetureAnimee();
 
   // Correctif (26/08/2026, retour "pas déplaçable à la main sur mobile") :
   // onMouseDown/mousemove/mouseup ne réagissent pas de façon fiable au
@@ -159,11 +175,34 @@ function FenetreSection({
     window.addEventListener("pointercancel", onUp);
   }
 
+  // Bouton "ouvrir en vraie page" (30/08/2026, audit navigation) : ferme
+  // cette fenêtre (avec fondu, comme le bouton Fermer) ET le chat plein
+  // écran qui vit en dessous (z-[110], voir ChatFlottant.tsx) avant de
+  // naviguer -- sinon la vraie page se charge derrière le chat toujours
+  // ouvert et reste invisible. Même raisonnement que
+  // naviguerDepuisPlusMobile dans AppSidebar.tsx, pas limité au mobile :
+  // le chat plein écran recouvre tout l'écran (fixed inset-0) sur
+  // desktop aussi.
+  function ouvrirVraiePage() {
+    demarrerFermeture(() => fermer(cle));
+    fermerChat();
+    router.push(href);
+  }
+
   return (
     <div
       onPointerDownCapture={() => monterAuPremierPlan(cle)}
       style={{ left: x, top: y, width, height, zIndex: 120 + z }}
-      className="fixed flex flex-col overflow-hidden rounded-cgpt-carte border border-dj-bordure bg-dj-surface shadow-[0_16px_60px_rgba(0,0,0,0.5)]"
+      className={
+        "fixed flex flex-col overflow-hidden rounded-cgpt-carte border border-dj-bordure bg-dj-surface shadow-[0_16px_60px_rgba(0,0,0,0.5)]" +
+        // Fondu d'apparition (mount, reprend l'animation standard des
+        // modals du projet) et de disparition (juste avant le vrai
+        // retrait du tableau de fenêtres, voir demarrerFermeture
+        // ci-dessus) -- demande Bourama (30/08/2026) : "aucune transition".
+        (enSortie
+          ? " pointer-events-none scale-95 opacity-0 transition-all duration-200 ease-cgpt-doux"
+          : " animate-cgpt-entree-modal transition-all duration-200 ease-cgpt-doux")
+      }
     >
       <div
         onPointerDown={demarrerGlissement}
@@ -176,7 +215,28 @@ function FenetreSection({
         <Icone size={15} className="flex-shrink-0 text-dj-texte-muet" />
         <span className="flex-1 truncate text-sm font-medium text-dj-texte">{label}</span>
         <button
-          onClick={() => fermer(cle)}
+          onClick={ouvrirVraiePage}
+          // Correctif (30/08/2026, audit) : stopPropagation sur
+          // onPointerDown, même raison que le bouton Fermer juste en
+          // dessous -- sans ça, l'en-tête (onPointerDown plus haut) capte
+          // l'événement avant que le clic ne s'exécute proprement.
+          onPointerDown={(e) => e.stopPropagation()}
+          title="Ouvrir en vraie page"
+          className="flex h-6 w-6 flex-shrink-0 items-center justify-center rounded-md text-dj-texte-muet transition-colors hover:bg-dj-surface hover:text-dj-texte"
+        >
+          <ExternalLink size={13} />
+        </button>
+        <button
+          onClick={() => demarrerFermeture(() => fermer(cle))}
+          // Correctif (30/08/2026, audit "bouton Fermer capté par le
+          // glissement") : l'en-tête a onPointerDown pour le glissement
+          // (demarrerGlissement ci-dessus) -- sans stopPropagation ici, un
+          // clic sur ce bouton fait remonter l'événement pointerdown
+          // jusqu'à l'en-tête AVANT que onClick ne s'exécute, qui appelle
+          // setPointerCapture dessus et perturbe le clic. Même correctif
+          // déjà en place sur les poignées de redimensionnement
+          // (demarrerRedimensionnement, e.stopPropagation() en premier).
+          onPointerDown={(e) => e.stopPropagation()}
           title="Fermer"
           className="flex h-6 w-6 flex-shrink-0 items-center justify-center rounded-md text-dj-texte-muet transition-colors hover:bg-dj-surface hover:text-dj-texte"
         >
@@ -184,7 +244,11 @@ function FenetreSection({
         </button>
       </div>
       <div className="min-h-0 flex-1 overflow-y-auto p-4">
-        <div className="mx-auto w-full max-w-xl">{CONTENU_PAR_ONGLET[ongletId]}</div>
+        {/* Correctif (30/08/2026, audit "contenu bridé") : max-w-xl
+            retiré -- le contenu utilise maintenant toute la largeur
+            réelle de la fenêtre, déjà bornée par le redimensionnement
+            (TAILLE_MIN/largeur d'écran, voir contexteFenetres.tsx). */}
+        <div className="mx-auto w-full">{CONTENU_PAR_ONGLET[ongletId]}</div>
       </div>
       {POIGNEES.map((p) => (
         <div

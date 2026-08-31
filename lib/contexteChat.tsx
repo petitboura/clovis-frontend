@@ -1,12 +1,23 @@
 "use client";
 
-import { createContext, useContext } from "react";
+import { createContext, useCallback, useContext, useState } from "react";
 
 export type EtatChat = "fermee" | "mini" | "plein_ecran";
 
 type ContexteChatValeur = {
   etat: EtatChat;
   setEtat: (etat: EtatChat) => void;
+  // Fondu de fermeture (18/08/2026, demande Bourama : "le popup disparaît
+  // ... brut, j'aime pas"). Remonté ici depuis ChatFlottant.tsx le
+  // 30/08/2026 (audit "fermeture brutale du chat depuis le tiroir mobile")
+  // -- AVANT, cette logique vivait uniquement en local dans ChatFlottant
+  // (son propre bouton Fermer), et useFermerChat ci-dessous appelait
+  // directement setEtat("fermee") sans fondu : deux comportements
+  // différents pour fermer le même chat selon le déclencheur. Maintenant
+  // partagée ici, les deux (bouton Fermer du chat ET useFermerChat)
+  // passent par exactement le même mécanisme.
+  enFermeture: boolean;
+  fermerAvecFondu: () => void;
 };
 
 // L'état du chat flottant (fermee/mini/plein_ecran) vivait auparavant
@@ -15,6 +26,32 @@ type ContexteChatValeur = {
 // chat" sur l'écran d'accueil, 16/08/2026) -- ChatFlottant devient un
 // composant contrôlé (etat + setEtat reçus en props).
 export const ContexteChat = createContext<ContexteChatValeur | null>(null);
+
+// Durée du fondu de fermeture -- doit rester synchronisée avec la
+// transition CSS (duration-200) appliquée dans ChatFlottant.tsx sur les
+// classes de sortie (opacity-0 scale-95).
+const DUREE_FERMETURE_MS = 200;
+
+// Fournisseur de la valeur de contexte, monté une seule fois dans
+// AppShell.tsx (même esprit que useFournirFenetres dans
+// contexteFenetres.tsx) -- centralise l'état ET le mécanisme de fondu de
+// fermeture, pour que tout composant sous ContexteChat.Provider (chat
+// lui-même, tiroir mobile, popups de sections) ferme le chat exactement
+// de la même façon.
+export function useFournirContexteChat(): ContexteChatValeur {
+  const [etat, setEtat] = useState<EtatChat>("fermee");
+  const [enFermeture, setEnFermeture] = useState(false);
+
+  const fermerAvecFondu = useCallback(() => {
+    setEnFermeture(true);
+    window.setTimeout(() => {
+      setEtat("fermee");
+      setEnFermeture(false);
+    }, DUREE_FERMETURE_MS);
+  }, []);
+
+  return { etat, setEtat, enFermeture, fermerAvecFondu };
+}
 
 export function useOuvrirChat() {
   const ctx = useContext(ContexteChat);
@@ -35,11 +72,17 @@ export function useOuvrirChat() {
 // d'équivalent OngletId, donc pas de fenêtre flottante possible via
 // ouvrirFenetre) doivent fermer le chat avant de naviguer, sinon la
 // page cible se charge derrière le chat toujours ouvert (fixed inset-0
-// z-[110]) et reste invisible. Ferme directement (pas de fondu, cette
-// fonction vit hors de ChatFlottant qui gère seul son animation de
-// sortie via fermerAvecFondu) -- acceptable ici puisque la navigation
-// qui suit fait de toute façon disparaître tout le contexte visuel.
+// z-[110]) et reste invisible.
+//
+// Correctif (30/08/2026, audit "fermeture brutale") : AVANT, cette
+// fonction fermait sec (setEtat("fermee") direct, sans fondu -- seul le
+// bouton Fermer de ChatFlottant avait une animation de sortie). Utilise
+// maintenant le même fermerAvecFondu partagé (voir useFournirContexteChat
+// ci-dessus) : le chat s'estompe pendant que la navigation qui suit fait
+// de toute façon disparaître tout le contexte visuel, au lieu de
+// disparaître instantanément avant même que la page cible n'ait fini de
+// se charger derrière lui.
 export function useFermerChat() {
   const ctx = useContext(ContexteChat);
-  return () => ctx?.setEtat("fermee");
+  return () => ctx?.fermerAvecFondu();
 }

@@ -59,7 +59,41 @@ export const SECTIONS_BASE: { icone: LucideIcon; titre: string; sousTitre?: stri
   { icone: Bell, titre: "Rappels", sousTitre: "Notifications programmées", href: "/rappels" },
 ];
 
-function LigneSection({ icone: Icone, titre, sousTitre, onClick }: { icone: LucideIcon; titre: string; sousTitre?: string; onClick: () => void }) {
+function LigneSection({
+  icone: Icone,
+  titre,
+  sousTitre,
+  onClick,
+  plat = false,
+}: {
+  icone: LucideIcon;
+  titre: string;
+  sousTitre?: string;
+  onClick: () => void;
+  // 30/08/2026, audit "bouton Plus mal aligné" (tiroir mobile du chat
+  // plein écran, AppSidebar.tsx) : ce tiroir a déjà son propre style de
+  // ligne (LienOnglet, même composant) -- le style carte pensé pour le
+  // menu hamburger natif/web (bordure/fond/coins arrondis, sous-titre,
+  // chevron) y fait doublon visuel. `plat` retire tout ça et aligne la
+  // ligne comme LienOnglet (même hauteur h-10 w-10 pour l'icône, mêmes
+  // marges px-2 py-2, pas de sous-titre ni de chevron). Uniquement activé
+  // par ce troisième appelant (AppSidebar.tsx) -- MenuHamburgerNatif.tsx
+  // et MenuHamburgerWeb.tsx gardent le style carte par défaut.
+  plat?: boolean;
+}) {
+  if (plat) {
+    return (
+      <button
+        onClick={onClick}
+        className="group mt-2 flex w-full items-center gap-2 rounded-xl px-2 py-2 text-left text-dj-texte-muet transition-colors hover:bg-dj-surface-haute hover:text-dj-texte"
+      >
+        <span className="flex h-10 w-10 flex-shrink-0 items-center justify-center">
+          <Icone size={18} />
+        </span>
+        <span className="text-sm">{titre}</span>
+      </button>
+    );
+  }
   return (
     <button
       onClick={onClick}
@@ -101,9 +135,16 @@ const AGENT_ID = "clovis";
 export function BlocsMenuPlus({
   sectionsNavigation,
   onNaviguer,
+  plat = false,
 }: {
   sectionsNavigation: typeof SECTIONS_BASE;
   onNaviguer?: (href: string) => void;
+  // 30/08/2026, audit "bouton Plus mal aligné" -- voir le commentaire sur
+  // LigneSection ci-dessus pour le détail. Passé tel quel à chaque ligne
+  // rendue ici (navigation ET actions Partager/Avis/Pourquoi Clovis, pour
+  // que le tiroir mobile du chat soit uniformément plat, pas seulement sa
+  // première liste).
+  plat?: boolean;
 }) {
   const router = useRouter();
   const [copie, setCopie] = useState(false);
@@ -135,52 +176,42 @@ export function BlocsMenuPlus({
     }
   }
 
+  const lignesNavigation = sectionsNavigation.map((s) => (
+    <LigneSection key={s.href} icone={s.icone} titre={s.titre} sousTitre={s.sousTitre} onClick={() => naviguer(s.href)} plat={plat} />
+  ));
+
+  const lignesActions = (
+    <>
+      <LigneSection icone={Share2} titre={copie ? "Copié !" : "Partager"} onClick={partager} plat={plat} />
+      <LigneSection icone={Star} titre="Avis sur Clovis" onClick={() => setAvisDeplie((v) => !v)} plat={plat} />
+      {avisDeplie && (
+        <div className="flex flex-col gap-4 p-4">
+          <NoteAgent agentId={AGENT_ID} />
+          <CommentairesAgent agentId={AGENT_ID} />
+        </div>
+      )}
+      <LigneSection icone={Compass} titre="Pourquoi Clovis ?" onClick={ouvrirCatalogue} plat={plat} />
+    </>
+  );
+
+  if (plat) {
+    return (
+      <div className="flex flex-col">
+        {lignesNavigation}
+        <div className="my-2 h-px w-full bg-dj-bordure" />
+        {lignesActions}
+      </div>
+    );
+  }
+
   return (
     <div className="flex flex-col gap-4">
       <div className="overflow-hidden rounded-cgpt-carte border border-dj-bordure bg-dj-surface">
-        <div className="divide-y divide-dj-bordure">
-          {sectionsNavigation.map((s) => (
-            <LigneSection key={s.href} icone={s.icone} titre={s.titre} sousTitre={s.sousTitre} onClick={() => naviguer(s.href)} />
-          ))}
-        </div>
+        <div className="divide-y divide-dj-bordure">{lignesNavigation}</div>
       </div>
 
       <div className="overflow-hidden rounded-cgpt-carte border border-dj-bordure bg-dj-surface">
-        <div className="divide-y divide-dj-bordure">
-          <button
-            onClick={partager}
-            className="flex w-full items-center gap-3 px-4 py-3 text-left transition-colors hover:bg-dj-surface-haute"
-          >
-            <span className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-full bg-dj-accent-1-conteneur">
-              <Share2 size={17} className="text-dj-accent-1-texte" />
-            </span>
-            <span className="flex-1 text-sm text-dj-texte">{copie ? "Copié !" : "Partager"}</span>
-          </button>
-          <button
-            onClick={() => setAvisDeplie((v) => !v)}
-            className="flex w-full items-center gap-3 px-4 py-3 text-left transition-colors hover:bg-dj-surface-haute"
-          >
-            <span className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-full bg-dj-accent-1-conteneur">
-              <Star size={17} className="text-dj-accent-1-texte" />
-            </span>
-            <span className="flex-1 text-sm text-dj-texte">Avis sur Clovis</span>
-          </button>
-          {avisDeplie && (
-            <div className="flex flex-col gap-4 p-4">
-              <NoteAgent agentId={AGENT_ID} />
-              <CommentairesAgent agentId={AGENT_ID} />
-            </div>
-          )}
-          <button
-            onClick={ouvrirCatalogue}
-            className="flex w-full items-center gap-3 px-4 py-3 text-left transition-colors hover:bg-dj-surface-haute"
-          >
-            <span className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-full bg-dj-accent-1-conteneur">
-              <Compass size={17} className="text-dj-accent-1-texte" />
-            </span>
-            <span className="flex-1 text-sm text-dj-texte">Pourquoi Clovis ?</span>
-          </button>
-        </div>
+        <div className="divide-y divide-dj-bordure">{lignesActions}</div>
       </div>
     </div>
   );
