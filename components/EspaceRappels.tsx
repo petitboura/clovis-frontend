@@ -150,8 +150,51 @@ export function EspaceRappels() {
 
   if (natif === null || chargementPermission) {
     return (
-      <div className="flex flex-col gap-3 p-4">
-        <Skeleton className="h-24 rounded-cgpt-carte" />
+      <div className="flex flex-col gap-4 p-4" aria-hidden>
+        <div>
+          <Skeleton className="h-4 w-20 rounded" />
+          <Skeleton className="mt-1 h-3 w-full rounded" style={{ animationDelay: "60ms" }} />
+          <Skeleton className="h-3 w-1/2 rounded" style={{ animationDelay: "120ms" }} />
+        </div>
+
+        <div className="flex flex-col gap-3 rounded-cgpt-carte border border-dj-bordure bg-dj-surface p-4">
+          <div className="flex items-center gap-2">
+            <Skeleton className="h-4 w-4 flex-shrink-0 rounded" style={{ animationDelay: "180ms" }} />
+            <Skeleton className="h-3.5 w-28 rounded" style={{ animationDelay: "200ms" }} />
+          </div>
+          <Skeleton className="h-9 rounded-lg" style={{ animationDelay: "220ms" }} />
+          <Skeleton className="h-9 rounded-lg" style={{ animationDelay: "240ms" }} />
+          <Skeleton className="h-9 rounded-lg" style={{ animationDelay: "260ms" }} />
+          <div className="flex gap-2">
+            <Skeleton className="h-6 w-32 rounded-lg" style={{ animationDelay: "280ms" }} />
+            <Skeleton className="h-6 w-28 rounded-lg" style={{ animationDelay: "300ms" }} />
+          </div>
+        </div>
+
+        <div className="flex flex-col gap-3 rounded-cgpt-carte border border-dj-bordure bg-dj-surface p-4">
+          <div className="flex items-center gap-2">
+            <Skeleton className="h-4 w-4 flex-shrink-0 rounded" style={{ animationDelay: "340ms" }} />
+            <Skeleton className="h-3.5 w-40 rounded" style={{ animationDelay: "360ms" }} />
+          </div>
+          <Skeleton className="h-9 rounded-lg" style={{ animationDelay: "380ms" }} />
+          <div className="flex gap-2">
+            <Skeleton className="h-9 flex-1 rounded-lg" style={{ animationDelay: "400ms" }} />
+            <Skeleton className="h-9 flex-1 rounded-lg" style={{ animationDelay: "420ms" }} />
+          </div>
+          <Skeleton className="h-6 w-24 rounded-lg" style={{ animationDelay: "440ms" }} />
+        </div>
+
+        <div className="flex flex-col gap-3 rounded-cgpt-carte border border-dj-bordure bg-dj-surface p-4">
+          <div className="flex items-center gap-2">
+            <Skeleton className="h-4 w-4 flex-shrink-0 rounded" style={{ animationDelay: "500ms" }} />
+            <Skeleton className="h-3.5 w-28 rounded" style={{ animationDelay: "520ms" }} />
+          </div>
+          <Skeleton className="h-3 w-full rounded" style={{ animationDelay: "540ms" }} />
+          <Skeleton className="h-3 w-2/3 rounded" style={{ animationDelay: "560ms" }} />
+          <Skeleton className="h-9 rounded-lg" style={{ animationDelay: "580ms" }} />
+          <Skeleton className="h-9 rounded-lg" style={{ animationDelay: "600ms" }} />
+          <Skeleton className="h-6 w-20 rounded-lg" style={{ animationDelay: "620ms" }} />
+        </div>
       </div>
     );
   }
