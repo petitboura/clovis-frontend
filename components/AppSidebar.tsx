@@ -33,6 +33,7 @@ import { BoutonInstaller } from "@/components/BoutonInstaller";
 import { BlocsMenuPlus, SECTIONS_BASE } from "@/components/EspacePlus";
 import { useFermerChat } from "@/lib/contexteChat";
 import { useFermetureAnimee } from "@/lib/useFermetureAnimee";
+import { useFermetureAuRetour } from "@/lib/contexteRetour";
 
 // Nav principale de l'app (refonte "Mon espace = l'app", 15/08/2026,
 // demande Bourama : "faut changer l'affichage même de mon espace, son
@@ -457,6 +458,21 @@ export function AppSidebar({
   const [profilDeplie, setProfilDeplie] = useState(false);
   const asideRef = useRef<HTMLDivElement>(null);
   const actionsRef = useRef<HTMLDivElement>(null);
+
+  // 31/08/2026, demande Bourama : le bouton retour (natif + web mobile)
+  // doit fermer ces sous-menus/tiroir un par un au lieu de fermer toute
+  // l'appli -- voir lib/contexteRetour.tsx. Le tiroir mobile n'est
+  // enregistré que pour l'instance concernée (contexteChat=true,
+  // masquerChromeMobile=false) : dans l'autre instance (nav principale),
+  // `ouverte` pilote uniquement la largeur du rail desktop, pas un
+  // panneau à fermer au retour -- voir le commentaire sur
+  // tiroirEnSortie plus haut.
+  useFermetureAuRetour(ouverte && !masquerChromeMobile, () => fermerTiroirMobile(() => setOuverte(false)));
+  useFermetureAuRetour(actionsDeplie, () => setActionsDeplie(false));
+  useFermetureAuRetour(groupeOuvertId !== null, () => setGroupeOuvertId(null));
+  useFermetureAuRetour(historiqueDeplie, () => setHistoriqueDeplie(false));
+  useFermetureAuRetour(profilDeplie, () => setProfilDeplie(false));
+  useFermetureAuRetour(avisDeplie, () => setAvisDeplie(false));
 
   // Photo + nom affichés en bas de la sidebar (22/08/2026, demande
   // Bourama : "la photo de profil s'affiche en bas dans la sidebar et

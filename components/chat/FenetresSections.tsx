@@ -1,12 +1,13 @@
 "use client";
 
-import { useRef } from "react";
+import { useEffect, useRef, useContext } from "react";
 import { useRouter } from "next/navigation";
 import { X, ExternalLink } from "lucide-react";
 import { ONGLETS, type OngletId } from "@/components/AppSidebar";
 import { useFenetres, TAILLE_MIN } from "@/lib/contexteFenetres";
 import { useFermerChat } from "@/lib/contexteChat";
 import { useFermetureAnimee } from "@/lib/useFermetureAnimee";
+import { ContexteRetour } from "@/lib/contexteRetour";
 import { MesCodes } from "@/components/MesCodes";
 import { EspaceEntrerCode } from "@/components/EspaceEntrerCode";
 import { MesComportements } from "@/components/MesComportements";
@@ -92,6 +93,35 @@ function FenetreSection({
   // le tableau de fenêtres, comportement distinct non concerné par cet
   // audit.
   const { enSortie, demarrerFermeture } = useFermetureAnimee();
+  // 31/08/2026, demande Bourama : le bouton retour (natif + web mobile)
+  // doit fermer la popup au-dessus au lieu de fermer toute l'appli --
+  // voir lib/contexteRetour.tsx. Enregistrement au montage/démontage
+  // (première fois qu'elle s'ouvre/quand elle se ferme) ; remonterAuSommet
+  // (second effet plus bas, dépendant de `z`) la replace au sommet de la
+  // pile de retour à chaque fois qu'elle est remise au premier plan, sans
+  // quoi le retour fermerait toujours la première fenêtre ouverte plutôt
+  // que celle visuellement au-dessus.
+  const ctxRetour = useContext(ContexteRetour);
+  const fermerCettePopup = () => demarrerFermeture(() => fermer(cle));
+
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  useEffect(() => {
+    if (!ctxRetour) return;
+    ctxRetour.empiler(cle, fermerCettePopup);
+    return () => ctxRetour.depiler(cle);
+    // Montage/démontage uniquement (cle est stable pour la durée de vie
+    // de cette fenêtre) -- volontairement pas de dépendance sur
+    // fermerCettePopup, qui change de référence à chaque rendu.
+  }, [ctxRetour, cle]);
+
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  useEffect(() => {
+    if (!ctxRetour) return;
+    // Ne touche PAS l'historique (contrairement à empiler ci-dessus) --
+    // se contente de replacer cette fenêtre au sommet de la pile de
+    // retour à chaque fois qu'elle est remise au premier plan (z change).
+    ctxRetour.remonterAuSommet(cle, fermerCettePopup);
+  }, [ctxRetour, cle, z]);
 
   // Correctif (26/08/2026, retour "pas déplaçable à la main sur mobile") :
   // onMouseDown/mousemove/mouseup ne réagissent pas de façon fiable au
@@ -184,7 +214,7 @@ function FenetreSection({
   // le chat plein écran recouvre tout l'écran (fixed inset-0) sur
   // desktop aussi.
   function ouvrirVraiePage() {
-    demarrerFermeture(() => fermer(cle));
+    fermerCettePopup();
     fermerChat();
     router.push(href);
   }
@@ -227,7 +257,7 @@ function FenetreSection({
           <ExternalLink size={13} />
         </button>
         <button
-          onClick={() => demarrerFermeture(() => fermer(cle))}
+          onClick={fermerCettePopup}
           // Correctif (30/08/2026, audit "bouton Fermer capté par le
           // glissement") : l'en-tête a onPointerDown pour le glissement
           // (demarrerGlissement ci-dessus) -- sans stopPropagation ici, un

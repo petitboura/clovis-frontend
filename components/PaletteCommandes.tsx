@@ -19,6 +19,7 @@ import { ONGLETS } from "@/components/AppSidebar";
 import { useTheme, type ChoixTheme } from "@/lib/useTheme";
 import { supabase } from "@/lib/supabase";
 import type { EtatChat } from "@/lib/contexteChat";
+import { useFermetureAuRetour } from "@/lib/contexteRetour";
 
 // Palette de commandes (Cmd+K / Ctrl+K), 22/08/2026, demande Bourama --
 // un des chantiers "grandes applis" (avec fil d'Ariane et historique dans
@@ -63,6 +64,11 @@ export function PaletteCommandes({
   const [requete, setRequete] = useState("");
   const [surligne, setSurligne] = useState(0);
   const inputRef = useRef<HTMLInputElement>(null);
+
+  // 31/08/2026, demande Bourama : le bouton retour (natif + web mobile)
+  // doit fermer la palette au lieu de fermer toute l'appli -- voir
+  // lib/contexteRetour.tsx.
+  useFermetureAuRetour(ouverte, () => setOuverte(false));
 
   useEffect(() => {
     function surTouche(e: KeyboardEvent) {

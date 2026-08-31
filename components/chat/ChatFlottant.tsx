@@ -12,6 +12,7 @@ import { Logo } from "@/components/Logo";
 import { useHauteurVisuelle } from "@/lib/useHauteurVisuelle";
 import { ContexteChat, type EtatChat } from "@/lib/contexteChat";
 import { useFenetres } from "@/lib/contexteFenetres";
+import { useFermetureAuRetour } from "@/lib/contexteRetour";
 import { texteAccueilSelonHeure } from "@/lib/salutations";
 import { Skeleton } from "@/components/Skeleton";
 
@@ -163,6 +164,22 @@ export function ChatFlottant({
   useEffect(() => {
     if (nouvelleConversationRef) nouvelleConversationRef.current = nouvelleConversation;
   });
+
+  // 31/08/2026, demande Bourama : le bouton retour (natif + web mobile)
+  // doit d'abord repasser le chat plein écran en mini, PUIS seulement au
+  // retour suivant le fermer complètement -- jamais fermer l'appli
+  // directement. Deux calques distincts et mutuellement exclusifs (l'un
+  // des deux `actif` est toujours faux selon `etat`), voir
+  // lib/contexteRetour.tsx. Placés avant le early return de la bulle
+  // fermée, même raison que l'effet juste au-dessus (ordre des hooks
+  // stable peu importe `etat`).
+  useFermetureAuRetour(etat === "plein_ecran", () => setEtat("mini"));
+  useFermetureAuRetour(etat === "mini", fermerAvecFondu);
+  // Sous-menu historique (mode mini, dropdown dans l'en-tête -- voir plus
+  // bas) et modale "compte requis" : mêmes calques de retour que le reste
+  // de l'appli.
+  useFermetureAuRetour(historiqueOuvert, () => setHistoriqueOuvert(false));
+  useFermetureAuRetour(compteRequis, () => setCompteRequis(false));
 
   async function selectionnerConversation(fil: FilConversation) {
     if (!agent) return;
