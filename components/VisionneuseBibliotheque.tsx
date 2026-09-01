@@ -1,10 +1,25 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import dynamic from "next/dynamic";
 import { X, Download, ExternalLink, Loader2, File as IconFichier, Copy, Check, FolderOpen } from "lucide-react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import { LinkPreview } from "./chat/LinkPreview";
+
+// Chargé dynamiquement, ssr:false (01/09) : ce fichier-ci est importé
+// STATIQUEMENT par EspaceBibliotheque.tsx / BibliothequePublique.tsx
+// (donc rendu au SSR), alors que react-pdf/pdfjs-dist (utilisé par
+// VisionneurPdf) accède à des API navigateur au chargement -- même
+// raison que pour le viewer PDF du chat (voir ChatIA.tsx).
+const VisionneurPdf = dynamic(() => import("./VisionneurPdf").then((m) => m.VisionneurPdf), {
+  ssr: false,
+  loading: () => (
+    <div className="flex h-[75vh] items-center justify-center">
+      <Loader2 size={20} className="animate-spin text-dj-texte-muet" />
+    </div>
+  ),
+});
 
 // Types Word/Excel/PowerPoint (anciens .doc/.xls/.ppt + .docx/.xlsx/.pptx)
 // -- 25/08, Bourama : "plusieurs types de fichier n'ont pas d'aperçu".
@@ -351,7 +366,16 @@ export function VisionneuseBibliotheque({
         </div>
 
         <div className="min-h-0 flex-1 overflow-auto">
-          {estPdf && <iframe src={fichier.url_publique} className="h-[75vh] w-full" title={titre} />}
+          {estPdf && (
+            // 01/09, demande Bourama : l'ancien <iframe> déléguait au
+            // lecteur PDF natif du navigateur -- absent sur mobile web
+            // et en app mobile native, aperçu vide/cassé. VisionneurPdf
+            // (react-pdf, canvas) marche pareil partout, avec swipe et
+            // saut de page direct.
+            <div className="h-[75vh]">
+              <VisionneurPdf url={fichier.url_publique} page={1} />
+            </div>
+          )}
 
           {estImage && (
             // eslint-disable-next-line @next/next/no-img-element -- source dynamique (bucket Supabase), pas un asset local

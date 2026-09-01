@@ -1,17 +1,13 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import { Document, Page, pdfjs } from "react-pdf";
-import { X, ChevronLeft, ChevronRight, ExternalLink, Download } from "lucide-react";
-import "react-pdf/dist/Page/AnnotationLayer.css";
-import "react-pdf/dist/Page/TextLayer.css";
+import { X, ExternalLink } from "lucide-react";
 import { LinkPreview } from "./LinkPreview";
-import { Skeleton } from "@/components/Skeleton";
+import { VisionneurPdf } from "@/components/VisionneurPdf";
 import {
   TYPES_MIME_OFFICE,
   estTypeTexteLisible,
   estFichierMarkdown,
-  telecharger,
   ContenuTexte,
   ContenuMarkdown,
   ContenuOffice,
@@ -44,78 +40,15 @@ import {
 // explicite pour sortir de l'app si l'utilisateur le veut vraiment --
 // même principe déjà en place pour les liens classiques du chat, jamais
 // de sortie automatique au simple clic.
-pdfjs.GlobalWorkerOptions.workerSrc = "/pdf-worker/pdf.worker.min.mjs";
+//
+// EXTRACTION 01/09 (demande Bourama : swipe + saut de page direct sur
+// le PDF, à la fois ici et dans la bibliothèque) : VisionneurPdf n'est
+// plus défini ici -- déplacé et enrichi dans components/VisionneurPdf.tsx
+// (partagé avec VisionneuseBibliotheque.tsx). Ce fichier reste chargé en
+// dynamic({ssr:false}) depuis ChatIA.tsx, donc l'import direct ci-dessous
+// est sans risque pour le SSR.
 
 import { DetailOuverturePosition, EVENEMENT_OUVRIR_POSITION } from "./visionneurPositionEvenement";
-
-function VisionneurPdf({ url, page }: { url: string; page: number }) {
-  const [nbPages, setNbPages] = useState<number | null>(null);
-  const [pageCourante, setPageCourante] = useState(page);
-  const [erreur, setErreur] = useState(false);
-
-  return (
-    <div className="flex h-full flex-col">
-      <div className="flex-1 overflow-auto p-3">
-        {erreur ? (
-          <div className="flex h-full flex-col items-center justify-center gap-2 text-center text-dj-texte-muet">
-            <p>Impossible d'afficher ce PDF ici.</p>
-            <button
-              type="button"
-              onClick={() => telecharger(url, "document.pdf")}
-              className="flex items-center gap-1 text-dj-accent-1-texte hover:underline"
-            >
-              <Download size={14} /> Télécharger
-            </button>
-          </div>
-        ) : (
-          <Document
-            file={url}
-            onLoadSuccess={({ numPages }) => {
-              setNbPages(numPages);
-              setPageCourante(Math.min(Math.max(page, 1), numPages));
-            }}
-            onLoadError={() => setErreur(true)}
-            loading={
-              // Corrigé (audit 30/08) : texte statique "Chargement du
-              // PDF..." sans animation remplacé par un rectangle au
-              // format page (proportion A4), centré comme la vraie page
-              // rendue juste après.
-              <div className="flex justify-center p-4" aria-hidden>
-                <Skeleton className="rounded-lg" style={{ width: "min(100%, 640px)", aspectRatio: "1 / 1.414" }} />
-              </div>
-            }
-            className="flex justify-center"
-          >
-            <Page pageNumber={pageCourante} width={Math.min(window.innerWidth - 48, 640)} />
-          </Document>
-        )}
-      </div>
-      {!erreur && nbPages && (
-        <div className="flex items-center justify-center gap-4 border-t border-dj-bordure py-2">
-          <button
-            type="button"
-            disabled={pageCourante <= 1}
-            onClick={() => setPageCourante((p) => Math.max(1, p - 1))}
-            className="rounded-full p-1.5 text-dj-texte-muet transition-colors hover:text-dj-texte disabled:opacity-30"
-          >
-            <ChevronLeft size={18} />
-          </button>
-          <span className="text-sm text-dj-texte-muet">
-            Page {pageCourante} / {nbPages}
-          </span>
-          <button
-            type="button"
-            disabled={pageCourante >= nbPages}
-            onClick={() => setPageCourante((p) => Math.min(nbPages, p + 1))}
-            className="rounded-full p-1.5 text-dj-texte-muet transition-colors hover:text-dj-texte disabled:opacity-30"
-          >
-            <ChevronRight size={18} />
-          </button>
-        </div>
-      )}
-    </div>
-  );
-}
 
 function LecteurAudioPosition({ url, debutSecondes }: { url: string; debutSecondes: number }) {
   const audioRef = useRef<HTMLAudioElement>(null);
