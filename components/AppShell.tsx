@@ -10,12 +10,11 @@ import { PaletteCommandes } from "@/components/PaletteCommandes";
 import { ContexteChat, useFournirContexteChat } from "@/lib/contexteChat";
 import { ContexteCatalogue } from "@/lib/contexteCatalogue";
 import { ContexteFenetres, useFournirFenetres } from "@/lib/contexteFenetres";
-import { ContexteRetour, useEmpilerRetour, useFournirRetour } from "@/lib/contexteRetour";
+import { ContexteRetour, useFournirContexteRetour } from "@/lib/contexteRetour";
 import { BarreOngletsNative } from "@/components/mobile/BarreOngletsNative";
 import { BarreOngletsWeb } from "@/components/mobile/BarreOngletsWeb";
 import { MenuHamburgerNatif } from "@/components/mobile/MenuHamburgerNatif";
 import { MenuHamburgerWeb } from "@/components/mobile/MenuHamburgerWeb";
-import { GestionRetourNatif } from "@/components/mobile/GestionRetourNatif";
 
 // Coquille de l'app entière (refonte "Mon espace = l'app", 15/08/2026).
 // Monte UNE SEULE FOIS, au niveau du layout (voir app/(app)/layout.tsx) :
@@ -53,18 +52,22 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   // Fenêtres flottantes de sections par-dessus le chat plein écran
   // (22/08/2026, demande Bourama -- voir lib/contexteFenetres.tsx).
   const fenetres = useFournirFenetres();
-  // Pile de fermeture pour le bouton retour matériel (31/08/2026, voir
-  // lib/contexteRetour.tsx) : panneaux/popups/chat plein écran s'y
-  // empilent eux-mêmes via useEmpilerRetour. Seul cas géré ici plutôt
-  // que dans son propre fichier : les fenêtres flottantes de sections,
-  // qui n'ont pas de composant "propriétaire" unique (plusieurs peuvent
-  // être ouvertes en même temps, voir lib/contexteFenetres.tsx) -- un
-  // retour ferme celle du dessus (z le plus haut), pas toutes d'un coup.
-  const retour = useFournirRetour();
-  useEmpilerRetour(fenetres.fenetres.length > 0, () => {
-    const dessus = fenetres.fenetres.reduce((a, b) => (b.z > a.z ? b : a));
-    fenetres.fermer(dessus.cle);
-  });
+  // 31/08/2026, demande Bourama : le bouton retour (natif ET web mobile)
+  // doit fermer ce qui est ouvert par-dessus l'appli au lieu de fermer
+  // l'appli elle-même -- voir lib/contexteRetour.tsx pour le mécanisme.
+  const contexteRetourValeur = useFournirContexteRetour();
+  // Le catalogue "Pourquoi Clovis ?" est une modale globale : calque au
+  // même titre que les autres, voir la pile dans lib/contexteRetour.tsx.
+  // Appel direct sur contexteRetourValeur (pas useFermetureAuRetour, qui
+  // lit le contexte via useContext -- AppShell est le composant qui
+  // FOURNIT ce contexte à ses enfants, il n'est pas lui-même sous son
+  // propre Provider et ne peut donc pas le consommer ainsi).
+  useEffect(() => {
+    if (!catalogueOuvert) return;
+    const id = "catalogue-clovis";
+    contexteRetourValeur.empiler(id, () => setCatalogueOuvert(false));
+    return () => contexteRetourValeur.depiler(id);
+  }, [catalogueOuvert, contexteRetourValeur]);
 
   useEffect(() => {
     let annule = false;
@@ -95,13 +98,12 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   }, []);
 
   return (
+    <ContexteRetour.Provider value={contexteRetourValeur}>
     <ContexteChat.Provider value={contexteChatValeur}>
     <ContexteCatalogue.Provider value={{ ouvrir: () => setCatalogueOuvert(true) }}>
       <ContexteFenetres.Provider value={fenetres}>
-        <ContexteRetour.Provider value={retour}>
         <div className="flex h-dvh">
           {natif && <BarreOngletsNative />}
-          {natif && <GestionRetourNatif />}
           {/* 30/08/2026, menu hamburger : reprend Accueil/Connecter
               Claude/Paramètres/Partager/Avis/Pourquoi Clovis, tout ce qui
               n'a pas de place dans les 5 onglets directs. Étape 1 de
@@ -197,9 +199,9 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           />
           {catalogueOuvert && <CatalogueClovis onFerme={() => setCatalogueOuvert(false)} />}
         </div>
-        </ContexteRetour.Provider>
       </ContexteFenetres.Provider>
     </ContexteCatalogue.Provider>
     </ContexteChat.Provider>
+    </ContexteRetour.Provider>
   );
 }

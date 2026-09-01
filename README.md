@@ -1,82 +1,132 @@
-# Clovis — frontend
+# clovis-frontend — Clovis
 
-Produit autonome dérivé de l'écosystème Djiguignè (rôle "établissement"),
-mais qui ne doit **jamais** laisser transparaître ce lien. Pour
-l'utilisateur, c'est une IA à part entière, pas une section d'un produit
-plus grand.
+Frontend Next.js (App Router, TypeScript) de **Clovis**, IA autonome pour
+établissements scolaires. Anciennement `classgpt-frontend`, renommé
+pendant l'été 2026. Dépôt séparé de `djiguigne-frontend` (dont il a
+hérité une partie de la structure de code initiale) et de son backend
+`clovis-backend` — isolation totale, le lien avec l'écosystème Djiguignè
+ne doit jamais transparaître pour l'utilisateur final.
 
-## Ce qui existe déjà (backend, inchangé, partagé)
+Ce même dépôt produit aussi l'**app mobile Android/iOS** via Capacitor
+(dossiers `android/` et `ios/`) : pas de code natif séparé pour l'UI, la
+même app Next.js tourne dans une WebView, avec une barre d'onglets et un
+menu natifs par-dessus.
 
-- Backend FastAPI (`djiguigne-backend`) : mêmes endpoints, notamment
-  `api/roles.py` (auth/rôles établissement-enseignant-étudiant), `api/chat.py`
-  (streaming), `lib/api.ts` de ce dépôt appelle directement ce backend.
-- Supabase (même projet que `djiguigne-frontend`) : auth directe côté
-  client via `lib/supabase.ts`, le backend ne fait que vérifier le token.
-- Agent Lirinus : c'est l'agent existant dédié aux établissements,
-  réutilisé ici en arrière-plan (l'utilisateur ne doit jamais voir son nom
-  technique ni savoir qu'il existe d'autres agents).
+**Ce README décrit l'état réel du code.** En cas de doute, le code fait
+foi — pas d'anciennes conversations ou de documentation externe.
 
-## État d'avancement
+---
 
-**Partie 1 — Squelette (fait)**
-Next.js 14 + Tailwind, tokens `dj-*` repris à l'identique de
-`djiguigne-frontend/tailwind.config.ts` (à ne jamais faire dériver sans
-décision explicite de Bourama). 3 polices de la marque (Bricolage
-Grotesque, Inter, JetBrains Mono).
+## Structure du dépôt
 
-**Partie 2 — Connexion et inscription autonomes (fait)**
-`app/connexion/page.tsx`, `app/inscription/page.tsx`, `components/ChampTelephone.tsx`,
-`components/ChampMotDePasse.tsx`, `lib/authFallback.ts`. Connexion email ou
-téléphone. L'inscription attribue silencieusement le rôle `etablissement`
-(pas de sélecteur de rôle visible — un compte enseignant/étudiant se
-rattache plus tard via un code d'invitation, partie 4). Aucun passage par
-la vitrine Djiguignè (`djiguigne-ai`), tout est géré ici.
+```
+app/
+  (app)/                 écrans connectés (voir "Écrans" plus bas)
+  connexion/, inscription/  authentification
+  oauth/, oauth/consent/  retour OAuth (Notion, connecteurs génériques)
+  mon-espace/            section publique "Mon espace" (bibliothèque publique, portfolio)
+  telecharger/           page qui sert le dernier APK publié (GitHub Releases)
+  cgu/, copyright/       contenu légal
+  layout.tsx             layout racine, résout NEXT_PUBLIC_APP_URL pour les balises OG
 
-**Partie 3 — Expérience de chat directe (fait)**
-`app/page.tsx` résout l'agent (Lirinus, jamais nommé côté UI) via
-`GET /api/roles/moi`, redirige vers `/connexion` si pas de session. Tous
-les composants de chat (`components/chat/*`) sont repris de
-`djiguigne-frontend`, adaptés : `SidebarChatLite.tsx` remplace la sidebar
-multi-agents (historique de conversations de CET agent uniquement, pas de
-"changer d'IA"/"voir l'IA"/"retour à la vitrine").
+components/
+  AppShell.tsx           coquille de toute l'app connectée : sidebar desktop classique (AppSidebar),
+                          hamburger + tiroir coulissant sur web mobile ; en natif, la nav passe par
+                          components/mobile/ à la place
+  AppSidebar.tsx          sidebar desktop (Bureau/Bibliothèque/Notes en direct, groupes
+                          "Personnaliser Clovis" et "Scolarité")
+  mobile/
+    BarreOngletsNative.tsx  vraie barre d'onglets système (plugin Capgo, pas une barre CSS/React) :
+                             Bibliothèque, Contrôle de session, Chat (au milieu), Notes, Personnaliser
+                             Clovis ; masquée automatiquement pendant le chat plein écran
+    BarreOngletsWeb.tsx     équivalent affiché quand l'app tourne dans un navigateur mobile classique
+    MenuHamburgerNatif.tsx  menu "Plus" en natif : bouton haut gauche (icône 3 barres décroissantes) +
+                            panneau flottant, reprend le contenu de l'ancien onglet Plus
+    MenuHamburgerWeb.tsx    même menu, variante web
+    GestionRetourNatif.tsx  gestion du bouton retour matériel Android
+  chat/                  composants du chat (ChatIA.tsx, ChatFlottant.tsx, BarreDeSaisie.tsx...)
+  icones/, icons/        icônes du produit
 
-**Correction apportée lors de la fusion (08/08)** : `lib/erreurs.ts`
-contenait ~58 codes d'erreur du reste de l'écosystème Djiguignè
-(création/modification d'agent, feed social, publications, vitrine,
-signature électronique, génération 3D/vidéo...) — jamais déclenchés par
-Clovis mais présents en clair dans le bundle JS livré au navigateur,
-donc inspectables via les devtools et révélateurs de l'écosystème plus
-large derrière le produit. Retirés. Le fallback de `messageErreur()` sur
-le message déjà en français renvoyé par le backend reste inchangé, aucune
-perte fonctionnelle.
+lib/
+  api.ts                 client HTTP vers clovis-backend (NEXT_PUBLIC_API_URL)
+  supabase.ts             client Supabase (auth + DB), enregistrement des plugins Capacitor natifs
+  contexteChat.tsx        état global du chat (dont l'état "plein_ecran" lu par la barre d'onglets)
+  contexteCatalogue.tsx, contexteFenetres.tsx, contexteRetour.tsx  autres contextes React globaux
+  canalTempsReel.ts      client du canal temps réel avec le backend (exploration de dossier mobile...)
+  usePluginNatif.ts       hook d'accès générique aux plugins Capacitor
+  useNotificationsPush.ts abonnement aux notifications Web Push (protégé : jamais appelé en natif,
+                          la WebView Capacitor n'a pas l'objet Notification du navigateur)
+  erreurs.ts              messages d'erreur centralisés, miroir de core/erreurs.py côté backend
+  outils.ts, matieres.ts, coloration.ts, dateRelative.ts, formatageHeure.ts, salutations.ts  utilitaires
 
-## Ce qui reste à faire (parties 4 et 5)
+android/, ios/            projets Capacitor (capacitor.config.ts minimal, export statique build:capacitor
+                          vers webDir "out", pas de rechargement du site distant dans la WebView)
+```
 
-**Partie 4 — Espace utilisateur réduit
-Uniquement : inviter par message/code, suivi des étudiants ("l'IA de mes
-élèves"), diffusion de documents. Les fonctions équivalentes existent déjà
-côté backend (`diffuserDocumentEtablissement`, `diffuserLien` — voir
-`djiguigne-frontend/lib/api.ts` comme référence). Explicitement SANS :
-onglets "administrer"/"mes IA", bouton retour vitrine, sélecteur/historique
-d'agents.
+## Écrans (`app/(app)`)
 
-**Partie 5 — Identité visuelle "à main levée" (reste à faire)**
-Logo (chapeau de diplômé, couleurs Djiguignè), et un traitement organique :
-courbes légèrement irrégulières, animations à easing non linéaire (pas de
-`ease-in-out` générique), rien ne s'affiche jamais de façon brute. À
-appliquer avec retenue, jamais de façon gratuite/décorative — chaque
-irrégularité doit servir une transition ou une apparition précise.
+| Route | Contenu |
+|---|---|
+| `/` | Accueil (raccourcis "Mon espace", activité récente) |
+| `/bureau` | Bureau |
+| `/bibliotheque` | Bibliothèque personnelle (+ sous-section Dossiers du téléphone) |
+| `/memoire` | Ma mémoire |
+| `/comportements` | Mes skills ("comportements" en interne) |
+| `/personnaliser` | Personnaliser Clovis (skills, mémoire, plugins) — onglet central du menu natif |
+| `/controle-session` | Contrôle de session |
+| `/rappels` | Notes / rappels |
+| `/connecter-claude` | Connexion du serveur MCP public comme connecteur externe |
+| `/parametres` | Paramètres (profil, préférences, confidentialité, capacités du téléphone, accessibilité, aide, à propos, zone de danger) |
+| `/plus` | Menu "Plus" en version web (bureau, scolarité, connecter Claude, admin, paramètres) |
+| `/admin/signalements` | Modération des signalements de contenu public |
 
-## Règles à respecter dans toutes les parties suivantes
+## Navigation mobile
 
-- Jamais de valeur en dur (texte, couleur, URL, seuil) qui devrait pouvoir
-  changer sans toucher au code.
-- Toujours responsive (mobile ET desktop).
-- Transitions fluides partout, jamais d'affichage brut, jamais de
-  chargement bloquant sans animation.
-- Préparer le multi-langue (pas de texte figé non traduisible).
-- Ne jamais exposer le nom technique des agents, ni l'existence de
-  Djiguignè, ni de lien vers la vitrine ou le frontend étudiant.
-- S'inspirer de Claude.ai et ChatGPT pour les patterns d'interaction
-  (streaming, animations de chargement, gestion des erreurs), sans copier
-  à l'identique.
+Décision confirmée : barre d'onglets système en bas (Bibliothèque,
+Contrôle de session, Chat, Notes, Personnaliser Clovis) + menu "Plus" en
+icône hamburger haut gauche plutôt qu'en onglet. Implémentée avec de
+vrais composants système (`@capgo/capacitor-native-navigation` +
+`@capgo/capacitor-transitions`), pas une barre stylée en CSS. La version
+web mobile (navigateur, hors app installée) garde un hamburger + tiroir
+coulissant équivalent mais non natif.
+
+Six plugins Capacitor natifs existent côté Android (`MainActivity.java`) :
+Dossiers, ControleSession, Connecteurs, Accessibilité, MiseAJour et
+PontNatif, tous ont désormais un point d'entrée dans la nav web/TypeScript.
+
+## Ce qui tourne en production
+
+- App web sur Vercel (Next.js 14, React 18), consommant `clovis-backend`.
+- App mobile Android/iOS buildée depuis ce même dépôt (`npm run
+  build:capacitor`), distribuée hors store (APK via `/telecharger`) ;
+  socle natif historique (Kotlin/Compose + Swift/SwiftUI) conservé pour
+  référence dans le dépôt séparé `clovis-mobile`, plus de nouveau
+  développement natif direct là bas.
+
+## Variables d'environnement
+
+| Variable | Usage |
+|---|---|
+| `NEXT_PUBLIC_API_URL` | URL de `clovis-backend` |
+| `NEXT_PUBLIC_SUPABASE_URL` / `NEXT_PUBLIC_SUPABASE_ANON_KEY` | client Supabase (auth + DB) |
+| `NEXT_PUBLIC_APP_URL` | URL publique du déploiement, utilisée par `app/layout.tsx` (balises OG) et le bouton partager (lien de téléchargement de l'app) ; sur Vercel, doit être créée en type "Configuration", jamais "Secrète" (incompatible avec un préfixe `NEXT_PUBLIC_`) |
+
+Voir `.env.local.example`.
+
+## Lancer l'app
+
+```
+npm install
+npm run dev
+```
+
+## Builder pour mobile (Capacitor)
+
+```
+npm run build:capacitor
+```
+
+Build statique Next.js vers `out/`, puis `npx cap sync`. Nécessite
+Android Studio/Xcode installés localement pour ouvrir et compiler les
+projets `android/`/`ios/` ensuite (hors de portée d'un sandbox sans ces
+outils).
