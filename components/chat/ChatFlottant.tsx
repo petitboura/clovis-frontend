@@ -319,9 +319,25 @@ export function ChatFlottant({
         // modals du projet, cgpt-entree-modal) et de fermeture (juste
         // avant le démontage réel, voir fermerAvecFondu) -- demande
         // Bourama 18/08/2026 : "le popup disparaît ... apparaît brut".
-        (enFermeture
-          ? " pointer-events-none scale-95 opacity-0 transition-all duration-200 ease-cgpt-doux"
-          : " animate-cgpt-entree-modal transition-all duration-200 ease-cgpt-doux")
+        //
+        // 01/09/2026 : en plein écran, jamais de scale() ici -- une
+        // transform (même figée à scale(1) par le fill-mode "both" de
+        // cgpt-entree-modal) fait de ce conteneur le containing block de
+        // tous ses descendants position:fixed (ex. le tiroir Historique
+        // dans AppSidebar), qui ne flottent plus par rapport au vrai
+        // écran mais sont piégés dedans -- et pousse Chrome à composer
+        // toute la zone comme un calque à part, ce qui abîmait le texte
+        // de l'historique (illisible/coloré tant qu'on ne forçait pas un
+        // redessin en zoomant). Le plein écran garde donc un fondu pur
+        // (dj-fade-in-rapide, opacity uniquement), le popup mini
+        // conserve le zoom existant (rien à piéger à l'intérieur).
+        (pleinEcran
+          ? enFermeture
+            ? " pointer-events-none opacity-0 transition-opacity duration-200 ease-cgpt-doux"
+            : " animate-dj-fade-in-rapide"
+          : enFermeture
+            ? " pointer-events-none scale-95 opacity-0 transition-all duration-200 ease-cgpt-doux"
+            : " animate-cgpt-entree-modal transition-all duration-200 ease-cgpt-doux")
       }
       style={pleinEcran ? { height: "var(--vh-visuelle, 100dvh)" } : undefined}
     >
