@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import {
   Search, Plus, Trash2, Paperclip, FileText, Image as IconImage, Music as IconAudio, Video as IconVideo,
-  Flag, FolderPlus, Check, Link as IconLien, Upload, FolderX, X, Globe, Lock, Loader2, Download,
+  Flag, FolderPlus, Check, Link as IconLien, Upload, FolderX, X, Globe, Lock, Loader2, Download, ChevronRight,
 } from "lucide-react";
 import Link from "next/link";
 import {
@@ -62,7 +62,16 @@ function iconePourType(typeMime: string | null) {
 export function BibliothequePublique() {
   const [liste, setListe] = useState<EntreeBibliothequePublique[] | undefined>(undefined);
   const [dossiers, setDossiers] = useState<DossierCataloguePublic[] | undefined>(undefined);
-  const [dossierCourantId, setDossierCourantId] = useState<string | null>(null);
+  // Navigation par dossier avec fil d'ariane (corrigé 01/09/2026, bug
+  // signalé par Bourama : "dans ses dossier on ne peut ajouter des
+  // dossier donc pas d'arborescence") -- avant ce correctif un seul
+  // niveau de dossier était possible : aucun moyen de créer un
+  // sous-dossier depuis l'intérieur d'un dossier, et ses éventuels
+  // sous-dossiers n'étaient de toute façon jamais affichés. Repris du
+  // même mécanisme que EspaceBibliotheque.tsx (bibliothèque privée) :
+  // pile du fil d'ariane, tableau vide = racine.
+  const [pileDossiers, setPileDossiers] = useState<{ id: string; nom: string }[]>([]);
+  const dossierCourantId = pileDossiers.length > 0 ? pileDossiers[pileDossiers.length - 1].id : null;
   const [recherche, setRecherche] = useState("");
   const [envoi, setEnvoi] = useState(false);
   const [erreur, setErreur] = useState<string | null>(null);
@@ -327,9 +336,13 @@ export function BibliothequePublique() {
   }
 
   async function creerDossier() {
-    // Nom optionnel (28/08, demande Bourama) -- l'API se rabat sur "Nouveau dossier" si vide.
+    // Nom optionnel (28/08, demande Bourama) -- l'API se rabat sur
+    // "Nouveau dossier" si vide. dossierCourantId comme parent
+    // (corrigé 01/09/2026) : avant ce correctif, un dossier créé
+    // depuis l'intérieur d'un autre dossier atterrissait toujours à la
+    // racine -- aucune arborescence possible.
     try {
-      await creerDossierCataloguePublic(nouveauNomDossier.trim(), nouveauStatutDossier);
+      await creerDossierCataloguePublic(nouveauNomDossier.trim(), nouveauStatutDossier, dossierCourantId ?? undefined);
       setNouveauNomDossier("");
       setCreationDossierOuverte(false);
       chargerDossiers();
@@ -342,7 +355,12 @@ export function BibliothequePublique() {
     if (!window.confirm(`Supprimer le dossier « ${d.nom} » ? (les documents qu'il contient restent dans le catalogue)`)) return;
     try {
       await supprimerDossierCataloguePublic(d.id);
-      if (dossierCourantId === d.id) setDossierCourantId(null);
+      // Si le dossier supprimé est sur le fil d'ariane actuel (on est
+      // dedans, ou dans un de ses sous-dossiers), on remonte jusqu'à
+      // son parent -- même logique que EspaceBibliotheque.tsx.
+      if (pileDossiers.some((p) => p.id === d.id)) {
+        setPileDossiers((p) => p.slice(0, p.findIndex((x) => x.id === d.id)));
+      }
       chargerDossiers();
     } catch (e) {
       window.alert(messageErreur(e));
@@ -386,8 +404,12 @@ export function BibliothequePublique() {
     return <CTACompteRequis texte="Crée un compte pour ajouter un document à la bibliothèque publique." />;
   }
 
-  const dossiersRacine = (dossiers ?? [])
-    .filter((d) => !d.dossier_parent_id)
+  // Sous-dossiers du niveau actuellement affiché (racine si
+  // dossierCourantId est null) -- corrigé 01/09/2026, remplace
+  // l'ancien "dossiersRacine" qui ne regardait jamais que le niveau 0
+  // et empêchait donc toute arborescence.
+  const sousDossiersAffiches = (dossiers ?? [])
+    .filter((d) => (d.dossier_parent_id ?? null) === dossierCourantId)
     .filter((d) => filtreStatutDossier === "tous" || d.statut === filtreStatutDossier);
   const dossierActuel = dossierCourantId ? (dossiers ?? []).find((d) => d.id === dossierCourantId) : null;
   const listeAffichee = dossierCourantId
@@ -424,7 +446,7 @@ export function BibliothequePublique() {
         <button
           onClick={() => {
             setOngletBiblioPublique("tous");
-            setDossierCourantId(null);
+            setPileDossiers([]);
           }}
           className={`rounded-cgpt-bouton px-2 py-1 font-semibold transition-colors ${
             ongletBiblioPublique === "tous" ? "bg-dj-surface-haute text-dj-texte" : "text-dj-texte-muet hover:text-dj-texte"
@@ -444,171 +466,188 @@ export function BibliothequePublique() {
 
       {ongletBiblioPublique === "dossiers" && (
         <>
-          {dossierCourantId ? (
+          {/* Fil d'ariane (corrigé 01/09/2026, voir commentaire sur
+              pileDossiers) : navigation à profondeur illimitée, comme en
+              privé -- remplace l'ancien bouton "← Dossiers" qui ne
+              permettait de remonter que d'un seul niveau. */}
+          <div className="flex flex-wrap items-center gap-1 text-xs text-dj-texte-muet">
             <button
-              onClick={() => setDossierCourantId(null)}
-              className="flex w-fit items-center gap-1 text-xs font-medium text-dj-texte-muet hover:text-dj-texte"
+              onClick={() => setPileDossiers([])}
+              className={`rounded-cgpt-bouton px-2 py-1 font-medium transition-colors hover:text-dj-texte ${
+                dossierCourantId === null ? "text-dj-texte" : ""
+              }`}
             >
-              ← Dossiers
+              Dossiers
             </button>
-          ) : (
-            <>
-              <div className="flex items-center justify-between gap-2 text-xs">
-                <div className="flex items-center gap-1">
-                  {(
-                    [
-                      ["tous", "Tous statuts"],
-                      ["contribution_libre", "Libre"],
-                      ["privee", "Privé"],
-                    ] as const
-                  ).map(([valeur, libelle]) => (
-                    <button
-                      key={valeur}
-                      onClick={() => setFiltreStatutDossier(valeur)}
-                      className={`rounded-cgpt-bouton px-2 py-1 font-medium transition-colors ${
-                        filtreStatutDossier === valeur ? "bg-dj-surface-haute text-dj-texte" : "text-dj-texte-muet hover:text-dj-texte"
-                      }`}
-                    >
-                      {libelle}
-                    </button>
-                  ))}
-                </div>
-                <div className="flex items-center gap-1">
-                  <button
-                    onClick={() => setCreationDossierOuverte((v) => !v)}
-                    className="flex items-center gap-1 rounded-cgpt-bouton px-2 py-1 font-semibold text-dj-texte-muet transition-colors hover:text-dj-texte"
-                  >
-                    <FolderPlus size={14} />
-                    Nouveau dossier
-                  </button>
-                  <button
-                    onClick={() => inputDossierRef.current?.click()}
-                    className="flex items-center gap-1 rounded-cgpt-bouton px-2 py-1 font-semibold text-dj-texte-muet transition-colors hover:text-dj-texte"
-                  >
-                    <Upload size={14} />
-                    Importer un dossier
-                  </button>
-                </div>
+            {pileDossiers.map((d, i) => (
+              <span key={d.id} className="flex items-center gap-1">
+                <ChevronRight size={12} className="flex-shrink-0" />
+                <button
+                  onClick={() => setPileDossiers((p) => p.slice(0, i + 1))}
+                  className={`rounded-cgpt-bouton px-2 py-1 font-medium transition-colors hover:text-dj-texte ${
+                    i === pileDossiers.length - 1 ? "text-dj-texte" : ""
+                  }`}
+                >
+                  {d.nom}
+                </button>
+              </span>
+            ))}
+          </div>
+
+          <div className="flex items-center justify-between gap-2 text-xs">
+            <div className="flex items-center gap-1">
+              {(
+                [
+                  ["tous", "Tous statuts"],
+                  ["contribution_libre", "Libre"],
+                  ["privee", "Privé"],
+                ] as const
+              ).map(([valeur, libelle]) => (
+                <button
+                  key={valeur}
+                  onClick={() => setFiltreStatutDossier(valeur)}
+                  className={`rounded-cgpt-bouton px-2 py-1 font-medium transition-colors ${
+                    filtreStatutDossier === valeur ? "bg-dj-surface-haute text-dj-texte" : "text-dj-texte-muet hover:text-dj-texte"
+                  }`}
+                >
+                  {libelle}
+                </button>
+              ))}
+            </div>
+            <div className="flex items-center gap-1">
+              <button
+                onClick={() => setCreationDossierOuverte((v) => !v)}
+                className="flex items-center gap-1 rounded-cgpt-bouton px-2 py-1 font-semibold text-dj-texte-muet transition-colors hover:text-dj-texte"
+              >
+                <FolderPlus size={14} />
+                Nouveau dossier
+              </button>
+              <button
+                onClick={() => inputDossierRef.current?.click()}
+                className="flex items-center gap-1 rounded-cgpt-bouton px-2 py-1 font-semibold text-dj-texte-muet transition-colors hover:text-dj-texte"
+              >
+                <Upload size={14} />
+                Importer un dossier
+              </button>
+            </div>
+          </div>
+
+          <input
+            ref={inputDossierRef}
+            type="file"
+            className="hidden"
+            // @ts-expect-error -- webkitdirectory n'est pas dans le typage React standard, mais bien supporté par les navigateurs (PC + mobile web, pas l'app native)
+            webkitdirectory=""
+            onChange={(e) => {
+              const fichiers = e.target.files;
+              if (fichiers && fichiers.length > 0) setDossierEnAttenteStatut(Array.from(fichiers));
+              e.target.value = "";
+            }}
+          />
+
+          {dossierEnAttenteStatut && (
+            <div className="flex animate-dj-fade-in-rapide flex-col gap-2 rounded-xl border border-dj-bordure bg-dj-surface px-4 py-3">
+              <p className="text-sm text-dj-texte">
+                Statut du dossier importé ({dossierEnAttenteStatut.length} fichier{dossierEnAttenteStatut.length > 1 ? "s" : ""}) :
+              </p>
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={() => {
+                    const fichiers = dossierEnAttenteStatut;
+                    setDossierEnAttenteStatut(null);
+                    if (fichiers) envoyerDossierDirect(fichiers, "contribution_libre");
+                  }}
+                  className="flex items-center gap-1 rounded-cgpt-bouton bg-dj-accent-1 px-3 py-1.5 text-xs font-bold text-[#1A0D02] hover:bg-dj-accent-2"
+                >
+                  <Globe size={14} />
+                  Contribution libre
+                </button>
+                <button
+                  onClick={() => {
+                    const fichiers = dossierEnAttenteStatut;
+                    setDossierEnAttenteStatut(null);
+                    if (fichiers) envoyerDossierDirect(fichiers, "privee");
+                  }}
+                  className="flex items-center gap-1 rounded-cgpt-bouton border border-dj-bordure px-3 py-1.5 text-xs font-bold text-dj-texte hover:bg-dj-surface-haute"
+                >
+                  <Lock size={14} />
+                  Privé (moi seul)
+                </button>
+                <button
+                  onClick={() => setDossierEnAttenteStatut(null)}
+                  className="ml-auto text-dj-texte-muet hover:text-dj-texte"
+                >
+                  <X size={16} />
+                </button>
               </div>
+            </div>
+          )}
 
-              <input
-                ref={inputDossierRef}
-                type="file"
-                className="hidden"
-                // @ts-expect-error -- webkitdirectory n'est pas dans le typage React standard, mais bien supporté par les navigateurs (PC + mobile web, pas l'app native)
-                webkitdirectory=""
-                onChange={(e) => {
-                  const fichiers = e.target.files;
-                  if (fichiers && fichiers.length > 0) setDossierEnAttenteStatut(Array.from(fichiers));
-                  e.target.value = "";
-                }}
-              />
+          {uploadDossierEnCours && (
+            <p className="text-xs text-dj-texte-muet">
+              {progressionEnvoi
+                ? `Import du dossier : ${progressionEnvoi.envoyes}/${progressionEnvoi.total} (${Math.round((progressionEnvoi.envoyes / progressionEnvoi.total) * 100)}%)`
+                : "Import du dossier en cours…"}
+            </p>
+          )}
 
-              {dossierEnAttenteStatut && (
-                <div className="flex animate-dj-fade-in-rapide flex-col gap-2 rounded-xl border border-dj-bordure bg-dj-surface px-4 py-3">
-                  <p className="text-sm text-dj-texte">
-                    Statut du dossier importé ({dossierEnAttenteStatut.length} fichier{dossierEnAttenteStatut.length > 1 ? "s" : ""}) :
-                  </p>
-                  <div className="flex items-center gap-2">
-                    <button
-                      onClick={() => {
-                        const fichiers = dossierEnAttenteStatut;
-                        setDossierEnAttenteStatut(null);
-                        if (fichiers) envoyerDossierDirect(fichiers, "contribution_libre");
-                      }}
-                      className="flex items-center gap-1 rounded-cgpt-bouton bg-dj-accent-1 px-3 py-1.5 text-xs font-bold text-[#1A0D02] hover:bg-dj-accent-2"
-                    >
-                      <Globe size={14} />
-                      Contribution libre
-                    </button>
-                    <button
-                      onClick={() => {
-                        const fichiers = dossierEnAttenteStatut;
-                        setDossierEnAttenteStatut(null);
-                        if (fichiers) envoyerDossierDirect(fichiers, "privee");
-                      }}
-                      className="flex items-center gap-1 rounded-cgpt-bouton border border-dj-bordure px-3 py-1.5 text-xs font-bold text-dj-texte hover:bg-dj-surface-haute"
-                    >
-                      <Lock size={14} />
-                      Privé (moi seul)
-                    </button>
-                    <button
-                      onClick={() => setDossierEnAttenteStatut(null)}
-                      className="ml-auto text-dj-texte-muet hover:text-dj-texte"
-                    >
-                      <X size={16} />
-                    </button>
+          {/* Skeleton précis (30/08, suite audit) : icône plate 16px
+              (Globe/Lock, sans rond coloré -- contrairement à la
+              bibliothèque privée qui a un conteneur tonal), une seule
+              ligne (le nom, pas de sous-titre ici), 1 bouton d'action
+              à droite (suppression). 4 lignes pour remplir l'espace
+              au lieu de 2 fixes. */}
+          {dossiers === undefined && (
+            <div className="flex flex-col gap-2" aria-hidden>
+              {[
+                { largeur: "w-2/5", delai: "0ms" },
+                { largeur: "w-1/2", delai: "100ms" },
+                { largeur: "w-1/3", delai: "200ms" },
+                { largeur: "w-3/5", delai: "300ms" },
+              ].map(({ largeur, delai }, i) => (
+                <div
+                  key={i}
+                  className="flex items-center justify-between gap-3 rounded-xl border border-dj-bordure bg-dj-surface px-4 py-3"
+                >
+                  <div className="flex min-w-0 flex-1 items-center gap-2">
+                    <Skeleton className="h-4 w-4 flex-shrink-0 rounded" style={{ animationDelay: delai }} />
+                    <Skeleton className={`h-3.5 rounded ${largeur}`} style={{ animationDelay: delai }} />
                   </div>
+                  <Skeleton className="h-3.5 w-3.5 flex-shrink-0 rounded" style={{ animationDelay: delai }} />
                 </div>
-              )}
+              ))}
+            </div>
+          )}
 
-              {uploadDossierEnCours && (
-                <p className="text-xs text-dj-texte-muet">
-                  {progressionEnvoi
-                    ? `Import du dossier : ${progressionEnvoi.envoyes}/${progressionEnvoi.total} (${Math.round((progressionEnvoi.envoyes / progressionEnvoi.total) * 100)}%)`
-                    : "Import du dossier en cours…"}
-                </p>
-              )}
-
-              {/* Skeleton précis (30/08, suite audit) : icône plate 16px
-                  (Globe/Lock, sans rond coloré -- contrairement à la
-                  bibliothèque privée qui a un conteneur tonal), une seule
-                  ligne (le nom, pas de sous-titre ici), 1 bouton d'action
-                  à droite (suppression). 4 lignes pour remplir l'espace
-                  au lieu de 2 fixes. */}
-              {dossiers === undefined && (
-                <div className="flex flex-col gap-2" aria-hidden>
-                  {[
-                    { largeur: "w-2/5", delai: "0ms" },
-                    { largeur: "w-1/2", delai: "100ms" },
-                    { largeur: "w-1/3", delai: "200ms" },
-                    { largeur: "w-3/5", delai: "300ms" },
-                  ].map(({ largeur, delai }, i) => (
-                    <div
-                      key={i}
-                      className="flex items-center justify-between gap-3 rounded-xl border border-dj-bordure bg-dj-surface px-4 py-3"
-                    >
-                      <div className="flex min-w-0 flex-1 items-center gap-2">
-                        <Skeleton className="h-4 w-4 flex-shrink-0 rounded" style={{ animationDelay: delai }} />
-                        <Skeleton className={`h-3.5 rounded ${largeur}`} style={{ animationDelay: delai }} />
-                      </div>
-                      <Skeleton className="h-3.5 w-3.5 flex-shrink-0 rounded" style={{ animationDelay: delai }} />
-                    </div>
-                  ))}
+          {dossiers !== undefined && sousDossiersAffiches.length > 0 && (
+            <div className="flex flex-col gap-2">
+              {sousDossiersAffiches.map((d) => (
+                <div
+                  key={d.id}
+                  className="flex items-center justify-between gap-3 rounded-xl border border-dj-bordure bg-dj-surface px-4 py-3 transition-colors"
+                >
+                  <button
+                    onClick={() => setPileDossiers((p) => [...p, { id: d.id, nom: d.nom }])}
+                    title={d.statut === "contribution_libre" ? "Contribution libre : tout le monde peut y ajouter" : "Privé : seul le créateur peut y ajouter"}
+                    className="flex min-w-0 items-center gap-2 text-sm text-dj-texte hover:text-dj-texte"
+                  >
+                    {d.statut === "contribution_libre" ? (
+                      <Globe size={16} className="flex-shrink-0 text-dj-texte-muet" />
+                    ) : (
+                      <Lock size={16} className="flex-shrink-0 text-dj-texte-muet" />
+                    )}
+                    <span className="truncate font-medium">{d.nom}</span>
+                  </button>
+                  <button
+                    onClick={() => supprimerDossier(d)}
+                    className="flex-shrink-0 text-dj-texte-muet hover:text-[var(--dj-erreur)]"
+                    title="Supprimer le dossier"
+                  >
+                    <FolderX size={14} />
+                  </button>
                 </div>
-              )}
-
-              {dossiers !== undefined && dossiersRacine.length > 0 && (
-                <div className="flex flex-col gap-2">
-                  {dossiersRacine.map((d) => (
-                    <div
-                      key={d.id}
-                      className="flex items-center justify-between gap-3 rounded-xl border border-dj-bordure bg-dj-surface px-4 py-3 transition-colors"
-                    >
-                      <button
-                        onClick={() => setDossierCourantId(d.id)}
-                        title={d.statut === "contribution_libre" ? "Contribution libre : tout le monde peut y ajouter" : "Privé : seul le créateur peut y ajouter"}
-                        className="flex min-w-0 items-center gap-2 text-sm text-dj-texte hover:text-dj-texte"
-                      >
-                        {d.statut === "contribution_libre" ? (
-                          <Globe size={16} className="flex-shrink-0 text-dj-texte-muet" />
-                        ) : (
-                          <Lock size={16} className="flex-shrink-0 text-dj-texte-muet" />
-                        )}
-                        <span className="truncate font-medium">{d.nom}</span>
-                      </button>
-                      <button
-                        onClick={() => supprimerDossier(d)}
-                        className="flex-shrink-0 text-dj-texte-muet hover:text-[var(--dj-erreur)]"
-                        title="Supprimer le dossier"
-                      >
-                        <FolderX size={14} />
-                      </button>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </>
+              ))}
+            </div>
           )}
 
           {creationDossierOuverte && (
@@ -898,7 +937,7 @@ export function BibliothequePublique() {
           <button
             onClick={() => {
               setOngletBiblioPublique("dossiers");
-              setDossierCourantId(null);
+              setPileDossiers([]);
               setCreationDossierOuverte(true);
               setMenuAjoutOuvert(false);
             }}
