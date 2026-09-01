@@ -1,6 +1,7 @@
 "use client";
 
 import { ReactNode, useEffect } from "react";
+import { useFermetureAuRetour } from "@/lib/contexteRetour";
 
 // Panneau flottant (20/08/2026, demande Bourama : "il y a plein de plein
 // écran qui sont comme ça, des carrés, des trucs plats -- change") :
@@ -41,6 +42,16 @@ export function PanneauFlottant({
   pleine?: boolean;
   enSortie?: boolean;
 }) {
+  // Bouton retour matériel Android / popstate web mobile (31/08/2026,
+  // suite de lib/contexteRetour.tsx -- même raisonnement que
+  // MenuHamburgerNatif.tsx et PaletteCommandes.tsx) : couvre en un seul
+  // endroit les 8 popups qui passent par ce wrapper (MesComportements,
+  // EspaceDossiers, BlocExpansible, BarreDeSaisie, EditeurMathsRiche,
+  // CanvasDessin, BlocCode...), qui n'étaient pas encore raccordées à la
+  // pile alors que ce mécanisme existe déjà pour le menu hamburger et la
+  // palette de commandes.
+  useFermetureAuRetour(!!onFerme, onFerme ?? (() => {}));
+
   // Fermeture au clavier (audit 25/08/2026 : aucune popup du chat ne
   // gérait Echap jusqu'ici). Couvre en un seul endroit les 8 composants
   // qui passent par ce wrapper.
