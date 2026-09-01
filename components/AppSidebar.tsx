@@ -1033,15 +1033,17 @@ export function AppSidebar({
               haut) : nécessaire ici uniquement, pour gérer fenêtre
               flottante/fermeture du chat, contrairement aux deux autres
               appelants qui restent sur le router.push par défaut. */}
-          <div className="mt-2 rounded-xl px-2">
+          <div>
             <button
               onClick={() => setActionsDeplie((v) => !v)}
-              className={`group flex w-full items-center gap-2 py-2 text-sm transition-colors ${
-                actionsDeplie ? "text-dj-texte" : "text-dj-texte-muet"
+              className={`group relative mt-2 flex w-full items-center gap-2 rounded-xl px-2 transition-colors ${
+                actionsDeplie ? "bg-dj-surface-haute text-dj-texte" : "text-dj-texte-muet hover:bg-dj-surface-haute hover:text-dj-texte"
               }`}
             >
-              <MoreHorizontal size={18} className="transition-transform duration-200 group-hover:-translate-y-0.5" />
-              Plus
+              <span className="flex h-10 w-10 flex-shrink-0 items-center justify-center">
+                <MoreHorizontal size={18} className="transition-transform duration-200 group-hover:-translate-y-0.5" />
+              </span>
+              <span className="text-sm">Plus</span>
             </button>
             {actionsDeplie && (
               <div className="pb-2">

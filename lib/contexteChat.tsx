@@ -74,15 +74,15 @@ export function useOuvrirChat() {
 // page cible se charge derrière le chat toujours ouvert (fixed inset-0
 // z-[110]) et reste invisible.
 //
-// Correctif (30/08/2026, audit "fermeture brutale") : AVANT, cette
-// fonction fermait sec (setEtat("fermee") direct, sans fondu -- seul le
-// bouton Fermer de ChatFlottant avait une animation de sortie). Utilise
-// maintenant le même fermerAvecFondu partagé (voir useFournirContexteChat
-// ci-dessus) : le chat s'estompe pendant que la navigation qui suit fait
-// de toute façon disparaître tout le contexte visuel, au lieu de
-// disparaître instantanément avant même que la page cible n'ait fini de
-// se charger derrière lui.
+// Correctif (01/09/2026, signalé Bourama : "la section s'ouvre mais le
+// chat est par dessus, rien ne bouge") : le fondu de fermerAvecFondu
+// prend 200ms avant de basculer etat sur "fermee", pendant lesquelles le
+// chat plein écran (fixed inset-0 z-[110]) reste affiché par dessus la
+// page de destination, déjà chargée derrière lui par router.push. Fermer
+// directement (setEtat("fermee"), sans fondu) supprime ce délai : la
+// page cible redevient visible dès que possible, plutôt que de dépendre
+// d'une animation qui se termine après coup.
 export function useFermerChat() {
   const ctx = useContext(ContexteChat);
-  return () => ctx?.fermerAvecFondu();
+  return () => ctx?.setEtat("fermee");
 }
