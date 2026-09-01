@@ -75,15 +75,51 @@ struct SynchronisationDossiers: Codable {
 
 // MARK: Lot 1B, recepteur d'actions
 
+// "chemin"/"nouveau_chemin" (01/09/2026) envoient une liste de chaines,
+// alors que tous les autres parametres restent de simples chaines --
+// remplace le [String:String] d'origine (voir commentaire historique
+// ci-dessous) par ce type generique, plutot que d'avaler l'erreur en
+// silence comme avant.
+enum ValeurParametre: Codable {
+    case texte(String)
+    case liste([String])
+
+    init(from decoder: Decoder) throws {
+        let c = try decoder.singleValueContainer()
+        if let s = try? c.decode(String.self) {
+            self = .texte(s)
+        } else {
+            self = .liste(try c.decode([String].self))
+        }
+    }
+
+    func encode(to encoder: Encoder) throws {
+        var c = encoder.singleValueContainer()
+        switch self {
+        case .texte(let s): try c.encode(s)
+        case .liste(let l): try c.encode(l)
+        }
+    }
+
+    var commeTexte: String? {
+        if case .texte(let s) = self { return s }
+        return nil
+    }
+
+    var commeListe: [String]? {
+        if case .liste(let l) = self { return l }
+        return nil
+    }
+}
+
 struct ActionAppareil: Codable {
     let id: String
     let type_action: String
     // Ajoute le 26/08/2026 : brancher le cerveau, toutes les valeurs de
-    // parametres sont des chaines pour les type_action actuels (dossier_*,
-    // accessibilite_*, voir clovis-backend/core/serveur_mcp_generation.py::
-    // executer_action_mobile). Si un futur type_action envoie une valeur
-    // non-chaine, il faudra remplacer ce type par un decodage JSON generique.
-    var parametres: [String: String] = [:]
+    // parametres etaient des chaines pour les type_action d'alors
+    // (dossier_*, accessibilite_*). Etendu le 01/09/2026 (voir
+    // ValeurParametre) : "chemin"/"nouveau_chemin" ajoutent des listes.
+    var parametres: [String: ValeurParametre] = [:]
 
     private enum CodingKeys: String, CodingKey {
         case id, type_action, parametres
@@ -93,7 +129,7 @@ struct ActionAppareil: Codable {
         let c = try decoder.container(keyedBy: CodingKeys.self)
         id = try c.decode(String.self, forKey: .id)
         type_action = try c.decode(String.self, forKey: .type_action)
-        parametres = (try? c.decode([String: String].self, forKey: .parametres)) ?? [:]
+        parametres = (try? c.decode([String: ValeurParametre].self, forKey: .parametres)) ?? [:]
     }
 }
 

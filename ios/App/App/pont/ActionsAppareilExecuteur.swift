@@ -32,11 +32,32 @@ enum ActionsAppareilExecuteur {
         }
     }
 
+    private enum ResolutionEmplacement {
+        case succes(URL, String)
+        case echec(String)
+    }
+
     /// Un seul essai, jamais de boucle de reessai a l'aveugle (meme regle
     /// que cote Android).
-    private static func dispatcher(typeAction: String, parametres: [String: String]) -> ResultatAction {
+    private static func dispatcher(typeAction: String, parametres: [String: ValeurParametre]) -> ResultatAction {
+        func texte(_ cle: String) -> String? { parametres[cle]?.commeTexte }
+        func liste(_ cle: String) -> [String] { parametres[cle]?.commeListe ?? [] }
+
         func dossierParNom(_ nom: String) -> DossierDesigne? {
             DossiersDesignesRepository.listerDossiersDesignes().first { $0.url.lastPathComponent == nom }
+        }
+        // Descend "chemin" (sous-dossiers PARENTS uniquement) depuis
+        // racine, niveau par niveau -- miroir exact de dossierParChemin
+        // cote Android. Profondeur illimitee, chemin vide -> racine.
+        func dossierParChemin(_ racine: URL, _ chemin: [String]) -> URL? {
+            var courant = racine
+            for segment in chemin {
+                guard let enfant = DossiersDesignesRepository.listerContenu(courant).first(where: { $0.estDossier && $0.nom == segment }) else {
+                    return nil
+                }
+                courant = enfant.url
+            }
+            return courant
         }
         func elementParNom(_ dossier: URL, _ nom: String) -> ElementDossier? {
             DossiersDesignesRepository.listerContenu(dossier).first { $0.nom == nom }
@@ -44,71 +65,97 @@ enum ActionsAppareilExecuteur {
         func resultatBooleen(_ succes: Bool, _ messageSucces: String, _ messageEchec: String) -> ResultatAction {
             ResultatAction(succes: succes, resultat: succes ? messageSucces : messageEchec)
         }
+        // Resout dossierNom + chemin (cleChemin, optionnel) en une URL et
+        // un libelle lisible ("Cours/Maths") pour les messages. Enum dedie
+        // (pas Result<_, String>, String n'est pas conforme a Error).
+        func resoudreEmplacement(_ dossierNom: String, _ cleChemin: String) -> ResolutionEmplacement {
+            guard let dossier = dossierParNom(dossierNom) else {
+                return .echec("Dossier \"\(dossierNom)\" introuvable (a peut-être été retiré).")
+            }
+            let chemin = liste(cleChemin)
+            if chemin.isEmpty { return .succes(dossier.url, dossierNom) }
+            guard let url = dossierParChemin(dossier.url, chemin) else {
+                return .echec("Sous-dossier introuvable dans \"\(dossierNom)/\(chemin.joined(separator: "/"))\".")
+            }
+            return .succes(url, "\(dossierNom)/\(chemin.joined(separator: "/"))")
+        }
 
         switch typeAction {
         case "dossier_creer_fichier":
-            guard let dossierNom = parametres["dossier_nom"], let nom = parametres["nom"] else {
+            guard let dossierNom = texte("dossier_nom"), let nom = texte("nom") else {
                 return ResultatAction(succes: false, resultat: "Paramètres manquants (dossier_nom, nom).")
             }
-            guard let dossier = dossierParNom(dossierNom) else {
-                return ResultatAction(succes: false, resultat: "Dossier \"\(dossierNom)\" introuvable (a peut-être été retiré).")
+            let resoluParenturl = resoudreEmplacement(dossierNom, "chemin")
+            guard case .succes(let parentUrl, let libelle) = resoluParenturl else {
+                if case .echec(let msg) = resoluParenturl { return ResultatAction(succes: false, resultat: msg) }
+                return ResultatAction(succes: false, resultat: "Emplacement introuvable.")
             }
             // Note : pas de gestion de type_mime cote iOS (limite existante de
             // DossiersDesignesRepository.creerFichier, pas ajoutee par ce lot).
-            let succes = DossiersDesignesRepository.creerFichier(dansParent: dossier.url, nom: nom)
-            return resultatBooleen(succes, "Fichier \"\(nom)\" créé dans \"\(dossierNom)\".", "Échec de la création de \"\(nom)\" dans \"\(dossierNom)\".")
+            let succes = DossiersDesignesRepository.creerFichier(dansParent: parentUrl, nom: nom)
+            return resultatBooleen(succes, "Fichier \"\(nom)\" créé dans \"\(libelle)\".", "Échec de la création de \"\(nom)\" dans \"\(libelle)\".")
 
         case "dossier_creer_sous_dossier":
-            guard let dossierNom = parametres["dossier_nom"], let nom = parametres["nom"] else {
+            guard let dossierNom = texte("dossier_nom"), let nom = texte("nom") else {
                 return ResultatAction(succes: false, resultat: "Paramètres manquants (dossier_nom, nom).")
             }
-            guard let dossier = dossierParNom(dossierNom) else {
-                return ResultatAction(succes: false, resultat: "Dossier \"\(dossierNom)\" introuvable (a peut-être été retiré).")
+            let resoluParenturl = resoudreEmplacement(dossierNom, "chemin")
+            guard case .succes(let parentUrl, let libelle) = resoluParenturl else {
+                if case .echec(let msg) = resoluParenturl { return ResultatAction(succes: false, resultat: msg) }
+                return ResultatAction(succes: false, resultat: "Emplacement introuvable.")
             }
-            let succes = DossiersDesignesRepository.creerSousDossier(dansParent: dossier.url, nom: nom)
-            return resultatBooleen(succes, "Sous-dossier \"\(nom)\" créé dans \"\(dossierNom)\".", "Échec de la création du sous-dossier \"\(nom)\" dans \"\(dossierNom)\".")
+            let succes = DossiersDesignesRepository.creerSousDossier(dansParent: parentUrl, nom: nom)
+            return resultatBooleen(succes, "Sous-dossier \"\(nom)\" créé dans \"\(libelle)\".", "Échec de la création du sous-dossier \"\(nom)\" dans \"\(libelle)\".")
 
         case "dossier_renommer":
-            guard let dossierNom = parametres["dossier_nom"], let elementNom = parametres["element_nom"], let nouveauNom = parametres["nouveau_nom"] else {
+            guard let dossierNom = texte("dossier_nom"), let elementNom = texte("element_nom"), let nouveauNom = texte("nouveau_nom") else {
                 return ResultatAction(succes: false, resultat: "Paramètres manquants (dossier_nom, element_nom, nouveau_nom).")
             }
-            guard let dossier = dossierParNom(dossierNom) else {
-                return ResultatAction(succes: false, resultat: "Dossier \"\(dossierNom)\" introuvable (a peut-être été retiré).")
+            let resoluParenturl = resoudreEmplacement(dossierNom, "chemin")
+            guard case .succes(let parentUrl, let libelle) = resoluParenturl else {
+                if case .echec(let msg) = resoluParenturl { return ResultatAction(succes: false, resultat: msg) }
+                return ResultatAction(succes: false, resultat: "Emplacement introuvable.")
             }
-            guard let element = elementParNom(dossier.url, elementNom) else {
-                return ResultatAction(succes: false, resultat: "\"\(elementNom)\" introuvable dans \"\(dossierNom)\".")
+            guard let element = elementParNom(parentUrl, elementNom) else {
+                return ResultatAction(succes: false, resultat: "\"\(elementNom)\" introuvable dans \"\(libelle)\".")
             }
             let succes = DossiersDesignesRepository.renommer(element.url, nouveauNom: nouveauNom)
             return resultatBooleen(succes, "\"\(elementNom)\" renommé en \"\(nouveauNom)\".", "Échec du renommage de \"\(elementNom)\".")
 
         case "dossier_supprimer":
-            guard let dossierNom = parametres["dossier_nom"], let elementNom = parametres["element_nom"] else {
+            guard let dossierNom = texte("dossier_nom"), let elementNom = texte("element_nom") else {
                 return ResultatAction(succes: false, resultat: "Paramètres manquants (dossier_nom, element_nom).")
             }
-            guard let dossier = dossierParNom(dossierNom) else {
-                return ResultatAction(succes: false, resultat: "Dossier \"\(dossierNom)\" introuvable (a peut-être été retiré).")
+            let resoluParenturl = resoudreEmplacement(dossierNom, "chemin")
+            guard case .succes(let parentUrl, let libelle) = resoluParenturl else {
+                if case .echec(let msg) = resoluParenturl { return ResultatAction(succes: false, resultat: msg) }
+                return ResultatAction(succes: false, resultat: "Emplacement introuvable.")
             }
-            guard let element = elementParNom(dossier.url, elementNom) else {
-                return ResultatAction(succes: false, resultat: "\"\(elementNom)\" introuvable dans \"\(dossierNom)\".")
+            guard let element = elementParNom(parentUrl, elementNom) else {
+                return ResultatAction(succes: false, resultat: "\"\(elementNom)\" introuvable dans \"\(libelle)\".")
             }
             let succes = DossiersDesignesRepository.supprimer(element.url)
-            return resultatBooleen(succes, "\"\(elementNom)\" supprimé de \"\(dossierNom)\".", "Échec de la suppression de \"\(elementNom)\".")
+            return resultatBooleen(succes, "\"\(elementNom)\" supprimé de \"\(libelle)\".", "Échec de la suppression de \"\(elementNom)\".")
 
         case "dossier_deplacer":
-            guard let dossierNom = parametres["dossier_nom"], let elementNom = parametres["element_nom"], let nouveauDossierNom = parametres["nouveau_dossier_nom"] else {
+            guard let dossierNom = texte("dossier_nom"), let elementNom = texte("element_nom"), let nouveauDossierNom = texte("nouveau_dossier_nom") else {
                 return ResultatAction(succes: false, resultat: "Paramètres manquants (dossier_nom, element_nom, nouveau_dossier_nom).")
             }
-            guard let dossier = dossierParNom(dossierNom) else {
-                return ResultatAction(succes: false, resultat: "Dossier \"\(dossierNom)\" introuvable (a peut-être été retiré).")
+            let resoluSourceparenturl = resoudreEmplacement(dossierNom, "chemin")
+            guard case .succes(let sourceParentUrl, let libelleSource) = resoluSourceparenturl else {
+                if case .echec(let msg) = resoluSourceparenturl { return ResultatAction(succes: false, resultat: msg) }
+                return ResultatAction(succes: false, resultat: "Emplacement source introuvable.")
             }
-            guard let nouveauDossier = dossierParNom(nouveauDossierNom) else {
-                return ResultatAction(succes: false, resultat: "Dossier de destination \"\(nouveauDossierNom)\" introuvable.")
+            let resoluDestinationurl = resoudreEmplacement(nouveauDossierNom, "nouveau_chemin")
+            guard case .succes(let destinationUrl, let libelleDestination) = resoluDestinationurl else {
+                if case .echec(let msg) = resoluDestinationurl { return ResultatAction(succes: false, resultat: msg) }
+                return ResultatAction(succes: false, resultat: "Emplacement de destination introuvable.")
             }
-            guard let element = elementParNom(dossier.url, elementNom) else {
-                return ResultatAction(succes: false, resultat: "\"\(elementNom)\" introuvable dans \"\(dossierNom)\".")
+            guard let element = elementParNom(sourceParentUrl, elementNom) else {
+                return ResultatAction(succes: false, resultat: "\"\(elementNom)\" introuvable dans \"\(libelleSource)\".")
             }
-            let succes = DossiersDesignesRepository.deplacer(element.url, versParent: nouveauDossier.url)
-            return resultatBooleen(succes, "\"\(elementNom)\" déplacé de \"\(dossierNom)\" vers \"\(nouveauDossierNom)\".", "Échec du déplacement de \"\(elementNom)\".")
+            let succes = DossiersDesignesRepository.deplacer(element.url, versParent: destinationUrl)
+            return resultatBooleen(succes, "\"\(elementNom)\" déplacé de \"\(libelleSource)\" vers \"\(libelleDestination)\".", "Échec du déplacement de \"\(elementNom)\".")
 
         case "accessibilite_cliquer", "accessibilite_saisir":
             return ResultatAction(succes: false, resultat: "Accessibilité non disponible sur iOS (pas d'équivalent à l'AccessibilityService Android).")

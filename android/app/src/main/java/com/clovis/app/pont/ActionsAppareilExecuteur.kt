@@ -13,6 +13,7 @@ import android.util.Log
 import com.clovis.app.accessibilite.AccessibiliteExecuteur
 import com.clovis.app.dossiers.DossiersDesignesRepository
 import kotlinx.serialization.json.JsonObject
+import kotlinx.serialization.json.jsonArray
 import kotlinx.serialization.json.jsonPrimitive
 
 object ActionsAppareilExecuteur {
@@ -53,11 +54,40 @@ object ActionsAppareilExecuteur {
         fun dossierParNom(nom: String) =
             repo.listerDossiersDesignes().firstOrNull { it.nom == nom }
 
+        // Descend "chemin" (noms de sous-dossiers, PARENTS uniquement)
+        // depuis racineUri, niveau par niveau via listerContenu -- meme
+        // logique que resoudreCheminUri cote JS (canalTempsReel.ts,
+        // explorer_dossier), portee ici pour gerer_dossier_telephone.
+        // Profondeur illimitee. Chemin vide/absent -> racine telle quelle.
+        fun dossierParChemin(racineUri: Uri, chemin: List<String>): Uri? {
+            var uriCourant = racineUri
+            for (segment in chemin) {
+                val enfant = repo.listerContenu(uriCourant).firstOrNull { it.estDossier && it.nom == segment }
+                    ?: return null
+                uriCourant = enfant.uri
+            }
+            return uriCourant
+        }
+
         fun elementParNom(dossierUri: Uri, nom: String) =
             repo.listerContenu(dossierUri).firstOrNull { it.nom == nom }
 
         fun resultatBooleen(succes: Boolean, messageSucces: String, messageEchec: String) =
             ResultatAction(succes, if (succes) messageSucces else messageEchec)
+
+        // Resout dossierNom + chemin (parametre "chemin", optionnel) en
+        // une seule Uri, avec message d'erreur explicite si un segment
+        // du chemin est introuvable. libelleChemin sert juste a des
+        // messages d'erreur/succes lisibles ("Cours/Maths" par exemple).
+        fun resoudreEmplacement(dossierNom: String, cleChemin: String = "chemin"): Result<Pair<Uri, String>> {
+            val dossier = dossierParNom(dossierNom)
+                ?: return Result.failure(Exception("Dossier \"$dossierNom\" introuvable (a peut-être été retiré)."))
+            val chemin = parametres.listeTexte(cleChemin) ?: emptyList()
+            if (chemin.isEmpty()) return Result.success(dossier.uri to dossierNom)
+            val uri = dossierParChemin(dossier.uri, chemin)
+                ?: return Result.failure(Exception("Sous-dossier introuvable dans \"$dossierNom/${chemin.joinToString("/")}\"."))
+            return Result.success(uri to "$dossierNom/${chemin.joinToString("/")}")
+        }
 
         return when (typeAction) {
             "dossier_creer_fichier" -> {
@@ -66,11 +96,12 @@ object ActionsAppareilExecuteur {
                 if (dossierNom == null || nom == null) {
                     return ResultatAction(false, "Paramètres manquants (dossier_nom, nom).")
                 }
-                val dossier = dossierParNom(dossierNom)
-                    ?: return ResultatAction(false, "Dossier \"$dossierNom\" introuvable (a peut-être été retiré).")
+                val (parentUri, libelle) = resoudreEmplacement(dossierNom).getOrElse {
+                    return ResultatAction(false, it.message ?: "Emplacement introuvable.")
+                }
                 val typeMime = parametres.texte("type_mime") ?: "text/plain"
-                val succes = repo.creerFichier(dossier.uri, nom, typeMime)
-                resultatBooleen(succes, "Fichier \"$nom\" créé dans \"$dossierNom\".", "Échec de la création de \"$nom\" dans \"$dossierNom\".")
+                val succes = repo.creerFichier(parentUri, nom, typeMime)
+                resultatBooleen(succes, "Fichier \"$nom\" créé dans \"$libelle\".", "Échec de la création de \"$nom\" dans \"$libelle\".")
             }
             "dossier_creer_sous_dossier" -> {
                 val dossierNom = parametres.texte("dossier_nom")
@@ -78,10 +109,11 @@ object ActionsAppareilExecuteur {
                 if (dossierNom == null || nom == null) {
                     return ResultatAction(false, "Paramètres manquants (dossier_nom, nom).")
                 }
-                val dossier = dossierParNom(dossierNom)
-                    ?: return ResultatAction(false, "Dossier \"$dossierNom\" introuvable (a peut-être été retiré).")
-                val succes = repo.creerSousDossier(dossier.uri, nom)
-                resultatBooleen(succes, "Sous-dossier \"$nom\" créé dans \"$dossierNom\".", "Échec de la création du sous-dossier \"$nom\" dans \"$dossierNom\".")
+                val (parentUri, libelle) = resoudreEmplacement(dossierNom).getOrElse {
+                    return ResultatAction(false, it.message ?: "Emplacement introuvable.")
+                }
+                val succes = repo.creerSousDossier(parentUri, nom)
+                resultatBooleen(succes, "Sous-dossier \"$nom\" créé dans \"$libelle\".", "Échec de la création du sous-dossier \"$nom\" dans \"$libelle\".")
             }
             "dossier_renommer" -> {
                 val dossierNom = parametres.texte("dossier_nom")
@@ -90,10 +122,11 @@ object ActionsAppareilExecuteur {
                 if (dossierNom == null || elementNom == null || nouveauNom == null) {
                     return ResultatAction(false, "Paramètres manquants (dossier_nom, element_nom, nouveau_nom).")
                 }
-                val dossier = dossierParNom(dossierNom)
-                    ?: return ResultatAction(false, "Dossier \"$dossierNom\" introuvable (a peut-être été retiré).")
-                val element = elementParNom(dossier.uri, elementNom)
-                    ?: return ResultatAction(false, "\"$elementNom\" introuvable dans \"$dossierNom\".")
+                val (parentUri, libelle) = resoudreEmplacement(dossierNom).getOrElse {
+                    return ResultatAction(false, it.message ?: "Emplacement introuvable.")
+                }
+                val element = elementParNom(parentUri, elementNom)
+                    ?: return ResultatAction(false, "\"$elementNom\" introuvable dans \"$libelle\".")
                 val succes = repo.renommer(element.uri, nouveauNom)
                 resultatBooleen(succes, "\"$elementNom\" renommé en \"$nouveauNom\".", "Échec du renommage de \"$elementNom\".")
             }
@@ -103,12 +136,13 @@ object ActionsAppareilExecuteur {
                 if (dossierNom == null || elementNom == null) {
                     return ResultatAction(false, "Paramètres manquants (dossier_nom, element_nom).")
                 }
-                val dossier = dossierParNom(dossierNom)
-                    ?: return ResultatAction(false, "Dossier \"$dossierNom\" introuvable (a peut-être été retiré).")
-                val element = elementParNom(dossier.uri, elementNom)
-                    ?: return ResultatAction(false, "\"$elementNom\" introuvable dans \"$dossierNom\".")
+                val (parentUri, libelle) = resoudreEmplacement(dossierNom).getOrElse {
+                    return ResultatAction(false, it.message ?: "Emplacement introuvable.")
+                }
+                val element = elementParNom(parentUri, elementNom)
+                    ?: return ResultatAction(false, "\"$elementNom\" introuvable dans \"$libelle\".")
                 val succes = repo.supprimer(element.uri)
-                resultatBooleen(succes, "\"$elementNom\" supprimé de \"$dossierNom\".", "Échec de la suppression de \"$elementNom\".")
+                resultatBooleen(succes, "\"$elementNom\" supprimé de \"$libelle\".", "Échec de la suppression de \"$elementNom\".")
             }
             "dossier_deplacer" -> {
                 val dossierNom = parametres.texte("dossier_nom")
@@ -117,14 +151,16 @@ object ActionsAppareilExecuteur {
                 if (dossierNom == null || elementNom == null || nouveauDossierNom == null) {
                     return ResultatAction(false, "Paramètres manquants (dossier_nom, element_nom, nouveau_dossier_nom).")
                 }
-                val dossier = dossierParNom(dossierNom)
-                    ?: return ResultatAction(false, "Dossier \"$dossierNom\" introuvable (a peut-être été retiré).")
-                val nouveauDossier = dossierParNom(nouveauDossierNom)
-                    ?: return ResultatAction(false, "Dossier de destination \"$nouveauDossierNom\" introuvable.")
-                val element = elementParNom(dossier.uri, elementNom)
-                    ?: return ResultatAction(false, "\"$elementNom\" introuvable dans \"$dossierNom\".")
-                val succes = repo.deplacer(element.uri, dossier.uri, nouveauDossier.uri)
-                resultatBooleen(succes, "\"$elementNom\" déplacé de \"$dossierNom\" vers \"$nouveauDossierNom\".", "Échec du déplacement de \"$elementNom\".")
+                val (sourceParentUri, libelleSource) = resoudreEmplacement(dossierNom, "chemin").getOrElse {
+                    return ResultatAction(false, it.message ?: "Emplacement source introuvable.")
+                }
+                val (destinationUri, libelleDestination) = resoudreEmplacement(nouveauDossierNom, "nouveau_chemin").getOrElse {
+                    return ResultatAction(false, it.message ?: "Emplacement de destination introuvable.")
+                }
+                val element = elementParNom(sourceParentUri, elementNom)
+                    ?: return ResultatAction(false, "\"$elementNom\" introuvable dans \"$libelleSource\".")
+                val succes = repo.deplacer(element.uri, sourceParentUri, destinationUri)
+                resultatBooleen(succes, "\"$elementNom\" déplacé de \"$libelleSource\" vers \"$libelleDestination\".", "Échec du déplacement de \"$elementNom\".")
             }
             "accessibilite_cliquer" -> {
                 val texteCible = parametres.texte("texte_cible")
@@ -150,6 +186,18 @@ object ActionsAppareilExecuteur {
         val element = this[cle] ?: return null
         return try {
             element.jsonPrimitive.content
+        } catch (e: Exception) {
+            null
+        }
+    }
+
+    // "chemin"/"nouveau_chemin" (01/09/2026) : liste de noms de
+    // sous-dossiers, absente ou invalide -> null (traite comme racine
+    // par resoudreEmplacement, jamais une erreur bloquante ici).
+    private fun JsonObject.listeTexte(cle: String): List<String>? {
+        val element = this[cle] ?: return null
+        return try {
+            element.jsonArray.map { it.jsonPrimitive.content }
         } catch (e: Exception) {
             null
         }
