@@ -406,6 +406,17 @@ select:focus-visible {
   opacity: 1;
   transform: translateY(0);
 }
+
+/* Corrige un bug de rendu de Chromium (Chrome, Edge, WebView Android) :
+   une liste avec son propre défilement (overflow-y-auto), placée à
+   l'intérieur d'un panneau lui-même "position: fixed" avec défilement,
+   peut se dessiner avec un texte tout petit et coloré, illisible tant
+   qu'on ne force pas un redessin (ex. en zoomant). Isoler la liste dans
+   sa propre couche de composition stable règle le problème. */
+.dj-scroll-isole {
+  transform: translateZ(0);
+  contain: paint;
+}
 @media (prefers-reduced-motion: reduce) {
   .dj-reveal {
     opacity: 1;

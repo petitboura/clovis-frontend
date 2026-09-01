@@ -386,7 +386,7 @@ export function ChatFlottant({
                 <History size={16} className="transition-transform duration-300 group-hover:rotate-45" />
               </button>
               {historiqueOuvert && (
-                <div className="absolute right-0 top-9 z-10 max-h-64 w-56 animate-dj-fade-in-rapide overflow-y-auto rounded-cgpt-carte border border-dj-bordure bg-dj-surface p-1 shadow-lg">
+                <div className="dj-scroll-isole absolute right-0 top-9 z-10 max-h-64 w-56 animate-dj-fade-in-rapide overflow-y-auto rounded-cgpt-carte border border-dj-bordure bg-dj-surface p-1 shadow-lg">
                   {historique.map((fil) => (
                     <button
                       key={fil.conversation_id ?? "legacy"}

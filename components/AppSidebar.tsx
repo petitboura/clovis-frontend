@@ -956,7 +956,7 @@ export function AppSidebar({
                       Historique
                     </button>
                     {historiqueDeplie && (
-                      <div className="flex max-h-56 flex-col overflow-y-auto px-1 pb-1">
+                      <div className="dj-scroll-isole flex max-h-56 flex-col overflow-y-auto px-1 pb-1">
                         {historique.map((fil) => {
                           const estActive = fil.conversation_id === conversationActiveId;
                           return (
