@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { usePathname } from "next/navigation";
 import { PanneauFlottant } from "@/components/PanneauFlottant";
 import { BlocsMenuPlus, SECTIONS_BASE } from "@/components/EspacePlus";
+import { useFermetureAuRetour } from "@/lib/contexteRetour";
 
 // Créé le 30/08/2026, audit navigation web mobile vs natif, étape 1.
 //
@@ -54,6 +55,13 @@ export function MenuHamburgerWeb() {
   useEffect(() => {
     setOuvert(false);
   }, [pathname]);
+
+  // Correctif (01/09/2026) : meme trou que MenuHamburgerNatif.tsx (voir
+  // son commentaire) -- ce panneau ne s'enregistrait jamais comme calque
+  // dans lib/contexteRetour.tsx. Le fallback popstate du 31/08 couvre
+  // aussi le web mobile Android (pas seulement le natif), donc ce menu
+  // devait s'y empiler comme les autres calques deja cables.
+  useFermetureAuRetour(ouvert, () => setOuvert(false));
 
   return (
     <>

@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { usePathname } from "next/navigation";
 import { PanneauFlottant } from "@/components/PanneauFlottant";
 import { BlocsMenuPlus, SECTIONS_BASE } from "@/components/EspacePlus";
+import { useFermetureAuRetour } from "@/lib/contexteRetour";
 
 // Créé le 30/08/2026, tâche 2 (menu hamburger natif), Bourama.
 //
@@ -53,6 +54,15 @@ export function MenuHamburgerNatif() {
   useEffect(() => {
     setOuvert(false);
   }, [pathname]);
+
+  // Correctif (01/09/2026) : ce panneau ne s'enregistrait jamais comme
+  // calque dans lib/contexteRetour.tsx (voir son commentaire -- pile de
+  // calques introduite le 31/08 pour le bouton retour, chat plein ecran/
+  // popups de section/tiroir/modales deja cables). Restait un trou :
+  // bouton retour materiel (ou popstate sur web mobile) avec ce menu
+  // ouvert ne le fermait pas, minimisait l'appli / naviguait en arriere
+  // a la place, menu reste ouvert derriere.
+  useFermetureAuRetour(ouvert, () => setOuvert(false));
 
   return (
     <>
