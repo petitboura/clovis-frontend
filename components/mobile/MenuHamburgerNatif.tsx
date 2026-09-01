@@ -59,7 +59,7 @@ export function MenuHamburgerNatif() {
       <button
         onClick={() => setOuvert(true)}
         aria-label="Ouvrir le menu"
-        className="group fixed left-2 top-[calc(0.5rem+var(--cap-native-navigation-top,0px))] z-40 flex h-8 w-8 items-center justify-center text-dj-texte"
+        className="group fixed left-2 top-[calc(0.5rem+var(--cap-native-navigation-top,var(--safe-top)))] z-40 flex h-8 w-8 items-center justify-center text-dj-texte"
       >
         <IconeEscalier />
       </button>

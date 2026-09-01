@@ -5,6 +5,7 @@ import { Bell, CalendarPlus, ExternalLink, Send, ShieldCheck } from "lucide-reac
 import { usePluginNatif, messageErreurPlugin } from "@/lib/usePluginNatif";
 import { Skeleton } from "./Skeleton";
 import { BandeauTelechargerApp } from "./BandeauTelechargerApp";
+import { BoutonInfoSection } from "./BoutonInfoSection";
 
 /**
  * Écran autonome pour le plugin Notifications : construit d'abord côté
@@ -207,9 +208,12 @@ export function EspaceRappels() {
 
   return (
     <div className="flex animate-dj-fade-in-rapide flex-col gap-4 p-4">
-      <div>
+      <div className="flex items-center gap-1.5">
         <h2 className="font-display text-base font-bold text-dj-texte">Rappels</h2>
-        <p className="mt-1 text-xs text-dj-texte-muet">Notifications, rappels programmés et événements de calendrier.</p>
+        <BoutonInfoSection
+          rubriqueId="rappels"
+          texteCourt="Notifications, rappels programmés et événements de calendrier."
+        />
       </div>
 
       {!accordee ? (

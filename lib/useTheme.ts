@@ -18,7 +18,18 @@ export type ThemeResolu = "clair" | "sombre";
 
 function lireThemeResolu(): ThemeResolu {
   if (typeof document === "undefined") return "sombre"; // SSR : sans importance, jamais affiché
-  return document.documentElement.dataset.theme === "light" ? "clair" : "sombre";
+  const attribut = document.documentElement.dataset.theme;
+  if (attribut === "light") return "clair";
+  if (attribut === "dark") return "sombre";
+  // Mode "systeme" (aucun attribut force, cas par defaut pour la plupart
+  // des utilisateurs) : avant ce correctif, on retombait ici directement
+  // sur "sombre" sans jamais consulter la vraie preference du telephone,
+  // ce qui donnait par exemple une barre d'onglets native toujours noire
+  // meme en theme clair systeme (remonte par Bourama, 01/09/2026).
+  if (typeof window !== "undefined" && window.matchMedia) {
+    return window.matchMedia("(prefers-color-scheme: dark)").matches ? "sombre" : "clair";
+  }
+  return "sombre";
 }
 
 function lireChoixStocke(): ChoixTheme {

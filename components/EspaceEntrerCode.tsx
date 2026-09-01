@@ -11,6 +11,7 @@ import {
 import { messageErreur, ErreurApi } from "@/lib/erreurs";
 import { Skeleton } from "./Skeleton";
 import { CTACompteRequis } from "./CTACompteRequis";
+import { BoutonInfoSection } from "./BoutonInfoSection";
 
 /**
  * Bloc "Entrer un code" (réécrit le 14/08/2026, demande Bourama --
@@ -123,10 +124,13 @@ export function EspaceEntrerCode() {
 
   return (
     <section className="rounded-cgpt-carte border border-dj-bordure bg-dj-surface p-5">
-      <h2 className="font-display text-base font-semibold text-dj-texte">Entrer un code</h2>
-      <p className="mt-1 text-xs text-dj-texte-muet">
-        Quelqu&apos;un t&apos;a donné un code ? Entre-le ici pour recevoir tout ce qu&apos;il partage.
-      </p>
+      <div className="flex items-center gap-1.5">
+        <h2 className="font-display text-base font-semibold text-dj-texte">Entrer un code</h2>
+        <BoutonInfoSection
+          rubriqueId="entrer-code"
+          texteCourt="Quelqu'un t'a donné un code ? Entre-le ici pour recevoir tout ce qu'il partage."
+        />
+      </div>
 
       <div className="mt-4 flex items-center gap-2">
         <input

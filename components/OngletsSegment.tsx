@@ -37,7 +37,7 @@ export function OngletsSegment({ onglets, valeur, onChange, ariaLabel, taille = 
   const paddingBouton = taille === "compact" ? "px-3 py-1.5 text-xs" : "px-3.5 py-2 text-sm";
 
   return (
-    <div role="tablist" aria-label={ariaLabel} className="flex w-full flex-wrap gap-1">
+    <div role="tablist" aria-label={ariaLabel} className="flex w-full gap-1 overflow-x-auto">
       {onglets.map(({ valeur: v, libelle, icone: Icone }) => {
         const actif = v === valeur;
         return (
@@ -46,7 +46,7 @@ export function OngletsSegment({ onglets, valeur, onChange, ariaLabel, taille = 
             role="tab"
             aria-selected={actif}
             onClick={() => onChange(v)}
-            className={`flex items-center gap-1.5 rounded-full font-medium transition-colors duration-200 ${paddingBouton} ${
+            className={`flex flex-shrink-0 items-center gap-1.5 whitespace-nowrap rounded-full font-medium transition-colors duration-200 ${paddingBouton} ${
               actif ? "bg-dj-accent-1-conteneur text-dj-accent-1-texte" : "text-dj-texte-muet hover:text-dj-texte"
             }`}
           >

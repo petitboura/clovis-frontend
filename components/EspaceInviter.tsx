@@ -7,6 +7,7 @@ import { MATIERES } from "@/lib/matieres";
 import { messageErreur } from "@/lib/erreurs";
 import { Skeleton } from "./Skeleton";
 import { SelectPersonnalise } from "./SelectPersonnalise";
+import { BoutonInfoSection } from "./BoutonInfoSection";
 
 /**
  * Bloc "Écrire une matière" de l'espace Clovis (réécrit le 09/08,
@@ -73,11 +74,13 @@ export function EspaceInviter() {
 
   return (
     <section className="rounded-2xl border border-dj-bordure bg-dj-surface p-5">
-      <h2 className="font-display text-base font-semibold text-dj-texte">Écrire une matière</h2>
-      <p className="mt-1 text-xs text-dj-texte-muet">
-        Choisis une matière et écris ce que Clovis doit savoir ou comment il doit répondre. Un code se génère à
-        l'enregistrement, partage-le, il débloque exactement ce texte pour celui qui l'entre.
-      </p>
+      <div className="flex items-center gap-1.5">
+        <h2 className="font-display text-base font-semibold text-dj-texte">Écrire une matière</h2>
+        <BoutonInfoSection
+          rubriqueId="ecrire-matiere"
+          texteCourt="Choisis une matière et écris ce que Clovis doit savoir ou comment il doit répondre."
+        />
+      </div>
 
       {chargement && (
         <div className="mt-4 flex flex-col gap-3" aria-hidden>

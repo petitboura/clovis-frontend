@@ -1,10 +1,13 @@
+import { Suspense } from "react";
 import { SectionPage } from "@/components/SectionPage";
 import { EspaceParametres } from "@/components/EspaceParametres";
 
 export default function PageParametres() {
   return (
     <SectionPage title="Paramètres">
-      <EspaceParametres />
+      <Suspense fallback={null}>
+        <EspaceParametres />
+      </Suspense>
     </SectionPage>
   );
 }

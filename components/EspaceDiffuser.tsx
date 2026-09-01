@@ -11,6 +11,7 @@ import {
 import { messageErreur } from "@/lib/erreurs";
 import { Skeleton } from "./Skeleton";
 import { SelectPersonnalise } from "./SelectPersonnalise";
+import { BoutonInfoSection } from "./BoutonInfoSection";
 
 /**
  * "Diffuser" (réécrit le 09/08, demande Bourama : plus de "toute
@@ -80,10 +81,13 @@ export function EspaceDiffuser() {
 
   return (
     <section className="rounded-2xl border border-dj-bordure bg-dj-surface p-5">
-      <h2 className="font-display text-base font-semibold text-dj-texte">Diffuser</h2>
-      <p className="mt-1 text-xs text-dj-texte-muet">
-        Ajouté à la bibliothèque personnelle de chacun de ceux qui ont entré ce code précis, privé à ce lien.
-      </p>
+      <div className="flex items-center gap-1.5">
+        <h2 className="font-display text-base font-semibold text-dj-texte">Diffuser</h2>
+        <BoutonInfoSection
+          rubriqueId="diffuser"
+          texteCourt="Ajouté à la bibliothèque de chacun de ceux qui ont entré ce code, privé à ce lien."
+        />
+      </div>
 
       {chargementContenus && <Skeleton className="mt-4 h-9 rounded-lg border border-dj-bordure" />}
 

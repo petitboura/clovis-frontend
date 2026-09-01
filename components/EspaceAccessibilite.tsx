@@ -5,6 +5,7 @@ import { ShieldCheck, Settings2, Plus, X, ScrollText } from "lucide-react";
 import { usePluginNatif, messageErreurPlugin } from "@/lib/usePluginNatif";
 import { Skeleton } from "./Skeleton";
 import { BandeauTelechargerApp } from "./BandeauTelechargerApp";
+import { BoutonInfoSection } from "./BoutonInfoSection";
 
 /**
  * Écran autonome pour le plugin natif Accessibilite (Lot 3B Partie 3 mobile,
@@ -223,11 +224,12 @@ export function EspaceAccessibilite() {
 
   return (
     <div className="flex animate-dj-fade-in-rapide flex-col gap-4 p-4">
-      <div>
+      <div className="flex items-center gap-1.5">
         <h2 className="font-display text-base font-bold text-dj-texte">Accessibilité</h2>
-        <p className="mt-1 text-xs text-dj-texte-muet">
-          Autorise Clovis à lire et agir dans les apps que tu choisis, une par une.
-        </p>
+        <BoutonInfoSection
+          rubriqueId="accessibilite"
+          texteCourt="Autorise Clovis à lire et agir dans les apps que tu choisis, une par une."
+        />
       </div>
 
       {!serviceActif ? (

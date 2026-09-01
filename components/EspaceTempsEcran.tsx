@@ -6,6 +6,7 @@ import { usePluginNatif, messageErreurPlugin } from "@/lib/usePluginNatif";
 import { synchroniserUsage, obtenirUsage, type LigneUsage } from "@/lib/api";
 import { Skeleton } from "./Skeleton";
 import { BandeauTelechargerApp } from "./BandeauTelechargerApp";
+import { BoutonInfoSection } from "./BoutonInfoSection";
 
 /**
  * Écran autonome pour le plugin natif TempsEcran (Android uniquement :
@@ -178,9 +179,12 @@ export function EspaceTempsEcran() {
 
   return (
     <div className="flex animate-dj-fade-in-rapide flex-col gap-4 p-4">
-      <div>
+      <div className="flex items-center gap-1.5">
         <h2 className="font-display text-base font-bold text-dj-texte">Temps d&apos;écran</h2>
-        <p className="mt-1 text-xs text-dj-texte-muet">Temps passé aujourd&apos;hui dans chaque app, et les 7 derniers jours.</p>
+        <BoutonInfoSection
+          rubriqueId="temps-ecran"
+          texteCourt="Temps passé aujourd'hui dans chaque app, et les 7 derniers jours."
+        />
       </div>
 
       {chargementPermission ? (

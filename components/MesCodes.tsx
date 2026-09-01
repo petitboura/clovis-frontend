@@ -15,6 +15,7 @@ import {
 import { messageErreur, ErreurApi } from "@/lib/erreurs";
 import { Skeleton } from "./Skeleton";
 import { CTACompteRequis } from "./CTACompteRequis";
+import { BoutonInfoSection } from "./BoutonInfoSection";
 
 // Même agent générique que MesComportements.tsx (app/(app)/comportements/page.tsx)
 // -- "Mes comportements" n'a jamais eu de notion de rôle, un seul agentId
@@ -161,11 +162,13 @@ export function MesCodes() {
     <section className="rounded-cgpt-carte border border-dj-bordure bg-dj-surface p-5">
       <div className="flex items-center justify-between">
         <div>
-          <h2 className="font-display text-base font-semibold text-dj-texte">Mes codes</h2>
-          <p className="mt-1 text-xs text-dj-texte-muet">
-            Crée un code et partage-le : tous ceux qui l&apos;entrent reçoivent tout ce que tu y mets,
-            comportement, bibliothèque, texte. Modifiable après coup, tout le monde voit la mise à jour.
-          </p>
+          <div className="flex items-center gap-1.5">
+            <h2 className="font-display text-base font-semibold text-dj-texte">Mes codes</h2>
+            <BoutonInfoSection
+              rubriqueId="mes-codes"
+              texteCourt="Crée un code et partage-le : tous ceux qui l'entrent reçoivent ce que tu y mets."
+            />
+          </div>
         </div>
         <button
           onClick={creerVide}

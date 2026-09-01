@@ -112,9 +112,16 @@ const COULEURS_THEME: Record<"clair" | "sombre", { fond: string; accent: string;
   sombre: { fond: "#0f0d0b", accent: "#e8bf60", muet: "#9a9184" },
 };
 
+// 01/09/2026, correctif (Bourama : "barre toujours noire meme en changeant
+// de theme") : dynamic n'etait jamais precise. Sur Android 12+, ce champ
+// laisse "non specifie" peut faire deriver les couleurs non couvertes
+// explicitement depuis la palette systeme Material You (souvent sombre),
+// meme quand background/tint/inactiveTint sont bien fournis. dynamic:false
+// force le plugin a n'utiliser que nos couleurs explicites, jamais la
+// palette systeme.
 function couleursTabbar(resolu: "clair" | "sombre") {
   const c = COULEURS_THEME[resolu];
-  return { background: c.fond, tint: c.accent, inactiveTint: c.muet };
+  return { dynamic: false, background: c.fond, tint: c.accent, inactiveTint: c.muet };
 }
 
 function definitionOnglets() {

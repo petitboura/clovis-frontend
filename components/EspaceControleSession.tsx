@@ -5,6 +5,7 @@ import { ShieldCheck, Settings2, Play, Square } from "lucide-react";
 import { usePluginNatif, messageErreurPlugin } from "@/lib/usePluginNatif";
 import { Skeleton } from "./Skeleton";
 import { BandeauTelechargerApp } from "./BandeauTelechargerApp";
+import { BoutonInfoSection } from "./BoutonInfoSection";
 
 /**
  * Écran autonome pour le plugin natif ControleSession (Lot 3B Partie 3
@@ -125,11 +126,12 @@ export function EspaceControleSession() {
 
   return (
     <div className="flex animate-dj-fade-in-rapide flex-col gap-4 p-4">
-      <div>
+      <div className="flex items-center gap-1.5">
         <h2 className="font-display text-base font-bold text-dj-texte">Contrôle de session</h2>
-        <p className="mt-1 text-xs text-dj-texte-muet">
-          Coupe les sonneries et notifications, et active Ne pas déranger le temps de ta session de travail.
-        </p>
+        <BoutonInfoSection
+          rubriqueId="controle-session"
+          texteCourt="Coupe les sonneries et notifications, et active Ne pas déranger le temps de ta session."
+        />
       </div>
 
       {chargementPermission ? (
