@@ -998,19 +998,22 @@ export async function supprimerMonCompte() {
 //
 // Un code peut porter, chacun optionnel et combinable : des comportements
 // (18/08/2026 : sélection parmi "Mes comportements", référence vivante --
-// plus un texte tapé ici, voir MesCodes.tsx), un partage de bibliothèque
-// (copie automatique à chaque ajout), un texte libre. Vivant : modifier
-// le code (ou un comportement référencé) met à jour ce que voient tous
-// ses receveurs, pas besoin d'un nouveau code.
+// plus un texte tapé ici, voir MesCodes.tsx), un ou plusieurs dossiers de
+// bibliothèque partagés (02/09/2026, remplace partage_bibliotheque tout
+// ou rien -- copie automatique à chaque ajout, sous-dossiers inclus), un
+// texte libre. Vivant : modifier le code (ou un comportement/dossier
+// référencé) met à jour ce que voient tous ses receveurs, pas besoin
+// d'un nouveau code.
 
 export type ComportementLie = { id: string; nom: string };
+export type DossierLie = { id: string; nom: string };
 
 export type CodePartage = {
   id: string;
   code: string;
   nom: string | null;
   comportements: ComportementLie[];
-  partage_bibliotheque: boolean;
+  dossiers: DossierLie[];
   texte_libre: string | null;
   actif: boolean;
   created_at: string;
@@ -1020,7 +1023,7 @@ export type CodePartage = {
 export type CodePartagePayload = {
   nom?: string | null;
   comportement_ids?: string[];
-  partage_bibliotheque?: boolean;
+  dossier_ids?: string[];
   texte_libre?: string | null;
 };
 
@@ -1053,7 +1056,8 @@ export type RattachementCode = {
   proprietaire_nom: string;
   a_comportement: boolean;
   comportements: ComportementLie[];
-  partage_bibliotheque: boolean;
+  a_dossier: boolean;
+  dossiers: DossierLie[];
   texte_libre: string | null;
 };
 

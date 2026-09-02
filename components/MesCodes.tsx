@@ -9,8 +9,11 @@ import {
   activerCode,
   supprimerCode,
   lireMesComportements,
+  listerDossiersBibliotheque,
+  creerDossierBibliotheque,
   type CodePartage,
   type Comportement,
+  type DossierBibliotheque,
 } from "@/lib/api";
 import { messageErreur, ErreurApi } from "@/lib/erreurs";
 import { Skeleton } from "./Skeleton";
@@ -31,14 +34,18 @@ const AGENT_ID = "clovis";
  * -- chaque code peut porter, tous optionnels et combinables : une
  * sélection de comportements déjà créés dans "Mes comportements"
  * (18/08/2026, demande Bourama : plus de texte tapé ici, référence
- * vivante -- voir ChampComportement), un partage de bibliothèque (copie
- * automatique à chaque ajout), un texte libre. Vivant : modifier un
- * champ met à jour ce que voient tous les receveurs de ce code, pas
- * besoin d'en générer un nouveau.
+ * vivante -- voir ChampComportement), un ou plusieurs dossiers de
+ * bibliothèque déjà créés (02/09/2026, demande Bourama : remplace
+ * l'ancien "Partager ma bibliothèque" tout ou rien -- voir
+ * ChampDossiers, chaque dossier partagé synchronise son contenu actuel
+ * ET tous ses ajouts futurs, sous-dossiers compris), un texte libre.
+ * Vivant : modifier un champ met à jour ce que voient tous les
+ * receveurs de ce code, pas besoin d'en générer un nouveau.
  */
 export function MesCodes() {
   const [codes, setCodes] = useState<CodePartage[] | undefined>(undefined);
   const [mesComportements, setMesComportements] = useState<Comportement[]>([]);
+  const [mesDossiers, setMesDossiers] = useState<DossierBibliotheque[]>([]);
   const [erreur, setErreur] = useState<string | null>(null);
   const [ouvert, setOuvert] = useState<string | null>(null); // id du code en édition
   const [creation, setCreation] = useState(false);
@@ -46,6 +53,10 @@ export function MesCodes() {
   // Refonte "Mon espace = l'app" : section auparavant inatteignable sans
   // compte, même détection 401 que les autres.
   const [sansCompte, setSansCompte] = useState(false);
+
+  function chargerDossiers() {
+    listerDossiersBibliotheque().then(setMesDossiers).catch(() => setMesDossiers([]));
+  }
 
   function charger() {
     listerMesCodes()
@@ -62,6 +73,7 @@ export function MesCodes() {
   useEffect(() => {
     charger();
     lireMesComportements(AGENT_ID).then(setMesComportements).catch(() => setMesComportements([]));
+    chargerDossiers();
   }, []);
 
   async function creerVide() {
@@ -239,7 +251,12 @@ export function MesCodes() {
                     mesComportements={mesComportements}
                     onSauver={(comportement_ids) => sauvegarder(c.id, { comportement_ids })}
                   />
-                  <ChampBibliotheque c={c} onSauver={(partage_bibliotheque) => sauvegarder(c.id, { partage_bibliotheque })} />
+                  <ChampDossiers
+                    c={c}
+                    mesDossiers={mesDossiers}
+                    onSauver={(dossier_ids) => sauvegarder(c.id, { dossier_ids })}
+                    onDossierCree={chargerDossiers}
+                  />
                   <ChampTexteLibre c={c} onSauver={(texte_libre) => sauvegarder(c.id, { texte_libre })} />
                 </div>
               )}
@@ -327,12 +344,116 @@ function ChampComportement({
   );
 }
 
-function ChampBibliotheque({ c, onSauver }: { c: CodePartage; onSauver: (v: boolean) => void }) {
+/** Aplati l'arborescence des dossiers en une liste ordonnée parent avant
+ * enfants, avec la profondeur de chacun (pour l'indentation visuelle). */
+function ordonnerDossiers(dossiers: DossierBibliotheque[]): { dossier: DossierBibliotheque; profondeur: number }[] {
+  const enfants = new Map<string | null, DossierBibliotheque[]>();
+  for (const d of dossiers) {
+    const cle = d.dossier_parent_id;
+    if (!enfants.has(cle)) enfants.set(cle, []);
+    enfants.get(cle)!.push(d);
+  }
+  const resultat: { dossier: DossierBibliotheque; profondeur: number }[] = [];
+  function visiter(parentId: string | null, profondeur: number) {
+    for (const d of enfants.get(parentId) || []) {
+      resultat.push({ dossier: d, profondeur });
+      visiter(d.id, profondeur + 1);
+    }
+  }
+  visiter(null, 0);
+  return resultat;
+}
+
+/**
+ * 02/09/2026, demande Bourama : remplace la case "Partager ma
+ * bibliothèque" (tout ou rien) -- sélection précise d'un ou plusieurs
+ * dossiers déjà créés dans la bibliothèque perso. Partager un dossier
+ * partage aussi automatiquement tous ses sous-dossiers (géré côté
+ * backend, voir core/codes_partage.py). Un champ permet aussi de créer
+ * un nouveau dossier directement ici et de l'attacher dans la foulée,
+ * sans passer par la bibliothèque d'abord. Sauvegarde immédiate à
+ * chaque coche, comme ChampComportement.
+ */
+function ChampDossiers({
+  c,
+  mesDossiers,
+  onSauver,
+  onDossierCree,
+}: {
+  c: CodePartage;
+  mesDossiers: DossierBibliotheque[];
+  onSauver: (v: string[]) => void;
+  onDossierCree: () => void;
+}) {
+  const [nouveauNom, setNouveauNom] = useState("");
+  const [creation, setCreation] = useState(false);
+  const idsActuels = c.dossiers.map((d) => d.id);
+  const ordonnes = ordonnerDossiers(mesDossiers);
+
+  function basculer(id: string) {
+    const nouveaux = idsActuels.includes(id) ? idsActuels.filter((i) => i !== id) : [...idsActuels, id];
+    onSauver(nouveaux);
+  }
+
+  async function creerEtAttacher() {
+    const nom = nouveauNom.trim();
+    if (!nom || creation) return;
+    setCreation(true);
+    try {
+      const dossier = (await creerDossierBibliotheque(nom)) as DossierBibliotheque;
+      onDossierCree();
+      onSauver([...idsActuels, dossier.id]);
+      setNouveauNom("");
+    } finally {
+      setCreation(false);
+    }
+  }
+
   return (
-    <label className="flex items-center gap-2 text-sm text-dj-texte">
-      <input type="checkbox" checked={c.partage_bibliotheque} onChange={(e) => onSauver(e.target.checked)} className="h-4 w-4 accent-dj-accent-1" />
-      Partager ma bibliothèque (chaque nouvel ajout est copié chez les receveurs)
-    </label>
+    <div>
+      <label className="text-xs font-semibold text-dj-texte-muet">
+        Dossiers partagés (sous-dossiers inclus, mis à jour au fil des ajouts)
+      </label>
+      {ordonnes.length === 0 ? (
+        <p className="mt-1 text-xs text-dj-texte-muet">
+          Aucun dossier créé pour l&apos;instant, crées-en un juste en dessous.
+        </p>
+      ) : (
+        <div className="mt-1 flex flex-col gap-1.5 rounded-lg border border-dj-bordure bg-dj-surface px-2.5 py-2">
+          {ordonnes.map(({ dossier, profondeur }) => (
+            <label
+              key={dossier.id}
+              className="flex items-center gap-2 text-sm text-dj-texte"
+              style={{ paddingLeft: profondeur * 16 }}
+            >
+              <input
+                type="checkbox"
+                checked={idsActuels.includes(dossier.id)}
+                onChange={() => basculer(dossier.id)}
+                className="h-4 w-4 flex-shrink-0 accent-dj-accent-1"
+              />
+              <span className="min-w-0 truncate">{dossier.nom}</span>
+            </label>
+          ))}
+        </div>
+      )}
+      <div className="mt-1.5 flex gap-1.5">
+        <input
+          value={nouveauNom}
+          onChange={(e) => setNouveauNom(e.target.value)}
+          onKeyDown={(e) => e.key === "Enter" && creerEtAttacher()}
+          placeholder="Créer un nouveau dossier à partager"
+          className="flex-1 rounded-lg border border-dj-bordure bg-dj-surface px-2.5 py-1.5 text-sm text-dj-texte outline-none focus:border-dj-bordure-forte"
+        />
+        <button
+          onClick={creerEtAttacher}
+          disabled={creation || !nouveauNom.trim()}
+          className="flex-shrink-0 rounded-lg bg-dj-accent-1 px-2.5 text-[#1A0D02] disabled:opacity-50"
+        >
+          <Plus size={14} />
+        </button>
+      </div>
+    </div>
   );
 }
 
