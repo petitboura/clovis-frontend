@@ -9,6 +9,7 @@ import {
   HelpCircle,
   Info,
   Trash2,
+  Download,
   Camera,
   Monitor,
   Sun,
@@ -21,7 +22,7 @@ import {
 import { BoutonRetour } from "./BoutonRetour";
 import { ChampMotDePasse } from "./ChampMotDePasse";
 import { supabase } from "@/lib/supabase";
-import { appelerApiFichier, lireMonProfil, enregistrerMonProfil, supprimerMonCompte } from "@/lib/api";
+import { appelerApiFichier, lireMonProfil, enregistrerMonProfil, supprimerMonCompte, exporterMesDonnees } from "@/lib/api";
 import { messageErreur, ErreurApi } from "@/lib/erreurs";
 import { useTheme, type ChoixTheme } from "@/lib/useTheme";
 import { Skeleton } from "./Skeleton";
@@ -202,6 +203,8 @@ export function EspaceParametres() {
   const [erreurMotDePasse, setErreurMotDePasse] = useState<string | null>(null);
 
   const [suppressionEnCours, setSuppressionEnCours] = useState(false);
+  const [exportEnCours, setExportEnCours] = useState(false);
+  const [erreurExport, setErreurExport] = useState<string | null>(null);
   const [erreurSuppression, setErreurSuppression] = useState<string | null>(null);
 
   useEffect(() => {
@@ -289,6 +292,18 @@ export function EspaceParametres() {
       setErreurMotDePasse(e?.message || "Impossible de mettre à jour le mot de passe, réessaie.");
     } finally {
       setEnregistrementMotDePasse(false);
+    }
+  }
+
+  async function handleExporterMesDonnees() {
+    setExportEnCours(true);
+    setErreurExport(null);
+    try {
+      await exporterMesDonnees();
+    } catch (e) {
+      setErreurExport(messageErreur(e));
+    } finally {
+      setExportEnCours(false);
     }
   }
 
@@ -429,6 +444,16 @@ export function EspaceParametres() {
           <LigneListe icone={Smartphone} titre="Capacités du téléphone" sousTitre="Connecteurs, mise à jour" onClick={() => setVue("capacites-telephone")} />
           <LigneListe icone={Accessibility} titre="Accessibilité" onClick={() => setVue("accessibilite")} />
         </Liste>
+
+        <Liste>
+          <LigneListe
+            icone={Download}
+            titre={exportEnCours ? "Export en cours…" : "Exporter mes données"}
+            sousTitre="Télécharger une copie de tout ce que Clovis sait sur toi"
+            onClick={handleExporterMesDonnees}
+          />
+        </Liste>
+        {erreurExport && <p className="text-sm text-[var(--dj-erreur)]">{erreurExport}</p>}
 
         <Liste>
           <LigneListe

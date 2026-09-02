@@ -992,6 +992,28 @@ export async function supprimerMonCompte() {
   return appelerApi("/api/profiles/me", { method: "DELETE" });
 }
 
+/** GET /api/profiles/me/export -- voir api/profiles.py:exporter_mes_donnees.
+ * Contrairement à appelerApi (qui retourne le JSON parsé pour l'utiliser
+ * en mémoire), déclenche un vrai téléchargement de fichier dans le
+ * navigateur : on récupère le JSON nous-mêmes puis on construit un blob
+ * + un lien <a download> temporaire (fetch() seul ne fait jamais
+ * apparaître la boîte de dialogue "Enregistrer sous" du navigateur,
+ * même avec l'en-tête Content-Disposition renvoyé par le backend). */
+export async function exporterMesDonnees() {
+  const donnees = await appelerApi("/api/profiles/me/export");
+  const blob = new Blob([JSON.stringify(donnees, null, 2)], {
+    type: "application/json",
+  });
+  const url = URL.createObjectURL(blob);
+  const lien = document.createElement("a");
+  lien.href = url;
+  lien.download = `clovis_mes_donnees_${donnees.user_id ?? "export"}.json`;
+  document.body.appendChild(lien);
+  lien.click();
+  lien.remove();
+  URL.revokeObjectURL(url);
+}
+
 // --- Codes de partage (14/08/2026, remplace le système matière ci-dessus,
 // qui n'était de toute façon jamais lu par le chat -- voir
 // core/codes_partage.py côté backend) --------------------------------------
