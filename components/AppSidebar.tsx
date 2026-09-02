@@ -941,7 +941,7 @@ export function AppSidebar({
         <div
           className={
             `fixed inset-y-0 left-0 z-40 flex w-72 flex-col border-r border-dj-bordure bg-dj-fond px-2 py-3 md:hidden ${
-              profilDeplie ? "overflow-visible" : "overflow-y-auto overflow-x-hidden"
+              historiqueDeplie || profilDeplie ? "overflow-visible" : "overflow-y-auto overflow-x-hidden"
             }` +
             (tiroirEnSortie
               ? " pointer-events-none translate-x-2 opacity-0 transition-all duration-200 ease-cgpt-doux"
@@ -962,7 +962,7 @@ export function AppSidebar({
                 )}
 
                 {historique.length > 0 && (
-                  <div className="mt-1">
+                  <div className="relative mt-1">
                     <button
                       onClick={() => setHistoriqueDeplie((v) => !v)}
                       className={`group flex w-full items-center gap-2 rounded-xl px-2 py-2 text-sm transition-colors ${
@@ -973,7 +973,7 @@ export function AppSidebar({
                       Historique
                     </button>
                     {historiqueDeplie && (
-                      <div className="dj-scroll-isole flex max-h-56 flex-col overflow-y-auto px-1 pb-1">
+                      <div className="dj-scroll-isole absolute left-1 top-11 z-10 max-h-64 w-56 animate-dj-fade-in-rapide overflow-y-auto rounded-xl border border-dj-bordure bg-dj-surface p-1 shadow-lg">
                         {historique.map((fil) => {
                           const estActive = fil.conversation_id === conversationActiveId;
                           return (
@@ -981,8 +981,8 @@ export function AppSidebar({
                               key={fil.conversation_id ?? "legacy"}
                               onClick={() => !estActive && onSelectionnerConversation?.(fil)}
                               disabled={estActive}
-                              className={`truncate border-b border-white/[0.06] px-2 py-2 text-left text-sm last:border-b-0 ${
-                                estActive ? "text-dj-accent-1-texte" : "text-dj-texte hover:text-dj-texte"
+                              className={`block w-full truncate rounded-lg px-2.5 py-2 text-left text-sm transition-colors ${
+                                estActive ? "text-dj-accent-1-texte" : "text-dj-texte hover:bg-dj-surface-haute"
                               }`}
                             >
                               {estActive ? "● " : ""}
