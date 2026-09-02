@@ -681,10 +681,20 @@ export function BibliothequePublique() {
       )}
 
       {erreursEnvoi.length > 0 && (
-        <div className="flex flex-col gap-1 rounded-cgpt-carte border border-[var(--dj-erreur)] bg-dj-surface p-3 text-xs text-[var(--dj-erreur)]">
-          {erreursEnvoi.map((e, i) => (
-            <p key={i}>« {e.nom} » : {e.erreur}</p>
-          ))}
+        <div className="flex items-start gap-2 rounded-cgpt-carte border border-[var(--dj-erreur)] bg-dj-surface p-3 text-xs text-[var(--dj-erreur)]">
+          <div className="flex flex-1 flex-col gap-1">
+            {erreursEnvoi.map((e, i) => (
+              <p key={i}>« {e.nom} » : {e.erreur}</p>
+            ))}
+          </div>
+          <button
+            type="button"
+            onClick={() => setErreursEnvoi([])}
+            className="shrink-0 text-[var(--dj-erreur)]/70 hover:text-[var(--dj-erreur)]"
+            aria-label="Fermer"
+          >
+            <X size={14} />
+          </button>
         </div>
       )}
 

@@ -656,12 +656,22 @@ async function envoyerFichiersDirect(fichiersChoisis: FileList | File[]) {
       ) : (
         <>
       {erreursEnvoi.length > 0 && (
-        <div className="flex flex-col gap-1 rounded-xl border border-[var(--dj-erreur)]/40 bg-[var(--dj-erreur)]/5 px-4 py-3">
-          {erreursEnvoi.map((e) => (
-            <p key={e.nom} className="text-sm text-[var(--dj-erreur)]">
-              {e.nom} : {e.erreur}
-            </p>
-          ))}
+        <div className="flex items-start gap-2 rounded-xl border border-[var(--dj-erreur)]/40 bg-[var(--dj-erreur)]/5 px-4 py-3">
+          <div className="flex flex-1 flex-col gap-1">
+            {erreursEnvoi.map((e) => (
+              <p key={e.nom} className="text-sm text-[var(--dj-erreur)]">
+                {e.nom} : {e.erreur}
+              </p>
+            ))}
+          </div>
+          <button
+            type="button"
+            onClick={() => setErreursEnvoi([])}
+            className="shrink-0 text-[var(--dj-erreur)]/70 hover:text-[var(--dj-erreur)]"
+            aria-label="Fermer"
+          >
+            <X size={16} />
+          </button>
         </div>
       )}
 
