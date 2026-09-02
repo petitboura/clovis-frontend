@@ -2,6 +2,7 @@
 
 import { useEffect } from "react";
 import { X, Download } from "lucide-react";
+import { useFermetureAnimee } from "@/lib/useFermetureAnimee";
 
 // Zoom plein écran d'image, réutilisé partout où le chat affiche une
 // image cliquable (audit 25/08/2026 : ce même overlay était réécrit
@@ -26,18 +27,27 @@ export function VisionneuseImage({
    * n'en avaient pas avant non plus -- comportement inchangé). */
   onTelecharger?: () => void;
 }) {
+  // 01/09/2026 (Bourama : "plein de boutons qui se ferment et s'ouvrent
+  // brut") : fermeture instantanée -- même mécanisme que
+  // lib/useFermetureAnimee.ts.
+  const { enSortie, demarrerFermeture } = useFermetureAnimee();
+  const fermer = () => demarrerFermeture(onFermer);
+
   useEffect(() => {
     function surTouche(e: KeyboardEvent) {
-      if (e.key === "Escape") onFermer();
+      if (e.key === "Escape") fermer();
     }
     window.addEventListener("keydown", surTouche);
     return () => window.removeEventListener("keydown", surTouche);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- fermer recrée une fonction stable via demarrerFermeture (useCallback) + onFermer du parent
   }, [onFermer]);
 
   return (
     <div
-      className="fixed inset-0 z-50 flex animate-dj-fade-in items-center justify-center bg-black/85 p-6"
-      onClick={onFermer}
+      className={`fixed inset-0 z-50 flex items-center justify-center bg-black/85 p-6 ${
+        enSortie ? "opacity-0 transition-opacity duration-150 ease-in" : "animate-dj-fade-in"
+      }`}
+      onClick={fermer}
     >
       {onTelecharger && (
         <button
@@ -55,7 +65,7 @@ export function VisionneuseImage({
         aria-label="Fermer"
         onClick={(e) => {
           e.stopPropagation();
-          onFermer();
+          fermer();
         }}
         className="absolute right-5 top-5 text-dj-texte-muet hover:text-dj-texte"
       >

@@ -49,6 +49,7 @@ import {
 // est sans risque pour le SSR.
 
 import { DetailOuverturePosition, EVENEMENT_OUVRIR_POSITION } from "./visionneurPositionEvenement";
+import { useFermetureAnimee } from "@/lib/useFermetureAnimee";
 
 function LecteurAudioPosition({ url, debutSecondes }: { url: string; debutSecondes: number }) {
   const audioRef = useRef<HTMLAudioElement>(null);
@@ -103,8 +104,13 @@ function CarteSiteExterne({ url, titre }: { url: string; titre: string }) {
 
 export function VisionneurPositionGlobal() {
   const [detail, setDetail] = useState<DetailOuverturePosition | null>(null);
+  // 01/09/2026 (Bourama : "plein de boutons qui se ferment et s'ouvrent
+  // brut") : ce visionneur n'avait aucune animation, ni entrée ni sortie
+  // -- aligné ici sur le même mécanisme que le reste de l'app (voir
+  // lib/useFermetureAnimee.ts).
+  const { enSortie, demarrerFermeture } = useFermetureAnimee();
 
-  const fermer = useCallback(() => setDetail(null), []);
+  const fermer = useCallback(() => demarrerFermeture(() => setDetail(null)), [demarrerFermeture]);
 
   useEffect(() => {
     function onOuvrir(e: Event) {
@@ -139,11 +145,15 @@ export function VisionneurPositionGlobal() {
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4"
+      className={`fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 ${
+        enSortie ? "opacity-0 transition-opacity duration-150 ease-in" : "animate-dj-fade-in-rapide"
+      }`}
       onClick={fermer}
     >
       <div
-        className="flex h-[85vh] w-full max-w-2xl flex-col rounded-cgpt-bouton border border-dj-bordure bg-dj-fond shadow-2xl"
+        className={`flex h-[85vh] w-full max-w-2xl flex-col rounded-cgpt-bouton border border-dj-bordure bg-dj-fond shadow-2xl ${
+          enSortie ? "animate-cgpt-sortie-modal" : "animate-cgpt-entree-modal"
+        }`}
         onClick={(e) => e.stopPropagation()}
       >
         <div className="flex items-center justify-between border-b border-dj-bordure px-4 py-3">

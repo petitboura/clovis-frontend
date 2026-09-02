@@ -3,6 +3,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import { Info } from "lucide-react";
+import { useFermetureAnimee } from "@/lib/useFermetureAnimee";
 
 // Créé le 01/09/2026, correctif (Bourama : "les descriptions de section
 // toujours affichées, c'est pas la norme mobile").
@@ -28,12 +29,17 @@ import { Info } from "lucide-react";
 // d'où le paramètre de requête plutôt qu'une ancre de page classique.
 export function BoutonInfoSection({ rubriqueId, texteCourt }: { rubriqueId: string; texteCourt: string }) {
   const [ouvert, setOuvert] = useState(false);
+  // 01/09/2026 (Bourama : "plein de boutons qui se ferment et s'ouvrent
+  // brut") : cette bulle n'avait qu'une animation d'entrée -- même
+  // mécanisme que lib/useFermetureAnimee.ts.
+  const { enSortie, demarrerFermeture } = useFermetureAnimee();
+  const fermer = () => demarrerFermeture(() => setOuvert(false));
 
   return (
     <span className="relative inline-flex">
       <button
         type="button"
-        onClick={() => setOuvert((o) => !o)}
+        onClick={() => (ouvert ? fermer() : setOuvert(true))}
         aria-label="Plus d'informations sur cette section"
         aria-expanded={ouvert}
         className="flex h-5 w-5 flex-shrink-0 items-center justify-center rounded-full text-dj-texte-muet transition-colors hover:bg-dj-surface-haute hover:text-dj-texte"
@@ -41,7 +47,7 @@ export function BoutonInfoSection({ rubriqueId, texteCourt }: { rubriqueId: stri
         <Info size={14} />
       </button>
 
-      {ouvert && (
+      {(ouvert || enSortie) && (
         <>
           {/* Zone invisible pour fermer au clic à l'extérieur, même motif
               que les autres popovers légers de l'app (pas de backdrop
@@ -50,14 +56,18 @@ export function BoutonInfoSection({ rubriqueId, texteCourt }: { rubriqueId: stri
             type="button"
             aria-hidden
             tabIndex={-1}
-            onClick={() => setOuvert(false)}
+            onClick={fermer}
             className="fixed inset-0 z-40 cursor-default"
           />
-          <div className="absolute left-0 top-full z-40 mt-2 w-64 animate-dj-fade-in-rapide rounded-cgpt-carte border border-dj-bordure bg-dj-surface p-3 text-left shadow-xl">
+          <div
+            className={`absolute left-0 top-full z-40 mt-2 w-64 rounded-cgpt-carte border border-dj-bordure bg-dj-surface p-3 text-left shadow-xl ${
+              enSortie ? "animate-cgpt-sortie-modal" : "animate-cgpt-entree-modal"
+            }`}
+          >
             <p className="text-xs leading-relaxed text-dj-texte-muet">{texteCourt}</p>
             <Link
               href={`/parametres?aide=${rubriqueId}`}
-              onClick={() => setOuvert(false)}
+              onClick={fermer}
               className="mt-2 inline-block text-xs font-medium text-dj-accent-1-texte hover:underline"
             >
               En savoir plus

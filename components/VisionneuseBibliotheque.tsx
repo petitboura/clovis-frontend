@@ -6,6 +6,7 @@ import { X, Download, ExternalLink, Loader2, File as IconFichier, Copy, Check, F
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import { LinkPreview } from "./chat/LinkPreview";
+import { useFermetureAnimee } from "@/lib/useFermetureAnimee";
 
 // Chargé dynamiquement, ssr:false (01/09) : ce fichier-ci est importé
 // STATIQUEMENT par EspaceBibliotheque.tsx / BibliothequePublique.tsx
@@ -310,27 +311,49 @@ export function VisionneuseBibliotheque({
   // dossiers ; BibliothequePublique.tsx n'en passe pas).
   onRanger?: () => void;
 }) {
-  if (!fichier) return null;
+  // 01/09/2026 (Bourama : "plein de boutons qui se ferment et s'ouvrent
+  // brut") : `if (!fichier) return null` démontait l'aperçu d'un coup --
+  // même mécanisme que lib/useFermetureAnimee.ts. Le parent passe
+  // `fichier={null}` dès le clic sur fermer (voir EspaceBibliotheque.tsx
+  // / BibliothequePublique.tsx), donc contrairement aux autres popups de
+  // cet audit, ce composant ne peut pas compter sur son PROPRE state pour
+  // rester monté pendant la sortie -- il garde ici la dernière valeur
+  // reçue le temps que l'animation joue.
+  const [dernierFichier, setDernierFichier] = useState(fichier);
+  useEffect(() => {
+    if (fichier) setDernierFichier(fichier);
+  }, [fichier]);
 
-  const estImage = fichier.type_mime.startsWith("image/");
-  const estAudio = fichier.type_mime.startsWith("audio/");
-  const estVideo = fichier.type_mime.startsWith("video/");
-  const estPdf = fichier.type_mime === "application/pdf";
-  const estLien = fichier.type_mime === "text/uri-list";
-  const estMarkdown = !estLien && estFichierMarkdown(fichier.nom_fichier, fichier.type_mime);
-  const estOffice = TYPES_MIME_OFFICE.has(fichier.type_mime);
-  const estTexte = !estLien && !estMarkdown && estTypeTexteLisible(fichier.type_mime);
+  const { enSortie, demarrerFermeture } = useFermetureAnimee();
+  const fermer = () => demarrerFermeture(onFermer);
+
+  if (!fichier && !enSortie) return null;
+  const f = fichier ?? dernierFichier;
+  if (!f) return null;
+
+  const estImage = f.type_mime.startsWith("image/");
+  const estAudio = f.type_mime.startsWith("audio/");
+  const estVideo = f.type_mime.startsWith("video/");
+  const estPdf = f.type_mime === "application/pdf";
+  const estLien = f.type_mime === "text/uri-list";
+  const estMarkdown = !estLien && estFichierMarkdown(f.nom_fichier, f.type_mime);
+  const estOffice = TYPES_MIME_OFFICE.has(f.type_mime);
+  const estTexte = !estLien && !estMarkdown && estTypeTexteLisible(f.type_mime);
   const estAutre =
     !estPdf && !estImage && !estAudio && !estVideo && !estTexte && !estMarkdown && !estLien && !estOffice;
-  const titre = fichier.description || fichier.nom_fichier;
+  const titre = f.description || f.nom_fichier;
 
   return (
     <div
-      className="fixed inset-0 z-[100] flex animate-dj-fade-in-rapide items-center justify-center bg-black/70 p-4"
-      onClick={onFermer}
+      className={`fixed inset-0 z-[100] flex items-center justify-center bg-black/70 p-4 ${
+        enSortie ? "opacity-0 transition-opacity duration-150 ease-in" : "animate-dj-fade-in-rapide"
+      }`}
+      onClick={fermer}
     >
       <div
-        className="flex max-h-[90vh] w-full max-w-3xl animate-cgpt-entree-modal flex-col overflow-hidden rounded-cgpt-carte border border-dj-bordure bg-dj-surface shadow-[0_2px_24px_rgba(0,0,0,0.35)]"
+        className={`flex max-h-[90vh] w-full max-w-3xl flex-col overflow-hidden rounded-cgpt-carte border border-dj-bordure bg-dj-surface shadow-[0_2px_24px_rgba(0,0,0,0.35)] ${
+          enSortie ? "animate-cgpt-sortie-modal" : "animate-cgpt-entree-modal"
+        }`}
         onClick={(e) => e.stopPropagation()}
       >
         <div className="flex items-center justify-between gap-2 border-b border-dj-bordure px-4 py-3">
@@ -348,7 +371,7 @@ export function VisionneuseBibliotheque({
             )}
             {!estLien && (
               <button
-                onClick={() => telecharger(fichier.url_publique, fichier.nom_fichier)}
+                onClick={() => telecharger(f.url_publique, f.nom_fichier)}
                 aria-label="Télécharger"
                 className="flex h-8 w-8 items-center justify-center rounded-cgpt-bouton text-dj-texte-muet transition-colors hover:text-dj-texte"
               >
@@ -356,7 +379,7 @@ export function VisionneuseBibliotheque({
               </button>
             )}
             <button
-              onClick={onFermer}
+              onClick={fermer}
               aria-label="Fermer"
               className="flex h-8 w-8 items-center justify-center rounded-cgpt-bouton text-dj-texte-muet transition-colors hover:text-dj-texte"
             >
@@ -373,38 +396,38 @@ export function VisionneuseBibliotheque({
             // (react-pdf, canvas) marche pareil partout, avec swipe et
             // saut de page direct.
             <div className="h-[75vh]">
-              <VisionneurPdf url={fichier.url_publique} page={1} />
+              <VisionneurPdf url={f.url_publique} page={1} />
             </div>
           )}
 
           {estImage && (
             // eslint-disable-next-line @next/next/no-img-element -- source dynamique (bucket Supabase), pas un asset local
-            <img src={fichier.url_publique} alt={titre} className="mx-auto max-h-[75vh] w-auto object-contain" />
+            <img src={f.url_publique} alt={titre} className="mx-auto max-h-[75vh] w-auto object-contain" />
           )}
 
           {estAudio && (
             <div className="p-6">
-              <audio controls src={fichier.url_publique} style={{ colorScheme: "dark" }} className="w-full" />
+              <audio controls src={f.url_publique} style={{ colorScheme: "dark" }} className="w-full" />
             </div>
           )}
 
           {estVideo && (
-            <video controls src={fichier.url_publique} style={{ colorScheme: "dark" }} className="max-h-[75vh] w-full" />
+            <video controls src={f.url_publique} style={{ colorScheme: "dark" }} className="max-h-[75vh] w-full" />
           )}
 
-          {estTexte && <ContenuTexte href={fichier.url_publique} />}
+          {estTexte && <ContenuTexte href={f.url_publique} />}
 
-          {estMarkdown && <ContenuMarkdown href={fichier.url_publique} />}
+          {estMarkdown && <ContenuMarkdown href={f.url_publique} />}
 
-          {estOffice && <ContenuOffice href={fichier.url_publique} titre={titre} />}
+          {estOffice && <ContenuOffice href={f.url_publique} titre={titre} />}
 
-          {estAutre && <ContenuNonPrevisualisable href={fichier.url_publique} nom={fichier.nom_fichier} />}
+          {estAutre && <ContenuNonPrevisualisable href={f.url_publique} nom={f.nom_fichier} />}
 
           {estLien && (
             <div className="p-5">
-              <LinkPreview href={fichier.url_publique} texteLien={titre} />
+              <LinkPreview href={f.url_publique} texteLien={titre} />
               <button
-                onClick={() => window.open(fichier.url_publique, "_blank", "noopener,noreferrer")}
+                onClick={() => window.open(f.url_publique, "_blank", "noopener,noreferrer")}
                 className="mt-3 flex items-center gap-1.5 rounded-lg border border-dj-bordure px-3 py-1.5 text-xs text-dj-texte-muet transition-colors hover:border-dj-bordure-forte hover:text-dj-texte"
               >
                 <ExternalLink size={13} /> Ouvrir le site

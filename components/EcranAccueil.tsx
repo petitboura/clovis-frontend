@@ -159,7 +159,10 @@ export function EcranAccueil() {
   if (verificationSession) return null;
 
   return (
-    <div className="mx-auto w-full max-w-3xl animate-dj-fade-in space-y-10 px-4 pb-24 pt-8 md:pt-12">
+    // animate-dj-fade-in retiré le 01/09/2026 : voir le même correctif
+    // et la même explication dans components/SectionPage.tsx
+    // (TransitionPage.tsx anime désormais l'entrée/sortie de toute page).
+    <div className="mx-auto w-full max-w-3xl space-y-10 px-4 pb-24 pt-8 md:pt-12">
       {/* Bienvenue : vrai moment d'entrée (refonte 22/08/2026, demande
           Bourama : "faut une vraie hiérarchie, pas 8 cartes à plat").
           Avant : logo/titre/bouton empilés au même niveau visuel que le

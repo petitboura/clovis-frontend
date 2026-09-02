@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { ExternalLink, Quote } from "lucide-react";
 import { ouvrirPosition } from "./visionneurPositionEvenement";
+import { useFermetureAnimee } from "@/lib/useFermetureAnimee";
 
 // Rendu "bête" d'une liste de puces de sources cliquables -- PLUS de
 // toggle propre depuis le 26/07 (retour Bourama : les sources d'une
@@ -60,27 +61,37 @@ type Source = {
 // vraiment la bonne page/le bon instant.
 function ExtraitPuce({ source }: { source: Source }) {
   const [ouvert, setOuvert] = useState(false);
+  // 01/09/2026 (Bourama : "plein de boutons qui se ferment et s'ouvrent
+  // brut") : ce popover n'avait aucune animation, ni entrée ni sortie --
+  // aligné ici sur le même mécanisme que les autres popovers du chat
+  // (voir lib/useFermetureAnimee.ts).
+  const { enSortie, demarrerFermeture } = useFermetureAnimee();
+  const fermer = () => demarrerFermeture(() => setOuvert(false));
 
   return (
     <div className="relative">
       <button
         type="button"
-        onClick={() => setOuvert((v) => !v)}
+        onClick={() => (ouvert ? fermer() : setOuvert(true))}
         title="Voir le passage exact"
         className="flex items-center gap-1 rounded-cgpt-bouton border border-dj-bordure px-2 py-1 text-[12px] text-dj-texte-muet transition-colors hover:text-dj-texte"
       >
         <Quote size={12} className="shrink-0" />
       </button>
-      {ouvert && (
+      {(ouvert || enSortie) && (
         <>
           {/* Zone invisible pour fermer le popover au clic en dehors */}
-          <div className="fixed inset-0 z-10" onClick={() => setOuvert(false)} />
-          <div className="absolute bottom-full left-0 z-20 mb-1.5 w-64 rounded-cgpt-bouton border border-dj-bordure bg-dj-fond p-2.5 text-[12px] shadow-lg">
+          <div className="fixed inset-0 z-10" onClick={fermer} />
+          <div
+            className={`absolute bottom-full left-0 z-20 mb-1.5 w-64 rounded-cgpt-bouton border border-dj-bordure bg-dj-fond p-2.5 text-[12px] shadow-lg ${
+              enSortie ? "animate-cgpt-sortie-modal" : "animate-cgpt-entree-modal"
+            }`}
+          >
             <p className="max-h-40 overflow-y-auto whitespace-pre-wrap text-dj-texte-muet">{source.extrait}</p>
             <button
               type="button"
               onClick={() => {
-                setOuvert(false);
+                fermer();
                 ouvrirPosition({
                   url: source.url,
                   titre: source.reperage ? `${source.titre}, ${source.reperage}` : source.titre,

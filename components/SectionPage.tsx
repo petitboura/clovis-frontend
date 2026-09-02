@@ -25,6 +25,14 @@ import { BoutonRetour } from "./BoutonRetour";
 // soeurs (comme une vraie page de paramètres avec sidebar, pas un popup
 // qu'on doit rouvrir pour changer de section).
 //
+// animate-dj-fade-in retiré le 01/09/2026 (chantier "changement de
+// section" brut) : l'entrée ET la sortie de chaque section sont
+// désormais pilotées par components/TransitionPage.tsx (AppShell.tsx),
+// qui anime tout l'arbre {children} d'un coup -- garder la classe ici en
+// plus aurait fait démarrer deux fondus indépendants sur le même
+// opacity (celui-ci en CSS, celui de TransitionPage en style inline via
+// framer-motion), l'un pouvant couper l'autre en plein milieu.
+//
 // `soeurs[].icone` reçoit un élément déjà rendu (ex: <ScrollText
 // size={16} />), PAS un composant (ex: ScrollText) -- correctif 24/08 :
 // chaque page qui appelle SectionPage est un Server Component, et
@@ -51,7 +59,7 @@ export function SectionPage({
 
   if (!groupe) {
     return (
-      <div className="mx-auto w-full max-w-3xl animate-dj-fade-in space-y-4 px-4 pb-24 pt-6 md:pt-8">
+      <div className="mx-auto w-full max-w-3xl space-y-4 px-4 pb-24 pt-6 md:pt-8">
         <h1 className="font-display text-xl font-bold text-dj-texte">{title}</h1>
         {children}
       </div>
@@ -59,7 +67,7 @@ export function SectionPage({
   }
 
   return (
-    <div className="mx-auto w-full max-w-5xl animate-dj-fade-in px-4 pb-24 pt-6 md:pt-8">
+    <div className="mx-auto w-full max-w-5xl px-4 pb-24 pt-6 md:pt-8">
       <div className="mb-1 flex items-center gap-1.5 text-sm text-dj-texte-muet">
         <BoutonRetour href={groupe.href} padding="p-0.5" className="-ml-0.5" />
         <Link href={groupe.href} className="transition-colors hover:text-dj-texte">

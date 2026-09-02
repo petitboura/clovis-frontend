@@ -156,6 +156,7 @@ function MenuProfil({
   menuOuvert,
   onBasculerMenu,
   onFermerMenu,
+  enSortieMenu,
   onNaviguerVersParametres,
   onSeDeconnecter,
 }: {
@@ -173,20 +174,29 @@ function MenuProfil({
   // eu exactement ce problème le 20/08.
   menuOuvert: boolean;
   onBasculerMenu: () => void;
+  // 01/09/2026 : onFermerMenu passé par AppSidebar route déjà par
+  // demarrerFermeture (voir profilEnSortie/fermerProfilMenu côté
+  // AppSidebar) -- ce composant n'a plus sa propre instance du hook,
+  // enSortieMenu lui est passé en prop pour rester en phase avec le
+  // bouton retour matériel (même raisonnement que tiroirEnSortie).
   onFermerMenu: () => void;
+  enSortieMenu: boolean;
   onNaviguerVersParametres: () => void;
   onSeDeconnecter: () => void;
 }) {
   const ref = useRef<HTMLDivElement>(null);
   const libelle = nomAffiche || "Mon compte";
+  const fermer = onFermerMenu;
+  const enSortie = enSortieMenu;
 
   useEffect(() => {
     if (!menuOuvert) return;
     function onClicExterieur(e: MouseEvent) {
-      if (ref.current && !ref.current.contains(e.target as Node)) onFermerMenu();
+      if (ref.current && !ref.current.contains(e.target as Node)) fermer();
     }
     document.addEventListener("mousedown", onClicExterieur);
     return () => document.removeEventListener("mousedown", onClicExterieur);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- fermer recrée une fonction stable via demarrerFermeture (useCallback) + onFermerMenu du parent
   }, [menuOuvert, onFermerMenu]);
 
   const Avatar = (
@@ -214,15 +224,15 @@ function MenuProfil({
         {mobile ? <span className="text-sm">{libelle}</span> : <LibelleRail ouverte={ouverte}>{libelle}</LibelleRail>}
       </button>
 
-      {menuOuvert && (
+      {(menuOuvert || enSortie) && (
         <div
-          className={`absolute bottom-full z-50 mb-2 w-56 animate-dj-fade-in-rapide overflow-hidden rounded-cgpt-carte border border-dj-bordure bg-dj-surface shadow-[0_8px_30px_rgba(0,0,0,0.35)] ${
+          className={`absolute bottom-full z-50 mb-2 w-56 overflow-hidden rounded-cgpt-carte border border-dj-bordure bg-dj-surface shadow-[0_8px_30px_rgba(0,0,0,0.35)] ${
             mobile ? "left-2" : "left-0"
-          }`}
+          } ${enSortie ? "animate-cgpt-sortie-modal" : "animate-cgpt-entree-modal"}`}
         >
           <button
             onClick={() => {
-              onFermerMenu();
+              fermer();
               onNaviguerVersParametres();
             }}
             className="flex w-full items-center gap-2.5 px-3 py-2.5 text-left transition-colors hover:bg-dj-surface-haute"
@@ -238,7 +248,7 @@ function MenuProfil({
 
           <button
             onClick={() => {
-              onFermerMenu();
+              fermer();
               onNaviguerVersParametres();
             }}
             className="flex w-full items-center gap-2.5 px-3 py-2 text-left text-sm text-dj-texte transition-colors hover:bg-dj-surface-haute"
@@ -253,7 +263,7 @@ function MenuProfil({
 
           <button
             onClick={() => {
-              onFermerMenu();
+              fermer();
               onSeDeconnecter();
             }}
             className="flex w-full items-center gap-2.5 px-3 py-2 text-left text-sm text-[var(--dj-erreur)] transition-colors hover:bg-dj-surface-haute"
@@ -456,6 +466,12 @@ export function AppSidebar({
   // commentaire dans MenuProfil plus haut). Remonté ici pour piloter le
   // overflow-visible du rail, comme actionsDeplie/historiqueDeplie/groupeOuvertId.
   const [profilDeplie, setProfilDeplie] = useState(false);
+  // 01/09/2026 (Bourama : "plein de boutons qui se ferment et s'ouvrent
+  // brut") : remonté ici (plutôt que gardé local à MenuProfil) pour la
+  // même raison que tiroirEnSortie ci-dessus -- le bouton retour matériel
+  // (juste en dessous) doit aussi déclencher l'animation de sortie, pas
+  // juste le clic normal.
+  const { enSortie: profilEnSortie, demarrerFermeture: fermerProfilMenu } = useFermetureAnimee();
   const asideRef = useRef<HTMLDivElement>(null);
   const actionsRef = useRef<HTMLDivElement>(null);
 
@@ -471,7 +487,7 @@ export function AppSidebar({
   useFermetureAuRetour(actionsDeplie, () => setActionsDeplie(false));
   useFermetureAuRetour(groupeOuvertId !== null, () => setGroupeOuvertId(null));
   useFermetureAuRetour(historiqueDeplie, () => setHistoriqueDeplie(false));
-  useFermetureAuRetour(profilDeplie, () => setProfilDeplie(false));
+  useFermetureAuRetour(profilDeplie, () => fermerProfilMenu(() => setProfilDeplie(false)));
   useFermetureAuRetour(avisDeplie, () => setAvisDeplie(false));
 
   // Photo + nom affichés en bas de la sidebar (22/08/2026, demande
@@ -898,7 +914,8 @@ export function AppSidebar({
             LibelleRail={LibelleRail}
             menuOuvert={profilDeplie}
             onBasculerMenu={() => setProfilDeplie((v) => !v)}
-            onFermerMenu={() => setProfilDeplie(false)}
+            onFermerMenu={() => fermerProfilMenu(() => setProfilDeplie(false))}
+            enSortieMenu={profilEnSortie}
             onNaviguerVersParametres={() => router.push("/parametres")}
             onSeDeconnecter={seDeconnecter}
           />
@@ -1068,7 +1085,8 @@ export function AppSidebar({
                 mobile
                 menuOuvert={profilDeplie}
                 onBasculerMenu={() => setProfilDeplie((v) => !v)}
-                onFermerMenu={() => setProfilDeplie(false)}
+                onFermerMenu={() => fermerProfilMenu(() => setProfilDeplie(false))}
+                enSortieMenu={profilEnSortie}
                 onNaviguerVersParametres={() => {
                   setProfilDeplie(false);
                   fermerTiroirMobile(() => setOuverte(false));

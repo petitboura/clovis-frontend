@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useFermetureAnimee } from "@/lib/useFermetureAnimee";
 
 // Porté de djiguigne-frontend/components/BoutonInstaller.tsx, texte
 // adapté à Clovis. app/manifest.ts + public/sw.js existent
@@ -11,6 +12,11 @@ export function BoutonInstaller() {
   const [estIOS, setEstIOS] = useState(false);
   const [dejaInstalle, setDejaInstalle] = useState(false);
   const [instructionsIOS, setInstructionsIOS] = useState(false);
+  // 01/09/2026 (Bourama : "plein de boutons qui se ferment et s'ouvrent
+  // brut") : ouverture animée mais fermeture instantanée -- même
+  // mécanisme que lib/useFermetureAnimee.ts.
+  const { enSortie, demarrerFermeture } = useFermetureAnimee();
+  const fermerInstructions = () => demarrerFermeture(() => setInstructionsIOS(false));
 
   useEffect(() => {
     setDejaInstalle(window.matchMedia("(display-mode: standalone)").matches);
@@ -49,11 +55,15 @@ export function BoutonInstaller() {
 
       {instructionsIOS && (
         <div
-          className="fixed inset-0 z-[100] flex animate-dj-fade-in-rapide items-end justify-center bg-black/50 p-4 sm:items-center"
-          onClick={() => setInstructionsIOS(false)}
+          className={`fixed inset-0 z-[100] flex items-end justify-center bg-black/50 p-4 sm:items-center ${
+            enSortie ? "opacity-0 transition-opacity duration-150 ease-in" : "animate-dj-fade-in-rapide"
+          }`}
+          onClick={fermerInstructions}
         >
           <div
-            className="w-full max-w-sm animate-cgpt-entree-modal rounded-cgpt-carte border border-dj-bordure bg-dj-surface p-5 text-sm text-dj-texte"
+            className={`w-full max-w-sm rounded-cgpt-carte border border-dj-bordure bg-dj-surface p-5 text-sm text-dj-texte ${
+              enSortie ? "animate-cgpt-sortie-modal" : "animate-cgpt-entree-modal"
+            }`}
             onClick={(e) => e.stopPropagation()}
           >
             <p className="font-display text-base font-bold">Installer Clovis</p>
@@ -67,7 +77,7 @@ export function BoutonInstaller() {
             </ol>
             <button
               type="button"
-              onClick={() => setInstructionsIOS(false)}
+              onClick={fermerInstructions}
               className="mt-4 w-full rounded-cgpt-bouton bg-dj-accent-1 py-2 text-sm font-bold text-[#1A0D02]"
             >
               Compris

@@ -4,6 +4,7 @@ import { useState } from "react";
 import { X, Flag } from "lucide-react";
 import { creerSignalement, type TypeSignalement } from "@/lib/api";
 import { messageErreur } from "@/lib/erreurs";
+import { useFermetureAnimee } from "@/lib/useFermetureAnimee";
 
 // Formulaire de signalement (22/08, chantier "rendre la bibliothèque
 // plus sérieuse", voir guide Notion "Guide pour droit d'auteur",
@@ -24,6 +25,12 @@ export function SignalerContenuModal({ cible, onFermer }: { cible: CibleSignalem
   const [envoiEnCours, setEnvoiEnCours] = useState(false);
   const [erreur, setErreur] = useState<string | null>(null);
   const [envoye, setEnvoye] = useState(false);
+
+  // 01/09/2026 (Bourama : "plein de boutons qui se ferment et s'ouvrent
+  // brut") : ouverture animée mais fermeture instantanée -- même
+  // mécanisme que lib/useFermetureAnimee.ts.
+  const { enSortie, demarrerFermeture } = useFermetureAnimee();
+  const fermer = () => demarrerFermeture(onFermer);
 
   async function envoyer() {
     if (!motif.trim() || !nom.trim() || !email.trim() || !declarationHonneur) return;
@@ -50,18 +57,22 @@ export function SignalerContenuModal({ cible, onFermer }: { cible: CibleSignalem
 
   return (
     <div
-      className="fixed inset-0 z-50 flex animate-dj-fade-in-rapide items-end justify-center bg-black/60 p-0 backdrop-blur-sm sm:items-center sm:p-6"
-      onClick={onFermer}
+      className={`fixed inset-0 z-50 flex items-end justify-center bg-black/60 p-0 backdrop-blur-sm sm:items-center sm:p-6 ${
+        enSortie ? "opacity-0 transition-opacity duration-150 ease-in" : "animate-dj-fade-in-rapide"
+      }`}
+      onClick={fermer}
     >
       <div
-        className="flex max-h-[85vh] w-full flex-col gap-3 overflow-y-auto rounded-t-2xl border border-dj-bordure bg-dj-surface p-5 shadow-[0_8px_40px_rgba(0,0,0,0.45)] animate-cgpt-entree-modal sm:max-w-md sm:rounded-cgpt-carte"
+        className={`flex max-h-[85vh] w-full flex-col gap-3 overflow-y-auto rounded-t-2xl border border-dj-bordure bg-dj-surface p-5 shadow-[0_8px_40px_rgba(0,0,0,0.45)] sm:max-w-md sm:rounded-cgpt-carte ${
+          enSortie ? "animate-cgpt-sortie-modal" : "animate-cgpt-entree-modal"
+        }`}
         onClick={(e) => e.stopPropagation()}
       >
         <div className="flex items-center justify-between">
           <h4 className="flex items-center gap-2 text-sm font-semibold text-dj-texte">
             <Flag size={15} /> Signaler ce contenu
           </h4>
-          <button onClick={onFermer} className="text-dj-texte-muet hover:text-dj-texte">
+          <button onClick={fermer} className="text-dj-texte-muet hover:text-dj-texte">
             <X size={16} />
           </button>
         </div>

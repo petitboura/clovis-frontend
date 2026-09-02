@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { appelerApi } from "@/lib/api";
 import { SelectPersonnalise } from "../SelectPersonnalise";
+import { useFermetureAnimee } from "@/lib/useFermetureAnimee";
 
 interface Categorie {
   id: string;
@@ -37,14 +38,23 @@ export function PopupFeedback({
   const [questionPartagee, setQuestionPartagee] = useState(false);
   const [envoiEnCours, setEnvoiEnCours] = useState(false);
 
+  // 01/09/2026 (Bourama : "plein de boutons qui se ferment et s'ouvrent
+  // brut") : la carte n'avait même aucune animation d'entrée déclarée
+  // (seul le fond faisait un fondu), et donc a fortiori aucune sortie --
+  // alignée ici sur le même mécanisme et les mêmes classes que les
+  // autres popups du chat (voir lib/useFermetureAnimee.ts).
+  const { enSortie, demarrerFermeture } = useFermetureAnimee();
+  const fermer = () => demarrerFermeture(onFerme);
+
   // Fermeture au clavier (audit 25/08/2026 : aucune popup du chat ne
   // gérait Echap jusqu'ici).
   useEffect(() => {
     function surTouche(e: KeyboardEvent) {
-      if (e.key === "Escape") onFerme();
+      if (e.key === "Escape") fermer();
     }
     window.addEventListener("keydown", surTouche);
     return () => window.removeEventListener("keydown", surTouche);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- fermer recrée une fonction stable via demarrerFermeture (useCallback) + onFerme du parent
   }, [onFerme]);
 
   useEffect(() => {
@@ -85,8 +95,18 @@ export function PopupFeedback({
     // CompteRequisModal dans ChatFlottant.tsx) : ce popup peut être ouvert
     // en même temps qu'une fenêtre de section (FenetresSections.tsx,
     // bornée à 120-124), qui passait alors devant.
-    <div className="fixed inset-0 z-[150] flex items-center justify-center bg-black/70 p-4 animate-dj-fade-in">
-      <div className="w-full max-w-md rounded-2xl border border-dj-bordure bg-dj-surface p-6">
+    <div
+      className={`fixed inset-0 z-[150] flex items-center justify-center bg-black/70 p-4 ${
+        enSortie ? "opacity-0 transition-opacity duration-150 ease-in" : "animate-dj-fade-in-rapide"
+      }`}
+      onClick={fermer}
+    >
+      <div
+        className={`w-full max-w-md rounded-2xl border border-dj-bordure bg-dj-surface p-6 ${
+          enSortie ? "animate-cgpt-sortie-modal" : "animate-cgpt-entree-modal"
+        }`}
+        onClick={(e) => e.stopPropagation()}
+      >
         <h2 className="text-lg font-bold text-dj-texte">
           Donner un retour {type === "positif" ? "positif" : "négatif"}
         </h2>
@@ -152,7 +172,7 @@ export function PopupFeedback({
 
         <div className="mt-5 flex justify-end gap-2">
           <button
-            onClick={onFerme}
+            onClick={fermer}
             className="rounded-cgpt-bouton border border-dj-bordure px-4 py-2 text-sm text-dj-texte transition-colors hover:border-dj-bordure-forte"
           >
             Annuler

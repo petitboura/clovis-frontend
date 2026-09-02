@@ -13,6 +13,7 @@ import {
   Plug,
   Bot,
 } from "lucide-react";
+import { useFermetureAnimee } from "@/lib/useFermetureAnimee";
 
 // Catalogue "Ce qui différencie Clovis" (14/08, demande Bourama : "un
 // catalogue qui explique les choses différentes des autres IA quand on
@@ -89,13 +90,28 @@ const SORTIES = [
 ];
 
 export function CatalogueClovis({ onFerme }: { onFerme: () => void }) {
+  // 01/09/2026 (Bourama : "plein de boutons qui se ferment et s'ouvrent
+  // brut") : ce panneau animait son ouverture (animate-cgpt-entree-modal)
+  // mais le parent (AppShell.tsx) le démonte via `{catalogueOuvert && ...}`,
+  // donc la fermeture retirait le composant du DOM sans jamais jouer
+  // d'animation de sortie. Même mécanisme que lib/useFermetureAnimee.ts
+  // (déjà utilisé par PanneauFlottant et les 8 popups qui passent par
+  // lui) : ce composant reste monté ~180ms de plus le temps que
+  // cgpt-sortie-modal joue, puis appelle le onFerme réel du parent.
+  const { enSortie, demarrerFermeture } = useFermetureAnimee();
+  const fermer = () => demarrerFermeture(onFerme);
+
   return (
     <div
-      className="fixed inset-0 z-[100] flex animate-dj-fade-in-rapide items-end justify-center bg-black/50 p-4 sm:items-center"
-      onClick={onFerme}
+      className={`fixed inset-0 z-[100] flex items-end justify-center bg-black/50 p-4 sm:items-center ${
+        enSortie ? "opacity-0 transition-opacity duration-150 ease-in" : "animate-dj-fade-in-rapide"
+      }`}
+      onClick={fermer}
     >
       <div
-        className="flex max-h-[85vh] w-full max-w-2xl flex-col animate-cgpt-entree-modal rounded-cgpt-carte border border-dj-bordure bg-dj-surface shadow-[0_2px_24px_rgba(0,0,0,0.35)]"
+        className={`flex max-h-[85vh] w-full max-w-2xl flex-col rounded-cgpt-carte border border-dj-bordure bg-dj-surface shadow-[0_2px_24px_rgba(0,0,0,0.35)] ${
+          enSortie ? "animate-cgpt-sortie-modal" : "animate-cgpt-entree-modal"
+        }`}
         onClick={(e) => e.stopPropagation()}
       >
         <div className="flex flex-shrink-0 items-start justify-between border-b border-dj-bordure px-6 py-4">
@@ -106,7 +122,7 @@ export function CatalogueClovis({ onFerme }: { onFerme: () => void }) {
             <h2 className="font-display text-lg font-bold tracking-[-0.01em] text-dj-texte">Ce qui différencie Clovis</h2>
           </div>
           <button
-            onClick={onFerme}
+            onClick={fermer}
             aria-label="Fermer"
             className="flex-shrink-0 text-dj-texte-muet transition-colors hover:text-dj-texte"
           >

@@ -5,6 +5,7 @@ import { usePathname } from "next/navigation";
 import { PanneauFlottant } from "@/components/PanneauFlottant";
 import { BlocsMenuPlus, SECTIONS_BASE } from "@/components/EspacePlus";
 import { useFermetureAuRetour } from "@/lib/contexteRetour";
+import { useFermetureAnimee } from "@/lib/useFermetureAnimee";
 
 // Créé le 30/08/2026, audit navigation web mobile vs natif, étape 1.
 //
@@ -42,6 +43,15 @@ export function MenuHamburgerWeb() {
   const [ouvert, setOuvert] = useState(false);
   const pathname = usePathname();
 
+  // 01/09/2026 (Bourama : "plein de boutons qui se ferment et s'ouvrent
+  // brut, surtout le hamburger") : ce panneau passait déjà par
+  // PanneauFlottant, mais sans jamais lui passer `enSortie` -- il
+  // s'ouvrait donc avec animation (cgpt-entree-modal) mais se fermait
+  // d'un coup, comme les 8 popups qui utilisaient ce même composant
+  // avant le correctif du 18/08 (voir lib/useFermetureAnimee.ts).
+  // Branché ici sur le même mécanisme.
+  const { enSortie, demarrerFermeture } = useFermetureAnimee();
+
   // Correctif (30/08/2026, Bourama : "tu clique sur une section ça
   // change mais tu ne vois pas") : les liens de BlocsMenuPlus naviguent
   // via router.push (voir EspacePlus.tsx), qui ne referme jamais ce
@@ -51,9 +61,12 @@ export function MenuHamburgerWeb() {
   // chemin change (couvre aussi bien un lien direct qu'un retour
   // arrière/avant navigateur), sans toucher Partager/Avis (Deplie via
   // state local dans BlocsMenuPlus, jamais une navigation, donc jamais
-  // concernés par ce changement de pathname).
+  // concernés par ce changement de pathname). 01/09/2026 : passe
+  // désormais par demarrerFermeture comme toute autre fermeture, pour ne
+  // pas réintroduire une fermeture brute sur ce seul chemin.
   useEffect(() => {
-    setOuvert(false);
+    if (ouvert) demarrerFermeture(() => setOuvert(false));
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- ne doit réagir qu'à un changement de pathname, pas à ouvert/demarrerFermeture
   }, [pathname]);
 
   // Correctif (01/09/2026) : meme trou que MenuHamburgerNatif.tsx (voir
@@ -61,7 +74,7 @@ export function MenuHamburgerWeb() {
   // dans lib/contexteRetour.tsx. Le fallback popstate du 31/08 couvre
   // aussi le web mobile Android (pas seulement le natif), donc ce menu
   // devait s'y empiler comme les autres calques deja cables.
-  useFermetureAuRetour(ouvert, () => setOuvert(false));
+  useFermetureAuRetour(ouvert, () => demarrerFermeture(() => setOuvert(false)));
 
   return (
     <>
@@ -74,7 +87,11 @@ export function MenuHamburgerWeb() {
       </button>
 
       {ouvert && (
-        <PanneauFlottant onFerme={() => setOuvert(false)} entete={<span className="text-sm font-medium text-dj-texte">Plus</span>}>
+        <PanneauFlottant
+          onFerme={() => demarrerFermeture(() => setOuvert(false))}
+          entete={<span className="text-sm font-medium text-dj-texte">Plus</span>}
+          enSortie={enSortie}
+        >
           <BlocsMenuPlus sectionsNavigation={SECTIONS_BASE} />
         </PanneauFlottant>
       )}

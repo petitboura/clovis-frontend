@@ -5,6 +5,7 @@ import { usePathname } from "next/navigation";
 import { PanneauFlottant } from "@/components/PanneauFlottant";
 import { BlocsMenuPlus, SECTIONS_BASE } from "@/components/EspacePlus";
 import { useFermetureAuRetour } from "@/lib/contexteRetour";
+import { useFermetureAnimee } from "@/lib/useFermetureAnimee";
 
 // Créé le 30/08/2026, tâche 2 (menu hamburger natif), Bourama.
 //
@@ -47,12 +48,21 @@ export function MenuHamburgerNatif() {
   const [ouvert, setOuvert] = useState(false);
   const pathname = usePathname();
 
+  // 01/09/2026 (Bourama : "plein de boutons qui se ferment et s'ouvrent
+  // brut, surtout le hamburger") : meme trou que MenuHamburgerWeb.tsx --
+  // enSortie jamais passe a PanneauFlottant, donc ouverture animee mais
+  // fermeture instantanee. Voir lib/useFermetureAnimee.ts.
+  const { enSortie, demarrerFermeture } = useFermetureAnimee();
+
   // Correctif (30/08/2026) : meme bug que MenuHamburgerWeb.tsx (voir son
   // commentaire) -- BlocsMenuPlus navigue via router.push, qui ne
   // refermait jamais ce panneau plein ecran (PanneauFlottant, z-50),
-  // cachant la nouvelle page pourtant bien chargee derriere.
+  // cachant la nouvelle page pourtant bien chargee derriere. 01/09/2026 :
+  // passe desormais par demarrerFermeture, pour ne pas reintroduire une
+  // fermeture brute sur ce seul chemin.
   useEffect(() => {
-    setOuvert(false);
+    if (ouvert) demarrerFermeture(() => setOuvert(false));
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- ne doit réagir qu'à un changement de pathname, pas à ouvert/demarrerFermeture
   }, [pathname]);
 
   // Correctif (01/09/2026) : ce panneau ne s'enregistrait jamais comme
@@ -62,7 +72,7 @@ export function MenuHamburgerNatif() {
   // bouton retour materiel (ou popstate sur web mobile) avec ce menu
   // ouvert ne le fermait pas, minimisait l'appli / naviguait en arriere
   // a la place, menu reste ouvert derriere.
-  useFermetureAuRetour(ouvert, () => setOuvert(false));
+  useFermetureAuRetour(ouvert, () => demarrerFermeture(() => setOuvert(false)));
 
   return (
     <>
@@ -75,7 +85,11 @@ export function MenuHamburgerNatif() {
       </button>
 
       {ouvert && (
-        <PanneauFlottant onFerme={() => setOuvert(false)} entete={<span className="text-sm font-medium text-dj-texte">Plus</span>}>
+        <PanneauFlottant
+          onFerme={() => demarrerFermeture(() => setOuvert(false))}
+          entete={<span className="text-sm font-medium text-dj-texte">Plus</span>}
+          enSortie={enSortie}
+        >
           <BlocsMenuPlus sectionsNavigation={SECTIONS_BASE} />
         </PanneauFlottant>
       )}

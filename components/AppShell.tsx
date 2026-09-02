@@ -15,6 +15,7 @@ import { BarreOngletsNative } from "@/components/mobile/BarreOngletsNative";
 import { BarreOngletsWeb } from "@/components/mobile/BarreOngletsWeb";
 import { MenuHamburgerNatif } from "@/components/mobile/MenuHamburgerNatif";
 import { MenuHamburgerWeb } from "@/components/mobile/MenuHamburgerWeb";
+import { TransitionPage } from "@/components/TransitionPage";
 
 // Coquille de l'app entière (refonte "Mon espace = l'app", 15/08/2026).
 // Monte UNE SEULE FOIS, au niveau du layout (voir app/(app)/layout.tsx) :
@@ -179,7 +180,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                   }
             }
           >
-            {children}
+            <TransitionPage>{children}</TransitionPage>
           </main>
           <ChatFlottant
             connecte={connecte}

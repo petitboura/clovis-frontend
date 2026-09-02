@@ -4,6 +4,7 @@ import { useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { X } from "lucide-react";
 import { Bouton } from "@/components/Bouton";
+import { useFermetureAnimee } from "@/lib/useFermetureAnimee";
 
 // Modal "Compte requis" (09/08, demande Bourama) : toute action qui
 // nécessite obligatoirement un compte doit passer par ici plutôt que
@@ -28,27 +29,39 @@ export function CompteRequisModal({
 }) {
   const router = useRouter();
 
+  // 01/09/2026 (Bourama : "plein de boutons qui se ferment et s'ouvrent
+  // brut") : ouverture animée (animate-cgpt-entree-modal) mais fermeture
+  // instantanée -- même mécanisme que lib/useFermetureAnimee.ts, déjà
+  // utilisé par PanneauFlottant et les 8 popups qui passent par lui.
+  const { enSortie, demarrerFermeture } = useFermetureAnimee();
+  const fermer = () => demarrerFermeture(onFerme);
+
   // Fermeture au clavier (audit 25/08/2026, aucune popup du chat ne
   // gérait Echap jusqu'ici).
   useEffect(() => {
     function surTouche(e: KeyboardEvent) {
-      if (e.key === "Escape") onFerme();
+      if (e.key === "Escape") fermer();
     }
     window.addEventListener("keydown", surTouche);
     return () => window.removeEventListener("keydown", surTouche);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- fermer recrée une fonction stable via demarrerFermeture (useCallback) + onFerme du parent
   }, [onFerme]);
 
   return (
     <div
-      className={`fixed inset-0 ${zIndex} flex animate-dj-fade-in-rapide items-end justify-center bg-black/50 p-4 sm:items-center`}
-      onClick={onFerme}
+      className={`fixed inset-0 ${zIndex} flex items-end justify-center bg-black/50 p-4 sm:items-center ${
+        enSortie ? "opacity-0 transition-opacity duration-150 ease-in" : "animate-dj-fade-in-rapide"
+      }`}
+      onClick={fermer}
     >
       <div
-        className="w-full max-w-sm animate-cgpt-entree-modal rounded-cgpt-carte border border-dj-bordure bg-dj-surface p-6 text-center shadow-[0_2px_24px_rgba(0,0,0,0.35)]"
+        className={`w-full max-w-sm rounded-cgpt-carte border border-dj-bordure bg-dj-surface p-6 text-center shadow-[0_2px_24px_rgba(0,0,0,0.35)] ${
+          enSortie ? "animate-cgpt-sortie-modal" : "animate-cgpt-entree-modal"
+        }`}
         onClick={(e) => e.stopPropagation()}
       >
         <button
-          onClick={onFerme}
+          onClick={fermer}
           aria-label="Fermer"
           className="float-right text-dj-texte-muet transition-colors hover:text-dj-texte"
         >

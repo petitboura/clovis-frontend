@@ -20,6 +20,7 @@ import { useTheme, type ChoixTheme } from "@/lib/useTheme";
 import { supabase } from "@/lib/supabase";
 import type { EtatChat } from "@/lib/contexteChat";
 import { useFermetureAuRetour } from "@/lib/contexteRetour";
+import { useFermetureAnimee } from "@/lib/useFermetureAnimee";
 
 // Palette de commandes (Cmd+K / Ctrl+K), 22/08/2026, demande Bourama --
 // un des chantiers "grandes applis" (avec fil d'Ariane et historique dans
@@ -65,23 +66,31 @@ export function PaletteCommandes({
   const [surligne, setSurligne] = useState(0);
   const inputRef = useRef<HTMLInputElement>(null);
 
+  // 01/09/2026 (Bourama : "plein de boutons qui se ferment et s'ouvrent
+  // brut") : `if (!ouverte) return null` démontait la palette d'un coup
+  // -- même mécanisme que lib/useFermetureAnimee.ts, le composant reste
+  // monté ~180ms de plus pour jouer sa sortie.
+  const { enSortie, demarrerFermeture } = useFermetureAnimee();
+  const fermer = () => demarrerFermeture(() => setOuverte(false));
+
   // 31/08/2026, demande Bourama : le bouton retour (natif + web mobile)
   // doit fermer la palette au lieu de fermer toute l'appli -- voir
   // lib/contexteRetour.tsx.
-  useFermetureAuRetour(ouverte, () => setOuverte(false));
+  useFermetureAuRetour(ouverte, fermer);
 
   useEffect(() => {
     function surTouche(e: KeyboardEvent) {
       if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "k") {
         e.preventDefault();
-        setOuverte((v) => !v);
+        if (ouverte) fermer();
+        else setOuverte(true);
       } else if (e.key === "Escape") {
-        setOuverte(false);
+        fermer();
       }
     }
     document.addEventListener("keydown", surTouche);
     return () => document.removeEventListener("keydown", surTouche);
-  }, []);
+  }, [ouverte, fermer]);
 
   useEffect(() => {
     if (!ouverte) return;
@@ -165,18 +174,22 @@ export function PaletteCommandes({
 
   function executer(c: Commande) {
     c.action();
-    setOuverte(false);
+    fermer();
   }
 
-  if (!ouverte) return null;
+  if (!ouverte && !enSortie) return null;
 
   return (
     <div
-      className="fixed inset-0 z-[120] flex animate-dj-fade-in-rapide items-start justify-center bg-black/50 px-4 pt-[12vh]"
-      onClick={() => setOuverte(false)}
+      className={`fixed inset-0 z-[120] flex items-start justify-center bg-black/50 px-4 pt-[12vh] ${
+        enSortie ? "opacity-0 transition-opacity duration-150 ease-in" : "animate-dj-fade-in-rapide"
+      }`}
+      onClick={fermer}
     >
       <div
-        className="w-full max-w-lg animate-cgpt-entree-modal overflow-hidden rounded-cgpt-carte border border-dj-bordure bg-dj-surface shadow-[0_8px_40px_rgba(0,0,0,0.45)]"
+        className={`w-full max-w-lg overflow-hidden rounded-cgpt-carte border border-dj-bordure bg-dj-surface shadow-[0_8px_40px_rgba(0,0,0,0.45)] ${
+          enSortie ? "animate-cgpt-sortie-modal" : "animate-cgpt-entree-modal"
+        }`}
         onClick={(e) => e.stopPropagation()}
       >
         <div className="flex items-center gap-2 border-b border-dj-bordure px-4 py-3">
