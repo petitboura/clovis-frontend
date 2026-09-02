@@ -780,11 +780,19 @@ export function BarreDeSaisie({
     return () => document.removeEventListener("mousedown", gererClicExterieur);
   }, [selecteurOuvert]);
 
+  // Correctif (02/09/2026, signalé Bourama : 404 répétés en console) :
+  // le bouton GitHub (plus bas, appliSlotUnique?.nom === "github") ne
+  // s'affiche que si l'agent a exactement cette appli activée -- avant
+  // ce correctif, cet appel de statut partait quand même à chaque
+  // chargement du chat même quand le bouton n'existe pas, contre un
+  // endpoint qui répond 404 pour cet agent. Même garde-fou que le
+  // rendu du bouton, pour ne plus appeler l'endpoint pour rien.
   useEffect(() => {
+    if (appliSlotUnique?.nom !== "github") return;
     statutConnexion("github")
       .then((r) => setGithubConnecte(r.connecte))
       .catch(() => setGithubConnecte(false));
-  }, []);
+  }, [appliSlotUnique?.nom]);
 
   // Connexion Notion (01/08, activation complète demandée par Bourama) --
   // même pattern que githubConnecte/selecteurOuvert ci-dessus. Le choix du
@@ -819,11 +827,15 @@ export function BarreDeSaisie({
     return () => document.removeEventListener("mousedown", gererClicExterieur);
   }, [selecteurNotionOuvert]);
 
+  // Même correctif (02/09/2026) que githubConnecte plus haut : ne
+  // vérifier le statut Notion que si le bouton Notion peut réellement
+  // s'afficher pour cet agent.
   useEffect(() => {
+    if (appliSlotUnique?.nom !== "notion") return;
     statutConnexion("notion")
       .then((r) => setNotionConnecte(r.connecte))
       .catch(() => setNotionConnecte(false));
-  }, []);
+  }, [appliSlotUnique?.nom]);
 
   // Recherche débouncée (400ms) déclenchée par la frappe, uniquement
   // pendant que le sélecteur est ouvert. Champ vide -> pas d'appel réseau,

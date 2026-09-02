@@ -78,6 +78,13 @@ export const metadata: Metadata = {
   title: "Clovis",
   description: "Ton compagnon d'études pour la classe.",
   appleWebApp: { capable: true, statusBarStyle: "black-translucent", title: "Clovis" },
+  // Correctif (02/09/2026) : Next.js (appleWebApp ci-dessus) ne génère
+  // que la balise préfixée "apple-", dépréciée par Chrome/Android au
+  // profit du nom standard sans préfixe -- averti en console. On garde
+  // la balise "apple-" (nécessaire pour Safari iOS) et on ajoute la
+  // nouvelle en plus (nécessaire pour Chrome/Android), aucune des deux
+  // n'étant redondante selon le navigateur.
+  other: { "mobile-web-app-capable": "yes" },
   // Aperçu de lien (WhatsApp, Messenger, iMessage, etc.) -- ajouté le 24/08
   // (demande Bourama : le lien de l'appli n'affichait aucun aperçu, faute de
   // ces métadonnées). L'image elle-même vient de app/opengraph-image.png,
