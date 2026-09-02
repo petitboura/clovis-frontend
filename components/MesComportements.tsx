@@ -130,7 +130,7 @@ function ChipComportement({
           title={c.actif ? "Désactiver (ne sera plus proposé à l'IA)" : "Activer"}
           className="flex flex-shrink-0 items-center text-dj-texte-muet hover:text-dj-texte disabled:opacity-40"
         >
-          {c.actif ? <ToggleRight size={18} className="text-dj-accent-1-texte" /> : <ToggleLeft size={18} />}
+          {c.actif ? <ToggleRight size={18} /> : <ToggleLeft size={18} />}
         </span>
       </div>
       {/* Badge de rattachement (lien_libelle) sur sa propre ligne, sous le
