@@ -598,7 +598,14 @@ function BulleMessageInterne({
         className={
           estUtilisateur
             ? "max-w-[80%] break-words rounded-cgpt-carte bg-dj-surface px-4 py-2.5 text-[15px] text-dj-texte"
-            : "max-w-[80%] break-words px-1 py-1 font-lecture text-[16px] leading-relaxed text-dj-texte"
+            : // 2026-09-02 (demande Bourama) : sur mobile/natif Capacitor
+              // (webview embarquee, meme largeur de viewport qu'un navigateur
+              // mobile -- meme convention que md:hidden ailleurs dans ce
+              // projet), le texte assistant n'a pas de bulle visuelle et
+              // n'a donc pas besoin d'etre plafonne a 80% en plus du
+              // conteneur de chat (max-w-3xl) : max-w-full jusqu'a md,
+              // 80% conserve a partir du desktop (md:) comme avant.
+              "max-w-full break-words px-1 py-1 font-lecture text-[16px] leading-relaxed text-dj-texte md:max-w-[80%]"
         }
       >
         {message.piecesJointes && message.piecesJointes.length > 0 && (
