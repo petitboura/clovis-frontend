@@ -260,6 +260,17 @@ export interface MessageAffiche {
   // l'utilisateur en a le plus besoin. Ce flag découple "action possible"
   // de "réponse persistée en base".
   erreur?: boolean;
+  // Ajouté 02/09/2026 (demande Bourama : gestion du plafond d'appels
+  // d'outils) : présent quand CE message précis s'est terminé sur
+  // "limite_outils_atteinte" (plafond d'étapes atteint, voir
+  // core/main.py:_agent_groq) ou "repetition_detectee" (même appel refait
+  // plusieurs fois d'affilée) -- le message explique déjà lui-même la
+  // situation dans son texte, ce champ sert uniquement à afficher le bon
+  // bouton ("Continuer" / "Réessayer") sous ce message précis et à
+  // reprendre avec l'état exact où tout s'est arrêté (voir
+  // ChatIA.tsx:reprendreAgent). Devient obsolète (ignoré) dès qu'un
+  // nouveau message est envoyé -- voir envoyerMessage.
+  repriseDisponible?: { type: "limite" | "repetition"; etatReprise: unknown } | null;
 }
 
 // Ajouté le 2026-07-23 (bug repéré par Bourama : en rechargeant un fil de

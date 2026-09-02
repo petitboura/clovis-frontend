@@ -9,6 +9,7 @@ import { BarreDeSaisie, LongueurReponse, LocalisationJointe } from "./BarreDeSai
 import { PopupFeedback } from "./PopupFeedback";
 import { StatutOutil, EtatStatut } from "./StatutOutil";
 import { ConfirmationOutil } from "./ConfirmationOutil";
+import { BoutonRepriseAgent } from "./BoutonRepriseAgent";
 import { messageErreur } from "@/lib/erreurs";
 import { emettreDonneesModifieesPourOutil } from "@/lib/evenementsDonnees";
 import { IconeGenerique } from "@/components/icones/IconeGenerique";
@@ -438,6 +439,70 @@ export function ChatIA({
         arguments: evenement.arguments || {},
         etatReprise: evenement.etat_reprise,
       });
+    } else if (evenement.type === "limite_outils_atteinte" || evenement.type === "repetition_detectee") {
+      // Ajouté 02/09/2026 (voir core/main.py:_agent_groq, docstring de
+      // chat()) : le texte expliquant la situation a déjà été streamé
+      // dans CE message via les événements "reponse" juste avant --
+      // on y attache juste l'état de reprise pour afficher le bon
+      // bouton (voir BoutonRepriseAgent).
+      majMessages((prec) => {
+        const copie = [...prec];
+        copie[copie.length - 1] = {
+          ...copie[copie.length - 1],
+          repriseDisponible: {
+            type: evenement.type === "repetition_detectee" ? "repetition" : "limite",
+            etatReprise: evenement.etat_reprise,
+          },
+        };
+        return copie;
+      });
+    }
+  }
+
+  // Ajouté 02/09/2026 : reprend un tour arrêté sur limite_outils_atteinte
+  // ou repetition_detectee (bouton sous le message concerné). Contrairement
+  // à repriseApresConfirmation, aucun outil en attente à finir/annuler --
+  // on relance directement l'agent avec un budget neuf ; messages_agent
+  // (côté backend) garde déjà tous les résultats d'outils obtenus jusque-là,
+  // donc rien n'est perdu ni rejoué. La continuation s'affiche comme un
+  // NOUVEAU message assistant (pas ajoutée au précédent), même logique que
+  // le bouton "Continuer" de Claude.
+  async function reprendreAgent(indexMessage: number) {
+    const message = messages[indexMessage];
+    const reprise = message?.repriseDisponible;
+    if (!reprise) return;
+
+    // L'état devient obsolète dès qu'on l'utilise -- évite un double-clic
+    // qui relancerait deux fois le même état.
+    majMessages((prec) => {
+      const copie = [...prec];
+      copie[indexMessage] = { ...copie[indexMessage], repriseDisponible: null };
+      return copie.concat({ id: null, role: "assistant", content: "" });
+    });
+    reinitialiserAffichageControle();
+    setGenEnCours(true);
+    setStatuts([]);
+    setRaisonnementEnCours(false);
+
+    try {
+      await appelerApiStream(
+        "/api/chat",
+        { reprise: { etat_reprise: reprise.etatReprise, type: "continuer_agent" } },
+        (evenement) => traiterEvenement(evenement)
+      );
+    } catch (e) {
+      reinitialiserAffichageControle();
+      majMessages((prec) => {
+        const copie = [...prec];
+        copie[copie.length - 1] = {
+          ...copie[copie.length - 1],
+          content: "Une erreur est survenue, réessaie dans un instant.",
+          erreur: true,
+        };
+        return copie;
+      });
+    } finally {
+      setGenEnCours(false);
     }
   }
 
@@ -478,7 +543,11 @@ export function ChatIA({
     };
     const historiquePourApi = messages.map((m) => ({ role: m.role, content: m.content }));
 
-    majMessages((prec) => [...prec, messageUtilisateur, { id: null, role: "assistant", content: "" }]);
+    majMessages((prec) => [
+      ...prec.map((m) => (m.repriseDisponible ? { ...m, repriseDisponible: null } : m)),
+      messageUtilisateur,
+      { id: null, role: "assistant", content: "" },
+    ]);
     reinitialiserAffichageControle();
     setGenEnCours(true);
     setStatuts([]);
@@ -789,10 +858,10 @@ export function ChatIA({
         {messages.map((message, index) => {
           const estDernier = index === messages.length - 1;
           return (
-            <BulleMessage
-              key={index}
-              message={message}
-              nomAgent={nomAgent}
+            <div key={index}>
+              <BulleMessage
+                message={message}
+                nomAgent={nomAgent}
               // Rattachés à CE message précis plutôt qu'en bloc séparé plus
               // bas dans la liste (retour Bourama 24/07 : trop loin du
               // message, le raisonnement semblait "disparaître" une fois
@@ -835,7 +904,15 @@ export function ChatIA({
                   : undefined
               }
               onExpliquerSelection={message.role === "assistant" ? expliquerSelection : undefined}
-            />
+              />
+              {message.repriseDisponible && (
+                <BoutonRepriseAgent
+                  type={message.repriseDisponible.type}
+                  enAttente={genEnCours}
+                  onReprendre={() => reprendreAgent(index)}
+                />
+              )}
+            </div>
           );
         })}
 
