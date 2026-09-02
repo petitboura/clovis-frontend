@@ -59,6 +59,21 @@ const TAILLE_NORMALE = { width: 480, height: 560 };
 const TAILLE_LARGE = { width: 760, height: 640 };
 export const TAILLE_MIN = { width: 320, height: 280 };
 
+// Correctif (01/09/2026, signalé Bourama : popups qui ne s'ouvrent
+// jamais côté web mobile et appli native) : crypto.randomUUID() n'est
+// pas garanti disponible partout (certains WebView Android plus
+// anciens ne l'ont pas) : si absent, l'appel jette une erreur au
+// moment même de créer la fenêtre, qui échoue alors silencieusement à
+// chaque fois sur l'appareil concerné, sans rien afficher. Repli sur un
+// identifiant simple (pas besoin d'un vrai UUID ici, juste une clé
+// unique et stable) quand la fonction native manque.
+function idFenetre(): string {
+  if (typeof crypto !== "undefined" && typeof crypto.randomUUID === "function") {
+    return crypto.randomUUID();
+  }
+  return `fenetre-${Date.now()}-${Math.random().toString(36).slice(2)}`;
+}
+
 export function useFournirFenetres(): ContexteFenetresValeur {
   const [fenetres, setFenetres] = useState<FenetreSection[]>([]);
   // Compteur de z monotone (jamais réutilisé) plutôt qu'un simple index
@@ -105,7 +120,7 @@ export function useFournirFenetres(): ContexteFenetresValeur {
       return [
         ...f,
         {
-          cle: crypto.randomUUID(),
+          cle: idFenetre(),
           ongletId,
           x,
           y,
