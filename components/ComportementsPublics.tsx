@@ -162,13 +162,12 @@ export function ComportementsPublics({ onActive }: { onActive: () => void }) {
     return <CTACompteRequis texte="Crée un compte pour activer un skill publié par la communauté." />;
   }
 
+  // Description fixe remplacée par le bouton "i" du titre de page (géré
+  // par le parent MesComportements.tsx selon l'onglet ouvert, voir
+  // lib/aideSections.tsx, rubrique "skills-publics") -- correctif
+  // 02/09/2026, suite audit Bourama.
   return (
     <div className="flex animate-dj-fade-in-rapide flex-col gap-4">
-      <p className="text-sm text-dj-texte-muet">
-        Des comportements publiés par d&apos;autres étudiants. Active celui qui t&apos;intéresse : une copie
-        s&apos;ajoute directement dans &laquo;&nbsp;Mes comportements&nbsp;&raquo;, prête à l&apos;emploi.
-      </p>
-
       <div className="relative">
         <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-dj-texte-muet" />
         <input

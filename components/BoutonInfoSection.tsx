@@ -19,7 +19,7 @@ import { useFermetureAnimee } from "@/lib/useFermetureAnimee";
 // Remplace, sur les écrans concernés, le paragraphe
 // `<p className="mt-1 text-xs text-dj-texte-muet">...</p>` qui suivait
 // systématiquement le titre <h2>. Le texte lui-même ne change pas, voir
-// lib/aideSections.ts (source unique, lue aussi par la page Aide et
+// lib/aideSections.tsx (source unique, lue aussi par la page Aide et
 // support pour ne jamais diverger).
 //
 // Lien profond vers la bonne rubrique (pas juste la liste générale) :
@@ -27,7 +27,7 @@ import { useFermetureAnimee } from "@/lib/useFermetureAnimee";
 // directement la vue "aide" ET scroller/mettre en avant la rubrique --
 // EspaceParametres.tsx n'a pas de route par écran (état interne `vue`),
 // d'où le paramètre de requête plutôt qu'une ancre de page classique.
-export function BoutonInfoSection({ rubriqueId, texteCourt }: { rubriqueId: string; texteCourt: string }) {
+export function BoutonInfoSection({ rubriqueId, texteCourt }: { rubriqueId: string; texteCourt: React.ReactNode }) {
   const [ouvert, setOuvert] = useState(false);
   // 01/09/2026 (Bourama : "plein de boutons qui se ferment et s'ouvrent
   // brut") : cette bulle n'avait qu'une animation d'entrée -- même

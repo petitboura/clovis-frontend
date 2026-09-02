@@ -3,6 +3,7 @@
 import { useState } from "react";
 import Image from "next/image";
 import { Check, Copy } from "lucide-react";
+import { useInfoSection } from "./SectionPage";
 
 // Guide "Utiliser Clovis dans Claude" (18/08, demande Bourama).
 //
@@ -20,13 +21,13 @@ import { Check, Copy } from "lucide-react";
 const URL_MCP_CLOVIS = "https://clovis-backend-production.up.railway.app/mcp/espace";
 
 export function EspaceConnecterClaude() {
+  // Description fixe remplacée par le bouton "i" du titre de page (voir
+  // lib/aideSections.tsx, rubrique "connecter-claude") -- correctif
+  // 02/09/2026, suite audit Bourama.
+  useInfoSection("connecter-claude");
+
   return (
     <div className="flex flex-col gap-4">
-      <p className="text-sm text-dj-texte-muet">
-        Connecte ton compte Clovis à Claude pour que Claude puisse utiliser ce que tu as dans Clovis (ta mémoire,
-        tes skills, ta bibliothèque) directement dans vos conversations. Ça se fait une seule fois.
-      </p>
-
       <EtapeGuide numero={1} titre="Ouvre le menu à côté de la zone de texte">
         <p>
           Dans Claude, clique sur le <span className="font-semibold text-dj-texte">+</span> juste à gauche de la

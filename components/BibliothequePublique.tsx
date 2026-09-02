@@ -5,7 +5,6 @@ import {
   Search, Plus, Trash2, Paperclip, FileText, Image as IconImage, Music as IconAudio, Video as IconVideo,
   Flag, FolderPlus, Check, Link as IconLien, Upload, FolderX, X, Globe, Lock, Loader2, Download, ChevronRight,
 } from "lucide-react";
-import Link from "next/link";
 import {
   listerBibliothequePublique,
   ajouterABibliothequePublique,
@@ -416,22 +415,14 @@ export function BibliothequePublique() {
     ? (liste || []).filter((e) => dossierActuel?.fichier_ids.includes(e.id))
     : liste;
 
+  // Description fixe (+ rappel légal CGU/copyright) remplacée par le
+  // bouton "i" du titre de page (géré par le parent EspaceBibliotheque.tsx
+  // selon l'onglet ouvert, voir lib/aideSections.tsx, rubrique
+  // "bibliotheque-publique") -- correctif 02/09/2026, suite audit
+  // Bourama. Texte et liens repris tels quels, aucune reformulation du
+  // rappel légal.
   return (
     <div className="flex animate-dj-fade-in-rapide flex-col gap-4">
-      <p className="text-sm text-dj-texte-muet">
-        Un catalogue de documents partagé par tout le monde : ajoute un fichier, un lien ou une note avec un nom et
-        une description pour que les autres le retrouvent facilement. En publiant, tu garantis détenir les droits sur
-        ce contenu, voir les{" "}
-        <Link href="/cgu" className="text-dj-texte-muet underline hover:text-dj-texte">
-          CGU
-        </Link>{" "}
-        et la{" "}
-        <Link href="/copyright" className="text-dj-texte-muet underline hover:text-dj-texte">
-          politique de copyright
-        </Link>
-        .
-      </p>
-
       <div className="relative">
         <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-dj-texte-muet" />
         <input

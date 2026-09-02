@@ -40,6 +40,7 @@ import { VisionneuseBibliotheque } from "./VisionneuseBibliotheque";
 import { BibliothequePublique } from "./BibliothequePublique";
 import { EspaceDossiers } from "./EspaceDossiers";
 import { OngletsSegment } from "./OngletsSegment";
+import { useInfoSection } from "./SectionPage";
 
 // Onglet "Bibliothèque" de Mon espace, porté de
 // djiguigne-frontend/app/dashboard/espace/page.tsx (même logique,
@@ -99,6 +100,13 @@ export function EspaceBibliotheque() {
   // (comportement par défaut, inchangé ci-dessous) et le catalogue
   // public (nouveau composant BibliothequePublique.tsx).
   const [vue, setVue] = useState<"perso" | "publique" | "dossiers">("perso");
+
+  // Description fixe remplacée par le bouton "i" du titre de page,
+  // différente selon l'onglet ouvert (voir lib/aideSections.tsx,
+  // rubriques "bibliotheque-perso" / "bibliotheque-publique") --
+  // correctif 02/09/2026, suite audit Bourama. Pas de rubrique pour
+  // "dossiers" : cet onglet n'avait pas de description fixe à l'origine.
+  useInfoSection(vue === "publique" ? "bibliotheque-publique" : vue === "perso" ? "bibliotheque-perso" : null);
   const [sousOnglet, setSousOnglet] = useState<SousOngletBiblio>("tous");
   const [fichiers, setFichiers] = useState<FichierBiblio[] | null>(null);
   const [dossiers, setDossiers] = useState<DossierBibliotheque[] | null>(null);
@@ -647,11 +655,6 @@ async function envoyerFichiersDirect(fichiersChoisis: FileList | File[]) {
         <EspaceDossiers />
       ) : (
         <>
-      <p className="text-sm text-dj-texte-muet">
-        Les documents ajoutés ici sont personnels : toi seul y as accès, et Clovis peut les consulter
-        pendant une conversation.
-      </p>
-
       {erreursEnvoi.length > 0 && (
         <div className="flex flex-col gap-1 rounded-xl border border-[var(--dj-erreur)]/40 bg-[var(--dj-erreur)]/5 px-4 py-3">
           {erreursEnvoi.map((e) => (

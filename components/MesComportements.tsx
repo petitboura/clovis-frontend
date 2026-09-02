@@ -31,6 +31,7 @@ import { ComportementsPublics } from "@/components/ComportementsPublics";
 import { PanneauFlottant } from "@/components/PanneauFlottant";
 import { Skeleton } from "./Skeleton";
 import { OngletsSegment } from "./OngletsSegment";
+import { useInfoSection } from "./SectionPage";
 
 // Section "Mes comportements" (06/08/2026, demande Bourama : "on peut en
 // mettre plusieurs hein, pas juste un") : PLUSIEURS instructions perso
@@ -156,6 +157,12 @@ export function MesComportements({ agentId }: { agentId: string }) {
   // public (nouveau composant ComportementsPublics.tsx, même esprit que
   // EspacePlugins.tsx pour les plugins).
   const [vue, setVue] = useState<"mes-comportements" | "public">("mes-comportements");
+
+  // Description fixe remplacée par le bouton "i" du titre de page,
+  // différente selon l'onglet ouvert (voir lib/aideSections.tsx,
+  // rubriques "mes-skills" / "skills-publics") -- correctif 02/09/2026,
+  // suite audit Bourama.
+  useInfoSection(vue === "public" ? "skills-publics" : "mes-skills");
 
   // 22/08/2026, demande Bourama : distinguer les origines d'un skill
   // (créé directement / téléchargé du public) par des onglets-filtres
@@ -590,11 +597,6 @@ export function MesComportements({ agentId }: { agentId: string }) {
         </div>
       ) : (
         <div className="flex animate-dj-fade-in-rapide flex-col gap-4">
-          <p className="text-sm text-dj-texte-muet">
-            Tes consignes perso pour Clovis, en plus de ce que ton enseignant a déjà mis en place. Tu peux en ajouter
-            plusieurs, clique sur l&apos;une d&apos;elles pour l&apos;ouvrir en grand et la modifier tranquillement.
-          </p>
-
           <button
             onClick={ouvrirCreation}
             className="flex w-fit items-center gap-1.5 rounded-full border border-dj-bordure bg-dj-surface px-3 py-1.5 text-sm font-medium text-dj-texte transition-colors hover:border-dj-bordure-forte hover:bg-dj-surface-haute"

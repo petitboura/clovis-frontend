@@ -5,6 +5,7 @@ import { appelerApi } from "@/lib/api";
 import { messageErreur, ErreurApi } from "@/lib/erreurs";
 import { Skeleton } from "./Skeleton";
 import { CTACompteRequis } from "./CTACompteRequis";
+import { useInfoSection } from "./SectionPage";
 
 /**
  * Extrait de app/dashboard/memoire/page.tsx (2026-08-01, demande Bourama :
@@ -24,6 +25,11 @@ export function MaMemoire() {
   // n'avait jamais eu à le gérer avant) -- même détection que
   // MesComportements.tsx : 401 -> CTA plutôt qu'une erreur brute.
   const [sansCompte, setSansCompte] = useState(false);
+
+  // Description fixe remplacée par le bouton "i" du titre de page (voir
+  // lib/aideSections.tsx, rubrique "memoire") -- correctif 02/09/2026,
+  // suite audit Bourama.
+  useInfoSection("memoire");
 
   useEffect(() => {
     appelerApi("/api/memoire")
@@ -81,12 +87,6 @@ export function MaMemoire() {
 
   return (
     <div className="flex flex-col gap-4">
-      <p className="text-sm text-dj-texte-muet">
-        Résumé de ce que Clovis retient de tes conversations passées, pour personnaliser vos
-        échanges. Se met à jour automatiquement au fil des discussions, tu peux aussi le corriger
-        ou l&apos;effacer toi-même ici.
-      </p>
-
       {/* Skeleton précis (30/08, ré-analyse minutieuse demandée par
           Bourama) : le vrai contenu n'est PAS du texte de paragraphe nu --
           c'est une carte à bordure contenant une zone de texte éditable

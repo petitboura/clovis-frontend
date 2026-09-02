@@ -1,3 +1,5 @@
+import Link from "next/link";
+
 // Créé le 01/09/2026, correctif (Bourama : "les descriptions de section,
 // c'est pas la norme mobile, trouve où ça doit aller").
 //
@@ -15,11 +17,17 @@
 // rubriques de "Aide et support", et pour savoir sur quelle rubrique
 // scroller/ouvrir quand on y arrive via ?aide=<id> (lien "En savoir plus"
 // depuis une bulle).
+//
+// texteCourt/texteComplet en React.ReactNode, pas juste string (passage
+// en .tsx le 02/09/2026, suite audit Bourama sur les 6 écrans oubliés du
+// premier passage) : la rubrique "bibliotheque-publique" porte un rappel
+// légal avec liens cliquables (CGU, politique de copyright) qui doit
+// suivre le texte tel quel, pas être réduit à du texte brut.
 export type RubriqueAide = {
   id: string;
   titre: string;
-  texteCourt: string;
-  texteComplet: string;
+  texteCourt: React.ReactNode;
+  texteComplet: React.ReactNode;
 };
 
 export const RUBRIQUES_AIDE: RubriqueAide[] = [
@@ -78,6 +86,82 @@ export const RUBRIQUES_AIDE: RubriqueAide[] = [
     texteCourt: "Crée un code et partage-le : tous ceux qui l'entrent reçoivent ce que tu y mets.",
     texteComplet:
       "Crée un code et partage-le : tous ceux qui l'entrent reçoivent tout ce que tu y mets (comportement, bibliothèque, texte). Modifiable après coup, tout le monde voit la mise à jour dès qu'elle est faite.",
+  },
+  // Les 6 rubriques suivantes ajoutées le 02/09/2026 -- écrans oubliés du
+  // premier passage du 01/09 (signalé par Bourama), textes repris tels
+  // quels des paragraphes fixes qu'ils remplacent, sans reformulation.
+  {
+    id: "bibliotheque-perso",
+    titre: "Bibliothèque",
+    texteCourt: "Les documents ajoutés ici sont personnels : toi seul y as accès, et Clovis peut les consulter pendant une conversation.",
+    texteComplet:
+      "Les documents ajoutés ici sont personnels : toi seul y as accès, et Clovis peut les consulter pendant une conversation.",
+  },
+  {
+    id: "bibliotheque-publique",
+    titre: "Bibliothèque publique",
+    texteCourt: (
+      <>
+        Un catalogue de documents partagé par tout le monde : ajoute un fichier, un lien ou une note avec un nom et
+        une description pour que les autres le retrouvent facilement. En publiant, tu garantis détenir les droits sur
+        ce contenu, voir les{" "}
+        <Link href="/cgu" className="underline hover:text-dj-texte">
+          CGU
+        </Link>{" "}
+        et la{" "}
+        <Link href="/copyright" className="underline hover:text-dj-texte">
+          politique de copyright
+        </Link>
+        .
+      </>
+    ),
+    texteComplet: (
+      <>
+        Un catalogue de documents partagé par tout le monde : ajoute un fichier, un lien ou une note avec un nom et
+        une description pour que les autres le retrouvent facilement. En publiant, tu garantis détenir les droits sur
+        ce contenu, voir les{" "}
+        <Link href="/cgu" className="underline hover:text-dj-texte">
+          CGU
+        </Link>{" "}
+        et la{" "}
+        <Link href="/copyright" className="underline hover:text-dj-texte">
+          politique de copyright
+        </Link>
+        .
+      </>
+    ),
+  },
+  {
+    id: "mes-skills",
+    titre: "Mes skills",
+    texteCourt:
+      "Tes consignes perso pour Clovis, en plus de ce que ton enseignant a déjà mis en place. Tu peux en ajouter plusieurs, clique sur l'une d'elles pour l'ouvrir en grand et la modifier tranquillement.",
+    texteComplet:
+      "Tes consignes perso pour Clovis, en plus de ce que ton enseignant a déjà mis en place. Tu peux en ajouter plusieurs, clique sur l'une d'elles pour l'ouvrir en grand et la modifier tranquillement.",
+  },
+  {
+    id: "skills-publics",
+    titre: "Skills publics",
+    texteCourt:
+      "Des comportements publiés par d'autres étudiants. Active celui qui t'intéresse : une copie s'ajoute directement dans « Mes comportements », prête à l'emploi.",
+    texteComplet:
+      "Des comportements publiés par d'autres étudiants. Active celui qui t'intéresse : une copie s'ajoute directement dans « Mes comportements », prête à l'emploi.",
+  },
+  {
+    id: "connecter-claude",
+    titre: "Utiliser Clovis dans Claude",
+    texteCourt:
+      "Connecte ton compte Clovis à Claude pour que Claude puisse utiliser ce que tu as dans Clovis (ta mémoire, tes skills, ta bibliothèque) directement dans vos conversations. Ça se fait une seule fois.",
+    texteComplet:
+      "Connecte ton compte Clovis à Claude pour que Claude puisse utiliser ce que tu as dans Clovis (ta mémoire, tes skills, ta bibliothèque) directement dans vos conversations. Ça se fait une seule fois.",
+  },
+  {
+    id: "memoire",
+    titre: "Ma mémoire",
+    texteCourt:
+      "Résumé de ce que Clovis retient de tes conversations passées, pour personnaliser vos échanges. Se met à jour automatiquement au fil des discussions, tu peux aussi le corriger ou l'effacer toi-même ici.",
+    texteComplet:
+      "Résumé de ce que Clovis retient de tes conversations passées, pour personnaliser vos échanges. Se met à jour automatiquement au fil des discussions, tu peux aussi le corriger ou l'effacer toi-même ici.",
   },
 ];
 
