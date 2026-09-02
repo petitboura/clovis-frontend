@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import { X, ExternalLink } from "lucide-react";
+import { X, ExternalLink, Maximize2, Minimize2 } from "lucide-react";
 import { LinkPreview } from "./LinkPreview";
 import { VisionneurPdf } from "@/components/VisionneurPdf";
 import {
@@ -104,6 +104,11 @@ function CarteSiteExterne({ url, titre }: { url: string; titre: string }) {
 
 export function VisionneurPositionGlobal() {
   const [detail, setDetail] = useState<DetailOuverturePosition | null>(null);
+  // 02/09, demande Bourama : plein écran pour le lecteur PDF (web,
+  // mobile web, mobile natif) -- même logique que VisionneuseBibliotheque.tsx
+  // (overlay CSS pur, pas la Fullscreen API du navigateur -- absente sur
+  // Safari iOS/webviews natives Capacitor).
+  const [pleinEcran, setPleinEcran] = useState(false);
   // 01/09/2026 (Bourama : "plein de boutons qui se ferment et s'ouvrent
   // brut") : ce visionneur n'avait aucune animation, ni entrée ni sortie
   // -- aligné ici sur le même mécanisme que le reste de l'app (voir
@@ -114,6 +119,7 @@ export function VisionneurPositionGlobal() {
 
   useEffect(() => {
     function onOuvrir(e: Event) {
+      setPleinEcran(false);
       setDetail((e as CustomEvent<DetailOuverturePosition>).detail);
     }
     window.addEventListener(EVENEMENT_OUVRIR_POSITION, onOuvrir);
@@ -145,27 +151,40 @@ export function VisionneurPositionGlobal() {
 
   return (
     <div
-      className={`fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 ${
+      className={`fixed inset-0 z-50 flex items-center justify-center bg-black/60 ${pleinEcran ? "" : "p-4"} ${
         enSortie ? "opacity-0 transition-opacity duration-150 ease-in" : "animate-dj-fade-in-rapide"
       }`}
-      onClick={fermer}
+      onClick={pleinEcran ? undefined : fermer}
     >
       <div
-        className={`flex h-[85vh] w-full max-w-2xl flex-col rounded-cgpt-bouton border border-dj-bordure bg-dj-fond shadow-2xl ${
-          enSortie ? "animate-cgpt-sortie-modal" : "animate-cgpt-entree-modal"
-        }`}
+        className={`flex flex-col border-dj-bordure bg-dj-fond shadow-2xl ${
+          pleinEcran ? "h-full w-full rounded-none border-0" : "h-[85vh] w-full max-w-2xl rounded-cgpt-bouton border"
+        } ${enSortie ? "animate-cgpt-sortie-modal" : "animate-cgpt-entree-modal"}`}
         onClick={(e) => e.stopPropagation()}
       >
-        <div className="flex items-center justify-between border-b border-dj-bordure px-4 py-3">
-          <p className="truncate pr-3 text-sm font-medium text-dj-texte">{detail.titre}</p>
-          <button
-            type="button"
-            onClick={fermer}
-            className="shrink-0 rounded-full p-1 text-dj-texte-muet transition-colors hover:text-dj-texte"
-            title="Fermer"
-          >
-            <X size={18} />
-          </button>
+        <div className="flex items-center justify-between gap-2 border-b border-dj-bordure px-4 py-3">
+          <p className="min-w-0 truncate pr-3 text-sm font-medium text-dj-texte">{detail.titre}</p>
+          <div className="flex shrink-0 items-center gap-1.5">
+            {estPdf && (
+              <button
+                type="button"
+                onClick={() => setPleinEcran((v) => !v)}
+                aria-label={pleinEcran ? "Quitter le plein écran" : "Plein écran"}
+                title={pleinEcran ? "Quitter le plein écran" : "Plein écran"}
+                className="rounded-full p-1 text-dj-texte-muet transition-colors hover:text-dj-texte"
+              >
+                {pleinEcran ? <Minimize2 size={18} /> : <Maximize2 size={18} />}
+              </button>
+            )}
+            <button
+              type="button"
+              onClick={fermer}
+              className="rounded-full p-1 text-dj-texte-muet transition-colors hover:text-dj-texte"
+              title="Fermer"
+            >
+              <X size={18} />
+            </button>
+          </div>
         </div>
         <div className="min-h-0 flex-1 overflow-auto">
           {estAudio ? (

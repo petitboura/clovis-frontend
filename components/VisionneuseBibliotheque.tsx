@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import dynamic from "next/dynamic";
-import { X, Download, ExternalLink, Loader2, File as IconFichier, Copy, Check, FolderOpen } from "lucide-react";
+import { X, Download, ExternalLink, Loader2, File as IconFichier, Copy, Check, FolderOpen, Maximize2, Minimize2 } from "lucide-react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import { LinkPreview } from "./chat/LinkPreview";
@@ -327,6 +327,16 @@ export function VisionneuseBibliotheque({
   const { enSortie, demarrerFermeture } = useFermetureAnimee();
   const fermer = () => demarrerFermeture(onFermer);
 
+  // 02/09, demande Bourama : plein écran pour le lecteur PDF (web,
+  // mobile web, mobile natif) -- overlay CSS pur (le modal prend tout
+  // l'écran) plutôt que la Fullscreen API du navigateur, qui n'existe
+  // pas de façon fiable sur mobile (Safari iOS ne la supporte pas sur
+  // iPhone, les webviews natives Capacitor non plus).
+  const [pleinEcran, setPleinEcran] = useState(false);
+  useEffect(() => {
+    if (!fichier) setPleinEcran(false);
+  }, [fichier]);
+
   if (!fichier && !enSortie) return null;
   const f = fichier ?? dernierFichier;
   if (!f) return null;
@@ -345,20 +355,32 @@ export function VisionneuseBibliotheque({
 
   return (
     <div
-      className={`fixed inset-0 z-[100] flex items-center justify-center bg-black/70 p-4 ${
+      className={`fixed inset-0 z-[100] flex items-center justify-center bg-black/70 ${pleinEcran ? "" : "p-4"} ${
         enSortie ? "opacity-0 transition-opacity duration-150 ease-in" : "animate-dj-fade-in-rapide"
       }`}
-      onClick={fermer}
+      onClick={pleinEcran ? undefined : fermer}
     >
       <div
-        className={`flex max-h-[90vh] w-full max-w-3xl flex-col overflow-hidden rounded-cgpt-carte border border-dj-bordure bg-dj-surface shadow-[0_2px_24px_rgba(0,0,0,0.35)] ${
-          enSortie ? "animate-cgpt-sortie-modal" : "animate-cgpt-entree-modal"
-        }`}
+        className={`flex flex-col overflow-hidden border-dj-bordure bg-dj-surface ${
+          pleinEcran
+            ? "h-full w-full max-h-full max-w-full rounded-none border-0"
+            : "max-h-[90vh] w-full max-w-3xl rounded-cgpt-carte border shadow-[0_2px_24px_rgba(0,0,0,0.35)]"
+        } ${enSortie ? "animate-cgpt-sortie-modal" : "animate-cgpt-entree-modal"}`}
         onClick={(e) => e.stopPropagation()}
       >
         <div className="flex items-center justify-between gap-2 border-b border-dj-bordure px-4 py-3">
           <span className="min-w-0 truncate text-sm font-medium text-dj-texte">{titre}</span>
           <div className="flex shrink-0 items-center gap-1.5">
+            {estPdf && (
+              <button
+                onClick={() => setPleinEcran((v) => !v)}
+                aria-label={pleinEcran ? "Quitter le plein écran" : "Plein écran"}
+                title={pleinEcran ? "Quitter le plein écran" : "Plein écran"}
+                className="flex h-8 w-8 items-center justify-center rounded-cgpt-bouton text-dj-texte-muet transition-colors hover:text-dj-texte"
+              >
+                {pleinEcran ? <Minimize2 size={16} /> : <Maximize2 size={16} />}
+              </button>
+            )}
             {onRanger && (
               <button
                 onClick={onRanger}
@@ -395,7 +417,7 @@ export function VisionneuseBibliotheque({
             // et en app mobile native, aperçu vide/cassé. VisionneurPdf
             // (react-pdf, canvas) marche pareil partout, avec swipe et
             // saut de page direct.
-            <div className="h-[75vh]">
+            <div className="h-full min-h-[75vh]">
               <VisionneurPdf url={f.url_publique} page={1} />
             </div>
           )}
