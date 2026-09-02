@@ -192,6 +192,16 @@ function normaliserLatex(texte: string): string {
     .replace(/\\\(([\s\S]*?)\\\)/g, (_, formule) => `$${formule}$`);
 }
 
+// Citation inline (2026-09-02, remplace l'ancien format [n](citation:n)) :
+// le modèle écrit désormais [[n]], un marqueur beaucoup plus simple à
+// reproduire correctement -- voir <citations_sources> côté backend. Converti
+// ici vers le format de lien que le handler `a` ci-dessous sait déjà
+// afficher (voir plus bas), pour ne rien changer au rendu de la pilule
+// elle-même, seulement à ce qui déclenche son affichage.
+function normaliserCitations(texte: string): string {
+  return texte.replace(/\[\[(\d+)\]\]/g, (_, numero) => `[${numero}](citation:${numero})`);
+}
+
 export interface MessageAffiche {
   id: number | null; // id historique_conversations (null tant que non persisté, ex: pendant le streaming)
   role: "user" | "assistant";
@@ -243,7 +253,7 @@ export interface MessageAffiche {
   // séparé du message) : elles doivent apparaître juste après le
   // résultat de leur outil, pas dans un bloc "Sources" à part à la fin
   // -- voir OutilResultatBulle.tsx.
-  outilsResultats?: { nomOutil: string; nomLisible: string; resultat: string; sources?: { titre: string; url: string; extrait?: string; url_extrait?: string; reperage?: string; position_type?: "page" | "timestamp"; position_valeur?: number; type_mime?: string | null }[] }[];
+  outilsResultats?: { nomOutil: string; nomLisible: string; resultat: string; sources?: { numero: number; titre: string; url: string; extrait?: string; url_extrait?: string; reperage?: string; position_type?: "page" | "timestamp"; position_valeur?: number; type_mime?: string | null }[] }[];
   // Ajouté 2026-07-28 (demande Bourama) : lien(s) de fichier(s) générés
   // par un outil, détectés côté backend de façon garantie (voir
   // core/main.py, événement SSE "fichiers_generes") -- INDÉPENDANT de ce
@@ -407,7 +417,7 @@ function BulleMessageInterne({
   estEnCoursDeGeneration?: boolean;
   raisonnement?: string;
   raisonnementEnCours?: boolean;
-  outilsResultats?: { nomOutil: string; nomLisible: string; resultat: string; sources?: { titre: string; url: string; extrait?: string; url_extrait?: string; reperage?: string; position_type?: "page" | "timestamp"; position_valeur?: number; type_mime?: string | null }[] }[];
+  outilsResultats?: { nomOutil: string; nomLisible: string; resultat: string; sources?: { numero: number; titre: string; url: string; extrait?: string; url_extrait?: string; reperage?: string; position_type?: "page" | "timestamp"; position_valeur?: number; type_mime?: string | null }[] }[];
   fichiersGeneres?: { nomOutil: string; fichiers: { url: string; nom: string }[] }[];
 }) {
   const [copie, setCopie] = useState(false);
@@ -417,14 +427,16 @@ function BulleMessageInterne({
   // Citations inline dans le texte (26/08, demande Bourama : les sources
   // doivent apparaître à la fois AU FIL DU TEXTE, là où le modèle les
   // utilise, ET dans la liste complète en bas -- pas l'un OU l'autre).
-  // Numérotation GLOBALE sur tout le message, dans l'ordre des appels
-  // d'outils (identique à celle déjà affichée par SourcesBulle en bas) :
-  // le modèle est instrui de placer un marqueur [n](citation:n) dans sa
-  // propre réponse -- voir a() plus bas, qui résout "citation:n" contre
-  // cette liste pour ouvrir la bonne source au clic, sans jamais afficher
-  // le gros aperçu LinkPreview réservé aux vrais liens externes.
+  // Chaque source porte son propre `numero` (attribué une fois pour
+  // toutes côté backend, voir core/main.py) : le modèle est instruit de
+  // placer un marqueur [[n]] dans sa propre réponse -- voir
+  // normaliserCitations plus haut et a() plus bas, qui résolvent
+  // "citation:n" contre cette liste PAR NUMÉRO (pas par position) pour
+  // ouvrir la bonne source au clic, sans jamais afficher le gros aperçu
+  // LinkPreview réservé aux vrais liens externes.
   const sourcesAplaties = useMemo(() => {
     const toutes: {
+      numero: number;
       titre: string;
       url: string;
       extrait?: string;
@@ -753,38 +765,22 @@ function BulleMessageInterne({
                 const matchCitation = /^citation:(\d+)$/.exec(href);
                 if (matchCitation) {
                   const numero = parseInt(matchCitation[1], 10);
-                  const source = sourcesAplaties[numero - 1];
-                  // CORRECTIF 27/08 (Bourama : "c'est le frontend qui ne
-                  // sait pas l'afficher, pas un problème du modèle") --
-                  // avant : `if (!source) return null`, donc si la
-                  // résolution échouait pour une raison quelconque
-                  // (dédoublonnage par url trop agressif entre plusieurs
-                  // extraits d'un même fichier, corrigé dans
-                  // ChatIA.tsx -- ou toute autre cause), la citation
-                  // disparaissait purement et simplement du texte, sans
-                  // aucune trace ni erreur visible : impossible à
-                  // distinguer d'un marqueur que le modèle n'aurait
-                  // jamais écrit. Après : le texte des enfants (ce que le
-                  // modèle a écrit comme libellé du lien) reste TOUJOURS
-                  // visible, même si la source ne résout pas -- juste
-                  // sans interactivité dans ce cas précis.
+                  // CORRECTIF 2026-09-02 (Bourama : "c'est le frontend qui
+                  // ne sait pas l'afficher, pas un problème du modèle") --
+                  // avant : résolution par POSITION dans le tableau
+                  // (sourcesAplaties[numero - 1]), qui cassait dès que ce
+                  // tableau était réordonné/dédupliqué côté frontend (le
+                  // numéro ne correspondait plus au bon index). Chaque
+                  // source porte désormais son propre champ `numero`,
+                  // attribué une fois pour toutes côté backend -- on le
+                  // cherche ici directement, plus de dépendance à la
+                  // position.
+                  const source = sourcesAplaties.find((s) => s.numero === numero);
+                  // Le texte des enfants (ce que le modèle a écrit comme
+                  // libellé du lien) reste TOUJOURS visible même si la
+                  // source ne résout pas -- juste sans interactivité dans
+                  // ce cas précis.
                   if (!source) {
-                    // TEMPORAIRE (29/08, diagnostic) -- envoie l'état réel
-                    // de sourcesAplaties au backend pour le voir dans les
-                    // logs Railway, sans avoir besoin d'ouvrir la console
-                    // du navigateur. À retirer avec la route
-                    // /api/debug/citation une fois la cause trouvée.
-                    fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/debug/citation`, {
-                      method: "POST",
-                      headers: { "Content-Type": "application/json" },
-                      body: JSON.stringify({
-                        numero,
-                        nb_sources_disponibles: sourcesAplaties.length,
-                        titres_sources_disponibles: sourcesAplaties.map((s) => s.titre),
-                        href,
-                        enfants: texteBrut(children),
-                      }),
-                    }).catch(() => {});
                     return <span className="text-dj-accent-1-texte">{children}</span>;
                   }
                   const libelle = source.reperage ? `${source.titre}, ${source.reperage}` : source.titre;
@@ -840,7 +836,7 @@ function BulleMessageInterne({
               },
             }}
           >
-            {normaliserLatex(message.content)}
+            {normaliserCitations(normaliserLatex(message.content))}
           </ReactMarkdown>
         </div>
 

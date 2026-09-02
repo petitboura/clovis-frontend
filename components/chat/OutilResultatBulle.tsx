@@ -49,19 +49,13 @@ function iconePourOutil(outils: ReturnType<typeof useOutilsRegistre>["outils"], 
 export function OutilResultatBulle({
   resultats,
 }: {
-  resultats?: { nomOutil: string; nomLisible: string; resultat: string; sources?: { titre: string; url: string; extrait?: string; url_extrait?: string; reperage?: string; position_type?: "page" | "timestamp"; position_valeur?: number; type_mime?: string | null }[] }[];
+  resultats?: { nomOutil: string; nomLisible: string; resultat: string; sources?: { numero: number; titre: string; url: string; extrait?: string; url_extrait?: string; reperage?: string; position_type?: "page" | "timestamp"; position_valeur?: number; type_mime?: string | null }[] }[];
 }) {
   const { outils } = useOutilsRegistre();
   const [ouverts, setOuverts] = useState<Record<number, boolean>>({});
   const [sourcesOuvertes, setSourcesOuvertes] = useState<Record<number, boolean>>({});
 
   if (!resultats || !resultats.length) return null;
-
-  // Numérotation globale sur tout le message (26/08) -- doit rester
-  // identique à sourcesAplaties dans BulleMessage.tsx, pour que le
-  // marqueur [n] cliqué dans le texte et la puce n° n affichée ici en
-  // bas pointent bien vers la MÊME source.
-  let numeroCourant = 1;
 
   return (
     <div className="my-1.5 flex max-w-[85%] flex-col gap-1">
@@ -70,8 +64,6 @@ export function OutilResultatBulle({
         const ouvert = !!ouverts[index];
         const aDesSources = !!r.sources && r.sources.length > 0;
         const sourcesOuvert = !!sourcesOuvertes[index];
-        const numeroDepart = numeroCourant;
-        if (aDesSources) numeroCourant += r.sources!.length;
         return (
           <div key={index} className="animate-dj-fade-in">
             <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
@@ -112,7 +104,7 @@ export function OutilResultatBulle({
                 }`}
               >
                 <div className="overflow-hidden">
-                  <SourcesBulle sources={r.sources} numeroDepart={numeroDepart} />
+                  <SourcesBulle sources={r.sources} />
                 </div>
               </div>
             )}

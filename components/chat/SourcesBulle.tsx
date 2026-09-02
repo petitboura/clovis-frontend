@@ -40,6 +40,7 @@ function Favicon({ url }: { url: string }) {
 }
 
 type Source = {
+  numero: number;
   titre: string;
   url: string;
   extrait?: string;
@@ -111,7 +112,7 @@ function ExtraitPuce({ source }: { source: Source }) {
   );
 }
 
-export function SourcesBulle({ sources, numeroDepart = 1 }: { sources?: Source[]; numeroDepart?: number }) {
+export function SourcesBulle({ sources }: { sources?: Source[] }) {
   if (!sources || !sources.length) return null;
 
   return (
@@ -150,7 +151,7 @@ export function SourcesBulle({ sources, numeroDepart = 1 }: { sources?: Source[]
             >
               <Favicon url={source.url} />
               <span className="truncate">{source.titre}</span>
-              <sup className="shrink-0 font-semibold text-dj-texte-muet">{numeroDepart + index}</sup>
+              <sup className="shrink-0 font-semibold text-dj-texte-muet">{source.numero}</sup>
             </button>
             {aUnParagrapheDistinct && <ExtraitPuce source={source} />}
           </div>
