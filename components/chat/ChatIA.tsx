@@ -467,17 +467,38 @@ export function ChatIA({
   // donc rien n'est perdu ni rejoué. La continuation s'affiche comme un
   // NOUVEAU message assistant (pas ajoutée au précédent), même logique que
   // le bouton "Continuer" de Claude.
-  async function reprendreAgent(indexMessage: number) {
+  //
+  // `messageUtilisateur` optionnel (correction 02/09/2026, signalée par
+  // Bourama) : le bouton "Continuer" n'est qu'un raccourci pour éviter de
+  // taper ce mot -- si l'utilisateur tape autre chose à la place (un
+  // ajustement, "j'arrête"...) PENDANT que ce bouton est affiché, CE texte
+  // doit passer par ce même chemin (voir envoyerMessage plus bas, qui
+  // redirige ici s'il détecte un état de reprise en attente), pour que le
+  // modèle garde tout le contexte déjà accumulé plutôt que de repartir sur
+  // une conversation vierge. C'est au modèle de décider quoi faire de ce
+  // message (continuer, s'arrêter, s'ajuster), pas au frontend de trancher
+  // en amont en effaçant l'état.
+  async function reprendreAgent(indexMessage: number, messageUtilisateur?: string) {
     const message = messages[indexMessage];
     const reprise = message?.repriseDisponible;
     if (!reprise) return;
 
+    if (avantEnvoi && !avantEnvoi()) {
+      return;
+    }
+
     // L'état devient obsolète dès qu'on l'utilise -- évite un double-clic
-    // qui relancerait deux fois le même état.
+    // (ou un double-envoi) qui relancerait deux fois le même état.
     majMessages((prec) => {
       const copie = [...prec];
       copie[indexMessage] = { ...copie[indexMessage], repriseDisponible: null };
-      return copie.concat({ id: null, role: "assistant", content: "" });
+      const suite: MessageAffiche[] = messageUtilisateur
+        ? [
+            { id: null, role: "user", content: messageUtilisateur, created_at: new Date().toISOString() },
+            { id: null, role: "assistant", content: "" },
+          ]
+        : [{ id: null, role: "assistant", content: "" }];
+      return copie.concat(suite);
     });
     reinitialiserAffichageControle();
     setGenEnCours(true);
@@ -487,7 +508,13 @@ export function ChatIA({
     try {
       await appelerApiStream(
         "/api/chat",
-        { reprise: { etat_reprise: reprise.etatReprise, type: "continuer_agent" } },
+        {
+          reprise: {
+            etat_reprise: reprise.etatReprise,
+            type: "continuer_agent",
+            message_utilisateur: messageUtilisateur || null,
+          },
+        },
         (evenement) => traiterEvenement(evenement)
       );
     } catch (e) {
@@ -522,6 +549,23 @@ export function ChatIA({
     if (avantEnvoi && !avantEnvoi()) {
       return;
     }
+
+    // Correction 02/09/2026 (signalée par Bourama) : si un bouton
+    // Continuer/Réessayer est affiché sous le dernier message (limite
+    // d'étapes atteinte ou répétition détectée) et que l'utilisateur tape
+    // un message texte à la place de cliquer dessus, ce message doit
+    // repartir dans le MÊME contexte complet (tous les résultats d'outils
+    // déjà obtenus), pas sur une conversation vierge reconstruite depuis
+    // l'historique affiché -- c'est au modèle de décider quoi en faire
+    // (continuer, s'arrêter, s'ajuster). Limité au cas simple (texte
+    // seul, sans fichier joint) : reprendreAgent ne gère pas encore
+    // l'upload de fichiers sur ce chemin, voir sa docstring.
+    const dernierMessage = messages[messages.length - 1];
+    if (dernierMessage?.repriseDisponible && fichiers.length === 0 && !texteColle) {
+      await reprendreAgent(messages.length - 1, texte);
+      return;
+    }
+
     // Demande de Bourama (2026-07-22) : proposer l'activation des
     // notifications push dès la première vraie action (envoyer un
     // message = utiliser l'IA), pas au chargement de la page -- voir
@@ -543,6 +587,11 @@ export function ChatIA({
     };
     const historiquePourApi = messages.map((m) => ({ role: m.role, content: m.content }));
 
+    // Si on arrive ici, soit il n'y avait pas d'état de reprise en
+    // attente, soit on est dans le cas de secours (fichier joint,
+    // intercepté plus haut) qui bypass le contexte enrichi -- dans les
+    // deux cas, on nettoie les éventuels vieux boutons Continuer/Réessayer
+    // restants pour ne pas laisser un bouton obsolète affiché.
     majMessages((prec) => [
       ...prec.map((m) => (m.repriseDisponible ? { ...m, repriseDisponible: null } : m)),
       messageUtilisateur,
