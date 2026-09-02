@@ -16,6 +16,7 @@ import { BarreOngletsWeb } from "@/components/mobile/BarreOngletsWeb";
 import { MenuHamburgerNatif } from "@/components/mobile/MenuHamburgerNatif";
 import { MenuHamburgerWeb } from "@/components/mobile/MenuHamburgerWeb";
 import { TransitionPage } from "@/components/TransitionPage";
+import { BoutonNotifications } from "@/components/BoutonNotifications";
 
 // Coquille de l'app entière (refonte "Mon espace = l'app", 15/08/2026).
 // Monte UNE SEULE FOIS, au niveau du layout (voir app/(app)/layout.tsx) :
@@ -115,6 +116,12 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           {natif && <MenuHamburgerNatif />}
           {!natif && <BarreOngletsWeb />}
           {!natif && <MenuHamburgerWeb />}
+          {/* 02/09/2026, centre de notifications (bouton cloche) :
+              contrairement au hamburger (mobile uniquement, md:hidden),
+              visible mobile ET desktop -- pas de barre du haut dédiée
+              dans cette appli, voir commentaire dans
+              BoutonNotifications.tsx. */}
+          <BoutonNotifications connecte={connecte} />
           <AppSidebar
             connecte={connecte}
             onOuvrirCatalogue={() => setCatalogueOuvert(true)}

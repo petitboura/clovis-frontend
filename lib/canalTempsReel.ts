@@ -1,4 +1,5 @@
 import { supabase } from "./supabase";
+import type { NotificationClovis } from "./api";
 
 // Ajoute le 30/08/2026, Bourama : Lot 1 Partie 3 (app mobile), chantier
 // "Exploration de dossier en temps reel" (voir 00-commun-exploration-dossier.md
@@ -56,6 +57,25 @@ let tentativeReconnexion: ReturnType<typeof setTimeout> | null = null;
 let fermetureVoulue = false;
 let dejaInitialise = false;
 let pluginDossiers: PluginDossiers | null = null;
+
+// Ajoute le 02/09/2026, Bourama : centre de notifications (bouton
+// cloche), doit fonctionner web ET mobile -- contrairement au plugin
+// Dossiers (natif uniquement, pas de dossier a explorer sur le
+// telephone depuis un onglet web), le canal WebSocket lui-meme est du
+// JS standard (voir `new WebSocket` plus bas), rien n'empeche de
+// l'ouvrir aussi sur le web. Voir lib/supabase.ts pour l'appel.
+export function enregistrerPluginDossiers(registerPlugin: <T>(name: string) => T) {
+  pluginDossiers = registerPlugin<PluginDossiers>("Dossiers");
+}
+
+// Meme principe que ecouterExploration plus bas : simple pub/sub, ce
+// module n'est pas un composant React.
+const ecouteursNotifications = new Set<(n: NotificationClovis) => void>();
+
+export function ecouterNotifications(cb: (n: NotificationClovis) => void): () => void {
+  ecouteursNotifications.add(cb);
+  return () => ecouteursNotifications.delete(cb);
+}
 
 function urlWebSocket(token: string): string | null {
   if (!API_URL) return null;
@@ -382,6 +402,15 @@ async function ouvrirCanal() {
   ws.onmessage = (evenement) => {
     try {
       const message = JSON.parse(evenement.data);
+      // Ajoute le 02/09/2026 : deux formes de message possibles sur ce
+      // meme canal desormais -- {"type": "notification_nouvelle", ...}
+      // (serveur->client, fire-and-forget, voir
+      // core/canal_temps_reel.py::notifier_utilisateur) distingue de
+      // {"id":..., "question":...} (question->reponse existant).
+      if (message?.type === "notification_nouvelle" && message?.notification) {
+        ecouteursNotifications.forEach((cb) => cb(message.notification));
+        return;
+      }
       if (message?.id && message?.question !== undefined) {
         traiterQuestion(message.id, message.question);
       }
@@ -415,18 +444,24 @@ function fermerCanal() {
 }
 
 /**
- * A appeler une seule fois, uniquement cote natif (voir lib/supabase.ts,
- * qui fournit `registerPlugin` -- deja resolu la-bas via l'import
- * dynamique de @capacitor/core, pas la peine de le reimporter ici).
- * Ouvre le canal a l'ouverture/reprise de l'app (visibilitychange +
- * retour reseau) et le ferme quand l'app passe en arriere-plan, avec
- * reconnexion automatique en cas de coupure.
+ * A appeler une seule fois. Ouvre le canal a l'ouverture/reprise de
+ * l'app (visibilitychange + retour reseau) et le ferme quand l'app
+ * passe en arriere-plan, avec reconnexion automatique en cas de
+ * coupure.
+ *
+ * Modifie le 02/09/2026 (Bourama, centre de notifications) : appele
+ * desormais web ET natif (voir lib/supabase.ts) -- avant cette date,
+ * uniquement natif car seule l'exploration de dossier en avait besoin.
+ * L'enregistrement du plugin Dossiers (natif uniquement) est sorti
+ * d'ici, voir enregistrerPluginDossiers ci-dessus : sur le web,
+ * pluginDossiers reste simplement null, et repondreListerContenu (etc.)
+ * repond deja proprement une erreur explicite dans ce cas -- le serveur
+ * ne pose de toute facon jamais de question d'exploration a une session
+ * web.
  */
-export function initialiserCanalTempsReel(registerPlugin: <T>(name: string) => T) {
+export function initialiserCanalTempsReel() {
   if (dejaInitialise || typeof window === "undefined") return;
   dejaInitialise = true;
-
-  pluginDossiers = registerPlugin<PluginDossiers>("Dossiers");
 
   document.addEventListener("visibilitychange", () => {
     if (document.visibilityState === "visible") {

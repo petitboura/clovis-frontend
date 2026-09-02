@@ -1340,3 +1340,31 @@ export async function synchroniserUsage(plateforme: "android" | "ios", entrees: 
 export async function obtenirUsage(jours = 7) {
   return (await appelerApi(`/api/appareils-mobiles/usage?jours=${jours}`)) as { usage: LigneUsage[] };
 }
+
+// 02/09/2026, Bourama : centre de notifications (bouton cloche, header,
+// web + mobile). Voir api/notifications.py côté backend -- ne couvre
+// que les 4 nouveaux types Clovis (rappel_echu, action_ia_terminee,
+// document_recu_code, message_systeme), pas les anciens types de la
+// table (follow/comment/rating/...), laissés de côté pour l'instant.
+export type NotificationClovis = {
+  id: number;
+  type: "rappel_echu" | "action_ia_terminee" | "document_recu_code" | "message_systeme";
+  titre: string;
+  contenu: string | null;
+  lien: string | null;
+  lu: boolean;
+  created_at: string;
+};
+
+export async function listerMesNotifications() {
+  const resultat = await appelerApi("/api/notifications");
+  return resultat as NotificationClovis[];
+}
+
+export async function marquerNotificationLue(id: number) {
+  await appelerApi(`/api/notifications/${id}/lu`, { method: "POST" });
+}
+
+export async function marquerToutesNotificationsLues() {
+  await appelerApi("/api/notifications/tout-lu", { method: "POST" });
+}

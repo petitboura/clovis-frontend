@@ -40,6 +40,18 @@ export const supabase = createClient(url, cleAnon, {
   },
 });
 
+// Ajouté le 30/08/2026, Lot 1 "Exploration de dossier en temps réel" ;
+// modifié le 02/09/2026 (Bourama, centre de notifications -- bouton
+// cloche) : canal WebSocket bidirectionnel, désormais ouvert web ET
+// natif (voir lib/canalTempsReel.ts). Avant cette date, uniquement
+// natif car seule l'exploration de dossier (native only) en avait
+// besoin ; le centre de notifications doit fonctionner sur les deux.
+if (typeof window !== "undefined") {
+  import("./canalTempsReel").then(({ initialiserCanalTempsReel }) => {
+    initialiserCanalTempsReel();
+  });
+}
+
 // Ajouté le 25/08/2026, Bourama : Lot 3B (fusion Capacitor) -- transmet le
 // token d'accès au plugin natif PontNatif à chaque connexion/déconnexion/
 // rafraîchissement, pour que le service FCM côté Android puisse appeler
@@ -51,12 +63,10 @@ if (typeof window !== "undefined") {
   import("@capacitor/core").then(({ Capacitor, registerPlugin }) => {
     if (!Capacitor.isNativePlatform()) return;
 
-    // Ajouté le 30/08/2026, Lot 1 "Exploration de dossier en temps réel" :
-    // canal WebSocket bidirectionnel, uniquement côté natif (voir
-    // lib/canalTempsReel.ts). Chargé en dynamique comme le reste de ce
-    // bloc, pour ne rien exécuter sur le déploiement web (Vercel).
-    import("./canalTempsReel").then(({ initialiserCanalTempsReel }) => {
-      initialiserCanalTempsReel(registerPlugin);
+    // Plugin Dossiers : uniquement utile côté natif (exploration de
+    // dossier sur le téléphone), voir lib/canalTempsReel.ts.
+    import("./canalTempsReel").then(({ enregistrerPluginDossiers }) => {
+      enregistrerPluginDossiers(registerPlugin);
     });
 
     const PontNatif = registerPlugin<{
