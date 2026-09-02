@@ -25,7 +25,19 @@ self.addEventListener("fetch", (event) => {
         caches.open(CACHE).then((cache) => cache.put(event.request, copie));
         return reponse;
       })
-      .catch(() => caches.match(event.request))
+      .catch(() =>
+        // Correctif (02/09/2026, signalé Bourama : clics qui ne font
+        // "rien" sur mobile) : caches.match() renvoie `undefined` si
+        // cette requête n'a jamais été mise en cache avant (premier
+        // chargement d'une page, ou préchargement Next.js) -- et
+        // répondre `undefined` à un fetch fait planter TOUTE la
+        // requête (TypeError "Failed to convert value to 'Response'"),
+        // sans page d'erreur visible : le clic échoue en silence.
+        // Repli sur Response.error() quand rien n'est en cache, pour
+        // que le navigateur traite ça comme un échec réseau normal
+        // au lieu de planter.
+        caches.match(event.request).then((reponseEnCache) => reponseEnCache || Response.error())
+      )
   );
 });
 
