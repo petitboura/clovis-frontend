@@ -1,10 +1,10 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { usePathname, useRouter } from "next/navigation";
+import { useContext, useEffect, useRef, useState } from "react";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { PanneauFlottant } from "@/components/PanneauFlottant";
 import { BlocsMenuPlus, SECTIONS_BASE } from "@/components/EspacePlus";
-import { useFermetureAuRetour } from "@/lib/contexteRetour";
+import { ContexteRetour } from "@/lib/contexteRetour";
 import { useFermetureAnimee } from "@/lib/useFermetureAnimee";
 import { useFermerChat } from "@/lib/contexteChat";
 
@@ -35,6 +35,26 @@ import { useFermerChat } from "@/lib/contexteChat";
 // (pas la norme demandée) : l'icône flotte seule au dessus du contenu,
 // donc sa couleur suit désormais le thème (text-dj-texte) au lieu d'un
 // blanc fixe, sinon invisible sur le fond clair de l'app (#faf8f5).
+//
+// 03/09/2026, test Bourama (même diagnostic et même principe que
+// MenuHamburgerWeb.tsx : ce panneau ne pose plus lui-même une marque
+// brute dans window.history, il est piloté par un paramètre d'URL
+// posé/retiré via le routeur Next). Différence avec la version web :
+// le bouton retour MATÉRIEL Android (événement `backButton` de
+// Capacitor) ne passe ni par popstate ni par le routeur Next, donc rien
+// ne fermerait ce panneau tout seul en le pressant. On s'enregistre
+// donc quand même dans la pile de calques de contexteRetour.tsx, mais
+// UNIQUEMENT pour que le gestionnaire déjà existant de ce bouton
+// matériel (dans contexteRetour.tsx) trouve ce menu et l'appelle,
+// plutôt que de tomber sur une pile vide et minimiser l'appli. On
+// utilise volontairement `remonterAuSommet` (pas `empiler`) : cette
+// fonction se contente de mettre à jour la pile côté JS, sans jamais
+// poser sa propre entrée brute dans window.history -- l'entrée
+// d'historique réelle reste uniquement celle posée par router.push,
+// jamais dupliquée. `depiler(id, false)` au nettoyage : jamais de
+// history.back() automatique déclenché par ce nettoyage, seul un vrai
+// router.back() (explicite, ou via le fermer() passé au dessus) change
+// l'URL.
 function IconeEscalier() {
   return (
     <svg viewBox="0 0 24 24" width={24} height={24} aria-hidden="true" className="transition-transform duration-200 group-hover:scale-95">
@@ -46,77 +66,75 @@ function IconeEscalier() {
 }
 
 export function MenuHamburgerNatif() {
-  const [ouvert, setOuvert] = useState(false);
   const pathname = usePathname();
   const router = useRouter();
+  const searchParams = useSearchParams();
   const fermerChat = useFermerChat();
+  const ctx = useContext(ContexteRetour);
+  const id = useRef(`hamburger-natif-${Math.random().toString(36).slice(2)}`).current;
 
-  // 03/09/2026, demande Bourama : depuis le chat plein écran, les liens
-  // Accueil, Paramètres et Rappels (SECTIONS_BASE) naviguaient via
-  // router.push (comportement par défaut de BlocsMenuPlus) sans jamais
-  // fermer le chat -- le chat étant monté globalement dans AppShell.tsx
-  // (fixed inset-0 z-[110]), indépendamment de la route, la page cible
-  // se chargeait bien derrière lui mais restait invisible, cachée par
-  // le chat resté ouvert. Même correctif déjà appliqué dans le tiroir
-  // mobile de AppSidebar.tsx (naviguerDepuisPlusMobile). D'abord limité
-  // à Accueil, étendu à Paramètres et Rappels le même jour, puis à
-  // Connecter Claude (03/09/2026, confirmation explicite de Bourama) --
-  // fermerChat() appelé pour tous les liens désormais, sans risque si le
-  // chat n'était pas ouvert (voir useFermerChat, lib/contexteChat.tsx).
-  function naviguerDepuisPlus(href: string) {
-    fermerChat();
-    router.push(href);
-  }
+  const ouvert = searchParams.get("panneau") === "plus";
 
-  // 01/09/2026 (Bourama : "plein de boutons qui se ferment et s'ouvrent
-  // brut, surtout le hamburger") : meme trou que MenuHamburgerWeb.tsx --
-  // enSortie jamais passe a PanneauFlottant, donc ouverture animee mais
-  // fermeture instantanee. Voir lib/useFermetureAnimee.ts.
+  const [monte, setMonte] = useState(ouvert);
   const { enSortie, demarrerFermeture } = useFermetureAnimee();
 
-  // Correctif (30/08/2026) : meme bug que MenuHamburgerWeb.tsx (voir son
-  // commentaire) -- BlocsMenuPlus navigue via router.push, qui ne
-  // refermait jamais ce panneau plein ecran (PanneauFlottant, z-50),
-  // cachant la nouvelle page pourtant bien chargee derriere. 01/09/2026 :
-  // passe desormais par demarrerFermeture, pour ne pas reintroduire une
-  // fermeture brute sur ce seul chemin.
-  // Correctif (01/09/2026) : ce panneau ne s'enregistrait jamais comme
-  // calque dans lib/contexteRetour.tsx (voir son commentaire -- pile de
-  // calques introduite le 31/08 pour le bouton retour, chat plein ecran/
-  // popups de section/tiroir/modales deja cables). Restait un trou :
-  // bouton retour materiel (ou popstate sur web mobile) avec ce menu
-  // ouvert ne le fermait pas, minimisait l'appli / naviguait en arriere
-  // a la place, menu reste ouvert derriere.
-  const { marquerFermetureSansHistorique } = useFermetureAuRetour(ouvert, () => demarrerFermeture(() => setOuvert(false)));
-
-  // 03/09/2026, correctif Bourama ("clique un lien du menu, ça revient en
-  // arrière") : cette fermeture automatique arrive APRÈS une vraie
-  // navigation (router.push déjà effectué par naviguerDepuisPlus) -- sans
-  // marquerFermetureSansHistorique(), la fermeture du calque déclenchait
-  // un history.back() qui annulait cette navigation et ramenait sur la
-  // page de départ. Reste inchangé pour toute autre fermeture (clic à
-  // côté, bouton retour), qui continuent de consommer l'entrée normalement.
   useEffect(() => {
     if (ouvert) {
-      marquerFermetureSansHistorique();
-      demarrerFermeture(() => setOuvert(false));
+      setMonte(true);
+    } else if (monte) {
+      demarrerFermeture(() => setMonte(false));
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- ne doit réagir qu'à un changement de pathname, pas à ouvert/demarrerFermeture/marquerFermetureSansHistorique
-  }, [pathname]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- ne doit réagir qu'au paramètre d'URL, pas à monte/demarrerFermeture (référence stable de toute façon)
+  }, [ouvert]);
+
+  function fermerMenu() {
+    router.back();
+  }
+
+  // Voir commentaire d'en-tête : simple "réservation de place" dans la
+  // pile pour que le bouton retour matériel Android sache que ce menu
+  // est ouvert, sans poser d'entrée d'historique en plus de celle du
+  // routeur Next.
+  useEffect(() => {
+    if (!ctx) return;
+    if (ouvert) {
+      ctx.remonterAuSommet(id, fermerMenu);
+    }
+    return () => ctx.depiler(id, false);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- fermerMenu a une référence stable (router.back() seul), pas besoin de le lister
+  }, [ctx, id, ouvert]);
+
+  function ouvrirMenu() {
+    const params = new URLSearchParams(searchParams.toString());
+    params.set("panneau", "plus");
+    router.push(`${pathname}?${params.toString()}`);
+  }
+
+  // 03/09/2026, demande Bourama : depuis le chat plein écran, les liens
+  // Accueil, Paramètres et Rappels (SECTIONS_BASE) doivent fermer le
+  // chat avant de naviguer (monté globalement dans AppShell.tsx
+  // indépendamment de la route, voir historique complet dans
+  // clovis.md). `router.replace` plutôt que `router.push` : remplace
+  // directement l'entrée `?panneau=plus` par la nouvelle page, sans
+  // entrée intermédiaire en plus à traverser au retour arrière.
+  function naviguerDepuisPlus(href: string) {
+    fermerChat();
+    router.replace(href);
+  }
 
   return (
     <>
       <button
-        onClick={() => setOuvert(true)}
+        onClick={ouvrirMenu}
         aria-label="Ouvrir le menu"
         className="group fixed left-2 top-[calc(0.5rem+var(--cap-native-navigation-top,var(--safe-top)))] z-40 flex h-8 w-8 items-center justify-center text-dj-texte"
       >
         <IconeEscalier />
       </button>
 
-      {ouvert && (
+      {monte && (
         <PanneauFlottant
-          onFerme={() => demarrerFermeture(() => setOuvert(false))}
+          onFerme={fermerMenu}
           entete={<span className="text-sm font-medium text-dj-texte">Plus</span>}
           enSortie={enSortie}
         >

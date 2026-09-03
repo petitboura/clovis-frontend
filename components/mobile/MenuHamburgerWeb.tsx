@@ -1,10 +1,9 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { usePathname, useRouter } from "next/navigation";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { PanneauFlottant } from "@/components/PanneauFlottant";
 import { BlocsMenuPlus, SECTIONS_BASE } from "@/components/EspacePlus";
-import { useFermetureAuRetour } from "@/lib/contexteRetour";
 import { useFermetureAnimee } from "@/lib/useFermetureAnimee";
 import { useFermerChat } from "@/lib/contexteChat";
 
@@ -30,6 +29,22 @@ import { useFermerChat } from "@/lib/contexteChat";
 // dans MenuHamburgerNatif.tsx) : barres pleines en capsule, plus
 // grandes et plus espacées, badge de fond retiré, couleur suit le
 // thème (text-dj-texte) plutôt qu'un blanc fixe.
+//
+// 03/09/2026, test Bourama (diagnostic : window.history.pushState/
+// replaceState est réécrit en interne par Next depuis la 14.1+, ce qui
+// rend le marquage brut de contexteRetour.tsx non fiable) -- ce panneau
+// est le premier cas de test d'une approche différente : piloté par un
+// paramètre d'URL (?panneau=plus), posé/retiré uniquement via le
+// routeur Next (router.push/back), qui gère alors lui même sa vraie
+// entrée d'historique, jamais écrasée. Côté web, Next écoute déjà
+// popstate en interne (bouton retour navigateur) et remet
+// useSearchParams à jour tout seul -- plus besoin de s'enregistrer dans
+// la pile de calques de contexteRetour.tsx pour ce menu précis, qui
+// n'est donc plus du tout impliqué ici côté web (contrairement au
+// natif, voir MenuHamburgerNatif.tsx, où le bouton retour matériel
+// Android ne passe ni par popstate ni par Next). Test limité à ce seul
+// menu avant généralisation éventuelle aux autres calques (popups,
+// tiroir, chat plein écran, modales), inchangés pour l'instant.
 function IconeMenu() {
   return (
     <svg viewBox="0 0 24 24" width={24} height={24} aria-hidden="true" className="transition-transform duration-200 group-hover:scale-95">
@@ -41,82 +56,73 @@ function IconeMenu() {
 }
 
 export function MenuHamburgerWeb() {
-  const [ouvert, setOuvert] = useState(false);
   const pathname = usePathname();
   const router = useRouter();
+  const searchParams = useSearchParams();
   const fermerChat = useFermerChat();
 
-  // 03/09/2026, demande Bourama : même correctif que MenuHamburgerNatif.tsx
-  // (voir son commentaire) -- tous les liens de SECTIONS_BASE (Accueil,
-  // Paramètres, Rappels, Connecter Claude) naviguaient via router.push
-  // sans fermer le chat plein écran, monté globalement dans AppShell.tsx
-  // indépendamment de la route, donc la page cible se chargeait derrière
-  // lui et restait invisible. D'abord limité à Accueil, étendu à
-  // Paramètres et Rappels le même jour, puis à Connecter Claude
-  // (03/09/2026, confirmation explicite de Bourama) -- fermerChat()
-  // appelé pour tous les liens désormais, sans risque si le chat n'était
-  // pas ouvert (voir useFermerChat, lib/contexteChat.tsx).
-  function naviguerDepuisPlus(href: string) {
-    fermerChat();
-    router.push(href);
-  }
+  // Seule source de vérité pour l'ouverture : le paramètre d'URL, jamais
+  // un state local -- c'est tout l'intérêt du test (voir commentaire
+  // plus haut).
+  const ouvert = searchParams.get("panneau") === "plus";
 
-  // 01/09/2026 (Bourama : "plein de boutons qui se ferment et s'ouvrent
-  // brut, surtout le hamburger") : ce panneau passait déjà par
-  // PanneauFlottant, mais sans jamais lui passer `enSortie` -- il
-  // s'ouvrait donc avec animation (cgpt-entree-modal) mais se fermait
-  // d'un coup, comme les 8 popups qui utilisaient ce même composant
-  // avant le correctif du 18/08 (voir lib/useFermetureAnimee.ts).
-  // Branché ici sur le même mécanisme.
+  // `monte` reste vrai un court instant après que `ouvert` soit
+  // redevenu faux, le temps que l'animation de sortie joue (même
+  // principe que l'ancien state local, mais maintenant dérivé du
+  // paramètre d'URL au lieu de le remplacer).
+  const [monte, setMonte] = useState(ouvert);
   const { enSortie, demarrerFermeture } = useFermetureAnimee();
 
-  // Correctif (30/08/2026, Bourama : "tu clique sur une section ça
-  // change mais tu ne vois pas") : les liens de BlocsMenuPlus naviguent
-  // via router.push (voir EspacePlus.tsx), qui ne referme jamais ce
-  // panneau -- PanneauFlottant est un fond noir plein écran (z-50), donc
-  // la nouvelle page se chargeait bien derrière mais restait invisible,
-  // cachée par le panneau resté ouvert. Fermeture automatique dès que le
-  // chemin change (couvre aussi bien un lien direct qu'un retour
-  // arrière/avant navigateur), sans toucher Partager/Avis (Deplie via
-  // state local dans BlocsMenuPlus, jamais une navigation, donc jamais
-  // concernés par ce changement de pathname). 01/09/2026 : passe
-  // désormais par demarrerFermeture comme toute autre fermeture, pour ne
-  // pas réintroduire une fermeture brute sur ce seul chemin.
-  // Correctif (01/09/2026) : meme trou que MenuHamburgerNatif.tsx (voir
-  // son commentaire) -- ce panneau ne s'enregistrait jamais comme calque
-  // dans lib/contexteRetour.tsx. Le fallback popstate du 31/08 couvre
-  // aussi le web mobile Android (pas seulement le natif), donc ce menu
-  // devait s'y empiler comme les autres calques deja cables.
-  const { marquerFermetureSansHistorique } = useFermetureAuRetour(ouvert, () => demarrerFermeture(() => setOuvert(false)));
-
-  // 03/09/2026, correctif Bourama ("clique un lien du menu, ça revient en
-  // arrière") : cette fermeture automatique arrive APRÈS une vraie
-  // navigation (router.push déjà effectué par naviguerDepuisPlus) -- sans
-  // marquerFermetureSansHistorique(), la fermeture du calque déclenchait
-  // un history.back() qui annulait cette navigation et ramenait sur la
-  // page de départ. Reste inchangé pour toute autre fermeture (clic à
-  // côté, bouton retour), qui continuent de consommer l'entrée normalement.
   useEffect(() => {
     if (ouvert) {
-      marquerFermetureSansHistorique();
-      demarrerFermeture(() => setOuvert(false));
+      setMonte(true);
+    } else if (monte) {
+      demarrerFermeture(() => setMonte(false));
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- ne doit réagir qu'à un changement de pathname, pas à ouvert/demarrerFermeture/marquerFermetureSansHistorique
-  }, [pathname]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- ne doit réagir qu'au paramètre d'URL, pas à monte/demarrerFermeture (référence stable de toute façon)
+  }, [ouvert]);
+
+  function ouvrirMenu() {
+    const params = new URLSearchParams(searchParams.toString());
+    params.set("panneau", "plus");
+    router.push(`${pathname}?${params.toString()}`);
+  }
+
+  // Fermeture explicite (bouton X, clic à côté) : symétrique de
+  // l'ouverture, on retire la même entrée d'historique que router.push
+  // a posée -- le bouton retour navigateur fait exactement la même
+  // chose de son côté, Next relit alors seul la nouvelle valeur de
+  // useSearchParams, ce qui déclenche l'animation de sortie ci-dessus.
+  function fermerMenu() {
+    router.back();
+  }
+
+  // 03/09/2026, demande Bourama : tous les liens de SECTIONS_BASE
+  // (Accueil, Paramètres, Rappels, Connecter Claude) doivent fermer le
+  // chat plein écran avant de naviguer (monté globalement dans
+  // AppShell.tsx indépendamment de la route, sinon la page cible se
+  // charge derrière lui et reste invisible -- voir historique complet
+  // dans clovis.md). `router.replace` plutôt que `router.push` : on
+  // remplace l'entrée `?panneau=plus` par la nouvelle page directement,
+  // sans entrée intermédiaire à traverser en plus au retour arrière.
+  function naviguerDepuisPlus(href: string) {
+    fermerChat();
+    router.replace(href);
+  }
 
   return (
     <>
       <button
-        onClick={() => setOuvert(true)}
+        onClick={ouvrirMenu}
         aria-label="Ouvrir le menu"
         className="group fixed left-2 top-[calc(0.5rem+var(--safe-top,0px))] z-40 flex h-8 w-8 items-center justify-center text-dj-texte md:hidden"
       >
         <IconeMenu />
       </button>
 
-      {ouvert && (
+      {monte && (
         <PanneauFlottant
-          onFerme={() => demarrerFermeture(() => setOuvert(false))}
+          onFerme={fermerMenu}
           entete={<span className="text-sm font-medium text-dj-texte">Plus</span>}
           enSortie={enSortie}
         >
