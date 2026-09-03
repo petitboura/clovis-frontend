@@ -80,11 +80,6 @@ export function MenuHamburgerNatif() {
   // cachant la nouvelle page pourtant bien chargee derriere. 01/09/2026 :
   // passe desormais par demarrerFermeture, pour ne pas reintroduire une
   // fermeture brute sur ce seul chemin.
-  useEffect(() => {
-    if (ouvert) demarrerFermeture(() => setOuvert(false));
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- ne doit réagir qu'à un changement de pathname, pas à ouvert/demarrerFermeture
-  }, [pathname]);
-
   // Correctif (01/09/2026) : ce panneau ne s'enregistrait jamais comme
   // calque dans lib/contexteRetour.tsx (voir son commentaire -- pile de
   // calques introduite le 31/08 pour le bouton retour, chat plein ecran/
@@ -92,7 +87,22 @@ export function MenuHamburgerNatif() {
   // bouton retour materiel (ou popstate sur web mobile) avec ce menu
   // ouvert ne le fermait pas, minimisait l'appli / naviguait en arriere
   // a la place, menu reste ouvert derriere.
-  useFermetureAuRetour(ouvert, () => demarrerFermeture(() => setOuvert(false)));
+  const { marquerFermetureSansHistorique } = useFermetureAuRetour(ouvert, () => demarrerFermeture(() => setOuvert(false)));
+
+  // 03/09/2026, correctif Bourama ("clique un lien du menu, ça revient en
+  // arrière") : cette fermeture automatique arrive APRÈS une vraie
+  // navigation (router.push déjà effectué par naviguerDepuisPlus) -- sans
+  // marquerFermetureSansHistorique(), la fermeture du calque déclenchait
+  // un history.back() qui annulait cette navigation et ramenait sur la
+  // page de départ. Reste inchangé pour toute autre fermeture (clic à
+  // côté, bouton retour), qui continuent de consommer l'entrée normalement.
+  useEffect(() => {
+    if (ouvert) {
+      marquerFermetureSansHistorique();
+      demarrerFermeture(() => setOuvert(false));
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- ne doit réagir qu'à un changement de pathname, pas à ouvert/demarrerFermeture/marquerFermetureSansHistorique
+  }, [pathname]);
 
   return (
     <>

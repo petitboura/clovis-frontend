@@ -82,17 +82,27 @@ export function MenuHamburgerWeb() {
   // concernés par ce changement de pathname). 01/09/2026 : passe
   // désormais par demarrerFermeture comme toute autre fermeture, pour ne
   // pas réintroduire une fermeture brute sur ce seul chemin.
-  useEffect(() => {
-    if (ouvert) demarrerFermeture(() => setOuvert(false));
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- ne doit réagir qu'à un changement de pathname, pas à ouvert/demarrerFermeture
-  }, [pathname]);
-
   // Correctif (01/09/2026) : meme trou que MenuHamburgerNatif.tsx (voir
   // son commentaire) -- ce panneau ne s'enregistrait jamais comme calque
   // dans lib/contexteRetour.tsx. Le fallback popstate du 31/08 couvre
   // aussi le web mobile Android (pas seulement le natif), donc ce menu
   // devait s'y empiler comme les autres calques deja cables.
-  useFermetureAuRetour(ouvert, () => demarrerFermeture(() => setOuvert(false)));
+  const { marquerFermetureSansHistorique } = useFermetureAuRetour(ouvert, () => demarrerFermeture(() => setOuvert(false)));
+
+  // 03/09/2026, correctif Bourama ("clique un lien du menu, ça revient en
+  // arrière") : cette fermeture automatique arrive APRÈS une vraie
+  // navigation (router.push déjà effectué par naviguerDepuisPlus) -- sans
+  // marquerFermetureSansHistorique(), la fermeture du calque déclenchait
+  // un history.back() qui annulait cette navigation et ramenait sur la
+  // page de départ. Reste inchangé pour toute autre fermeture (clic à
+  // côté, bouton retour), qui continuent de consommer l'entrée normalement.
+  useEffect(() => {
+    if (ouvert) {
+      marquerFermetureSansHistorique();
+      demarrerFermeture(() => setOuvert(false));
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- ne doit réagir qu'à un changement de pathname, pas à ouvert/demarrerFermeture/marquerFermetureSansHistorique
+  }, [pathname]);
 
   return (
     <>

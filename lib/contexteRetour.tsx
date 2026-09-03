@@ -25,13 +25,24 @@ type Calque = { id: string; fermer: () => void };
 
 type ContexteRetourValeur = {
   empiler: (id: string, fermer: () => void) => void;
-  depiler: (id: string) => void;
   // Réordonne un calque déjà présent au sommet de la pile SANS toucher à
   // l'historique du navigateur -- utilisé quand une fenêtre déjà ouverte
   // est simplement remise au premier plan (voir FenetresSections.tsx),
   // pour que le retour ferme bien la fenêtre visuellement au-dessus, pas
   // la première ouverte.
   remonterAuSommet: (id: string, fermer: () => void) => void;
+  // 03/09/2026, correctif bug "clique un lien du menu Plus, ça revient
+  // en arrière" -- depiler prend maintenant `consommer` (true par
+  // défaut) : à false, retire le calque de la pile sans jamais appeler
+  // history.back(). Nécessaire quand un calque se ferme tout seul PARCE
+  // QU'une vraie navigation vient d'avoir lieu (ex: MenuHamburgerWeb/
+  // Natif.tsx qui se referment automatiquement au changement de
+  // pathname) : consommer l'entrée d'historique dans ce cas annule la
+  // navigation qui vient de se produire, au lieu de nettoyer une entrée
+  // "calque ouvert" devenue inutile. Sans ce paramètre, une fermeture
+  // explicite (clic à côté, bouton X) reste inchangée : elle continue de
+  // consommer normalement.
+  depiler: (id: string, consommer?: boolean) => void;
 };
 
 export const ContexteRetour = createContext<ContexteRetourValeur | null>(null);
@@ -56,7 +67,7 @@ export function useFournirContexteRetour(): ContexteRetourValeur {
     pile.current = [...pile.current.filter((c) => c.id !== id), { id, fermer }];
   }, []);
 
-  const depiler = useCallback((id: string) => {
+  const depiler = useCallback((id: string, consommer: boolean = true) => {
     const existait = pile.current.some((c) => c.id === id);
     pile.current = pile.current.filter((c) => c.id !== id);
     // Ne consomme une entrée d'historique que si ce calque en avait
@@ -66,7 +77,12 @@ export function useFournirContexteRetour(): ContexteRetourValeur {
     // `fermer()` : cet appel-ci (déclenché par le composant qui réagit à
     // son propre changement d'état) arrive alors en second et ne doit
     // rien refaire.
-    if (existait && typeof window !== "undefined") {
+    //
+    // `consommer=false` (03/09/2026) : le calque se ferme parce qu'une
+    // vraie navigation vient d'avoir lieu (pas un clic explicite sur
+    // fermer/à-côté) -- appeler history.back() ici annulerait cette
+    // navigation au lieu de nettoyer l'entrée devenue inutile.
+    if (existait && consommer && typeof window !== "undefined") {
       ignorerProchainPopstate.current = true;
       window.history.back();
     }
@@ -139,14 +155,29 @@ export function useFermetureAuRetour(actif: boolean, fermer: () => void) {
   const ctx = useContext(ContexteRetour);
   const fermerRef = useRef(fermer);
   fermerRef.current = fermer;
+  // 03/09/2026, correctif bug "clique un lien du menu Plus, ça revient
+  // en arrière" -- à true par défaut : la prochaine fermeture consomme
+  // normalement l'entrée d'historique (comportement inchangé pour tous
+  // les appelants existants). marquerFermetureSansHistorique() (retourné
+  // ci-dessous) le passe à false juste avant une fermeture déclenchée
+  // par une navigation déjà effectuée, pour que cette fermeture-là ne
+  // consomme rien. Remis à true à chaque réouverture du calque.
+  const consommerHistoriqueRef = useRef(true);
 
   useEffect(() => {
     if (!ctx) return;
     if (actif) {
+      consommerHistoriqueRef.current = true;
       ctx.empiler(id, () => fermerRef.current());
-      return () => ctx.depiler(id);
+      return () => ctx.depiler(id, consommerHistoriqueRef.current);
     }
     return undefined;
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [ctx, id, actif]);
+
+  return {
+    marquerFermetureSansHistorique: () => {
+      consommerHistoriqueRef.current = false;
+    },
+  };
 }
