@@ -417,7 +417,7 @@ export function VisionneuseBibliotheque({
             // et en app mobile native, aperçu vide/cassé. VisionneurPdf
             // (react-pdf, canvas) marche pareil partout, avec swipe et
             // saut de page direct.
-            <div className="h-full min-h-[75vh]">
+            <div className={pleinEcran ? "h-full" : "h-[75vh]"}>
               <VisionneurPdf url={f.url_publique} page={1} />
             </div>
           )}
