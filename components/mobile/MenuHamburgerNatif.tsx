@@ -1,6 +1,6 @@
 "use client";
 
-import { useContext, useEffect, useRef, useState } from "react";
+import { Suspense, useContext, useEffect, useRef, useState } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { PanneauFlottant } from "@/components/PanneauFlottant";
 import { BlocsMenuPlus, SECTIONS_BASE } from "@/components/EspacePlus";
@@ -65,7 +65,22 @@ function IconeEscalier() {
   );
 }
 
+// Corrige l'échec de build Vercel du 03/09/2026 : `useSearchParams` (voir
+// plus bas) exige d'être entouré d'un `<Suspense>` dès que le composant
+// est monté sur toute l'appli sans page dédiée -- sinon Next ne peut
+// pas produire les pages statiques (export utilisé pour le build
+// Capacitor). Wrapper sans logique propre, juste pour isoler ce
+// pré-requis technique ; toute la logique reste dans la fonction
+// interne ci-dessous.
 export function MenuHamburgerNatif() {
+  return (
+    <Suspense fallback={null}>
+      <MenuHamburgerNatifInterne />
+    </Suspense>
+  );
+}
+
+function MenuHamburgerNatifInterne() {
   const pathname = usePathname();
   const router = useRouter();
   const searchParams = useSearchParams();
