@@ -100,17 +100,28 @@ explique précisément ce qui manque et qui doit le fournir.
 - [ ] Métadonnées App Store (screenshots, description, etc.) : non
   commencé, hors du dépôt de code.
 
-## Point critique à trancher, pas deviné, à toi de répondre
+## Décision prise le 03/09/2026 (Bourama) : audience de cette soumission
 
 Clovis est un produit pour établissements scolaires (élèves/enseignants),
-avec création de compte directe dès l'arrivée sur l'app. Play Data
-Safety ET App Store demandent explicitement si l'app est **destinée aux
-enfants / susceptible d'accueillir des mineurs**, ce qui change les
-obligations légales (COPPA aux US, consentement parental, etc.) et les
-réponses à cocher dans les deux formulaires. Je ne peux pas répondre à
-ta place : les comptes Clovis sont-ils ouverts à des mineurs en
-autonomie (lycée/collège), ou uniquement à des adultes (enseignants,
-étudiants majeurs) ?
+basé en Tunisie/Afrique du Nord, avec création de compte directe dès
+l'arrivée sur l'app. Le collège (11-13 ans) fait partie du public visé à
+terme, mais **pas de cette première soumission** : décision explicite de
+ne rien bloquer dans le code d'inscription (aucun changement fait,
+l'inscription reste ouverte telle quelle), et de déclarer l'audience
+comme lycée/15 ans et plus dans les formulaires Play Console et App
+Store Connect pour cette version. Le collège sera ajouté dans une future
+mise à jour, avec la conformité adaptée à ce moment (âge à l'inscription
+et/ou invitation par l'établissement, à retrancher de ce fichier quand
+ce chantier sera lancé).
+
+Conséquence pratique sur les formulaires :
+- Google Play, questionnaire de classification de contenu : public visé
+  = 13 ans et plus (pas "Designed for children" ni "Mixed Audience").
+- Google Play, Data Safety, "Application destinée aux enfants" : Non.
+- App Store Connect, tranche d'âge cible ("Age Rating" / "Made for
+  Kids") : pas la catégorie Kids. Note rédactionnelle Bourama : garder
+  la description store cohérente (ne pas écrire "collège" tant que ce
+  n'est pas rouvert).
 
 ---
 
@@ -188,8 +199,11 @@ vos données en nous contactant à [email de contact].
 
 ## Mineurs
 
-[à compléter selon la réponse à la question ci-dessus sur les comptes
-mineurs, obligatoire avant publication]
+Clovis est actuellement destiné aux lycéens (15 ans et plus), aux
+étudiants et aux enseignants. Nous ne visons pas sciemment les enfants
+de moins de 13 ans avec la version actuelle de l'application. Si vous
+pensez qu'un enfant de moins de 13 ans a créé un compte, contactez-nous
+à [email de contact] pour que nous puissions le supprimer.
 ```
 
 ---
@@ -220,5 +234,5 @@ session. Redirection vers les réglages système, pas de popup standard.
   ni de partage publicitaire).
 - Chiffrement en transit : Oui (HTTPS).
 - Suppression de compte possible : Oui, dans l'app et hors de l'app.
-- Application destinée aux enfants : **[voir point critique ci-dessus,
-  à trancher avant de remplir ce champ]**.
+- Application destinée aux enfants : Non (audience déclarée = 13 ans et
+  plus pour cette version, voir décision du 03/09/2026 plus haut).
