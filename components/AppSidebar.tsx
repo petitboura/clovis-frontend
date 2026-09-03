@@ -522,19 +522,24 @@ export function AppSidebar({
   );
   // 03/09/2026, correctif Bourama ("même bug, mais sur les sections du
   // tiroir" -- suite du correctif marquerTiroirSansHistorique ci-dessus) :
-  // "Plus" (actionsDeplie), le groupe Personnaliser Clovis/Scolarité
-  // (groupeOuvertId) et le menu profil (profilDeplie) sont CHACUN leur
-  // propre calque, avec leur propre inscription dans la pile de
-  // contexteRetour.tsx -- donc leur propre history.back() par défaut à
-  // la fermeture. Marquer le tiroir "sans historique" (ci-dessus) ne
-  // couvre QUE le calque du tiroir : un clic sur un lien à l'intérieur
-  // de "Plus" ou d'un groupe ferme AUSSI ce popup imbriqué, qui consomme
-  // alors sa propre entrée d'historique et annule la navigation qui
-  // vient d'avoir lieu, exactement comme avant le premier correctif.
-  // Chacun a donc besoin de son propre marqueur, appelé au même endroit
-  // que pour le tiroir (voir naviguerDepuisPlusMobile, MenuGroupe
+  // le groupe Personnaliser Clovis/Scolarité (groupeOuvertId) et le menu
+  // profil (profilDeplie) sont CHACUN leur propre calque, avec leur
+  // propre inscription dans la pile de contexteRetour.tsx -- donc leur
+  // propre history.back() par défaut à la fermeture. Marquer le tiroir
+  // "sans historique" (ci-dessus) ne couvre QUE le calque du tiroir : un
+  // clic sur un lien à l'intérieur d'un groupe ferme AUSSI ce popup
+  // imbriqué, qui consomme alors sa propre entrée d'historique et
+  // annule la navigation qui vient d'avoir lieu, exactement comme avant
+  // le premier correctif. Chacun a donc besoin de son propre marqueur,
+  // appelé au même endroit que pour le tiroir (voir MenuGroupe
   // onNaviguer, onNaviguerVersParametres plus bas).
-  const { marquerFermetureSansHistorique: marquerActionsSansHistorique } = useFermetureAuRetour(actionsDeplie, () => setActionsDeplie(false));
+  // "Plus" (actionsDeplie) n'a plus besoin de ce marqueur ici : depuis
+  // le passage à MenuPlusChatFlottant.tsx (même jour), le "Plus" du
+  // tiroir mobile ne touche plus jamais actionsDeplie -- ce state ne
+  // sert donc plus qu'au popup "Plus" du rail desktop juste au-dessus
+  // dans ce fichier, qui n'a besoin d'aucun marqueur (jamais fermé par
+  // une navigation qui viendrait d'avoir lieu depuis l'intérieur).
+  useFermetureAuRetour(actionsDeplie, () => setActionsDeplie(false));
   const { marquerFermetureSansHistorique: marquerGroupeSansHistorique } = useFermetureAuRetour(groupeOuvertId !== null, () => setGroupeOuvertId(null));
   useFermetureAuRetour(historiqueDeplie, () => setHistoriqueDeplie(false));
   const { marquerFermetureSansHistorique: marquerProfilSansHistorique } = useFermetureAuRetour(profilDeplie, () => fermerProfilMenu(() => setProfilDeplie(false)));
@@ -730,12 +735,6 @@ export function AppSidebar({
     // router.push de fermerChatEtNaviguer juste en dessous.
     marquerTiroirSansHistorique();
     fermerTiroirMobile(() => setOuverte(false));
-    // "Plus" est un calque à part (actionsDeplie, voir plus haut) --
-    // même raison, sinon SA fermeture (setActionsDeplie(false))
-    // consomme sa propre entrée d'historique en plus de celle du
-    // tiroir, et annule quand même la navigation.
-    marquerActionsSansHistorique();
-    setActionsDeplie(false);
     // 03/09/2026, demande Bourama : "Connecter Claude" avait un cas
     // spécial ici (ouvrirFenetre, fenêtre flottante), qui ne fonctionne
     // pas sur mobile -- retiré, traité maintenant comme tous les autres
