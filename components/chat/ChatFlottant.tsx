@@ -173,7 +173,19 @@ export function ChatFlottant({
   // lib/contexteRetour.tsx. Placés avant le early return de la bulle
   // fermée, même raison que l'effet juste au-dessus (ordre des hooks
   // stable peu importe `etat`).
-  useFermetureAuRetour(etat === "plein_ecran", () => setEtat("mini"));
+  // 03/09/2026, correctif Bourama ("clic Bibliothèque/Concentration/
+  // Bureau/Personnaliser Clovis depuis le tiroir mobile du chat ferme le
+  // chat mais n'ouvre pas la section") : la valeur de retour de ce hook
+  // était jusqu'ici ignorée. Sans marquerFermetureSansHistorique(), une
+  // fermeture du chat par vraie navigation (fermerChatEtNaviguer, voir
+  // AppSidebar.tsx) consomme quand même l'entrée d'historique de ce
+  // calque au démontage -- history.back() annule alors la navigation qui
+  // vient d'avoir lieu. Transmise à AppSidebar juste plus bas pour que
+  // fermerChatEtNaviguer puisse marquer ce calque avant de fermer.
+  const { marquerFermetureSansHistorique: marquerPleinEcranSansHistorique } = useFermetureAuRetour(
+    etat === "plein_ecran",
+    () => setEtat("mini")
+  );
   useFermetureAuRetour(etat === "mini", fermerAvecFondu);
   // Sous-menu historique (mode mini, dropdown dans l'en-tête -- voir plus
   // bas) et modale "compte requis" : mêmes calques de retour que le reste
@@ -448,6 +460,7 @@ export function ChatFlottant({
             historique={historique}
             onNouvelleConversation={nouvelleConversation}
             onSelectionnerConversation={selectionnerConversation}
+            marquerPleinEcranSansHistorique={marquerPleinEcranSansHistorique}
           />
         )}
 

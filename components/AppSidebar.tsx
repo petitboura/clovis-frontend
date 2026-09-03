@@ -415,6 +415,7 @@ export function AppSidebar({
   onNouvelleConversation,
   onSelectionnerConversation,
   masquerChromeMobile = false,
+  marquerPleinEcranSansHistorique,
 }: {
   connecte: boolean;
   // Ajouté le 26/08/2026, Bourama : refonte navigation mobile native
@@ -447,6 +448,15 @@ export function AppSidebar({
   aDesMessages?: boolean;
   onNouvelleConversation?: () => void;
   onSelectionnerConversation?: (fil: FilConversation) => void;
+  // 03/09/2026, correctif Bourama : le calque "plein_ecran" du chat
+  // (ChatFlottant.tsx) s'enregistre dans contexteRetour.tsx mais ne
+  // marquait jamais sa propre fermeture "sans historique" quand elle
+  // venait d'une vraie navigation (fermerChatEtNaviguer plus bas) ce
+  // qui déclenchait un history.back() parasite et annulait la
+  // navigation. ChatFlottant.tsx transmet ici la fonction de marquage
+  // de ce calque, uniquement pour l'instance contexteChat de ce
+  // composant.
+  marquerPleinEcranSansHistorique?: () => void;
 }) {
   const pathname = usePathname();
   const router = useRouter();
@@ -466,6 +476,11 @@ export function AppSidebar({
   // clic doit fermer le chat et naviguer vraiment vers la page, même
   // mécanique que naviguerDepuisPlusMobile plus bas.
   function fermerChatEtNaviguer(href: string) {
+    // Voir commentaire sur la prop marquerPleinEcranSansHistorique
+    // ci-dessus : sans ça, le démontage du calque plein_ecran (déclenché
+    // juste après par fermerChat) consomme une entrée d'historique et
+    // annule le router.push juste en dessous.
+    marquerPleinEcranSansHistorique?.();
     fermerChat();
     router.push(href);
   }
