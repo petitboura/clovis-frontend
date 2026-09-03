@@ -47,15 +47,17 @@ export function MenuHamburgerWeb() {
   const fermerChat = useFermerChat();
 
   // 03/09/2026, demande Bourama : même correctif que MenuHamburgerNatif.tsx
-  // (voir son commentaire) -- Accueil, Paramètres et Rappels (SECTIONS_BASE)
-  // naviguaient via router.push sans fermer le chat plein écran, monté
-  // globalement dans AppShell.tsx indépendamment de la route, donc la page
-  // cible se chargeait derrière lui et restait invisible. D'abord limité à
-  // Accueil seul, étendu à Paramètres et Rappels le même jour sur
-  // confirmation explicite de Bourama. Connecter Claude n'a pas été
-  // signalé ni confirmé, pas touché ici.
+  // (voir son commentaire) -- tous les liens de SECTIONS_BASE (Accueil,
+  // Paramètres, Rappels, Connecter Claude) naviguaient via router.push
+  // sans fermer le chat plein écran, monté globalement dans AppShell.tsx
+  // indépendamment de la route, donc la page cible se chargeait derrière
+  // lui et restait invisible. D'abord limité à Accueil, étendu à
+  // Paramètres et Rappels le même jour, puis à Connecter Claude
+  // (03/09/2026, confirmation explicite de Bourama) -- fermerChat()
+  // appelé pour tous les liens désormais, sans risque si le chat n'était
+  // pas ouvert (voir useFermerChat, lib/contexteChat.tsx).
   function naviguerDepuisPlus(href: string) {
-    if (href === "/" || href === "/parametres" || href === "/rappels") fermerChat();
+    fermerChat();
     router.push(href);
   }
 

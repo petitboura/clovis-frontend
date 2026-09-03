@@ -59,12 +59,12 @@ export function MenuHamburgerNatif() {
   // se chargeait bien derrière lui mais restait invisible, cachée par
   // le chat resté ouvert. Même correctif déjà appliqué dans le tiroir
   // mobile de AppSidebar.tsx (naviguerDepuisPlusMobile). D'abord limité
-  // à Accueil seul, étendu à Paramètres et Rappels le même jour sur
-  // confirmation explicite de Bourama. Connecter Claude (href
-  // "/connecter-claude") n'a pas été signalé ni confirmé, pas touché
-  // ici -- à vérifier séparément si besoin.
+  // à Accueil, étendu à Paramètres et Rappels le même jour, puis à
+  // Connecter Claude (03/09/2026, confirmation explicite de Bourama) --
+  // fermerChat() appelé pour tous les liens désormais, sans risque si le
+  // chat n'était pas ouvert (voir useFermerChat, lib/contexteChat.tsx).
   function naviguerDepuisPlus(href: string) {
-    if (href === "/" || href === "/parametres" || href === "/rappels") fermerChat();
+    fermerChat();
     router.push(href);
   }
 
