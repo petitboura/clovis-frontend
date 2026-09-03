@@ -191,10 +191,6 @@ export function BibliothequePublique() {
   const inputFichierRef = useRef<HTMLInputElement>(null);
 
   const [creationDossierOuverte, setCreationDossierOuverte] = useState(false);
-  // 03/09/2026, demande Bourama : même refonte que EspaceBibliotheque.tsx
-  // -- plus de label racine ("Dossiers") affiché seul, "+" qui regroupe
-  // les actions du fil d'ariane au lieu de boutons texte séparés.
-  const [menuActionsDossierOuvert, setMenuActionsDossierOuvert] = useState(false);
   const [nouveauNomDossier, setNouveauNomDossier] = useState("");
   const [nouveauStatutDossier, setNouveauStatutDossier] = useState<"contribution_libre" | "privee">("contribution_libre");
 
@@ -723,11 +719,13 @@ export function BibliothequePublique() {
 
       {ongletBiblioPublique === "dossiers" && (
         <>
-          {/* Fil d'ariane + actions (03/09/2026, refonte demandée par
-              Bourama) : plus de label racine ("Dossiers") affiché seul à
-              la racine -- juste une flèche pour remonter d'un niveau
-              quand on est dans un dossier, sans réserver de place sinon.
-              Actions regroupées dans un "+" au lieu de boutons texte. */}
+          {/* Fil d'ariane (03/09/2026, refonte demandée par Bourama) : plus
+              de label racine ("Dossiers") affiché seul à la racine --
+              juste une flèche pour remonter d'un niveau quand on est dans
+              un dossier, sans réserver de place sinon. Les actions
+              ("Nouveau dossier", "Importer un dossier") ont été fusionnées
+              dans le "+" flottant existant plus bas (menuAjoutOuvert), pas
+              de deuxième "+" séparé. */}
           {dossierCourantId !== null && (
             <button
               onClick={() => setPileDossiers((p) => p.slice(0, -1))}
@@ -739,64 +737,24 @@ export function BibliothequePublique() {
             </button>
           )}
 
-          <div className="flex items-center justify-between gap-2 text-xs">
-            <div className="flex items-center gap-1">
-              {(
-                [
-                  ["tous", "Tous statuts"],
-                  ["contribution_libre", "Libre"],
-                  ["privee", "Privé"],
-                ] as const
-              ).map(([valeur, libelle]) => (
-                <button
-                  key={valeur}
-                  onClick={() => setFiltreStatutDossier(valeur)}
-                  className={`rounded-cgpt-bouton px-2 py-1 font-medium transition-colors ${
-                    filtreStatutDossier === valeur ? "bg-dj-surface-haute text-dj-texte" : "text-dj-texte-muet hover:text-dj-texte"
-                  }`}
-                >
-                  {libelle}
-                </button>
-              ))}
-            </div>
-            <div className="relative shrink-0">
+          <div className="flex items-center gap-1 text-xs">
+            {(
+              [
+                ["tous", "Tous statuts"],
+                ["contribution_libre", "Libre"],
+                ["privee", "Privé"],
+              ] as const
+            ).map(([valeur, libelle]) => (
               <button
-                type="button"
-                onClick={() => setMenuActionsDossierOuvert((v) => !v)}
-                aria-label={menuActionsDossierOuvert ? "Fermer le menu" : "Actions"}
-                aria-expanded={menuActionsDossierOuvert}
-                className="flex items-center justify-center rounded-cgpt-bouton border border-dj-bordure p-1.5 text-dj-texte-muet transition-colors hover:text-dj-texte"
+                key={valeur}
+                onClick={() => setFiltreStatutDossier(valeur)}
+                className={`rounded-cgpt-bouton px-2 py-1 font-medium transition-colors ${
+                  filtreStatutDossier === valeur ? "bg-dj-surface-haute text-dj-texte" : "text-dj-texte-muet hover:text-dj-texte"
+                }`}
               >
-                <Plus size={14} className={`transition-transform ${menuActionsDossierOuvert ? "rotate-45" : ""}`} />
+                {libelle}
               </button>
-              {menuActionsDossierOuvert && (
-                <>
-                  <div className="fixed inset-0 z-40" onClick={() => setMenuActionsDossierOuvert(false)} />
-                  <div className="absolute right-0 top-full z-40 mt-1 flex w-44 animate-dj-fade-in-rapide flex-col gap-0.5 rounded-cgpt-bouton border border-dj-bordure bg-dj-surface p-1 shadow-lg">
-                    <button
-                      onClick={() => {
-                        setCreationDossierOuverte((v) => !v);
-                        setMenuActionsDossierOuvert(false);
-                      }}
-                      className="flex items-center gap-2 rounded-cgpt-bouton px-2.5 py-1.5 text-left text-xs font-medium text-dj-texte-muet transition-colors hover:bg-dj-surface-haute hover:text-dj-texte"
-                    >
-                      <FolderPlus size={14} />
-                      Nouveau dossier
-                    </button>
-                    <button
-                      onClick={() => {
-                        inputDossierRef.current?.click();
-                        setMenuActionsDossierOuvert(false);
-                      }}
-                      className="flex items-center gap-2 rounded-cgpt-bouton px-2.5 py-1.5 text-left text-xs font-medium text-dj-texte-muet transition-colors hover:bg-dj-surface-haute hover:text-dj-texte"
-                    >
-                      <Upload size={14} />
-                      Importer un dossier
-                    </button>
-                  </div>
-                </>
-              )}
-            </div>
+            ))}
           </div>
 
           <input
@@ -1257,6 +1215,20 @@ export function BibliothequePublique() {
           >
             Nouveau dossier
             <FolderPlus size={15} />
+          </button>
+          {/* 03/09/2026, demande Bourama : "Importer un dossier" (jusque-là
+              dans un bouton texte séparé de l'onglet Dossiers) fusionné ici
+              -- un seul "+" flottant pour toute la bibliothèque publique. */}
+          <button
+            onClick={() => {
+              setOngletBiblioPublique("dossiers");
+              setMenuAjoutOuvert(false);
+              inputDossierRef.current?.click();
+            }}
+            className="flex items-center gap-2 rounded-cgpt-bouton border border-dj-bordure bg-dj-surface px-4 py-2 text-sm font-medium text-dj-texte shadow-lg transition-colors hover:border-dj-bordure-forte"
+          >
+            Importer un dossier
+            <Upload size={15} />
           </button>
           <button
             onClick={() => {

@@ -191,12 +191,6 @@ export function EspaceBibliotheque() {
   const dossierCourantId = pileDossiers.length > 0 ? pileDossiers[pileDossiers.length - 1].id : null;
   const [nouveauNomDossier, setNouveauNomDossier] = useState("");
   const [creationDossierOuverte, setCreationDossierOuverte] = useState(false);
-  // 03/09/2026, demande Bourama : le fil d'ariane racine ("Bibliothèque"
-  // affiché seul quand on n'est nulle part) et les boutons d'action texte
-  // ne servaient à rien à la racine -- remplacés par une simple flèche de
-  // retour (visible seulement dans un dossier) et un "+" qui regroupe les
-  // actions, même principe que le "+" flottant d'ajout plus bas.
-  const [menuActionsDossierOuvert, setMenuActionsDossierOuvert] = useState(false);
   const [dossierEnRenommage, setDossierEnRenommage] = useState<string | null>(null);
   const [fichierARanger, setFichierARanger] = useState<FichierBiblio | null>(null);
   // 25/08/2026, demande Bourama : depuis l'INTÉRIEUR d'un dossier
@@ -816,66 +810,23 @@ async function envoyerFichiersDirect(fichiersChoisis: FileList | File[]) {
         </div>
       </div>
 
-      {/* Fil d'ariane + actions dossier (03/09/2026, refonte demandée par
-          Bourama) : plus de label racine affiché seul ("Bibliothèque")
-          quand on n'est nulle part, juste une flèche pour remonter d'un
-          niveau quand on est dans un dossier -- ne prend aucune place à
-          la racine. Les actions passent dans un "+" au lieu de boutons
-          texte séparés. */}
-      <div className="flex items-center justify-between gap-2 text-xs">
-        {dossierCourantId !== null ? (
-          <button
-            onClick={() => setPileDossiers((p) => p.slice(0, -1))}
-            aria-label="Revenir au dossier précédent"
-            className="flex min-w-0 items-center gap-1 rounded-cgpt-bouton px-2 py-1 font-medium text-dj-texte transition-colors hover:text-dj-texte-muet"
-          >
-            <ChevronLeft size={14} className="flex-shrink-0" />
-            <span className="truncate">{pileDossiers[pileDossiers.length - 1]?.nom}</span>
-          </button>
-        ) : (
-          <span />
-        )}
-        <div className="relative shrink-0">
-          <button
-            type="button"
-            onClick={() => setMenuActionsDossierOuvert((v) => !v)}
-            aria-label={menuActionsDossierOuvert ? "Fermer le menu" : "Actions"}
-            aria-expanded={menuActionsDossierOuvert}
-            className="flex items-center justify-center rounded-cgpt-bouton border border-dj-bordure p-1.5 text-dj-texte-muet transition-colors hover:text-dj-texte"
-          >
-            <Plus size={14} className={`transition-transform ${menuActionsDossierOuvert ? "rotate-45" : ""}`} />
-          </button>
-          {menuActionsDossierOuvert && (
-            <>
-              <div className="fixed inset-0 z-40" onClick={() => setMenuActionsDossierOuvert(false)} />
-              <div className="absolute right-0 top-full z-40 mt-1 flex w-48 animate-dj-fade-in-rapide flex-col gap-0.5 rounded-cgpt-bouton border border-dj-bordure bg-dj-surface p-1 shadow-lg">
-                <button
-                  onClick={() => {
-                    setCreationDossierOuverte((v) => !v);
-                    setMenuActionsDossierOuvert(false);
-                  }}
-                  className="flex items-center gap-2 rounded-cgpt-bouton px-2.5 py-1.5 text-left text-xs font-medium text-dj-texte-muet transition-colors hover:bg-dj-surface-haute hover:text-dj-texte"
-                >
-                  <FolderPlus size={14} />
-                  Nouveau dossier
-                </button>
-                {dossierCourantId !== null && (
-                  <button
-                    onClick={() => {
-                      setPickerFichiersOuvert(true);
-                      setMenuActionsDossierOuvert(false);
-                    }}
-                    className="flex items-center gap-2 rounded-cgpt-bouton px-2.5 py-1.5 text-left text-xs font-medium text-dj-texte-muet transition-colors hover:bg-dj-surface-haute hover:text-dj-texte"
-                  >
-                    <IconDossierOuvert size={14} />
-                    Ajouter des fichiers ici
-                  </button>
-                )}
-              </div>
-            </>
-          )}
-        </div>
-      </div>
+      {/* Fil d'ariane (03/09/2026, refonte demandée par Bourama) : plus de
+          label racine affiché seul ("Bibliothèque") quand on n'est nulle
+          part -- juste une flèche pour remonter d'un niveau quand on est
+          dans un dossier, cette zone ne prend aucune place à la racine.
+          Les actions dossier ("Nouveau dossier", "Ajouter des fichiers
+          ici") ont été fusionnées dans le "+" flottant existant plus bas
+          (menuAjoutOuvert), pas de deuxième "+" séparé. */}
+      {dossierCourantId !== null && (
+        <button
+          onClick={() => setPileDossiers((p) => p.slice(0, -1))}
+          aria-label="Revenir au dossier précédent"
+          className="flex w-fit min-w-0 items-center gap-1 rounded-cgpt-bouton px-2 py-1 text-xs font-medium text-dj-texte transition-colors hover:text-dj-texte-muet"
+        >
+          <ChevronLeft size={14} className="flex-shrink-0" />
+          <span className="truncate">{pileDossiers[pileDossiers.length - 1]?.nom}</span>
+        </button>
+      )}
 
       {creationDossierOuverte && (
         <div className="flex animate-dj-fade-in-rapide items-center gap-2">
@@ -1103,6 +1054,33 @@ async function envoyerFichiersDirect(fichiersChoisis: FileList | File[]) {
       )}
       {menuAjoutOuvert && (
         <div className="fixed bottom-[calc(8.25rem+var(--cap-native-navigation-bottom,0px)+var(--dj-barre-onglets-web,0px))] right-5 z-40 flex animate-dj-fade-in-rapide flex-col items-end gap-2">
+          {/* 03/09/2026, demande Bourama : les actions "Nouveau dossier"
+              et "Ajouter des fichiers ici" (jusque-là dans un bouton
+              texte séparé du fil d'ariane) fusionnées ici -- un seul "+"
+              flottant pour toute la Bibliothèque privée, pas un deuxième
+              à côté qui ferait presque la même chose. */}
+          <button
+            onClick={() => {
+              setCreationDossierOuverte(true);
+              setMenuAjoutOuvert(false);
+            }}
+            className="flex items-center gap-2 rounded-cgpt-bouton border border-dj-bordure bg-dj-surface px-4 py-2 text-sm font-medium text-dj-texte shadow-lg transition-colors hover:border-dj-bordure-forte"
+          >
+            Nouveau dossier
+            <FolderPlus size={15} />
+          </button>
+          {dossierCourantId !== null && (
+            <button
+              onClick={() => {
+                setPickerFichiersOuvert(true);
+                setMenuAjoutOuvert(false);
+              }}
+              className="flex items-center gap-2 rounded-cgpt-bouton border border-dj-bordure bg-dj-surface px-4 py-2 text-sm font-medium text-dj-texte shadow-lg transition-colors hover:border-dj-bordure-forte"
+            >
+              Ajouter des fichiers ici
+              <IconDossierOuvert size={15} />
+            </button>
+          )}
           <label
             htmlFor="ajout-fab-fichiers"
             className="flex cursor-pointer items-center gap-2 rounded-cgpt-bouton border border-dj-bordure bg-dj-surface px-4 py-2 text-sm font-medium text-dj-texte shadow-lg transition-colors hover:border-dj-bordure-forte"
