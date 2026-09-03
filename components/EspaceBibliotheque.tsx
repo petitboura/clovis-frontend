@@ -71,6 +71,11 @@ type FichierBiblio = {
   created_at: string;
   // 29/08/2026, file d'attente de vectorisation en arrière-plan : "en_attente" / "en_cours" / "pret" / "echec".
   statut_vectorisation?: string;
+  // 02/09/2026, demande Bourama : distinguer d'où vient chaque fichier
+  // (voir core/bibliotheque_fichiers.py::enregistrer_fichier pour les
+  // valeurs possibles côté backend) -- absent ou "bibliotheque" = ajout
+  // direct privé.
+  origine?: string;
 };
 
 type SousOngletBiblio = "tous" | "documents" | "images" | "audio" | "videos" | "liens" | "texte";
@@ -94,6 +99,31 @@ function typeDe(f: FichierBiblio): SousOngletBiblio {
   return "documents";
 }
 
+// 02/09/2026, demande Bourama : les anciens sous-onglets par type
+// (SOUS_ONGLETS ci-dessus) passent dans un bouton Filtre (voir plus
+// bas), et c'est l'ORIGINE du fichier qui devient les onglets
+// principaux de la vue Perso -- "chat" mis à part (jamais montré ici,
+// voir lister_fichiers/exclut_origine côté backend), les 4 autres
+// origines existantes ("bibliotheque" par défaut = ajout direct privé,
+// "publique", "code_partage") plus "ia_generee" forment ces 5 onglets.
+type OrigineOnglet = "privee" | "publique" | "code_partage" | "chat" | "ia_generee";
+
+const ORIGINE_ONGLETS: { id: OrigineOnglet; label: string }[] = [
+  { id: "privee", label: "Bibliothèque privée" },
+  { id: "publique", label: "Depuis public" },
+  { id: "code_partage", label: "Depuis un code" },
+  { id: "chat", label: "Uploadé dans un chat" },
+  { id: "ia_generee", label: "Généré par l'IA" },
+];
+
+function origineDe(f: FichierBiblio): OrigineOnglet {
+  if (f.origine === "publique") return "publique";
+  if (f.origine === "code_partage") return "code_partage";
+  if (f.origine === "chat") return "chat";
+  if (f.origine === "ia_generee") return "ia_generee";
+  return "privee";
+}
+
 export function EspaceBibliotheque() {
   // 21/08/2026, demande Bourama : "un bibliothèque publique dans la
   // section bibliothèque" -- bascule entre la bibliothèque perso
@@ -108,6 +138,12 @@ export function EspaceBibliotheque() {
   // "dossiers" : cet onglet n'avait pas de description fixe à l'origine.
   useInfoSection(vue === "publique" ? "bibliotheque-publique" : vue === "perso" ? "bibliotheque-perso" : null);
   const [sousOnglet, setSousOnglet] = useState<SousOngletBiblio>("tous");
+  // 02/09/2026, demande Bourama : origine = nouvel onglet principal de la
+  // vue Perso, "tous/documents/images/..." (SOUS_ONGLETS) passe dans un
+  // bouton Filtre séparé, voir filtreOuvert -- les deux filtres se
+  // combinent (une origine ET un type à la fois).
+  const [origineOnglet, setOrigineOnglet] = useState<OrigineOnglet>("privee");
+  const [filtreOuvert, setFiltreOuvert] = useState(false);
   const [fichiers, setFichiers] = useState<FichierBiblio[] | null>(null);
   const [dossiers, setDossiers] = useState<DossierBibliotheque[] | null>(null);
   const [texteOuLien, setTexteOuLien] = useState("");
@@ -311,28 +347,34 @@ export function EspaceBibliotheque() {
     return m;
   }, [dossiers]);
 
-  // Un dossier contient un fichier du type filtré s'il en a un
+  // Un dossier contient un fichier du type/origine filtrés s'il en a un
   // directement, OU si un de ses sous-dossiers (récursivement) en a un,
-  // sinon il est masqué dans ce sous-onglet (confirmé par Bourama :
-  // jamais affiché vide).
-  function dossierContientType(dossierId: string, type: SousOngletBiblio): boolean {
-    if (type === "tous") return true;
+  // sinon il est masqué dans cet onglet (confirmé par Bourama : jamais
+  // affiché vide). CORRECTIF 02/09/2026 : combine maintenant origine
+  // (onglet principal) ET type (bouton Filtre) -- c'est ce qui fait
+  // apparaître les dossiers publics attachés (mirroir, voir
+  // core/dossiers_publics_attaches.py) au bon endroit, dans l'onglet
+  // "Depuis public" et nulle part ailleurs, sans rien coder de spécifique
+  // aux dossiers publics : ils sont juste des dossiers normaux dont les
+  // fichiers ont origine="publique".
+  function dossierContientType(dossierId: string, type: SousOngletBiblio, origine: OrigineOnglet): boolean {
     const dossier = (dossiers ?? []).find((d) => d.id === dossierId);
     if (!dossier) return false;
-    const aUnFichierDuType = dossier.fichier_ids.some((fid) => {
+    const aUnFichierCorrespondant = dossier.fichier_ids.some((fid) => {
       const f = fichiersParId.get(fid);
-      return f && typeDe(f) === type;
+      if (!f || origineDe(f) !== origine) return false;
+      return type === "tous" || typeDe(f) === type;
     });
-    if (aUnFichierDuType) return true;
+    if (aUnFichierCorrespondant) return true;
     const enfants = enfantsDe.get(dossierId) ?? [];
-    return enfants.some((e) => dossierContientType(e.id, type));
+    return enfants.some((e) => dossierContientType(e.id, type, origine));
   }
 
   const sousDossiersAffiches = useMemo(() => {
     const enfants = enfantsDe.get(dossierCourantId) ?? [];
-    return enfants.filter((d) => dossierContientType(d.id, sousOnglet));
+    return enfants.filter((d) => dossierContientType(d.id, sousOnglet, origineOnglet));
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [enfantsDe, dossierCourantId, sousOnglet, fichiersParId]);
+  }, [enfantsDe, dossierCourantId, sousOnglet, origineOnglet, fichiersParId]);
 
   const fichiersAffiches = useMemo(() => {
     // CORRECTIF 2026-08-27 (bug remonté par Bourama : "d'abord liste
@@ -354,9 +396,10 @@ export function EspaceBibliotheque() {
       const ids = new Set(dossier?.fichier_ids ?? []);
       base = fichiers.filter((f) => ids.has(f.id));
     }
+    base = base.filter((f) => origineDe(f) === origineOnglet);
     if (sousOnglet === "tous") return base;
     return base.filter((f) => typeDe(f) === sousOnglet);
-  }, [fichiers, dossiers, dossierCourantId, idsFichiersRanges, sousOnglet]);
+  }, [fichiers, dossiers, dossierCourantId, idsFichiersRanges, sousOnglet, origineOnglet]);
 
   // 25/08/2026, demande Bourama ("le dossier est juste là et point") :
 // tant qu'on est DANS un dossier, un ajout (fichier, texte, lien) doit y
@@ -675,19 +718,64 @@ async function envoyerFichiersDirect(fichiersChoisis: FileList | File[]) {
         </div>
       )}
 
-      <div className="flex gap-1 overflow-x-auto text-xs">
-        {SOUS_ONGLETS.map((s) => (
+      {/* 02/09/2026, demande Bourama : l'origine du fichier (privée /
+          depuis public / depuis un code / uploadé dans un chat / généré
+          par l'IA) devient l'onglet principal de la vue Perso, à la
+          place de l'ancien filtre par type. Le filtre par type
+          (SOUS_ONGLETS) ne disparaît pas, il passe dans le bouton Filtre
+          juste à côté, toujours visible et applicable quel que soit
+          l'onglet d'origine actif. */}
+      <div className="flex items-center gap-2">
+        <div className="min-w-0 flex-1">
+          <OngletsSegment
+            ariaLabel="Origine des fichiers"
+            valeur={origineOnglet}
+            onChange={(v) => setOrigineOnglet(v as OrigineOnglet)}
+            onglets={ORIGINE_ONGLETS.map((o) => ({ valeur: o.id, libelle: o.label }))}
+            taille="compact"
+          />
+        </div>
+        <div className="relative shrink-0">
           <button
-            key={s.id}
-            onClick={() => setSousOnglet(s.id)}
-            className={
-              "flex-shrink-0 rounded-cgpt-bouton px-3 py-1.5 font-semibold transition-colors " +
-              (sousOnglet === s.id ? "bg-dj-surface-haute text-dj-texte" : "text-dj-texte-muet hover:text-dj-texte")
-            }
+            type="button"
+            onClick={() => setFiltreOuvert((v) => !v)}
+            aria-label={filtreOuvert ? "Fermer le filtre" : "Filtrer par type"}
+            aria-expanded={filtreOuvert}
+            className={`flex items-center gap-1 rounded-cgpt-bouton border px-3 py-1.5 text-xs font-semibold transition-colors ${
+              sousOnglet !== "tous"
+                ? "border-dj-accent-1 bg-dj-accent-1-conteneur text-dj-accent-1-texte"
+                : "border-dj-bordure text-dj-texte-muet hover:text-dj-texte"
+            }`}
           >
-            {s.label}
+            Filtre
+            {sousOnglet !== "tous" && (
+              <span className="rounded-full bg-dj-accent-1 px-1.5 py-0.5 text-[10px] leading-none text-[#1A0D02]">
+                {SOUS_ONGLETS.find((s) => s.id === sousOnglet)?.label}
+              </span>
+            )}
           </button>
-        ))}
+          {filtreOuvert && (
+            <>
+              <div className="fixed inset-0 z-40" onClick={() => setFiltreOuvert(false)} />
+              <div className="absolute right-0 top-full z-40 mt-1 flex w-40 flex-col gap-0.5 rounded-cgpt-bouton border border-dj-bordure bg-dj-surface p-1 shadow-lg">
+                {SOUS_ONGLETS.map((s) => (
+                  <button
+                    key={s.id}
+                    onClick={() => {
+                      setSousOnglet(s.id);
+                      setFiltreOuvert(false);
+                    }}
+                    className={`rounded-cgpt-bouton px-2.5 py-1.5 text-left text-xs font-medium transition-colors ${
+                      sousOnglet === s.id ? "bg-dj-surface-haute text-dj-texte" : "text-dj-texte-muet hover:text-dj-texte"
+                    }`}
+                  >
+                    {s.label}
+                  </button>
+                ))}
+              </div>
+            </>
+          )}
+        </div>
       </div>
 
       {/* Fil d'ariane + actions dossier (22/08) : navigation dans
