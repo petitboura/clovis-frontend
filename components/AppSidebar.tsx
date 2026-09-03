@@ -292,6 +292,7 @@ function MenuGroupe({
   pathname,
   contexteChat,
   ouvrirFenetre,
+  fermerChatEtNaviguer,
   ouvert,
   onOuvrir,
   onFermer,
@@ -305,6 +306,10 @@ function MenuGroupe({
   pathname: string;
   contexteChat: boolean;
   ouvrirFenetre: (id: OngletId) => void;
+  // 03/09/2026, demande Bourama : requis quand mobile=true, voir onClick
+  // des sous-sections plus bas -- fermer le chat + naviguer au lieu
+  // d'ouvrir la fenêtre flottante (ne fonctionne pas sur mobile).
+  fermerChatEtNaviguer: (href: string) => void;
   ouvert: boolean;
   onOuvrir: () => void;
   onFermer: () => void;
@@ -373,9 +378,16 @@ function MenuGroupe({
                 onClick={(e) => {
                   onFermer();
                   onNaviguer?.();
+                  // Fenêtre flottante réservée au desktop (mobile=false) --
+                  // sur mobile (tiroir plein écran chat), fermer le chat et
+                  // naviguer vraiment, même mécanique que LienOnglet.
                   if (contexteChat) {
                     e.preventDefault();
-                    ouvrirFenetre(o.id);
+                    if (mobile) {
+                      fermerChatEtNaviguer(o.href);
+                    } else {
+                      ouvrirFenetre(o.id);
+                    }
                   }
                 }}
                 className={`flex w-full items-center gap-2.5 rounded-lg px-2.5 py-2 text-left text-sm transition-colors ${
@@ -447,6 +459,16 @@ export function AppSidebar({
   // Seulement en contexteChat=true (l'autre instance, hors chat, garde
   // sa vraie navigation classique par route).
   const { ouvrir: ouvrirFenetre } = useFenetres();
+  // 03/09/2026, demande Bourama, audit "clic sur une section ne fait
+  // rien en plein écran mobile web/natif" : la fenêtre flottante
+  // (ouvrirFenetre ci-dessus) ne fonctionne que sur desktop. Sur mobile
+  // (tiroir plein écran chat, mobile=true plus bas dans ce fichier), le
+  // clic doit fermer le chat et naviguer vraiment vers la page, même
+  // mécanique que naviguerDepuisPlusMobile plus bas.
+  function fermerChatEtNaviguer(href: string) {
+    fermerChat();
+    router.push(href);
+  }
   const [ouverte, setOuverte] = useState(false);
   // Fondu de fermeture du tiroir mobile (30/08/2026, audit "aucune
   // transition" -- même mécanisme que le chat lui-même et les popups de
@@ -602,10 +624,19 @@ export function AppSidebar({
           // En contexteChat=true, une vraie "section" (id présent --
           // "Accueil" n'en a pas, cf. navComplete plus bas, et garde sa
           // navigation classique) s'ouvre en fenêtre flottante par-dessus
-          // le chat au lieu de naviguer.
+          // le chat au lieu de naviguer -- SEULEMENT sur desktop
+          // (mobile=false, rail). 03/09/2026, demande Bourama : sur
+          // mobile web et natif (mobile=true, tiroir plein écran chat),
+          // la fenêtre flottante ne fonctionne pas -- comportement
+          // aligné sur naviguerDepuisPlusMobile, fermer le chat puis
+          // naviguer vraiment, comme depuis la barre du bas.
           if (contexteChat && onglet.id) {
             e.preventDefault();
-            ouvrirFenetre(onglet.id);
+            if (mobile) {
+              fermerChatEtNaviguer(onglet.href);
+            } else {
+              ouvrirFenetre(onglet.id);
+            }
           }
         }}
         className={`group relative mt-2 flex w-full items-center gap-2 rounded-xl transition-colors ${
@@ -659,12 +690,11 @@ export function AppSidebar({
   // invisible (fixed inset-0 z-[110]).
   function naviguerDepuisPlusMobile(href: string) {
     fermerTiroirMobile(() => setOuverte(false));
-    if (href === "/connecter-claude") {
-      ouvrirFenetre("claude");
-      return;
-    }
-    fermerChat();
-    router.push(href);
+    // 03/09/2026, demande Bourama : "Connecter Claude" avait un cas
+    // spécial ici (ouvrirFenetre, fenêtre flottante), qui ne fonctionne
+    // pas sur mobile -- retiré, traité maintenant comme tous les autres
+    // liens du menu Plus (ferme le chat, navigue vraiment).
+    fermerChatEtNaviguer(href);
   }
 
   return (
@@ -799,6 +829,7 @@ export function AppSidebar({
             pathname={pathname}
             contexteChat={contexteChat}
             ouvrirFenetre={ouvrirFenetre}
+            fermerChatEtNaviguer={fermerChatEtNaviguer}
             ouvert={groupeOuvertId === g.id}
             onOuvrir={() => setGroupeOuvertId(g.id)}
             onFermer={() => setGroupeOuvertId((v) => (v === g.id ? null : v))}
@@ -1014,6 +1045,7 @@ export function AppSidebar({
                   pathname={pathname}
                   contexteChat={contexteChat}
                   ouvrirFenetre={ouvrirFenetre}
+                  fermerChatEtNaviguer={fermerChatEtNaviguer}
                   ouvert={groupeOuvertId === g.id}
                   onOuvrir={() => setGroupeOuvertId(g.id)}
                   onFermer={() => setGroupeOuvertId((v) => (v === g.id ? null : v))}
