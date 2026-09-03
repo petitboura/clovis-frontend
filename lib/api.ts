@@ -356,15 +356,53 @@ export type EntreeBibliothequePublique = {
   created_at: string;
   // 29/08/2026, file d'attente de vectorisation en arrière-plan : "en_attente" / "en_cours" / "pret" / "echec".
   statut_vectorisation?: string;
+  // 03/09/2026, demande Bourama : 3 filtres cochables à la publication
+  // (voir core/listes_bibliotheque_publique.py côté backend), optionnels.
+  pays?: string | null;
+  classe?: string | null;
+  categorie?: string | null;
 };
 
-export async function listerBibliothequePublique(q?: string) {
-  const suffixe = q?.trim() ? `?q=${encodeURIComponent(q.trim())}` : "";
+// 03/09/2026, demande Bourama : filtres pays/classe/catégorie en plus de
+// la recherche texte -- voir GET /api/bibliotheque-publique côté backend.
+export type FiltresBibliothequePublique = {
+  pays?: string;
+  classe?: string;
+  categorie?: string;
+};
+
+export async function listerBibliothequePublique(q?: string, filtres?: FiltresBibliothequePublique) {
+  const params = new URLSearchParams();
+  if (q?.trim()) params.set("q", q.trim());
+  if (filtres?.pays?.trim()) params.set("pays", filtres.pays.trim());
+  if (filtres?.classe?.trim()) params.set("classe", filtres.classe.trim());
+  if (filtres?.categorie?.trim()) params.set("categorie", filtres.categorie.trim());
+  const suffixe = params.toString() ? `?${params.toString()}` : "";
   const resultat = await appelerApi(`/api/bibliotheque-publique${suffixe}`);
   return resultat as EntreeBibliothequePublique[];
 }
 
-export async function ajouterABibliothequePublique(fichier: File, nom?: string, description?: string, dossierId?: string) {
+// 03/09/2026, demande Bourama : valeurs déjà connues de pays/classe/
+// catégorie, pour peupler les suggestions du formulaire de publication
+// ET les menus des filtres de recherche -- voir GET
+// /api/bibliotheque-publique/listes côté backend.
+export type ListesFiltresBibliothequePublique = {
+  pays: string[];
+  classes: string[];
+  categories: string[];
+};
+
+export async function listerListesFiltresBibliothequePublique() {
+  return appelerApi("/api/bibliotheque-publique/listes") as Promise<ListesFiltresBibliothequePublique>;
+}
+
+export async function ajouterABibliothequePublique(
+  fichier: File,
+  nom?: string,
+  description?: string,
+  dossierId?: string,
+  filtres?: FiltresBibliothequePublique,
+) {
   const {
     data: { session },
   } = await supabase.auth.getSession();
@@ -378,6 +416,9 @@ export async function ajouterABibliothequePublique(fichier: File, nom?: string, 
   corps.append("nom", (nom || "").trim());
   corps.append("description", description || "");
   if (dossierId) corps.append("dossier_id", dossierId);
+  if (filtres?.pays?.trim()) corps.append("pays", filtres.pays.trim());
+  if (filtres?.classe?.trim()) corps.append("classe", filtres.classe.trim());
+  if (filtres?.categorie?.trim()) corps.append("categorie", filtres.categorie.trim());
 
   const reponse = await fetch(`${API_URL}/api/bibliotheque-publique`, {
     method: "POST",
@@ -395,17 +436,43 @@ export async function ajouterABibliothequePublique(fichier: File, nom?: string, 
 // 28/08/2026, demande Bourama : "le bouton + doit être comme en privé"
 // -- parité texte/lien avec ajouterTexteBibliothequePersonnelle /
 // ajouterLienBibliothequePersonnelle.
-export async function ajouterLienBibliothequePublique(url: string, nom?: string, description?: string, dossierId?: string) {
+export async function ajouterLienBibliothequePublique(
+  url: string,
+  nom?: string,
+  description?: string,
+  dossierId?: string,
+  filtres?: FiltresBibliothequePublique,
+) {
   return appelerApi("/api/bibliotheque-publique/lien", {
     method: "POST",
-    body: JSON.stringify({ url, nom: nom || "", description: description || "", dossier_id: dossierId || "" }),
+    body: JSON.stringify({
+      url,
+      nom: nom || "",
+      description: description || "",
+      dossier_id: dossierId || "",
+      pays: filtres?.pays || "",
+      classe: filtres?.classe || "",
+      categorie: filtres?.categorie || "",
+    }),
   }) as Promise<EntreeBibliothequePublique>;
 }
 
-export async function ajouterTexteBibliothequePublique(contenu: string, nom?: string, dossierId?: string) {
+export async function ajouterTexteBibliothequePublique(
+  contenu: string,
+  nom?: string,
+  dossierId?: string,
+  filtres?: FiltresBibliothequePublique,
+) {
   return appelerApi("/api/bibliotheque-publique/texte", {
     method: "POST",
-    body: JSON.stringify({ contenu, nom: nom || "", dossier_id: dossierId || "" }),
+    body: JSON.stringify({
+      contenu,
+      nom: nom || "",
+      dossier_id: dossierId || "",
+      pays: filtres?.pays || "",
+      classe: filtres?.classe || "",
+      categorie: filtres?.categorie || "",
+    }),
   }) as Promise<EntreeBibliothequePublique>;
 }
 
@@ -417,16 +484,32 @@ export type DossierCataloguePublic = {
   dossier_parent_id: string | null;
   created_at: string;
   fichier_ids: string[];
+  // 03/09/2026, demande Bourama : mêmes 3 filtres que pour un fichier.
+  pays?: string | null;
+  classe?: string | null;
+  categorie?: string | null;
 };
 
 export async function listerDossiersCataloguePublic() {
   return appelerApi("/api/bibliotheque-publique/dossiers") as Promise<DossierCataloguePublic[]>;
 }
 
-export async function creerDossierCataloguePublic(nom: string, statut: "contribution_libre" | "privee" = "contribution_libre", dossierParentId?: string) {
+export async function creerDossierCataloguePublic(
+  nom: string,
+  statut: "contribution_libre" | "privee" = "contribution_libre",
+  dossierParentId?: string,
+  filtres?: FiltresBibliothequePublique,
+) {
   return appelerApi("/api/bibliotheque-publique/dossiers", {
     method: "POST",
-    body: JSON.stringify({ nom, statut, dossier_parent_id: dossierParentId || null }),
+    body: JSON.stringify({
+      nom,
+      statut,
+      dossier_parent_id: dossierParentId || null,
+      pays: filtres?.pays || "",
+      classe: filtres?.classe || "",
+      categorie: filtres?.categorie || "",
+    }),
   }) as Promise<DossierCataloguePublic>;
 }
 

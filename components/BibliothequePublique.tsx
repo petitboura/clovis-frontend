@@ -16,8 +16,10 @@ import {
   listerDossiersCataloguePublic,
   creerDossierCataloguePublic,
   supprimerDossierCataloguePublic,
+  listerListesFiltresBibliothequePublique,
   type EntreeBibliothequePublique,
   type DossierCataloguePublic,
+  type ListesFiltresBibliothequePublique,
 } from "@/lib/api";
 import { messageErreur, ErreurApi } from "@/lib/erreurs";
 import { CTACompteRequis } from "@/components/CTACompteRequis";
@@ -34,6 +36,101 @@ function iconePourType(typeMime: string | null) {
   if (typeMime?.startsWith("audio/")) return IconAudio;
   if (typeMime?.startsWith("video/")) return IconVideo;
   return Paperclip;
+}
+
+// 03/09/2026, demande Bourama : "on a un filtre par type on va ajouter
+// un filtre par pays, classe et catégorie" -- le filtre par type
+// n'existait en réalité que dans EspaceBibliotheque.tsx (bibliothèque
+// PRIVÉE), jamais ici. Repris tel quel (mêmes catégories, même logique
+// de détection par type_mime) pour que le comportement soit identique
+// entre privé et public.
+type TypeBiblioPublique = "tous" | "documents" | "images" | "audio" | "videos" | "liens" | "texte";
+
+const TYPES_BIBLIO_PUBLIQUE: { id: TypeBiblioPublique; label: string }[] = [
+  { id: "tous", label: "Tous" },
+  { id: "documents", label: "Documents" },
+  { id: "images", label: "Images" },
+  { id: "audio", label: "Audio" },
+  { id: "videos", label: "Vidéos" },
+  { id: "liens", label: "Liens" },
+  { id: "texte", label: "Texte" },
+];
+
+// 03/09/2026, demande Bourama : 3 champs optionnels au moment de
+// publier un fichier unique, un lien, un texte ou un dossier (pas pour
+// l'ajout multi-fichiers ni l'import d'un dossier entier). Champ texte
+// + <datalist> (suggestions des valeurs déjà utilisées) plutôt qu'un
+// menu fermé : on peut toujours taper une valeur qui n'existe pas
+// encore, le serveur l'ajoute tout seul à la liste (voir
+// core/listes_bibliotheque_publique.py) -- pas de bouton "Autre" séparé.
+function ChampsFiltragePublication({
+  pays,
+  classe,
+  categorie,
+  onChangePays,
+  onChangeClasse,
+  onChangeCategorie,
+  listes,
+}: {
+  pays: string;
+  classe: string;
+  categorie: string;
+  onChangePays: (v: string) => void;
+  onChangeClasse: (v: string) => void;
+  onChangeCategorie: (v: string) => void;
+  listes: ListesFiltresBibliothequePublique;
+}) {
+  return (
+    <div className="flex flex-col gap-2 sm:flex-row">
+      <input
+        list="biblio-pub-liste-pays"
+        value={pays}
+        onChange={(e) => onChangePays(e.target.value)}
+        placeholder="Pays (optionnel)"
+        className="min-w-0 flex-1 rounded-cgpt-bouton border border-dj-bordure bg-dj-fond px-3 py-2 text-xs text-dj-texte outline-none focus:border-dj-bordure-forte"
+      />
+      <input
+        list="biblio-pub-liste-classe"
+        value={classe}
+        onChange={(e) => onChangeClasse(e.target.value)}
+        placeholder="Classe / niveau (optionnel)"
+        className="min-w-0 flex-1 rounded-cgpt-bouton border border-dj-bordure bg-dj-fond px-3 py-2 text-xs text-dj-texte outline-none focus:border-dj-bordure-forte"
+      />
+      <input
+        list="biblio-pub-liste-categorie"
+        value={categorie}
+        onChange={(e) => onChangeCategorie(e.target.value)}
+        placeholder="Catégorie (optionnel)"
+        className="min-w-0 flex-1 rounded-cgpt-bouton border border-dj-bordure bg-dj-fond px-3 py-2 text-xs text-dj-texte outline-none focus:border-dj-bordure-forte"
+      />
+      <datalist id="biblio-pub-liste-pays">
+        {listes.pays.map((v) => (
+          <option key={v} value={v} />
+        ))}
+      </datalist>
+      <datalist id="biblio-pub-liste-classe">
+        {listes.classes.map((v) => (
+          <option key={v} value={v} />
+        ))}
+      </datalist>
+      <datalist id="biblio-pub-liste-categorie">
+        {listes.categories.map((v) => (
+          <option key={v} value={v} />
+        ))}
+      </datalist>
+    </div>
+  );
+}
+
+function typeDe(entree: EntreeBibliothequePublique): TypeBiblioPublique {
+  const typeMime = entree.type_mime;
+  if (!typeMime) return "documents";
+  if (typeMime === "text/uri-list") return "liens";
+  if (typeMime === "text/plain") return "texte";
+  if (typeMime.startsWith("image/")) return "images";
+  if (typeMime.startsWith("audio/")) return "audio";
+  if (typeMime.startsWith("video/")) return "videos";
+  return "documents";
 }
 
 // Onglet "Bibliothèque publique" (21/08/2026, demande Bourama : "un
@@ -95,6 +192,50 @@ export function BibliothequePublique() {
   const [creationDossierOuverte, setCreationDossierOuverte] = useState(false);
   const [nouveauNomDossier, setNouveauNomDossier] = useState("");
   const [nouveauStatutDossier, setNouveauStatutDossier] = useState<"contribution_libre" | "privee">("contribution_libre");
+
+  // 03/09/2026, demande Bourama : 3 filtres cochables au moment de
+  // publier (fichier, lien, texte, dossier -- pas pour l'ajout multi-
+  // fichiers ni l'import d'un dossier entier, "pas la peine, on
+  // trouvera un moyen de filtrer plus tard"). Champs optionnels,
+  // partagés par les 3 modales de publication (une seule ouverte à la
+  // fois, même principe que nom/description). Valeur libre : si elle
+  // n'existe pas encore dans la liste, le serveur l'ajoute tout seul
+  // (voir core/listes_bibliotheque_publique.py) -- pas de bouton
+  // "Autre" séparé, on tape simplement une nouvelle valeur.
+  const [champPays, setChampPays] = useState("");
+  const [champClasse, setChampClasse] = useState("");
+  const [champCategorie, setChampCategorie] = useState("");
+  const [listesFiltres, setListesFiltres] = useState<ListesFiltresBibliothequePublique>({ pays: [], classes: [], categories: [] });
+
+  function chargerListesFiltres() {
+    listerListesFiltresBibliothequePublique()
+      .then(setListesFiltres)
+      .catch(() => {}); // simple suggestions/menus -- un échec ici ne doit jamais bloquer la publication ou la recherche
+  }
+
+  function reinitialiserChampsFiltragePublication() {
+    setChampPays("");
+    setChampClasse("");
+    setChampCategorie("");
+  }
+
+  // Filtres de recherche/parcours (même demande) : le type est filtré
+  // côté app sur la liste déjà chargée (comme en privé, voir typeDe
+  // ci-dessus) ; pays/classe/catégorie sont envoyés au serveur (voir
+  // GET /api/bibliotheque-publique côté backend). "" = pas de filtre.
+  const [filtreType, setFiltreType] = useState<TypeBiblioPublique>("tous");
+  const [filtrePays, setFiltrePays] = useState("");
+  const [filtreClasse, setFiltreClasse] = useState("");
+  const [filtreCategorie, setFiltreCategorie] = useState("");
+  const [panneauFiltreOuvert, setPanneauFiltreOuvert] = useState(false);
+  const nombreFiltresActifs = [filtreType !== "tous", !!filtrePays, !!filtreClasse, !!filtreCategorie].filter(Boolean).length;
+
+  function reinitialiserFiltres() {
+    setFiltreType("tous");
+    setFiltrePays("");
+    setFiltreClasse("");
+    setFiltreCategorie("");
+  }
 
   // 29/08/2026, demande Bourama : upload d'un dossier entier (comme en
   // privé, voir envoyerDossierDirect dans EspaceBibliotheque.tsx) --
@@ -162,7 +303,7 @@ export function BibliothequePublique() {
   }, [lotVectorisation?.enAttente.size]);
 
   function charger(q?: string) {
-    listerBibliothequePublique(q)
+    listerBibliothequePublique(q, { pays: filtrePays, classe: filtreClasse, categorie: filtreCategorie })
       .then(setListe)
       .catch(() => setListe([]));
   }
@@ -176,13 +317,17 @@ export function BibliothequePublique() {
   useEffect(() => {
     charger();
     chargerDossiers();
+    chargerListesFiltres();
   }, []);
 
+  // 03/09/2026 : recharge aussi quand un des 3 filtres serveur change,
+  // pas seulement la recherche texte -- même debounce (évite une
+  // requête à chaque frappe si jamais recherche change en même temps).
   useEffect(() => {
     const id = setTimeout(() => charger(recherche), 250);
     return () => clearTimeout(id);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [recherche]);
+  }, [recherche, filtrePays, filtreClasse, filtreCategorie]);
 
   function choisirFichiers(fichiersChoisis: FileList | File[]) {
     const liste = Array.from(fichiersChoisis);
@@ -272,7 +417,14 @@ export function BibliothequePublique() {
     if (fichiers.length > 1) setProgressionEnvoi({ total: fichiers.length, envoyes: 0 });
     try {
       if (fichiers.length === 1) {
-        const ligne = await ajouterABibliothequePublique(fichiers[0], nom, description, dossierCourantId || undefined);
+        // pays/classe/catégorie seulement pour un fichier unique -- pas
+        // pour le cas multi juste en dessous (demande Bourama : "pas la
+        // peine, on trouvera un moyen de filtrer plus tard").
+        const ligne = await ajouterABibliothequePublique(fichiers[0], nom, description, dossierCourantId || undefined, {
+          pays: champPays,
+          classe: champClasse,
+          categorie: champCategorie,
+        });
         if (ligne?.statut_vectorisation === "en_attente" && ligne.id) suivreVectorisation([ligne.id]);
       } else {
         const { erreurs, idsAVectoriser } = await ajouterFichiersABibliothequePublique(fichiers, (envoyes, total) =>
@@ -290,9 +442,11 @@ export function BibliothequePublique() {
       setFichiers([]);
       setNom("");
       setDescription("");
+      reinitialiserChampsFiltragePublication();
       setModaleFichierOuverte(false);
       charger(recherche);
       chargerDossiers();
+      chargerListesFiltres();
     } catch (e) {
       if (e instanceof ErreurApi && e.statusCode === 401) {
         setSansCompte(true);
@@ -311,18 +465,21 @@ export function BibliothequePublique() {
     const titre = nom.trim();
     setEnvoi(true);
     setErreur(null);
+    const filtresSaisis = { pays: champPays, classe: champClasse, categorie: champCategorie };
     try {
       const ligne =
         modaleAjout === "lien"
-          ? await ajouterLienBibliothequePublique(contenu, titre || undefined, description || undefined, dossierCourantId || undefined)
-          : await ajouterTexteBibliothequePublique(contenu, titre || undefined, dossierCourantId || undefined);
+          ? await ajouterLienBibliothequePublique(contenu, titre || undefined, description || undefined, dossierCourantId || undefined, filtresSaisis)
+          : await ajouterTexteBibliothequePublique(contenu, titre || undefined, dossierCourantId || undefined, filtresSaisis);
       if (ligne?.statut_vectorisation === "en_attente" && ligne.id) suivreVectorisation([ligne.id]);
       setTexteOuLien("");
       setNom("");
       setDescription("");
+      reinitialiserChampsFiltragePublication();
       setModaleAjout(null);
       charger(recherche);
       chargerDossiers();
+      chargerListesFiltres();
     } catch (e) {
       if (e instanceof ErreurApi && e.statusCode === 401) {
         setSansCompte(true);
@@ -341,10 +498,16 @@ export function BibliothequePublique() {
     // depuis l'intérieur d'un autre dossier atterrissait toujours à la
     // racine -- aucune arborescence possible.
     try {
-      await creerDossierCataloguePublic(nouveauNomDossier.trim(), nouveauStatutDossier, dossierCourantId ?? undefined);
+      await creerDossierCataloguePublic(nouveauNomDossier.trim(), nouveauStatutDossier, dossierCourantId ?? undefined, {
+        pays: champPays,
+        classe: champClasse,
+        categorie: champCategorie,
+      });
       setNouveauNomDossier("");
+      reinitialiserChampsFiltragePublication();
       setCreationDossierOuverte(false);
       chargerDossiers();
+      chargerListesFiltres();
     } catch (e) {
       window.alert(messageErreur(e));
     }
@@ -411,9 +574,13 @@ export function BibliothequePublique() {
     .filter((d) => (d.dossier_parent_id ?? null) === dossierCourantId)
     .filter((d) => filtreStatutDossier === "tous" || d.statut === filtreStatutDossier);
   const dossierActuel = dossierCourantId ? (dossiers ?? []).find((d) => d.id === dossierCourantId) : null;
-  const listeAffichee = dossierCourantId
+  const listeApresDossier = dossierCourantId
     ? (liste || []).filter((e) => dossierActuel?.fichier_ids.includes(e.id))
     : liste;
+  // 03/09/2026, demande Bourama : filtre par type appliqué côté app
+  // (comme en privé), sur "Tous" ET à l'intérieur d'un dossier ouvert --
+  // pays/classe/catégorie sont déjà filtrés côté serveur (voir charger()).
+  const listeAffichee = listeApresDossier?.filter((e) => filtreType === "tous" || typeDe(e) === filtreType);
 
   // Description fixe (+ rappel légal CGU/copyright) remplacée par le
   // bouton "i" du titre de page (géré par le parent EspaceBibliotheque.tsx
@@ -433,27 +600,97 @@ export function BibliothequePublique() {
         />
       </div>
 
-      <div className="flex items-center gap-1 text-xs">
-        <button
-          onClick={() => {
-            setOngletBiblioPublique("tous");
-            setPileDossiers([]);
-          }}
-          className={`rounded-cgpt-bouton px-2 py-1 font-semibold transition-colors ${
-            ongletBiblioPublique === "tous" ? "bg-dj-surface-haute text-dj-texte" : "text-dj-texte-muet hover:text-dj-texte"
-          }`}
-        >
-          Tous
-        </button>
-        <button
-          onClick={() => setOngletBiblioPublique("dossiers")}
-          className={`rounded-cgpt-bouton px-2 py-1 font-semibold transition-colors ${
-            ongletBiblioPublique === "dossiers" ? "bg-dj-surface-haute text-dj-texte" : "text-dj-texte-muet hover:text-dj-texte"
-          }`}
-        >
-          Dossiers
-        </button>
+      <div className="flex items-center justify-between gap-2 text-xs">
+        <div className="flex items-center gap-1">
+          <button
+            onClick={() => {
+              setOngletBiblioPublique("tous");
+              setPileDossiers([]);
+            }}
+            className={`rounded-cgpt-bouton px-2 py-1 font-semibold transition-colors ${
+              ongletBiblioPublique === "tous" ? "bg-dj-surface-haute text-dj-texte" : "text-dj-texte-muet hover:text-dj-texte"
+            }`}
+          >
+            Tous
+          </button>
+          <button
+            onClick={() => setOngletBiblioPublique("dossiers")}
+            className={`rounded-cgpt-bouton px-2 py-1 font-semibold transition-colors ${
+              ongletBiblioPublique === "dossiers" ? "bg-dj-surface-haute text-dj-texte" : "text-dj-texte-muet hover:text-dj-texte"
+            }`}
+          >
+            Dossiers
+          </button>
+        </div>
+        {/* 03/09/2026, demande Bourama : filtre par type + pays/classe/
+            catégorie -- visible seulement là où une liste de FICHIERS est
+            montrée (onglet "Tous", ou à l'intérieur d'un dossier ouvert),
+            pas sur l'écran de navigation des dossiers eux-mêmes (qui a
+            déjà son propre filtre Libre/Privé, une autre notion). */}
+        {(ongletBiblioPublique === "tous" || dossierCourantId) && (
+          <button
+            type="button"
+            onClick={() => setPanneauFiltreOuvert(true)}
+            className={`flex flex-shrink-0 items-center gap-1 rounded-cgpt-bouton border px-3 py-1.5 font-semibold transition-colors ${
+              nombreFiltresActifs > 0
+                ? "border-dj-accent-1 bg-dj-accent-1-conteneur text-dj-accent-1-texte"
+                : "border-dj-bordure text-dj-texte-muet hover:text-dj-texte"
+            }`}
+          >
+            Filtre
+            {nombreFiltresActifs > 0 && (
+              <span className="rounded-full bg-dj-accent-1 px-1.5 py-0.5 text-[10px] leading-none text-[#1A0D02]">
+                {nombreFiltresActifs}
+              </span>
+            )}
+          </button>
+        )}
       </div>
+
+      {/* Étiquettes des filtres actifs (03/09/2026) -- "filter feedback
+          bar", chaque filtre reste visible et retirable individuellement
+          sans rouvrir le panneau. */}
+      {(ongletBiblioPublique === "tous" || dossierCourantId) && nombreFiltresActifs > 0 && (
+        <div className="flex flex-wrap items-center gap-1.5 text-xs">
+          {filtreType !== "tous" && (
+            <span className="flex items-center gap-1 rounded-full border border-dj-bordure bg-dj-surface px-2.5 py-1 text-dj-texte">
+              {TYPES_BIBLIO_PUBLIQUE.find((t) => t.id === filtreType)?.label}
+              <button onClick={() => setFiltreType("tous")} aria-label="Retirer le filtre de type" className="text-dj-texte-muet hover:text-dj-texte">
+                <X size={11} />
+              </button>
+            </span>
+          )}
+          {filtrePays && (
+            <span className="flex items-center gap-1 rounded-full border border-dj-bordure bg-dj-surface px-2.5 py-1 text-dj-texte">
+              {filtrePays}
+              <button onClick={() => setFiltrePays("")} aria-label="Retirer le filtre de pays" className="text-dj-texte-muet hover:text-dj-texte">
+                <X size={11} />
+              </button>
+            </span>
+          )}
+          {filtreClasse && (
+            <span className="flex items-center gap-1 rounded-full border border-dj-bordure bg-dj-surface px-2.5 py-1 text-dj-texte">
+              {filtreClasse}
+              <button onClick={() => setFiltreClasse("")} aria-label="Retirer le filtre de classe" className="text-dj-texte-muet hover:text-dj-texte">
+                <X size={11} />
+              </button>
+            </span>
+          )}
+          {filtreCategorie && (
+            <span className="flex items-center gap-1 rounded-full border border-dj-bordure bg-dj-surface px-2.5 py-1 text-dj-texte">
+              {filtreCategorie}
+              <button onClick={() => setFiltreCategorie("")} aria-label="Retirer le filtre de catégorie" className="text-dj-texte-muet hover:text-dj-texte">
+                <X size={11} />
+              </button>
+            </span>
+          )}
+          {nombreFiltresActifs > 1 && (
+            <button onClick={reinitialiserFiltres} className="text-dj-texte-muet underline-offset-2 hover:text-dj-texte hover:underline">
+              Tout effacer
+            </button>
+          )}
+        </div>
+      )}
 
       {ongletBiblioPublique === "dossiers" && (
         <>
@@ -642,39 +879,56 @@ export function BibliothequePublique() {
           )}
 
           {creationDossierOuverte && (
-            <div className="flex animate-dj-fade-in-rapide items-center gap-2">
-              <input
-                autoFocus
-                type="text"
-                value={nouveauNomDossier}
-                onChange={(e) => setNouveauNomDossier(e.target.value)}
-                onKeyDown={(e) => e.key === "Enter" && creerDossier()}
-                placeholder="Nom du dossier… (optionnel)"
-                className="flex-1 rounded-cgpt-bouton border border-dj-bordure bg-dj-fond px-3 py-1.5 text-sm text-dj-texte outline-none focus:border-dj-bordure-forte"
+            // 03/09/2026, demande Bourama : passage d'une simple ligne à
+            // une petite carte -- nom/statut/pays/classe/catégorie ne
+            // tiennent plus sur une seule rangée, surtout sur mobile.
+            <div className="flex animate-dj-fade-in-rapide flex-col gap-2 rounded-xl border border-dj-bordure bg-dj-surface p-3">
+              <div className="flex flex-col gap-2 sm:flex-row">
+                <input
+                  autoFocus
+                  type="text"
+                  value={nouveauNomDossier}
+                  onChange={(e) => setNouveauNomDossier(e.target.value)}
+                  onKeyDown={(e) => e.key === "Enter" && creerDossier()}
+                  placeholder="Nom du dossier… (optionnel)"
+                  className="min-w-0 flex-1 rounded-cgpt-bouton border border-dj-bordure bg-dj-fond px-3 py-1.5 text-sm text-dj-texte outline-none focus:border-dj-bordure-forte"
+                />
+                <select
+                  value={nouveauStatutDossier}
+                  onChange={(e) => setNouveauStatutDossier(e.target.value as "contribution_libre" | "privee")}
+                  className="rounded-cgpt-bouton border border-dj-bordure bg-dj-fond px-2 py-1.5 text-xs text-dj-texte outline-none focus:border-dj-bordure-forte"
+                >
+                  <option value="contribution_libre">Contribution libre</option>
+                  <option value="privee">Privé (moi seul)</option>
+                </select>
+              </div>
+              <ChampsFiltragePublication
+                pays={champPays}
+                classe={champClasse}
+                categorie={champCategorie}
+                onChangePays={setChampPays}
+                onChangeClasse={setChampClasse}
+                onChangeCategorie={setChampCategorie}
+                listes={listesFiltres}
               />
-              <select
-                value={nouveauStatutDossier}
-                onChange={(e) => setNouveauStatutDossier(e.target.value as "contribution_libre" | "privee")}
-                className="rounded-cgpt-bouton border border-dj-bordure bg-dj-fond px-2 py-1.5 text-xs text-dj-texte outline-none focus:border-dj-bordure-forte"
-              >
-                <option value="contribution_libre">Contribution libre</option>
-                <option value="privee">Privé (moi seul)</option>
-              </select>
-              <button
-                onClick={creerDossier}
-                className="rounded-cgpt-bouton bg-dj-accent-1 px-3 py-1.5 text-xs font-bold text-[#1A0D02] hover:bg-dj-accent-2"
-              >
-                Créer
-              </button>
-              <button
-                onClick={() => {
-                  setCreationDossierOuverte(false);
-                  setNouveauNomDossier("");
-                }}
-                className="text-dj-texte-muet hover:text-dj-texte"
-              >
-                <X size={16} />
-              </button>
+              <div className="flex items-center justify-end gap-2">
+                <button
+                  onClick={() => {
+                    setCreationDossierOuverte(false);
+                    setNouveauNomDossier("");
+                    reinitialiserChampsFiltragePublication();
+                  }}
+                  className="rounded-cgpt-bouton border border-dj-bordure px-3 py-1.5 text-xs text-dj-texte-muet hover:text-dj-texte"
+                >
+                  Annuler
+                </button>
+                <button
+                  onClick={creerDossier}
+                  className="rounded-cgpt-bouton bg-dj-accent-1 px-3 py-1.5 text-xs font-bold text-[#1A0D02] hover:bg-dj-accent-2"
+                >
+                  Créer
+                </button>
+              </div>
             </div>
           )}
         </>
@@ -1011,6 +1265,15 @@ export function BibliothequePublique() {
                   rows={3}
                   className="resize-none rounded-xl border border-dj-bordure bg-dj-fond px-4 py-2 text-sm text-dj-texte outline-none focus:border-dj-bordure-forte"
                 />
+                <ChampsFiltragePublication
+                  pays={champPays}
+                  classe={champClasse}
+                  categorie={champCategorie}
+                  onChangePays={setChampPays}
+                  onChangeClasse={setChampClasse}
+                  onChangeCategorie={setChampCategorie}
+                  listes={listesFiltres}
+                />
               </>
             ) : (
               <div className="flex flex-col gap-1">
@@ -1040,6 +1303,7 @@ export function BibliothequePublique() {
                   setFichiers([]);
                   setNom("");
                   setDescription("");
+                  reinitialiserChampsFiltragePublication();
                 }}
                 className="rounded-cgpt-bouton border border-dj-bordure px-3 py-1.5 text-xs text-dj-texte-muet hover:text-dj-texte"
               >
@@ -1099,6 +1363,15 @@ export function BibliothequePublique() {
                 className="resize-none rounded-xl border border-dj-bordure bg-dj-fond px-4 py-2 text-sm text-dj-texte outline-none focus:border-dj-bordure-forte"
               />
             )}
+            <ChampsFiltragePublication
+              pays={champPays}
+              classe={champClasse}
+              categorie={champCategorie}
+              onChangePays={setChampPays}
+              onChangeClasse={setChampClasse}
+              onChangeCategorie={setChampCategorie}
+              listes={listesFiltres}
+            />
             {erreur && <p className="text-xs text-[var(--dj-erreur)]">{erreur}</p>}
             <div className="flex justify-end gap-2 pt-1">
               <button
@@ -1106,6 +1379,7 @@ export function BibliothequePublique() {
                   setModaleAjout(null);
                   setTexteOuLien("");
                   setNom("");
+                  reinitialiserChampsFiltragePublication();
                   setDescription("");
                 }}
                 className="rounded-cgpt-bouton border border-dj-bordure px-3 py-1.5 text-xs text-dj-texte-muet hover:text-dj-texte"
@@ -1118,6 +1392,104 @@ export function BibliothequePublique() {
                 className="rounded-cgpt-bouton bg-dj-accent-1 px-4 py-1.5 text-xs font-bold text-[#1A0D02] transition-colors hover:bg-dj-accent-2 disabled:opacity-50"
               >
                 {envoi ? "Envoi…" : "Ajouter"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* 03/09/2026, demande Bourama : panneau des 4 filtres (type +
+          pays/classe/catégorie), norme "un seul bouton Filtre + panneau"
+          (Airbnb/Amazon/Material Design) plutôt que 4 menus séparés qui
+          prendraient toute la largeur sur mobile. Chaque select
+          applique son filtre immédiatement (pas de bouton "Appliquer"
+          séparé), donc "Fermer" suffit. */}
+      {panneauFiltreOuvert && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4" onClick={() => setPanneauFiltreOuvert(false)}>
+          <div
+            className="flex w-full max-w-sm animate-dj-fade-in-rapide flex-col gap-3 rounded-cgpt-carte border border-dj-bordure bg-dj-surface p-4"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <p className="text-sm font-semibold text-dj-texte">Filtrer</p>
+
+            <div className="flex flex-col gap-1.5">
+              <p className="text-xs font-medium text-dj-texte-muet">Type</p>
+              <div className="flex flex-wrap gap-1">
+                {TYPES_BIBLIO_PUBLIQUE.map((t) => (
+                  <button
+                    key={t.id}
+                    onClick={() => setFiltreType(t.id)}
+                    className={`rounded-cgpt-bouton px-2.5 py-1 text-xs font-medium transition-colors ${
+                      filtreType === t.id ? "bg-dj-accent-1 text-[#1A0D02]" : "border border-dj-bordure text-dj-texte-muet hover:text-dj-texte"
+                    }`}
+                  >
+                    {t.label}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            <div className="flex flex-col gap-1.5">
+              <p className="text-xs font-medium text-dj-texte-muet">Pays</p>
+              <select
+                value={filtrePays}
+                onChange={(e) => setFiltrePays(e.target.value)}
+                className="rounded-cgpt-bouton border border-dj-bordure bg-dj-fond px-3 py-2 text-sm text-dj-texte outline-none focus:border-dj-bordure-forte"
+              >
+                <option value="">Tous les pays</option>
+                {listesFiltres.pays.map((v) => (
+                  <option key={v} value={v}>
+                    {v}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            <div className="flex flex-col gap-1.5">
+              <p className="text-xs font-medium text-dj-texte-muet">Classe / niveau</p>
+              <select
+                value={filtreClasse}
+                onChange={(e) => setFiltreClasse(e.target.value)}
+                className="rounded-cgpt-bouton border border-dj-bordure bg-dj-fond px-3 py-2 text-sm text-dj-texte outline-none focus:border-dj-bordure-forte"
+              >
+                <option value="">Toutes les classes</option>
+                {listesFiltres.classes.map((v) => (
+                  <option key={v} value={v}>
+                    {v}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            <div className="flex flex-col gap-1.5">
+              <p className="text-xs font-medium text-dj-texte-muet">Catégorie</p>
+              <select
+                value={filtreCategorie}
+                onChange={(e) => setFiltreCategorie(e.target.value)}
+                className="rounded-cgpt-bouton border border-dj-bordure bg-dj-fond px-3 py-2 text-sm text-dj-texte outline-none focus:border-dj-bordure-forte"
+              >
+                <option value="">Toutes les catégories</option>
+                {listesFiltres.categories.map((v) => (
+                  <option key={v} value={v}>
+                    {v}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            <div className="flex items-center justify-between gap-2 pt-1">
+              {nombreFiltresActifs > 0 ? (
+                <button onClick={reinitialiserFiltres} className="text-xs text-dj-texte-muet underline-offset-2 hover:text-dj-texte hover:underline">
+                  Réinitialiser
+                </button>
+              ) : (
+                <span />
+              )}
+              <button
+                onClick={() => setPanneauFiltreOuvert(false)}
+                className="rounded-cgpt-bouton bg-dj-accent-1 px-4 py-1.5 text-xs font-bold text-[#1A0D02] transition-colors hover:bg-dj-accent-2"
+              >
+                Fermer
               </button>
             </div>
           </div>
