@@ -51,19 +51,20 @@ export function MenuHamburgerNatif() {
   const router = useRouter();
   const fermerChat = useFermerChat();
 
-  // 03/09/2026, demande Bourama : depuis le chat plein écran, le lien
-  // Accueil (SECTIONS_BASE) naviguait via router.push (comportement par
-  // défaut de BlocsMenuPlus) sans jamais fermer le chat -- le chat étant
-  // monté globalement dans AppShell.tsx (fixed inset-0 z-[110]),
-  // indépendamment de la route, la page d'accueil se chargeait bien
-  // derrière lui mais restait invisible, cachée par le chat resté
-  // ouvert. Même correctif déjà appliqué à "Accueil" dans le tiroir
-  // mobile de AppSidebar.tsx (naviguerDepuisPlusMobile) -- ici limité à
-  // Accueil (href "/"), comme confirmé par Bourama, les autres liens
-  // (Paramètres, Rappels, Connecter Claude) n'étant pas concernés par
-  // cette demande.
+  // 03/09/2026, demande Bourama : depuis le chat plein écran, les liens
+  // Accueil, Paramètres et Rappels (SECTIONS_BASE) naviguaient via
+  // router.push (comportement par défaut de BlocsMenuPlus) sans jamais
+  // fermer le chat -- le chat étant monté globalement dans AppShell.tsx
+  // (fixed inset-0 z-[110]), indépendamment de la route, la page cible
+  // se chargeait bien derrière lui mais restait invisible, cachée par
+  // le chat resté ouvert. Même correctif déjà appliqué dans le tiroir
+  // mobile de AppSidebar.tsx (naviguerDepuisPlusMobile). D'abord limité
+  // à Accueil seul, étendu à Paramètres et Rappels le même jour sur
+  // confirmation explicite de Bourama. Connecter Claude (href
+  // "/connecter-claude") n'a pas été signalé ni confirmé, pas touché
+  // ici -- à vérifier séparément si besoin.
   function naviguerDepuisPlus(href: string) {
-    if (href === "/") fermerChat();
+    if (href === "/" || href === "/parametres" || href === "/rappels") fermerChat();
     router.push(href);
   }
 
