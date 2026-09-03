@@ -1,107 +1,67 @@
 "use client";
 
-import { Suspense, useContext, useEffect, useRef, useState } from "react";
-import { usePathname, useRouter, useSearchParams } from "next/navigation";
+import { useState } from "react";
 import { MoreHorizontal } from "lucide-react";
 import { PanneauFlottant } from "@/components/PanneauFlottant";
 import { BlocsMenuPlus, SECTIONS_BASE } from "@/components/EspacePlus";
-import { ContexteRetour } from "@/lib/contexteRetour";
+import { useFermetureAuRetour } from "@/lib/contexteRetour";
 import { useFermetureAnimee } from "@/lib/useFermetureAnimee";
 
-// Créé le 03/09/2026, demande Bourama : le bouton "Plus" du tiroir
-// mobile du chat plein écran (AppSidebar.tsx) dépliait avant son
-// contenu sur place (état local `actionsDeplie` + contexteRetour via
-// useFermetureAuRetour) -- mécanisme jugé incorrect par Bourama ("lui
-// même n'est pas correct"). Reprend à la place, très exactement, la
-// technique de MenuHamburgerNatif.tsx (celle qui marche, la même que
-// MenuHamburgerWeb.tsx en plus simple) : ouverture/fermeture pilotées
-// par un paramètre d'URL dédié, jamais un état local, `router.push`
-// pour ouvrir, `router.back()` pour fermer.
+// Créé le 03/09/2026 (paramètre d'URL + router.push/back, même
+// technique que MenuHamburgerWeb.tsx/MenuHamburgerNatif.tsx), corrigé
+// le 04/09/2026 : ce bouton "Plus", à l'intérieur du chat plein écran,
+// fermait le chat lui-même au lieu d'ouvrir son panneau.
 //
-// Paramètre d'URL séparé (?panneauChat=plus, jamais ?panneau=plus) :
-// ce dernier est déjà lu par MenuHamburgerNatif.tsx/MenuHamburgerWeb.tsx,
-// montés en permanence dans AppShell.tsx -- le réutiliser les ouvrirait
-// en même temps (invisibles derrière le chat plein écran, z-[110], mais
-// montés pour rien quand même). Décision explicite de Bourama (03/09) :
-// paramètre à part, même technique.
+// Cause : le tiroir mobile (AppSidebar.tsx, `ouverte`) et le chat plein
+// écran (ChatFlottant.tsx, `etat === "plein_ecran"`) s'enregistrent
+// tous les deux dans la pile de contexteRetour.tsx via `empiler`, qui
+// pose une entrée d'historique par un `window.history.pushState` brut
+// (voir contexteRetour.tsx). Ce fichier-ci, lui, pilotait son
+// ouverture/fermeture par un vrai `router.push`/`router.back()` de
+// Next, or Next (14.2 ici) réécrit/gère en interne son propre suivi
+// des entrées d'historique qu'il pose lui-même, et ne "voit" pas les
+// entrées posées par le `pushState` brut du dessous (tiroir, chat) :
+// au clic sur "Plus", le `router.push` de ce composant faisait perdre
+// à Next le compte des entrées non gérées par lui, ce qui refermait au
+// passage les deux calques du dessous (tiroir puis chat plein écran)
+// au lieu de n'ouvrir que ce panneau par-dessus.
 //
-// Enregistrement dans la pile de contexteRetour.tsx (remonterAuSommet,
-// pas empiler -- même raison que MenuHamburgerNatif.tsx) : le chat
-// plein écran s'enregistre déjà lui-même dans cette pile
-// (ChatFlottant.tsx, useFermetureAuRetour(etat === "plein_ecran", ...)).
-// Sans cet enregistrement, le bouton retour matériel Android fermerait
-// directement le chat au lieu de fermer d'abord ce panneau, qui flotte
-// pourtant par-dessus lui. `depiler(id, false)` au nettoyage : jamais de
-// history.back() automatique déclenché par ce nettoyage, seul un vrai
-// router.back() (via fermerMenu, ou via le bouton retour matériel qui
-// appelle directement fermerMenu) change l'URL.
+// Correctif : ce panneau revient à la même mécanique que le tiroir et
+// le chat plein écran juste en dessous de lui dans la pile : état
+// local (`ouvert`, plus de paramètre d'URL) + `useFermetureAuRetour`
+// (donc `empiler`/`depiler`, jamais `router.push`), pour que les 3
+// calques utilisent tous la même méthode et ne se marchent plus dessus.
+// Reste un panneau flottant par-dessus le chat (PanneauFlottant,
+// inchangé), seul le mécanisme d'ouverture/fermeture change.
 //
-// gererRetour={false} sur PanneauFlottant (voir correctif parallèle du
-// 03/09/2026 découvert au rebase de ce chantier, commit "history.back()
-// parasite qui annule la navigation du menu Plus") : PanneauFlottant
-// s'enregistre lui-même dans la même pile par défaut -- comme ce
-// composant-ci a déjà sa propre inscription manuelle juste au-dessus
-// (remonterAuSommet/depiler, même raison que MenuHamburgerNatif.tsx),
-// sans gererRetour={false} il y aurait double enregistrement et le même
-// history.back() parasite que ce correctif vient de corriger ailleurs.
-//
-// z-[150] sur PanneauFlottant : même valeur que celle passée par
-// ChatFlottant.tsx à CompteRequisModal pour flotter par-dessus ce même
-// chat plein écran (z-[110], voir le correctif du 25/08/2026 dans ce
-// fichier) -- gardée cohérente ici plutôt que réinventée.
-//
-// Bouton déclencheur : reprend le style de ligne du tiroir mobile
-// (icône MoreHorizontal + "Plus") qu'il remplace -- seul ce qui se
-// passe au clic change.
-function MenuPlusChatFlottantInterne({ onNaviguer }: { onNaviguer: (href: string) => void }) {
-  const pathname = usePathname();
-  const router = useRouter();
-  const searchParams = useSearchParams();
-  const ctx = useContext(ContexteRetour);
-  const id = useRef(`plus-chat-plein-ecran-${Math.random().toString(36).slice(2)}`).current;
-
-  const ouvert = searchParams.get("panneauChat") === "plus";
-
-  const [monte, setMonte] = useState(ouvert);
+// `marquerFermetureSansHistorique` (mêmes raisons que
+// marquerTiroirSansHistorique/marquerPleinEcranSansHistorique dans
+// AppSidebar.tsx) : appelée juste avant `onNaviguer`, qui ferme le
+// tiroir et le chat puis navigue vraiment (fermerChatEtNaviguer),
+// sans ça, le démontage de ce panneau (conséquence de cette navigation,
+// tout l'arbre du chat disparaissant) consommerait quand même son
+// entrée d'historique par défaut et annulerait la navigation qui vient
+// d'avoir lieu, exactement le même bug que ceux déjà corrigés pour le
+// tiroir/le groupe/le menu profil le 03/09/2026.
+function MenuPlusChatFlottant({ onNaviguer }: { onNaviguer: (href: string) => void }) {
+  const [ouvert, setOuvert] = useState(false);
   const { enSortie, demarrerFermeture } = useFermetureAnimee();
 
-  useEffect(() => {
-    if (ouvert) {
-      setMonte(true);
-    } else if (monte) {
-      demarrerFermeture(() => setMonte(false));
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- ne doit réagir qu'au paramètre d'URL, pas à monte/demarrerFermeture (référence stable de toute façon)
-  }, [ouvert]);
-
   function fermerMenu() {
-    router.back();
+    demarrerFermeture(() => setOuvert(false));
   }
 
-  // Voir commentaire d'en-tête : simple "réservation de place" dans la
-  // pile pour que le bouton retour matériel Android sache que ce
-  // panneau est ouvert (par-dessus le chat plein écran, déjà dans la
-  // pile), sans poser d'entrée d'historique en plus de celle du routeur
-  // Next.
-  useEffect(() => {
-    if (!ctx) return;
-    if (ouvert) {
-      ctx.remonterAuSommet(id, fermerMenu);
-    }
-    return () => ctx.depiler(id, false);
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- fermerMenu a une référence stable (router.back() seul), pas besoin de le lister
-  }, [ctx, id, ouvert]);
+  const { marquerFermetureSansHistorique } = useFermetureAuRetour(ouvert, fermerMenu);
 
-  function ouvrirMenu() {
-    const params = new URLSearchParams(searchParams.toString());
-    params.set("panneauChat", "plus");
-    router.push(`${pathname}?${params.toString()}`);
+  function naviguerEtFermer(href: string) {
+    marquerFermetureSansHistorique();
+    onNaviguer(href);
   }
 
   return (
     <div>
       <button
-        onClick={ouvrirMenu}
+        onClick={() => setOuvert(true)}
         className={`group relative mt-2 flex w-full items-center gap-2 rounded-xl px-2 transition-colors ${
           ouvert ? "bg-dj-surface-haute text-dj-texte" : "text-dj-texte-muet hover:bg-dj-surface-haute hover:text-dj-texte"
         }`}
@@ -112,7 +72,7 @@ function MenuPlusChatFlottantInterne({ onNaviguer }: { onNaviguer: (href: string
         <span className="text-sm">Plus</span>
       </button>
 
-      {monte && (
+      {(ouvert || enSortie) && (
         <PanneauFlottant
           onFerme={fermerMenu}
           entete={<span className="text-sm font-medium text-dj-texte">Plus</span>}
@@ -120,20 +80,11 @@ function MenuPlusChatFlottantInterne({ onNaviguer }: { onNaviguer: (href: string
           zIndex="z-[150]"
           gererRetour={false}
         >
-          <BlocsMenuPlus sectionsNavigation={SECTIONS_BASE} onNaviguer={onNaviguer} />
+          <BlocsMenuPlus sectionsNavigation={SECTIONS_BASE} onNaviguer={naviguerEtFermer} />
         </PanneauFlottant>
       )}
     </div>
   );
 }
 
-// Wrapper Suspense requis par useSearchParams (même correctif que
-// MenuHamburgerNatif.tsx/MenuHamburgerWeb.tsx, 03/09/2026, échec de
-// build Vercel sur l'export statique Capacitor).
-export function MenuPlusChatFlottant({ onNaviguer }: { onNaviguer: (href: string) => void }) {
-  return (
-    <Suspense fallback={null}>
-      <MenuPlusChatFlottantInterne onNaviguer={onNaviguer} />
-    </Suspense>
-  );
-}
+export { MenuPlusChatFlottant };
