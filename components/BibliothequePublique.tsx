@@ -12,6 +12,7 @@ import {
   ajouterLienBibliothequePublique,
   ajouterTexteBibliothequePublique,
   supprimerDeBibliothequePublique,
+  reessayerVectorisationBibliothequePublique,
   copierVersBibliothequePersonnelle,
   listerDossiersCataloguePublic,
   creerDossierCataloguePublic,
@@ -265,6 +266,9 @@ export function BibliothequePublique() {
   // session, pas tout le catalogue public).
   const [lotVectorisation, setLotVectorisation] = useState<{ total: number; enAttente: Set<string> } | null>(null);
   const [badgeInfoId, setBadgeInfoId] = useState<string | null>(null);
+  // 03/09/2026, bouton "Réessayer" -- voir EspaceBibliotheque.tsx pour le
+  // même mécanisme et son raisonnement détaillé.
+  const [reessaiEnCoursId, setReessaiEnCoursId] = useState<string | null>(null);
 
   // 29/08/2026 bis, demande Bourama : progression réelle de l'ENVOI
   // lui-même (stockage), distincte de la vectorisation qui vient après
@@ -279,6 +283,27 @@ export function BibliothequePublique() {
       ids.forEach((id) => enAttente.add(id));
       return { total: (precedent?.total ?? 0) + ids.length, enAttente };
     });
+  }
+
+  // Pendant de EspaceBibliotheque.tsx:reessayerVectorisation -- voir sa
+  // docstring pour le raisonnement détaillé (mise à jour optimiste +
+  // raccrochage au popup de progression).
+  async function reessayerVectorisation(entree: EntreeBibliothequePublique) {
+    setReessaiEnCoursId(entree.id);
+    try {
+      await reessayerVectorisationBibliothequePublique(entree.id);
+      setListe((precedent) =>
+        precedent?.map((ligne) =>
+          ligne.id === entree.id ? { ...ligne, statut_vectorisation: "en_attente" } : ligne
+        ) ?? precedent
+      );
+      suivreVectorisation([entree.id]);
+      setBadgeInfoId(null);
+    } catch (e) {
+      window.alert(messageErreur(e));
+    } finally {
+      setReessaiEnCoursId(null);
+    }
   }
 
   useEffect(() => {
@@ -1056,9 +1081,27 @@ export function BibliothequePublique() {
                       </button>
                       {badgeInfoId === entree.id && (
                         <div className="absolute right-0 top-full z-50 mt-1 w-56 rounded-cgpt-bouton border border-dj-bordure bg-dj-surface p-2 text-[11px] text-dj-texte shadow-xl animate-dj-fade-in-rapide">
-                          {entree.statut_vectorisation === "echec"
-                            ? "Échec du traitement -- l'IA ne peut pas retrouver ce fichier par son contenu."
-                            : "Traitement en cours : l'IA ne peut pas encore retrouver ce fichier facilement."}
+                          {entree.statut_vectorisation === "echec" ? (
+                            <>
+                              <p>
+                                Échec du traitement -- l'IA ne peut pas retrouver ce fichier par son
+                                contenu. Un nouveau réessai automatique aura lieu sous peu.
+                              </p>
+                              <button
+                                type="button"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  reessayerVectorisation(entree);
+                                }}
+                                disabled={reessaiEnCoursId === entree.id}
+                                className="mt-2 w-full rounded-cgpt-bouton bg-dj-accent-1-conteneur px-2 py-1 text-dj-accent-1-texte hover:opacity-90 disabled:opacity-50"
+                              >
+                                {reessaiEnCoursId === entree.id ? "Réessai en cours…" : "Réessayer maintenant"}
+                              </button>
+                            </>
+                          ) : (
+                            "Traitement en cours : l'IA ne peut pas encore retrouver ce fichier facilement."
+                          )}
                         </div>
                       )}
                     </span>

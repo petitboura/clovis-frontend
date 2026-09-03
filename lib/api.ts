@@ -324,6 +324,15 @@ export async function ajouterFichierBibliothequePersonnelle(fichier: File, descr
  * payloads backend diffèrent (voir api/bibliotheque_utilisateur.py :
  * /lien attend {url, titre}, /texte attend {contenu, titre}).
  */
+/**
+ * Bouton "Réessayer" (03/09/2026, demande Bourama : un fichier en échec
+ * de vectorisation restait affiché avec un point rouge indéfiniment --
+ * voir api/bibliotheque_utilisateur.py:reessayer_vectorisation).
+ */
+export async function reessayerVectorisationBibliothequePersonnelle(fichierId: string) {
+  return appelerApi(`/api/bibliotheque/${fichierId}/reessayer-vectorisation`, { method: "POST" });
+}
+
 export async function ajouterLienBibliothequePersonnelle(url: string, titre?: string) {
   return appelerApi("/api/bibliotheque/lien", {
     method: "POST",
@@ -537,6 +546,11 @@ export async function retirerFichierDossierCataloguePublic(dossierId: string, fi
 
 export async function supprimerDeBibliothequePublique(entreeId: string) {
   return appelerApi(`/api/bibliotheque-publique/${entreeId}`, { method: "DELETE" });
+}
+
+/** Pendant de reessayerVectorisationBibliothequePersonnelle ci-dessus, pour la bibliothèque publique. */
+export async function reessayerVectorisationBibliothequePublique(entreeId: string) {
+  return appelerApi(`/api/bibliotheque-publique/${entreeId}/reessayer-vectorisation`, { method: "POST" });
 }
 
 /**

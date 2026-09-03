@@ -25,6 +25,7 @@ import {
   ajouterFichierBibliothequePersonnelle,
   ajouterLienBibliothequePersonnelle,
   ajouterTexteBibliothequePersonnelle,
+  reessayerVectorisationBibliothequePersonnelle,
   listerDossiersBibliotheque,
   creerDossierBibliotheque,
   renommerDossierBibliotheque,
@@ -233,6 +234,11 @@ export function EspaceBibliotheque() {
   // Badge par fichier (en_attente/en_cours/echec) : info-bulle ouverte au
   // clic OU au survol -- id du fichier concerné, null si aucune.
   const [badgeInfoId, setBadgeInfoId] = useState<string | null>(null);
+  // 03/09/2026, bouton "Réessayer" (demande Bourama : un fichier en échec
+  // de vectorisation restait affiché indéfiniment) -- id du fichier dont
+  // le réessai est en cours d'appel, pour désactiver le bouton le temps
+  // de la requête et éviter un double-clic.
+  const [reessaiEnCoursId, setReessaiEnCoursId] = useState<string | null>(null);
 
   // 29/08/2026 bis, demande Bourama : "uploader 100 PDF prend quand même
   // un peu de temps" -- l'ENVOI lui-même (stockage, boucle séquentielle
@@ -251,6 +257,32 @@ export function EspaceBibliotheque() {
       ids.forEach((id) => enAttente.add(id));
       return { total: (precedent?.total ?? 0) + ids.length, enAttente };
     });
+  }
+
+  // 03/09/2026, bouton "Réessayer" (demande Bourama, voir badge plus bas
+  // dans le rendu) : relance immédiatement la vectorisation d'un fichier
+  // "echec" (voir api/bibliotheque_utilisateur.py:reessayer_vectorisation).
+  // Mise à jour optimiste du statut local à "en_attente" pour que le
+  // point rouge redevienne aussitôt le spinner (en_attente/en_cours),
+  // sans attendre le prochain rechargement de la liste -- suivreVectorisation
+  // le raccroche au popup de progression comme un fichier normalement en
+  // cours de traitement.
+  async function reessayerVectorisation(f: FichierBiblio) {
+    setReessaiEnCoursId(f.id);
+    try {
+      await reessayerVectorisationBibliothequePersonnelle(f.id);
+      setFichiers((precedent) =>
+        precedent?.map((ligne) =>
+          ligne.id === f.id ? { ...ligne, statut_vectorisation: "en_attente" } : ligne
+        ) ?? precedent
+      );
+      suivreVectorisation([f.id]);
+      setBadgeInfoId(null);
+    } catch (e) {
+      alert(messageErreur(e));
+    } finally {
+      setReessaiEnCoursId(null);
+    }
   }
 
   // 30/08/2026, étape 3 (voir commentaire sur natifDetecte plus haut) :
@@ -1267,9 +1299,27 @@ async function envoyerFichiersDirect(fichiersChoisis: FileList | File[]) {
                       </button>
                       {badgeInfoId === f.id && (
                         <div className="absolute right-0 top-full z-50 mt-1 w-56 rounded-cgpt-bouton border border-dj-bordure bg-dj-surface p-2 text-[11px] text-dj-texte shadow-xl animate-dj-fade-in-rapide">
-                          {f.statut_vectorisation === "echec"
-                            ? "Échec du traitement -- l'IA ne peut pas retrouver ce fichier par son contenu. Essaie de le supprimer et de le réajouter."
-                            : "Traitement en cours : l'IA ne peut pas encore retrouver ce fichier facilement."}
+                          {f.statut_vectorisation === "echec" ? (
+                            <>
+                              <p>
+                                Échec du traitement -- l'IA ne peut pas retrouver ce fichier par son
+                                contenu. Un nouveau réessai automatique aura lieu sous peu.
+                              </p>
+                              <button
+                                type="button"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  reessayerVectorisation(f);
+                                }}
+                                disabled={reessaiEnCoursId === f.id}
+                                className="mt-2 w-full rounded-cgpt-bouton bg-dj-accent-1-conteneur px-2 py-1 text-dj-accent-1-texte hover:opacity-90 disabled:opacity-50"
+                              >
+                                {reessaiEnCoursId === f.id ? "Réessai en cours…" : "Réessayer maintenant"}
+                              </button>
+                            </>
+                          ) : (
+                            "Traitement en cours : l'IA ne peut pas encore retrouver ce fichier facilement."
+                          )}
                         </div>
                       )}
                     </span>
