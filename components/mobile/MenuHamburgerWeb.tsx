@@ -1,11 +1,12 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { PanneauFlottant } from "@/components/PanneauFlottant";
 import { BlocsMenuPlus, SECTIONS_BASE } from "@/components/EspacePlus";
 import { useFermetureAuRetour } from "@/lib/contexteRetour";
 import { useFermetureAnimee } from "@/lib/useFermetureAnimee";
+import { useFermerChat } from "@/lib/contexteChat";
 
 // Créé le 30/08/2026, audit navigation web mobile vs natif, étape 1.
 //
@@ -42,6 +43,19 @@ function IconeMenu() {
 export function MenuHamburgerWeb() {
   const [ouvert, setOuvert] = useState(false);
   const pathname = usePathname();
+  const router = useRouter();
+  const fermerChat = useFermerChat();
+
+  // 03/09/2026, demande Bourama : même correctif que MenuHamburgerNatif.tsx
+  // (voir son commentaire) -- le lien Accueil (SECTIONS_BASE) naviguait
+  // via router.push sans fermer le chat plein écran, monté globalement
+  // dans AppShell.tsx indépendamment de la route, donc la page d'accueil
+  // se chargeait derrière lui et restait invisible. Limité à Accueil
+  // (href "/"), comme confirmé par Bourama.
+  function naviguerDepuisPlus(href: string) {
+    if (href === "/") fermerChat();
+    router.push(href);
+  }
 
   // 01/09/2026 (Bourama : "plein de boutons qui se ferment et s'ouvrent
   // brut, surtout le hamburger") : ce panneau passait déjà par
@@ -92,7 +106,7 @@ export function MenuHamburgerWeb() {
           entete={<span className="text-sm font-medium text-dj-texte">Plus</span>}
           enSortie={enSortie}
         >
-          <BlocsMenuPlus sectionsNavigation={SECTIONS_BASE} />
+          <BlocsMenuPlus sectionsNavigation={SECTIONS_BASE} onNaviguer={naviguerDepuisPlus} />
         </PanneauFlottant>
       )}
     </>

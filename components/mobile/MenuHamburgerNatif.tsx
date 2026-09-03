@@ -1,11 +1,12 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { PanneauFlottant } from "@/components/PanneauFlottant";
 import { BlocsMenuPlus, SECTIONS_BASE } from "@/components/EspacePlus";
 import { useFermetureAuRetour } from "@/lib/contexteRetour";
 import { useFermetureAnimee } from "@/lib/useFermetureAnimee";
+import { useFermerChat } from "@/lib/contexteChat";
 
 // Créé le 30/08/2026, tâche 2 (menu hamburger natif), Bourama.
 //
@@ -47,6 +48,24 @@ function IconeEscalier() {
 export function MenuHamburgerNatif() {
   const [ouvert, setOuvert] = useState(false);
   const pathname = usePathname();
+  const router = useRouter();
+  const fermerChat = useFermerChat();
+
+  // 03/09/2026, demande Bourama : depuis le chat plein écran, le lien
+  // Accueil (SECTIONS_BASE) naviguait via router.push (comportement par
+  // défaut de BlocsMenuPlus) sans jamais fermer le chat -- le chat étant
+  // monté globalement dans AppShell.tsx (fixed inset-0 z-[110]),
+  // indépendamment de la route, la page d'accueil se chargeait bien
+  // derrière lui mais restait invisible, cachée par le chat resté
+  // ouvert. Même correctif déjà appliqué à "Accueil" dans le tiroir
+  // mobile de AppSidebar.tsx (naviguerDepuisPlusMobile) -- ici limité à
+  // Accueil (href "/"), comme confirmé par Bourama, les autres liens
+  // (Paramètres, Rappels, Connecter Claude) n'étant pas concernés par
+  // cette demande.
+  function naviguerDepuisPlus(href: string) {
+    if (href === "/") fermerChat();
+    router.push(href);
+  }
 
   // 01/09/2026 (Bourama : "plein de boutons qui se ferment et s'ouvrent
   // brut, surtout le hamburger") : meme trou que MenuHamburgerWeb.tsx --
@@ -90,7 +109,7 @@ export function MenuHamburgerNatif() {
           entete={<span className="text-sm font-medium text-dj-texte">Plus</span>}
           enSortie={enSortie}
         >
-          <BlocsMenuPlus sectionsNavigation={SECTIONS_BASE} />
+          <BlocsMenuPlus sectionsNavigation={SECTIONS_BASE} onNaviguer={naviguerDepuisPlus} />
         </PanneauFlottant>
       )}
     </>
