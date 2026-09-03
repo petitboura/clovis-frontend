@@ -30,7 +30,7 @@ import { lireMonProfil } from "@/lib/api";
 import { NoteAgent } from "@/components/NoteAgent";
 import { CommentairesAgent } from "@/components/CommentairesAgent";
 import { BoutonInstaller } from "@/components/BoutonInstaller";
-import { BlocsMenuPlus, SECTIONS_BASE } from "@/components/EspacePlus";
+import { MenuPlusChatFlottant } from "@/components/mobile/MenuPlusChatFlottant";
 import { useFermerChat } from "@/lib/contexteChat";
 import { useFermetureAnimee } from "@/lib/useFermetureAnimee";
 import { useFermetureAuRetour } from "@/lib/contexteRetour";
@@ -1139,32 +1139,24 @@ export function AppSidebar({
               divergent de celui du menu principal mobile (SECTIONS_BASE,
               voir EspacePlus.tsx). Bureau et Concentration ont rejoint
               les boutons directs juste au dessus (ongletsMobileDirects) ;
-              pour le reste, ce bloc réutilise maintenant BlocsMenuPlus
-              tel quel (même composant que MenuHamburgerNatif.tsx/
+              pour le reste, ce bloc réutilise BlocsMenuPlus tel quel
+              (même composant que MenuHamburgerNatif.tsx/
               MenuHamburgerWeb.tsx), pour ne plus jamais avoir deux
               listes "Plus" qui divergent. Corrige au passage Rappels,
-              absent d'ici jusque là. onNaviguer personnalisé (voir plus
-              haut) : nécessaire ici uniquement, pour gérer fenêtre
-              flottante/fermeture du chat, contrairement aux deux autres
-              appelants qui restent sur le router.push par défaut. */}
-          <div>
-            <button
-              onClick={() => setActionsDeplie((v) => !v)}
-              className={`group relative mt-2 flex w-full items-center gap-2 rounded-xl px-2 transition-colors ${
-                actionsDeplie ? "bg-dj-surface-haute text-dj-texte" : "text-dj-texte-muet hover:bg-dj-surface-haute hover:text-dj-texte"
-              }`}
-            >
-              <span className="flex h-10 w-10 flex-shrink-0 items-center justify-center">
-                <MoreHorizontal size={18} className="transition-transform duration-200 group-hover:-translate-y-0.5" />
-              </span>
-              <span className="text-sm">Plus</span>
-            </button>
-            {actionsDeplie && (
-              <div className="pb-2">
-                <BlocsMenuPlus sectionsNavigation={SECTIONS_BASE} onNaviguer={naviguerDepuisPlusMobile} plat />
-              </div>
-            )}
-          </div>
+              absent d'ici jusque là.
+              03/09/2026, demande Bourama : ce "Plus" dépliait avant son
+              contenu sur place (actionsDeplie, comme le "Plus" du rail
+              desktop juste au-dessus dans ce fichier) -- jugé incorrect
+              par Bourama. Remplacé par MenuPlusChatFlottant.tsx, qui
+              reprend la technique de MenuHamburgerNatif.tsx/
+              MenuHamburgerWeb.tsx (fenêtre flottante pilotée par
+              paramètre d'URL, pas par actionsDeplie) : seule cette
+              instance mobile du chat plein écran est concernée, le
+              "Plus" du rail desktop juste au-dessus garde actionsDeplie
+              tel quel, inchangé. onNaviguer=naviguerDepuisPlusMobile
+              (voir plus haut) : gère fermeture du chat + vraie
+              navigation, comme avant. */}
+          <MenuPlusChatFlottant onNaviguer={naviguerDepuisPlusMobile} />
 
           {/* Thème, profil et Se déconnecter/connecter regroupés dans
               MenuProfil (refonte sidebar, 22/08/2026, demande Bourama).

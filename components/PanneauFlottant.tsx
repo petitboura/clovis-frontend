@@ -45,7 +45,16 @@ export function PanneauFlottant({
   // (ou n'a besoin d'aucune) inscription dans cette pile de désactiver
   // celle-ci ici, sans toucher aux 8 autres popups qui en dépendent
   // (comportement par défaut inchangé, `gererRetour = true`).
+  // MenuPlusChatFlottant.tsx (même jour) a exactement le même besoin
+  // que MenuHamburgerNatif.tsx (sa propre inscription manuelle via
+  // remonterAuSommet/depiler) : passe aussi gererRetour={false}.
   gererRetour = true,
+  // 03/09/2026, ajouté pour MenuPlusChatFlottant.tsx (même besoin et
+  // même convention que le prop zIndex de CompteRequisModal.tsx) : z-50
+  // par défaut, inchangé pour les appelants existants -- un appelant qui
+  // doit flotter par-dessus le chat plein écran (z-[110], voir
+  // ChatFlottant.tsx) passe explicitement une valeur plus haute.
+  zIndex = "z-50",
 }: {
   children: ReactNode;
   onFerme?: () => void;
@@ -62,6 +71,7 @@ export function PanneauFlottant({
    * (ou n'en a besoin d'aucune), pour éviter un double enregistrement et
    * le history.back() parasite qui en découle à la fermeture. */
   gererRetour?: boolean;
+  zIndex?: string;
 }) {
   // Bouton retour matériel Android / popstate web mobile (31/08/2026,
   // suite de lib/contexteRetour.tsx -- même raisonnement que
@@ -87,7 +97,7 @@ export function PanneauFlottant({
 
   return (
     <div
-      className={`fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-3 backdrop-blur-sm sm:p-6 ${
+      className={`fixed inset-0 ${zIndex} flex items-center justify-center bg-black/60 p-3 backdrop-blur-sm sm:p-6 ${
         enSortie ? "opacity-0 transition-opacity duration-150 ease-in" : "animate-dj-fade-in-rapide"
       }`}
       onClick={onFerme}
