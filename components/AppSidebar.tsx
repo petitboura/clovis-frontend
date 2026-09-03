@@ -520,10 +520,24 @@ export function AppSidebar({
     ouverte && !masquerChromeMobile,
     () => fermerTiroirMobile(() => setOuverte(false))
   );
-  useFermetureAuRetour(actionsDeplie, () => setActionsDeplie(false));
-  useFermetureAuRetour(groupeOuvertId !== null, () => setGroupeOuvertId(null));
+  // 03/09/2026, correctif Bourama ("même bug, mais sur les sections du
+  // tiroir" -- suite du correctif marquerTiroirSansHistorique ci-dessus) :
+  // "Plus" (actionsDeplie), le groupe Personnaliser Clovis/Scolarité
+  // (groupeOuvertId) et le menu profil (profilDeplie) sont CHACUN leur
+  // propre calque, avec leur propre inscription dans la pile de
+  // contexteRetour.tsx -- donc leur propre history.back() par défaut à
+  // la fermeture. Marquer le tiroir "sans historique" (ci-dessus) ne
+  // couvre QUE le calque du tiroir : un clic sur un lien à l'intérieur
+  // de "Plus" ou d'un groupe ferme AUSSI ce popup imbriqué, qui consomme
+  // alors sa propre entrée d'historique et annule la navigation qui
+  // vient d'avoir lieu, exactement comme avant le premier correctif.
+  // Chacun a donc besoin de son propre marqueur, appelé au même endroit
+  // que pour le tiroir (voir naviguerDepuisPlusMobile, MenuGroupe
+  // onNaviguer, onNaviguerVersParametres plus bas).
+  const { marquerFermetureSansHistorique: marquerActionsSansHistorique } = useFermetureAuRetour(actionsDeplie, () => setActionsDeplie(false));
+  const { marquerFermetureSansHistorique: marquerGroupeSansHistorique } = useFermetureAuRetour(groupeOuvertId !== null, () => setGroupeOuvertId(null));
   useFermetureAuRetour(historiqueDeplie, () => setHistoriqueDeplie(false));
-  useFermetureAuRetour(profilDeplie, () => fermerProfilMenu(() => setProfilDeplie(false)));
+  const { marquerFermetureSansHistorique: marquerProfilSansHistorique } = useFermetureAuRetour(profilDeplie, () => fermerProfilMenu(() => setProfilDeplie(false)));
   useFermetureAuRetour(avisDeplie, () => setAvisDeplie(false));
 
   // Photo + nom affichés en bas de la sidebar (22/08/2026, demande
@@ -716,6 +730,12 @@ export function AppSidebar({
     // router.push de fermerChatEtNaviguer juste en dessous.
     marquerTiroirSansHistorique();
     fermerTiroirMobile(() => setOuverte(false));
+    // "Plus" est un calque à part (actionsDeplie, voir plus haut) --
+    // même raison, sinon SA fermeture (setActionsDeplie(false))
+    // consomme sa propre entrée d'historique en plus de celle du
+    // tiroir, et annule quand même la navigation.
+    marquerActionsSansHistorique();
+    setActionsDeplie(false);
     // 03/09/2026, demande Bourama : "Connecter Claude" avait un cas
     // spécial ici (ouvrirFenetre, fenêtre flottante), qui ne fonctionne
     // pas sur mobile -- retiré, traité maintenant comme tous les autres
@@ -973,7 +993,14 @@ export function AppSidebar({
             onBasculerMenu={() => setProfilDeplie((v) => !v)}
             onFermerMenu={() => fermerProfilMenu(() => setProfilDeplie(false))}
             enSortieMenu={profilEnSortie}
-            onNaviguerVersParametres={() => router.push("/parametres")}
+            onNaviguerVersParametres={() => {
+              // Même calque profilDeplie que la version mobile (voir
+              // MenuProfil mobile plus bas) -- même bug latent si le
+              // menu profil est ouvert au clic sur "Paramètres" ici,
+              // même correctif.
+              marquerProfilSansHistorique();
+              router.push("/parametres");
+            }}
             onSeDeconnecter={seDeconnecter}
           />
         ) : (
@@ -1082,6 +1109,12 @@ export function AppSidebar({
                     // navigation (fermerChatEtNaviguer, voir MenuGroupe).
                     marquerTiroirSansHistorique();
                     fermerTiroirMobile(() => setOuverte(false));
+                    // Le popup du groupe (groupeOuvertId, voir MenuGroupe
+                    // ci-dessus) est un calque à part -- sa fermeture
+                    // (onFermer, appelé juste avant ce callback par
+                    // MenuGroupe) consomme sinon sa propre entrée
+                    // d'historique et annule quand même la navigation.
+                    marquerGroupeSansHistorique();
                   }}
                 />
               ) : (
@@ -1152,6 +1185,11 @@ export function AppSidebar({
                 onFermerMenu={() => fermerProfilMenu(() => setProfilDeplie(false))}
                 enSortieMenu={profilEnSortie}
                 onNaviguerVersParametres={() => {
+                  // Le menu profil (profilDeplie) est un calque à part --
+                  // sa fermeture juste en dessous consomme sinon sa
+                  // propre entrée d'historique et annule quand même la
+                  // navigation, même raison que marquerTiroirSansHistorique.
+                  marquerProfilSansHistorique();
                   setProfilDeplie(false);
                   // 03/09/2026, même correctif que LienOnglet/
                   // naviguerDepuisPlusMobile plus haut.
