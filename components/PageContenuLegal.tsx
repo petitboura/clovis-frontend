@@ -26,7 +26,7 @@ import { EcranAutonome } from "@/components/EcranAutonome";
 // l'extérieur (lien direct, site vitrine) -- router.back() ramène
 // correctement dans les deux cas vers l'écran d'origine, sans supposer
 // lequel des deux c'est.
-export function PageContenuLegal({ cle }: { cle: "cgu" | "copyright" }) {
+export function PageContenuLegal({ cle }: { cle: "cgu" | "copyright" | "confidentialite" }) {
   const router = useRouter();
   const [contenu, setContenu] = useState<ContenuLegal | null | undefined>(undefined);
 

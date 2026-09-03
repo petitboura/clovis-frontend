@@ -1401,7 +1401,7 @@ export async function traiterSignalement(id: string, action: "retire" | "rejete"
 
 export type ContenuLegal = { cle: string; titre: string; contenu_markdown: string; updated_at: string };
 
-export async function lireContenuLegal(cle: "cgu" | "copyright") {
+export async function lireContenuLegal(cle: "cgu" | "copyright" | "confidentialite") {
   const resultat = await appelerApi(`/api/legal/${cle}`);
   return resultat as ContenuLegal;
 }

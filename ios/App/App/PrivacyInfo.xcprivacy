@@ -1,0 +1,68 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+    Cree le 03/09/2026, Bourama : audit soumission App Store, fichier
+    manquant jusqu'ici.
+
+    Construit a partir d'un audit reel du code (grep sur tout ios/App/App,
+    voir NE_JAMAIS_SUPPOSER) :
+    - UserDefaults utilise directement (DossiersDesignesRepository.swift,
+      bookmarks de dossiers) -> Required Reason API declaree (CA92.1).
+    - Aucun usage direct de File timestamp API, System boot time API, ou
+      Disk space API trouve dans le code de l'app (App target). Si le SDK
+      Capacitor ou un plugin en ajoute, il doit fournir son PROPRE
+      PrivacyInfo.xcprivacy (paquet .xcframework/SPM), pas a dupliquer ici.
+    - Aucun SDK publicitaire/analytics/tracking present dans le depot
+      (package.json, Package.swift) -> NSPrivacyTracking = false.
+    - NSPrivacyCollectedDataTypes : premiere ebauche a partir des
+      fonctionnalites connues (compte utilisateur = email, contenu genere
+      par l'utilisateur = documents/bibliotheque). A FAIRE VERIFIER par
+      Bourama avant soumission, voir note de bas de session, je n'ai pas
+      acces au schema Supabase complet pour garantir l'exhaustivite legale
+      de cette liste.
+-->
+<plist version="1.0">
+<dict>
+	<key>NSPrivacyTracking</key>
+	<false/>
+	<key>NSPrivacyTrackingDomains</key>
+	<array/>
+	<key>NSPrivacyCollectedDataTypes</key>
+	<array>
+		<dict>
+			<key>NSPrivacyCollectedDataType</key>
+			<string>NSPrivacyCollectedDataTypeEmailAddress</string>
+			<key>NSPrivacyCollectedDataTypeLinked</key>
+			<true/>
+			<key>NSPrivacyCollectedDataTypeTracking</key>
+			<false/>
+			<key>NSPrivacyCollectedDataTypePurposes</key>
+			<array>
+				<string>NSPrivacyCollectedDataTypePurposeAppFunctionality</string>
+			</array>
+		</dict>
+		<dict>
+			<key>NSPrivacyCollectedDataType</key>
+			<string>NSPrivacyCollectedDataTypeOtherUserContent</string>
+			<key>NSPrivacyCollectedDataTypeLinked</key>
+			<true/>
+			<key>NSPrivacyCollectedDataTypeTracking</key>
+			<false/>
+			<key>NSPrivacyCollectedDataTypePurposes</key>
+			<array>
+				<string>NSPrivacyCollectedDataTypePurposeAppFunctionality</string>
+			</array>
+		</dict>
+	</array>
+	<key>NSPrivacyAccessedAPITypes</key>
+	<array>
+		<dict>
+			<key>NSPrivacyAccessedAPIType</key>
+			<string>NSPrivacyAccessedAPICategoryUserDefaults</string>
+			<key>NSPrivacyAccessedAPITypeReasons</key>
+			<array>
+				<string>CA92.1</string>
+			</array>
+		</dict>
+	</array>
+</dict>
+</plist>

@@ -17,6 +17,11 @@ class AppDelegate: UIResponder, UIApplicationDelegate, UNUserNotificationCenterD
 
     func application(_ application: UIApplication, didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]?) -> Bool {
         UNUserNotificationCenter.current().delegate = self
+        // Ajoute le 03/09/2026 : voir NotificationsNatives.reenregistrerSiAutorise,
+        // corrige le bug d'enregistrement APNs jamais declenche.
+        Task {
+            await NotificationsNatives.reenregistrerSiAutorise()
+        }
         return true
     }
 

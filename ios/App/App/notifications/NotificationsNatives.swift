@@ -14,16 +14,46 @@
 // un ecran plein comme sur Android). A confirmer explicitement aupres de
 // Bourama que cette limite est acceptee (voir 03-notifications-rappels.md,
 // qui demandait deja de "documenter ce qui est reellement atteignable").
+import UIKit
 import UserNotifications
 
 enum NotificationsNatives {
 
+    // Ajoute le 03/09/2026, Bourama : bug trouve lors de l'audit soumission
+    // stores, demanderAutorisation() appelait requestAuthorization (locale)
+    // mais ne declenchait jamais l'enregistrement APNs
+    // (UIApplication.registerForRemoteNotifications()). Consequence :
+    // AppDelegate.didRegisterForRemoteNotificationsWithDeviceToken n'etait
+    // jamais appele, donc enregistrerPushToken(plateforme: "ios") n'etait
+    // jamais envoye au backend : le canal push natif iOS decrit dans
+    // notifications_push.py etait mort cote client, meme une fois
+    // APNS_KEY_P8_B64 configure cote backend.
+    @MainActor
+    private static func enregistrerPourNotificationsDistantes() {
+        UIApplication.shared.registerForRemoteNotifications()
+    }
+
     static func demanderAutorisation() async -> Bool {
         let centre = UNUserNotificationCenter.current()
         do {
-            return try await centre.requestAuthorization(options: [.alert, .sound, .badge])
+            let accordee = try await centre.requestAuthorization(options: [.alert, .sound, .badge])
+            if accordee {
+                await enregistrerPourNotificationsDistantes()
+            }
+            return accordee
         } catch {
             return false
+        }
+    }
+
+    /// Appele au lancement de l'app (voir AppDelegate) : redeclenche
+    /// l'enregistrement APNs si l'autorisation a deja ete accordee lors
+    /// d'un lancement precedent. Apple recommande d'appeler
+    /// registerForRemoteNotifications() a CHAQUE lancement (le token peut
+    /// changer), pas seulement au moment de la demande initiale.
+    static func reenregistrerSiAutorise() async {
+        if await autorisationAccordee() {
+            await enregistrerPourNotificationsDistantes()
         }
     }
 

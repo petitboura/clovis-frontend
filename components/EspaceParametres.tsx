@@ -736,6 +736,12 @@ export function EspaceParametres() {
         >
           Droit d&apos;auteur
         </button>
+        <button
+          onClick={() => router.push("/confidentialite")}
+          className="w-fit text-dj-texte-muet hover:text-dj-texte hover:underline"
+        >
+          Politique de confidentialité
+        </button>
       </div>
     </div>
   );
