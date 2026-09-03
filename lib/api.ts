@@ -368,15 +368,15 @@ export type EntreeBibliothequePublique = {
   // 03/09/2026, demande Bourama : 3 filtres cochables à la publication
   // (voir core/listes_bibliotheque_publique.py côté backend), optionnels.
   pays?: string | null;
-  classe?: string | null;
+  niveau?: string | null;
   categorie?: string | null;
 };
 
-// 03/09/2026, demande Bourama : filtres pays/classe/catégorie en plus de
+// 03/09/2026, demande Bourama : filtres pays/niveau/catégorie en plus de
 // la recherche texte -- voir GET /api/bibliotheque-publique côté backend.
 export type FiltresBibliothequePublique = {
   pays?: string;
-  classe?: string;
+  niveau?: string;
   categorie?: string;
 };
 
@@ -384,20 +384,20 @@ export async function listerBibliothequePublique(q?: string, filtres?: FiltresBi
   const params = new URLSearchParams();
   if (q?.trim()) params.set("q", q.trim());
   if (filtres?.pays?.trim()) params.set("pays", filtres.pays.trim());
-  if (filtres?.classe?.trim()) params.set("classe", filtres.classe.trim());
+  if (filtres?.niveau?.trim()) params.set("niveau", filtres.niveau.trim());
   if (filtres?.categorie?.trim()) params.set("categorie", filtres.categorie.trim());
   const suffixe = params.toString() ? `?${params.toString()}` : "";
   const resultat = await appelerApi(`/api/bibliotheque-publique${suffixe}`);
   return resultat as EntreeBibliothequePublique[];
 }
 
-// 03/09/2026, demande Bourama : valeurs déjà connues de pays/classe/
+// 03/09/2026, demande Bourama : valeurs déjà connues de pays/niveau/
 // catégorie, pour peupler les suggestions du formulaire de publication
 // ET les menus des filtres de recherche -- voir GET
 // /api/bibliotheque-publique/listes côté backend.
 export type ListesFiltresBibliothequePublique = {
   pays: string[];
-  classes: string[];
+  niveaux: string[];
   categories: string[];
 };
 
@@ -426,7 +426,7 @@ export async function ajouterABibliothequePublique(
   corps.append("description", description || "");
   if (dossierId) corps.append("dossier_id", dossierId);
   if (filtres?.pays?.trim()) corps.append("pays", filtres.pays.trim());
-  if (filtres?.classe?.trim()) corps.append("classe", filtres.classe.trim());
+  if (filtres?.niveau?.trim()) corps.append("niveau", filtres.niveau.trim());
   if (filtres?.categorie?.trim()) corps.append("categorie", filtres.categorie.trim());
 
   const reponse = await fetch(`${API_URL}/api/bibliotheque-publique`, {
@@ -460,7 +460,7 @@ export async function ajouterLienBibliothequePublique(
       description: description || "",
       dossier_id: dossierId || "",
       pays: filtres?.pays || "",
-      classe: filtres?.classe || "",
+      niveau: filtres?.niveau || "",
       categorie: filtres?.categorie || "",
     }),
   }) as Promise<EntreeBibliothequePublique>;
@@ -479,7 +479,7 @@ export async function ajouterTexteBibliothequePublique(
       nom: nom || "",
       dossier_id: dossierId || "",
       pays: filtres?.pays || "",
-      classe: filtres?.classe || "",
+      niveau: filtres?.niveau || "",
       categorie: filtres?.categorie || "",
     }),
   }) as Promise<EntreeBibliothequePublique>;
@@ -495,7 +495,7 @@ export type DossierCataloguePublic = {
   fichier_ids: string[];
   // 03/09/2026, demande Bourama : mêmes 3 filtres que pour un fichier.
   pays?: string | null;
-  classe?: string | null;
+  niveau?: string | null;
   categorie?: string | null;
 };
 
@@ -516,7 +516,7 @@ export async function creerDossierCataloguePublic(
       statut,
       dossier_parent_id: dossierParentId || null,
       pays: filtres?.pays || "",
-      classe: filtres?.classe || "",
+      niveau: filtres?.niveau || "",
       categorie: filtres?.categorie || "",
     }),
   }) as Promise<DossierCataloguePublic>;

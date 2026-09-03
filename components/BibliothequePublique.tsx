@@ -40,7 +40,7 @@ function iconePourType(typeMime: string | null) {
 }
 
 // 03/09/2026, demande Bourama : "on a un filtre par type on va ajouter
-// un filtre par pays, classe et catégorie" -- le filtre par type
+// un filtre par pays, niveau et catégorie" -- le filtre par type
 // n'existait en réalité que dans EspaceBibliotheque.tsx (bibliothèque
 // PRIVÉE), jamais ici. Repris tel quel (mêmes catégories, même logique
 // de détection par type_mime) pour que le comportement soit identique
@@ -66,18 +66,18 @@ const TYPES_BIBLIO_PUBLIQUE: { id: TypeBiblioPublique; label: string }[] = [
 // core/listes_bibliotheque_publique.py) -- pas de bouton "Autre" séparé.
 function ChampsFiltragePublication({
   pays,
-  classe,
+  niveau,
   categorie,
   onChangePays,
-  onChangeClasse,
+  onChangeNiveau,
   onChangeCategorie,
   listes,
 }: {
   pays: string;
-  classe: string;
+  niveau: string;
   categorie: string;
   onChangePays: (v: string) => void;
-  onChangeClasse: (v: string) => void;
+  onChangeNiveau: (v: string) => void;
   onChangeCategorie: (v: string) => void;
   listes: ListesFiltresBibliothequePublique;
 }) {
@@ -91,10 +91,10 @@ function ChampsFiltragePublication({
         className="min-w-0 flex-1 rounded-cgpt-bouton border border-dj-bordure bg-dj-fond px-3 py-2 text-xs text-dj-texte outline-none focus:border-dj-bordure-forte"
       />
       <input
-        list="biblio-pub-liste-classe"
-        value={classe}
-        onChange={(e) => onChangeClasse(e.target.value)}
-        placeholder="Classe / niveau (optionnel)"
+        list="biblio-pub-liste-niveau"
+        value={niveau}
+        onChange={(e) => onChangeNiveau(e.target.value)}
+        placeholder="Niveau (optionnel)"
         className="min-w-0 flex-1 rounded-cgpt-bouton border border-dj-bordure bg-dj-fond px-3 py-2 text-xs text-dj-texte outline-none focus:border-dj-bordure-forte"
       />
       <input
@@ -109,8 +109,8 @@ function ChampsFiltragePublication({
           <option key={v} value={v} />
         ))}
       </datalist>
-      <datalist id="biblio-pub-liste-classe">
-        {listes.classes.map((v) => (
+      <datalist id="biblio-pub-liste-niveau">
+        {listes.niveaux.map((v) => (
           <option key={v} value={v} />
         ))}
       </datalist>
@@ -204,9 +204,9 @@ export function BibliothequePublique() {
   // (voir core/listes_bibliotheque_publique.py) -- pas de bouton
   // "Autre" séparé, on tape simplement une nouvelle valeur.
   const [champPays, setChampPays] = useState("");
-  const [champClasse, setChampClasse] = useState("");
+  const [champNiveau, setChampNiveau] = useState("");
   const [champCategorie, setChampCategorie] = useState("");
-  const [listesFiltres, setListesFiltres] = useState<ListesFiltresBibliothequePublique>({ pays: [], classes: [], categories: [] });
+  const [listesFiltres, setListesFiltres] = useState<ListesFiltresBibliothequePublique>({ pays: [], niveaux: [], categories: [] });
 
   function chargerListesFiltres() {
     listerListesFiltresBibliothequePublique()
@@ -216,25 +216,25 @@ export function BibliothequePublique() {
 
   function reinitialiserChampsFiltragePublication() {
     setChampPays("");
-    setChampClasse("");
+    setChampNiveau("");
     setChampCategorie("");
   }
 
   // Filtres de recherche/parcours (même demande) : le type est filtré
   // côté app sur la liste déjà chargée (comme en privé, voir typeDe
-  // ci-dessus) ; pays/classe/catégorie sont envoyés au serveur (voir
+  // ci-dessus) ; pays/niveau/catégorie sont envoyés au serveur (voir
   // GET /api/bibliotheque-publique côté backend). "" = pas de filtre.
   const [filtreType, setFiltreType] = useState<TypeBiblioPublique>("tous");
   const [filtrePays, setFiltrePays] = useState("");
-  const [filtreClasse, setFiltreClasse] = useState("");
+  const [filtreNiveau, setFiltreNiveau] = useState("");
   const [filtreCategorie, setFiltreCategorie] = useState("");
   const [panneauFiltreOuvert, setPanneauFiltreOuvert] = useState(false);
-  const nombreFiltresActifs = [filtreType !== "tous", !!filtrePays, !!filtreClasse, !!filtreCategorie].filter(Boolean).length;
+  const nombreFiltresActifs = [filtreType !== "tous", !!filtrePays, !!filtreNiveau, !!filtreCategorie].filter(Boolean).length;
 
   function reinitialiserFiltres() {
     setFiltreType("tous");
     setFiltrePays("");
-    setFiltreClasse("");
+    setFiltreNiveau("");
     setFiltreCategorie("");
   }
 
@@ -328,7 +328,7 @@ export function BibliothequePublique() {
   }, [lotVectorisation?.enAttente.size]);
 
   function charger(q?: string) {
-    listerBibliothequePublique(q, { pays: filtrePays, classe: filtreClasse, categorie: filtreCategorie })
+    listerBibliothequePublique(q, { pays: filtrePays, niveau: filtreNiveau, categorie: filtreCategorie })
       .then(setListe)
       .catch(() => setListe([]));
   }
@@ -352,7 +352,7 @@ export function BibliothequePublique() {
     const id = setTimeout(() => charger(recherche), 250);
     return () => clearTimeout(id);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [recherche, filtrePays, filtreClasse, filtreCategorie]);
+  }, [recherche, filtrePays, filtreNiveau, filtreCategorie]);
 
   function choisirFichiers(fichiersChoisis: FileList | File[]) {
     const liste = Array.from(fichiersChoisis);
@@ -442,12 +442,12 @@ export function BibliothequePublique() {
     if (fichiers.length > 1) setProgressionEnvoi({ total: fichiers.length, envoyes: 0 });
     try {
       if (fichiers.length === 1) {
-        // pays/classe/catégorie seulement pour un fichier unique -- pas
+        // pays/niveau/catégorie seulement pour un fichier unique -- pas
         // pour le cas multi juste en dessous (demande Bourama : "pas la
         // peine, on trouvera un moyen de filtrer plus tard").
         const ligne = await ajouterABibliothequePublique(fichiers[0], nom, description, dossierCourantId || undefined, {
           pays: champPays,
-          classe: champClasse,
+          niveau: champNiveau,
           categorie: champCategorie,
         });
         if (ligne?.statut_vectorisation === "en_attente" && ligne.id) suivreVectorisation([ligne.id]);
@@ -490,7 +490,7 @@ export function BibliothequePublique() {
     const titre = nom.trim();
     setEnvoi(true);
     setErreur(null);
-    const filtresSaisis = { pays: champPays, classe: champClasse, categorie: champCategorie };
+    const filtresSaisis = { pays: champPays, niveau: champNiveau, categorie: champCategorie };
     try {
       const ligne =
         modaleAjout === "lien"
@@ -525,7 +525,7 @@ export function BibliothequePublique() {
     try {
       await creerDossierCataloguePublic(nouveauNomDossier.trim(), nouveauStatutDossier, dossierCourantId ?? undefined, {
         pays: champPays,
-        classe: champClasse,
+        niveau: champNiveau,
         categorie: champCategorie,
       });
       setNouveauNomDossier("");
@@ -604,7 +604,7 @@ export function BibliothequePublique() {
     : liste;
   // 03/09/2026, demande Bourama : filtre par type appliqué côté app
   // (comme en privé), sur "Tous" ET à l'intérieur d'un dossier ouvert --
-  // pays/classe/catégorie sont déjà filtrés côté serveur (voir charger()).
+  // pays/niveau/catégorie sont déjà filtrés côté serveur (voir charger()).
   const listeAffichee = listeApresDossier?.filter((e) => filtreType === "tous" || typeDe(e) === filtreType);
 
   // Description fixe (+ rappel légal CGU/copyright) remplacée par le
@@ -647,7 +647,7 @@ export function BibliothequePublique() {
             Dossiers
           </button>
         </div>
-        {/* 03/09/2026, demande Bourama : filtre par type + pays/classe/
+        {/* 03/09/2026, demande Bourama : filtre par type + pays/niveau/
             catégorie -- visible seulement là où une liste de FICHIERS est
             montrée (onglet "Tous", ou à l'intérieur d'un dossier ouvert),
             pas sur l'écran de navigation des dossiers eux-mêmes (qui a
@@ -693,10 +693,10 @@ export function BibliothequePublique() {
               </button>
             </span>
           )}
-          {filtreClasse && (
+          {filtreNiveau && (
             <span className="flex items-center gap-1 rounded-full border border-dj-bordure bg-dj-surface px-2.5 py-1 text-dj-texte">
-              {filtreClasse}
-              <button onClick={() => setFiltreClasse("")} aria-label="Retirer le filtre de classe" className="text-dj-texte-muet hover:text-dj-texte">
+              {filtreNiveau}
+              <button onClick={() => setFiltreNiveau("")} aria-label="Retirer le filtre de niveau" className="text-dj-texte-muet hover:text-dj-texte">
                 <X size={11} />
               </button>
             </span>
@@ -877,7 +877,7 @@ export function BibliothequePublique() {
 
           {creationDossierOuverte && (
             // 03/09/2026, demande Bourama : passage d'une simple ligne à
-            // une petite carte -- nom/statut/pays/classe/catégorie ne
+            // une petite carte -- nom/statut/pays/niveau/catégorie ne
             // tiennent plus sur une seule rangée, surtout sur mobile.
             <div className="flex animate-dj-fade-in-rapide flex-col gap-2 rounded-xl border border-dj-bordure bg-dj-surface p-3">
               <div className="flex flex-col gap-2 sm:flex-row">
@@ -901,10 +901,10 @@ export function BibliothequePublique() {
               </div>
               <ChampsFiltragePublication
                 pays={champPays}
-                classe={champClasse}
+                niveau={champNiveau}
                 categorie={champCategorie}
                 onChangePays={setChampPays}
-                onChangeClasse={setChampClasse}
+                onChangeNiveau={setChampNiveau}
                 onChangeCategorie={setChampCategorie}
                 listes={listesFiltres}
               />
@@ -1296,10 +1296,10 @@ export function BibliothequePublique() {
                 />
                 <ChampsFiltragePublication
                   pays={champPays}
-                  classe={champClasse}
+                  niveau={champNiveau}
                   categorie={champCategorie}
                   onChangePays={setChampPays}
-                  onChangeClasse={setChampClasse}
+                  onChangeNiveau={setChampNiveau}
                   onChangeCategorie={setChampCategorie}
                   listes={listesFiltres}
                 />
@@ -1394,10 +1394,10 @@ export function BibliothequePublique() {
             )}
             <ChampsFiltragePublication
               pays={champPays}
-              classe={champClasse}
+              niveau={champNiveau}
               categorie={champCategorie}
               onChangePays={setChampPays}
-              onChangeClasse={setChampClasse}
+              onChangeNiveau={setChampNiveau}
               onChangeCategorie={setChampCategorie}
               listes={listesFiltres}
             />
@@ -1428,7 +1428,7 @@ export function BibliothequePublique() {
       )}
 
       {/* 03/09/2026, demande Bourama : panneau des 4 filtres (type +
-          pays/classe/catégorie), norme "un seul bouton Filtre + panneau"
+          pays/niveau/catégorie), norme "un seul bouton Filtre + panneau"
           (Airbnb/Amazon/Material Design) plutôt que 4 menus séparés qui
           prendraient toute la largeur sur mobile. Chaque select
           applique son filtre immédiatement (pas de bouton "Appliquer"
@@ -1475,14 +1475,14 @@ export function BibliothequePublique() {
             </div>
 
             <div className="flex flex-col gap-1.5">
-              <p className="text-xs font-medium text-dj-texte-muet">Classe / niveau</p>
+              <p className="text-xs font-medium text-dj-texte-muet">Niveau</p>
               <select
-                value={filtreClasse}
-                onChange={(e) => setFiltreClasse(e.target.value)}
+                value={filtreNiveau}
+                onChange={(e) => setFiltreNiveau(e.target.value)}
                 className="rounded-cgpt-bouton border border-dj-bordure bg-dj-fond px-3 py-2 text-sm text-dj-texte outline-none focus:border-dj-bordure-forte"
               >
-                <option value="">Toutes les classes</option>
-                {listesFiltres.classes.map((v) => (
+                <option value="">Tous les niveaux</option>
+                {listesFiltres.niveaux.map((v) => (
                   <option key={v} value={v}>
                     {v}
                   </option>
