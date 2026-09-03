@@ -30,6 +30,22 @@ export function PanneauFlottant({
   // fonction de fermeture RÉELLE (celle qui finit par démonter) --
   // c'est au hook, pas à ce composant, de décider quand l'appeler.
   enSortie = false,
+  // 03/09/2026, correctif bug "clique Accueil/Paramètres/Rappels/Connecter
+  // Claude dans le menu Plus, ça ne va nulle part" -- ce panneau
+  // s'enregistrait TOUJOURS lui-même dans la pile de contexteRetour.tsx
+  // (juste en dessous, `useFermetureAuRetour`), y compris pour
+  // MenuHamburgerWeb.tsx (qui explicitement n'en a pas besoin, voir son
+  // en-tête) et MenuHamburgerNatif.tsx (qui a déjà SA PROPRE inscription
+  // manuelle dans la même pile, via remonterAuSommet/depiler). Dans les
+  // deux cas la fermeture par navigation (router.push/replace vers la
+  // page cible) déclenchait, au démontage de ce panneau, un
+  // `ctx.depiler(id, true)` par défaut -- donc un `history.back()` en
+  // plus, qui annulait la navigation qui venait tout juste d'avoir lieu.
+  // `gererRetour = false` permet à un appelant qui gère déjà lui-même
+  // (ou n'a besoin d'aucune) inscription dans cette pile de désactiver
+  // celle-ci ici, sans toucher aux 8 autres popups qui en dépendent
+  // (comportement par défaut inchangé, `gererRetour = true`).
+  gererRetour = true,
 }: {
   children: ReactNode;
   onFerme?: () => void;
@@ -41,6 +57,11 @@ export function PanneauFlottant({
    * formulaire classique, plutôt que revenir à l'aplat edge-to-edge. */
   pleine?: boolean;
   enSortie?: boolean;
+  /** Voir commentaire ci-dessus (03/09/2026). À false pour un appelant qui
+   * gère déjà lui-même son inscription dans la pile de contexteRetour.tsx
+   * (ou n'en a besoin d'aucune), pour éviter un double enregistrement et
+   * le history.back() parasite qui en découle à la fermeture. */
+  gererRetour?: boolean;
 }) {
   // Bouton retour matériel Android / popstate web mobile (31/08/2026,
   // suite de lib/contexteRetour.tsx -- même raisonnement que
@@ -50,7 +71,7 @@ export function PanneauFlottant({
   // CanvasDessin, BlocCode...), qui n'étaient pas encore raccordées à la
   // pile alors que ce mécanisme existe déjà pour le menu hamburger et la
   // palette de commandes.
-  useFermetureAuRetour(!!onFerme, onFerme ?? (() => {}));
+  useFermetureAuRetour(gererRetour && !!onFerme, onFerme ?? (() => {}));
 
   // Fermeture au clavier (audit 25/08/2026 : aucune popup du chat ne
   // gérait Echap jusqu'ici). Couvre en un seul endroit les 8 composants

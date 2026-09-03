@@ -152,6 +152,7 @@ function MenuHamburgerNatifInterne() {
           onFerme={fermerMenu}
           entete={<span className="text-sm font-medium text-dj-texte">Plus</span>}
           enSortie={enSortie}
+          gererRetour={false}
         >
           <BlocsMenuPlus sectionsNavigation={SECTIONS_BASE} onNaviguer={naviguerDepuisPlus} />
         </PanneauFlottant>
