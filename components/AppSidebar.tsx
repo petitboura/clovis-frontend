@@ -505,7 +505,21 @@ export function AppSidebar({
   // `ouverte` pilote uniquement la largeur du rail desktop, pas un
   // panneau à fermer au retour -- voir le commentaire sur
   // tiroirEnSortie plus haut.
-  useFermetureAuRetour(ouverte && !masquerChromeMobile, () => fermerTiroirMobile(() => setOuverte(false)));
+  // 03/09/2026, correctif Bourama ("même bug que le hamburger Plus, mais
+  // dans le hamburger du chat plein écran") : même trou que
+  // MenuHamburgerWeb.tsx/MenuHamburgerNatif.tsx (voir commit du
+  // correctif "menu Plus" -- lib/contexteRetour.tsx expose désormais
+  // marquerFermetureSansHistorique pour ça). Ce tiroir-ci se ferme aussi
+  // suite à une vraie navigation (clic sur un lien, un groupe, "Plus" ou
+  // "Paramètres" -- voir LienOnglet/MenuGroupe/naviguerDepuisPlusMobile/
+  // onNaviguerVersParametres plus bas), donc chacun de ces points
+  // d'appel doit marquer la fermeture "sans historique" juste avant,
+  // sinon le history.back() déclenché à la fermeture du tiroir annule la
+  // navigation qui vient d'avoir lieu.
+  const { marquerFermetureSansHistorique: marquerTiroirSansHistorique } = useFermetureAuRetour(
+    ouverte && !masquerChromeMobile,
+    () => fermerTiroirMobile(() => setOuverte(false))
+  );
   useFermetureAuRetour(actionsDeplie, () => setActionsDeplie(false));
   useFermetureAuRetour(groupeOuvertId !== null, () => setGroupeOuvertId(null));
   useFermetureAuRetour(historiqueDeplie, () => setHistoriqueDeplie(false));
@@ -620,7 +634,15 @@ export function AppSidebar({
       <Link
         href={onglet.href}
         onClick={(e) => {
-          if (mobile) fermerTiroirMobile(() => setOuverte(false));
+          // 03/09/2026 : ce clic navigue toujours vraiment (Link par
+          // défaut, ou fermerChatEtNaviguer juste plus bas) -- marquer
+          // AVANT de lancer la fermeture du tiroir, sinon son
+          // history.back() (déclenché après le fondu 180ms) annule
+          // cette navigation.
+          if (mobile) {
+            marquerTiroirSansHistorique();
+            fermerTiroirMobile(() => setOuverte(false));
+          }
           // En contexteChat=true, une vraie "section" (id présent --
           // "Accueil" n'en a pas, cf. navComplete plus bas, et garde sa
           // navigation classique) s'ouvre en fenêtre flottante par-dessus
@@ -689,6 +711,10 @@ export function AppSidebar({
   // fermer, sinon la page cible se charge derrière lui et reste
   // invisible (fixed inset-0 z-[110]).
   function naviguerDepuisPlusMobile(href: string) {
+    // 03/09/2026, même correctif que LienOnglet plus haut : marquer
+    // avant de fermer, sinon le history.back() différé annule le
+    // router.push de fermerChatEtNaviguer juste en dessous.
+    marquerTiroirSansHistorique();
     fermerTiroirMobile(() => setOuverte(false));
     // 03/09/2026, demande Bourama : "Connecter Claude" avait un cas
     // spécial ici (ouvrirFenetre, fenêtre flottante), qui ne fonctionne
@@ -1050,7 +1076,13 @@ export function AppSidebar({
                   onOuvrir={() => setGroupeOuvertId(g.id)}
                   onFermer={() => setGroupeOuvertId((v) => (v === g.id ? null : v))}
                   onBasculer={() => setGroupeOuvertId((v) => (v === g.id ? null : g.id))}
-                  onNaviguer={() => fermerTiroirMobile(() => setOuverte(false))}
+                  onNaviguer={() => {
+                    // 03/09/2026, même correctif que LienOnglet plus
+                    // haut : ce callback est toujours suivi d'une vraie
+                    // navigation (fermerChatEtNaviguer, voir MenuGroupe).
+                    marquerTiroirSansHistorique();
+                    fermerTiroirMobile(() => setOuverte(false));
+                  }}
                 />
               ) : (
                 <LienOnglet
@@ -1121,6 +1153,9 @@ export function AppSidebar({
                 enSortieMenu={profilEnSortie}
                 onNaviguerVersParametres={() => {
                   setProfilDeplie(false);
+                  // 03/09/2026, même correctif que LienOnglet/
+                  // naviguerDepuisPlusMobile plus haut.
+                  marquerTiroirSansHistorique();
                   fermerTiroirMobile(() => setOuverte(false));
                   router.push("/parametres");
                 }}
