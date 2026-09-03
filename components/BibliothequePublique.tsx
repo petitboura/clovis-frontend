@@ -27,6 +27,7 @@ import { CTACompteRequis } from "@/components/CTACompteRequis";
 import { CompteRequisModal } from "@/components/CompteRequisModal";
 import { SignalerContenuModal } from "@/components/SignalerContenuModal";
 import { VisionneuseBibliotheque } from "@/components/VisionneuseBibliotheque";
+import { SelectPersonnalise } from "@/components/SelectPersonnalise";
 import { Skeleton } from "./Skeleton";
 
 function iconePourType(typeMime: string | null) {
@@ -890,14 +891,16 @@ export function BibliothequePublique() {
                   placeholder="Nom du dossier… (optionnel)"
                   className="min-w-0 flex-1 rounded-cgpt-bouton border border-dj-bordure bg-dj-fond px-3 py-1.5 text-sm text-dj-texte outline-none focus:border-dj-bordure-forte"
                 />
-                <select
-                  value={nouveauStatutDossier}
-                  onChange={(e) => setNouveauStatutDossier(e.target.value as "contribution_libre" | "privee")}
-                  className="rounded-cgpt-bouton border border-dj-bordure bg-dj-fond px-2 py-1.5 text-xs text-dj-texte outline-none focus:border-dj-bordure-forte"
-                >
-                  <option value="contribution_libre">Contribution libre</option>
-                  <option value="privee">Privé (moi seul)</option>
-                </select>
+                <div className="sm:w-48 sm:flex-shrink-0">
+                  <SelectPersonnalise
+                    options={[
+                      { id: "contribution_libre", label: "Contribution libre" },
+                      { id: "privee", label: "Privé (moi seul)" },
+                    ]}
+                    valeur={nouveauStatutDossier}
+                    onChange={(id) => setNouveauStatutDossier(id as "contribution_libre" | "privee")}
+                  />
+                </div>
               </div>
               <ChampsFiltragePublication
                 pays={champPays}
@@ -1460,50 +1463,29 @@ export function BibliothequePublique() {
 
             <div className="flex flex-col gap-1.5">
               <p className="text-xs font-medium text-dj-texte-muet">Pays</p>
-              <select
-                value={filtrePays}
-                onChange={(e) => setFiltrePays(e.target.value)}
-                className="rounded-cgpt-bouton border border-dj-bordure bg-dj-fond px-3 py-2 text-sm text-dj-texte outline-none focus:border-dj-bordure-forte"
-              >
-                <option value="">Tous les pays</option>
-                {listesFiltres.pays.map((v) => (
-                  <option key={v} value={v}>
-                    {v}
-                  </option>
-                ))}
-              </select>
+              <SelectPersonnalise
+                options={[{ id: "", label: "Tous les pays" }, ...listesFiltres.pays.map((v) => ({ id: v, label: v }))]}
+                valeur={filtrePays}
+                onChange={setFiltrePays}
+              />
             </div>
 
             <div className="flex flex-col gap-1.5">
               <p className="text-xs font-medium text-dj-texte-muet">Niveau</p>
-              <select
-                value={filtreNiveau}
-                onChange={(e) => setFiltreNiveau(e.target.value)}
-                className="rounded-cgpt-bouton border border-dj-bordure bg-dj-fond px-3 py-2 text-sm text-dj-texte outline-none focus:border-dj-bordure-forte"
-              >
-                <option value="">Tous les niveaux</option>
-                {listesFiltres.niveaux.map((v) => (
-                  <option key={v} value={v}>
-                    {v}
-                  </option>
-                ))}
-              </select>
+              <SelectPersonnalise
+                options={[{ id: "", label: "Tous les niveaux" }, ...listesFiltres.niveaux.map((v) => ({ id: v, label: v }))]}
+                valeur={filtreNiveau}
+                onChange={setFiltreNiveau}
+              />
             </div>
 
             <div className="flex flex-col gap-1.5">
               <p className="text-xs font-medium text-dj-texte-muet">Catégorie</p>
-              <select
-                value={filtreCategorie}
-                onChange={(e) => setFiltreCategorie(e.target.value)}
-                className="rounded-cgpt-bouton border border-dj-bordure bg-dj-fond px-3 py-2 text-sm text-dj-texte outline-none focus:border-dj-bordure-forte"
-              >
-                <option value="">Toutes les catégories</option>
-                {listesFiltres.categories.map((v) => (
-                  <option key={v} value={v}>
-                    {v}
-                  </option>
-                ))}
-              </select>
+              <SelectPersonnalise
+                options={[{ id: "", label: "Toutes les catégories" }, ...listesFiltres.categories.map((v) => ({ id: v, label: v }))]}
+                valeur={filtreCategorie}
+                onChange={setFiltreCategorie}
+              />
             </div>
 
             <div className="flex items-center justify-between gap-2 pt-1">

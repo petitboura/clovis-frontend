@@ -36,6 +36,7 @@ import {
 } from "@/lib/api";
 import { messageErreur, ErreurApi } from "@/lib/erreurs";
 import { Skeleton } from "./Skeleton";
+import { CaseACocher } from "./CaseACocher";
 import { CTACompteRequis } from "./CTACompteRequis";
 import { VisionneuseBibliotheque } from "./VisionneuseBibliotheque";
 import { BibliothequePublique } from "./BibliothequePublique";
@@ -1353,11 +1354,7 @@ async function envoyerFichiersDirect(fichiersChoisis: FileList | File[]) {
                     key={d.id}
                     className="flex cursor-pointer items-center gap-2 rounded-cgpt-bouton px-2 py-1.5 text-sm text-dj-texte hover:bg-dj-surface-haute"
                   >
-                    <input
-                      type="checkbox"
-                      checked={dejaRange}
-                      onChange={() => basculerRangement(d.id, dejaRange)}
-                    />
+                    <CaseACocher checked={dejaRange} onChange={() => basculerRangement(d.id, dejaRange)} />
                     <IconDossier size={14} className="text-dj-texte-muet" />
                     {d.nom}
                   </label>
@@ -1458,8 +1455,7 @@ async function envoyerFichiersDirect(fichiersChoisis: FileList | File[]) {
                     key={f.id}
                     className="flex cursor-pointer items-center gap-2 rounded-cgpt-bouton px-2 py-1.5 text-sm text-dj-texte hover:bg-dj-surface-haute"
                   >
-                    <input
-                      type="checkbox"
+                    <CaseACocher
                       checked={dejaDedans}
                       onChange={async () => {
                         try {

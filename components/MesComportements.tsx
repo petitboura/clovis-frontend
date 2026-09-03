@@ -32,6 +32,7 @@ import { PanneauFlottant } from "@/components/PanneauFlottant";
 import { Skeleton } from "./Skeleton";
 import { OngletsSegment } from "./OngletsSegment";
 import { useInfoSection } from "./SectionPage";
+import { CaseACocher } from "./CaseACocher";
 
 // Section "Mes comportements" (06/08/2026, demande Bourama : "on peut en
 // mettre plusieurs hein, pas juste un") : PLUSIEURS instructions perso
@@ -726,12 +727,7 @@ export function MesComportements({ agentId }: { agentId: string }) {
                   className="flex-1 rounded-cgpt-carte border border-dj-bordure bg-dj-surface-haute px-3 py-1.5 text-sm text-dj-texte outline-none focus:border-dj-bordure-forte disabled:opacity-50"
                 />
                 <label className="flex flex-shrink-0 items-center gap-1.5 text-xs text-dj-texte-muet">
-                  <input
-                    type="checkbox"
-                    checked={nomAuto}
-                    onChange={(e) => setNomAuto(e.target.checked)}
-                    className="accent-dj-accent-1"
-                  />
+                  <CaseACocher checked={nomAuto} onChange={setNomAuto} />
                   Auto
                 </label>
               </div>

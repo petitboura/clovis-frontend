@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { appelerApi } from "@/lib/api";
 import { SelectPersonnalise } from "../SelectPersonnalise";
 import { useFermetureAnimee } from "@/lib/useFermetureAnimee";
+import { CaseACocher } from "../CaseACocher";
 
 interface Categorie {
   id: string;
@@ -146,21 +147,11 @@ export function PopupFeedback({
             créateur ne voit ni la réponse de son IA ni la question posée. */}
         <div className="mt-3 space-y-2">
           <label className="flex items-center gap-2 text-sm text-dj-texte-muet">
-            <input
-              type="checkbox"
-              checked={reponsePartagee}
-              onChange={(e) => setReponsePartagee(e.target.checked)}
-              className="h-4 w-4 accent-dj-accent-1"
-            />
+            <CaseACocher checked={reponsePartagee} onChange={setReponsePartagee} />
             Envoyer la réponse de Clovis
           </label>
           <label className="flex items-center gap-2 text-sm text-dj-texte-muet">
-            <input
-              type="checkbox"
-              checked={questionPartagee}
-              onChange={(e) => setQuestionPartagee(e.target.checked)}
-              className="h-4 w-4 accent-dj-accent-1"
-            />
+            <CaseACocher checked={questionPartagee} onChange={setQuestionPartagee} />
             Envoyer ma question
           </label>
         </div>

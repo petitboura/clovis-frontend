@@ -5,6 +5,7 @@ import { X, Flag } from "lucide-react";
 import { creerSignalement, type TypeSignalement } from "@/lib/api";
 import { messageErreur } from "@/lib/erreurs";
 import { useFermetureAnimee } from "@/lib/useFermetureAnimee";
+import { CaseACocher } from "@/components/CaseACocher";
 
 // Formulaire de signalement (22/08, chantier "rendre la bibliothèque
 // plus sérieuse", voir guide Notion "Guide pour droit d'auteur",
@@ -127,12 +128,7 @@ export function SignalerContenuModal({ cible, onFermer }: { cible: CibleSignalem
             </label>
 
             <label className="flex items-start gap-2 text-xs text-dj-texte-muet">
-              <input
-                type="checkbox"
-                checked={declarationHonneur}
-                onChange={(e) => setDeclarationHonneur(e.target.checked)}
-                className="mt-0.5"
-              />
+              <CaseACocher checked={declarationHonneur} onChange={setDeclarationHonneur} className="mt-0.5" />
               Je déclare sur l&apos;honneur être titulaire des droits sur ce contenu, ou mandaté pour agir en son
               nom, et que les informations fournies sont exactes.
             </label>

@@ -19,6 +19,7 @@ import { messageErreur, ErreurApi } from "@/lib/erreurs";
 import { Skeleton } from "./Skeleton";
 import { CTACompteRequis } from "./CTACompteRequis";
 import { BoutonInfoSection } from "./BoutonInfoSection";
+import { CaseACocher } from "./CaseACocher";
 
 // Même agent générique que MesComportements.tsx (app/(app)/comportements/page.tsx)
 // -- "Mes comportements" n'a jamais eu de notion de rôle, un seul agentId
@@ -329,12 +330,7 @@ function ChampComportement({
         <div className="mt-1 flex flex-col gap-1.5 rounded-lg border border-dj-bordure bg-dj-surface px-2.5 py-2">
           {mesComportements.map((cm) => (
             <label key={cm.id} className="flex items-center gap-2 text-sm text-dj-texte">
-              <input
-                type="checkbox"
-                checked={idsActuels.includes(cm.id)}
-                onChange={() => basculer(cm.id)}
-                className="h-4 w-4 flex-shrink-0 accent-dj-accent-1"
-              />
+              <CaseACocher checked={idsActuels.includes(cm.id)} onChange={() => basculer(cm.id)} />
               <span className="min-w-0 truncate">{cm.nom || cm.description}</span>
             </label>
           ))}
@@ -426,12 +422,7 @@ function ChampDossiers({
               className="flex items-center gap-2 text-sm text-dj-texte"
               style={{ paddingLeft: profondeur * 16 }}
             >
-              <input
-                type="checkbox"
-                checked={idsActuels.includes(dossier.id)}
-                onChange={() => basculer(dossier.id)}
-                className="h-4 w-4 flex-shrink-0 accent-dj-accent-1"
-              />
+              <CaseACocher checked={idsActuels.includes(dossier.id)} onChange={() => basculer(dossier.id)} />
               <span className="min-w-0 truncate">{dossier.nom}</span>
             </label>
           ))}
