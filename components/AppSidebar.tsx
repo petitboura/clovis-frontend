@@ -1009,11 +1009,12 @@ export function AppSidebar({
             enSortieMenu={profilEnSortie}
             onNaviguerVersParametres={() => {
               // Même calque profilDeplie que la version mobile (voir
-              // MenuProfil mobile plus bas) -- même bug latent si le
-              // menu profil est ouvert au clic sur "Paramètres" ici,
-              // même correctif.
+              // MenuProfil mobile plus bas), même correctif du
+              // 04/09/2026 : fermerChatEtNaviguer ferme aussi le chat
+              // plein écran s'il est ouvert (sans effet sinon), pour ne
+              // pas laisser la page Paramètres cachée derrière lui.
               marquerProfilSansHistorique();
-              router.push("/parametres");
+              fermerChatEtNaviguer("/parametres");
             }}
             onSeDeconnecter={seDeconnecter}
           />
@@ -1191,7 +1192,7 @@ export function AppSidebar({
                 onFermerMenu={() => fermerProfilMenu(() => setProfilDeplie(false))}
                 enSortieMenu={profilEnSortie}
                 onNaviguerVersParametres={() => {
-                  // Le menu profil (profilDeplie) est un calque à part --
+                  // Le menu profil (profilDeplie) est un calque à part,
                   // sa fermeture juste en dessous consomme sinon sa
                   // propre entrée d'historique et annule quand même la
                   // navigation, même raison que marquerTiroirSansHistorique.
@@ -1201,7 +1202,16 @@ export function AppSidebar({
                   // naviguerDepuisPlusMobile plus haut.
                   marquerTiroirSansHistorique();
                   fermerTiroirMobile(() => setOuverte(false));
-                  router.push("/parametres");
+                  // 04/09/2026 : ce bouton appelait un router.push brut,
+                  // sans jamais fermer le chat plein écran lui même (ni
+                  // marquer son calque, contrairement à tous les autres
+                  // liens du tiroir), la page Paramètres se chargeait
+                  // donc bien derrière, mais restait invisible, cachée
+                  // par le chat toujours affiché par dessus. Remplacé
+                  // par fermerChatEtNaviguer, la même fonction déjà
+                  // utilisée par naviguerDepuisPlusMobile/LienOnglet/
+                  // MenuGroupe juste au dessus dans ce fichier.
+                  fermerChatEtNaviguer("/parametres");
                 }}
                 onSeDeconnecter={seDeconnecter}
               />
