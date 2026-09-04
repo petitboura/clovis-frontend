@@ -173,6 +173,13 @@ export function EspaceParametres() {
     if (idRubrique && trouverRubriqueAide(idRubrique)) {
       setVue("aide");
       setRubriqueAideOuverte(idRubrique);
+      return;
+    }
+    // 04/09/2026 : ouvre directement la section Profil (photo/nom/bio)
+    // quand on arrive depuis "Voir le profil" (AppSidebar.tsx,
+    // MenuProfil), au lieu de retomber sur la liste générale.
+    if (searchParams.get("vue") === "profil") {
+      setVue("profil");
     }
   }, [searchParams]);
 
