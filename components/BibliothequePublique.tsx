@@ -1197,12 +1197,36 @@ export function BibliothequePublique() {
       )}
           {/* Sentinelle du scroll infini : invisible, déclenche
               chargerPlus() dès qu'elle entre dans le viewport (voir le
-              useEffect IntersectionObserver plus haut). Le petit loader
-              ne s'affiche que pendant le chargement d'un lot suivant, pas
-              au premier chargement (déjà couvert par le Skeleton). */}
+              useEffect IntersectionObserver plus haut). 04/09/2026,
+              demande Bourama : le rond qui tourne (Loader2) remplacé par
+              le même skeleton précis que le chargement initial (icône
+              16px + titre/sous-titre + 2 boutons d'action) -- juste 2
+              lignes au lieu de 5, pour rester léger vu que c'est un lot
+              suivant et pas le premier affichage. */}
           {listeAffichee && listeAffichee.length > 0 && plusDeResultats && (
-            <div ref={sentinelleRef} className="flex justify-center py-2">
-              {chargementPage && <Loader2 size={16} className="animate-spin text-dj-texte-muet" />}
+            <div ref={sentinelleRef} className="flex flex-col gap-2 py-1" aria-hidden>
+              {chargementPage &&
+                [
+                  { titre: "w-2/5", soustitre: "w-1/4", delai: "0ms" },
+                  { titre: "w-1/2", soustitre: "w-1/3", delai: "100ms" },
+                ].map(({ titre, soustitre, delai }, i) => (
+                  <div
+                    key={i}
+                    className="flex items-center justify-between gap-3 rounded-xl border border-dj-bordure bg-dj-surface px-4 py-3"
+                  >
+                    <div className="flex min-w-0 flex-1 items-center gap-3">
+                      <Skeleton className="h-4 w-4 flex-shrink-0 rounded" style={{ animationDelay: delai }} />
+                      <div className="flex min-w-0 flex-1 flex-col gap-1.5">
+                        <Skeleton className={`h-3.5 rounded ${titre}`} style={{ animationDelay: delai }} />
+                        <Skeleton className={`h-2.5 rounded ${soustitre}`} style={{ animationDelay: delai }} />
+                      </div>
+                    </div>
+                    <div className="flex flex-shrink-0 items-center gap-3">
+                      <Skeleton className="h-3.5 w-3.5 rounded" style={{ animationDelay: delai }} />
+                      <Skeleton className="h-3.5 w-3.5 rounded" style={{ animationDelay: delai }} />
+                    </div>
+                  </div>
+                ))}
             </div>
           )}
         </>
