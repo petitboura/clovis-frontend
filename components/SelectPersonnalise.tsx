@@ -29,7 +29,12 @@ export function SelectPersonnalise({
   maxLongueurLabel?: number;
 }) {
   const [ouvert, setOuvert] = useState(false);
+  const [ouvrirVersHaut, setOuvrirVersHaut] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
+  // Hauteur maximale du menu déroulant (voir la classe max-h-56 plus bas)
+  // plus une petite marge, utilisée pour savoir s'il reste assez de
+  // place en dessous du bouton avant de l'ouvrir vers le bas.
+  const HAUTEUR_MENU_ESTIMEE = 224 + 8;
   // 01/09/2026 (Bourama : "plein de boutons qui se ferment et s'ouvrent
   // brut") : ce menu n'avait aucune animation, ni entrée ni sortie --
   // aligné ici sur le même mécanisme que le reste de l'app (voir
@@ -65,13 +70,32 @@ export function SelectPersonnalise({
     return texte.length > maxLongueurLabel ? texte.slice(0, maxLongueurLabel).trimEnd() + "…" : texte;
   }
 
+  // 04/09/2026, bug signalé par Bourama (bibliothèque publique, panneau
+  // de filtre, champ Catégorie) : le menu s'ouvrait toujours vers le
+  // bas avec une hauteur fixe, sans jamais vérifier s'il restait assez
+  // de place à l'écran. Pour un champ situé bas dans le panneau (le
+  // dernier, Catégorie), avec beaucoup d'options, les derniers
+  // éléments finissaient hors de l'écran et impossibles à cliquer. On
+  // mesure maintenant la place réelle en dessous du bouton au moment de
+  // l'ouverture, et on ouvre vers le haut si le bas manque de place et
+  // que le haut en a davantage.
+  function ouvrirMenu() {
+    if (ref.current) {
+      const rect = ref.current.getBoundingClientRect();
+      const placeEnDessous = window.innerHeight - rect.bottom;
+      const placeAuDessus = rect.top;
+      setOuvrirVersHaut(placeEnDessous < HAUTEUR_MENU_ESTIMEE && placeAuDessus > placeEnDessous);
+    }
+    setOuvert(true);
+  }
+
   const choisi = options.find((o) => o.id === valeur);
 
   return (
     <div ref={ref} className="relative">
       <button
         type="button"
-        onClick={() => (ouvert ? fermer() : setOuvert(true))}
+        onClick={() => (ouvert ? fermer() : ouvrirMenu())}
         className="flex w-full items-center justify-between gap-2 rounded-lg border border-dj-bordure bg-dj-surface px-3 py-2 text-left text-sm text-dj-texte outline-none focus:border-dj-bordure-forte"
       >
         <span className="min-w-0 truncate">{choisi ? tronquer(choisi.label) : placeholder}</span>
@@ -80,9 +104,9 @@ export function SelectPersonnalise({
 
       {(ouvert || enSortie) && (
         <div
-          className={`absolute left-0 right-0 top-full z-20 mt-1 max-h-56 overflow-y-auto rounded-lg border border-dj-bordure bg-dj-surface-haute p-1 shadow-lg ${
-            enSortie ? "animate-cgpt-sortie-modal" : "animate-cgpt-entree-modal"
-          }`}
+          className={`absolute left-0 right-0 z-20 max-h-56 overflow-y-auto rounded-lg border border-dj-bordure bg-dj-surface-haute p-1 shadow-lg ${
+            ouvrirVersHaut ? "bottom-full mb-1" : "top-full mt-1"
+          } ${enSortie ? "animate-cgpt-sortie-modal" : "animate-cgpt-entree-modal"}`}
         >
           {options.length === 0 && <p className="px-2.5 py-1.5 text-xs text-dj-texte-muet">Aucune option.</p>}
           {options.map((o) => (
