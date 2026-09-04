@@ -5,6 +5,7 @@ import { Copy, Check, Download, Maximize2, Minimize2, X } from "lucide-react";
 import hljs from "@/lib/coloration";
 import { PanneauFlottant } from "@/components/PanneauFlottant";
 import { useFermetureAnimee } from "@/lib/useFermetureAnimee";
+import { useValeurThrottle } from "@/lib/useValeurThrottle";
 
 // Rendu des blocs ```lang ... ``` "code réel" du markdown (les langages
 // spéciaux -- mermaid/chart/carte/html -- sont interceptés un niveau plus
@@ -34,23 +35,46 @@ const EXTENSION_PAR_LANGAGE: Record<string, string> = {
   json: "json",
 };
 
-export function BlocCode({ langage, code }: { langage: string; code: string }) {
+export function BlocCode({
+  langage,
+  code,
+  estEnCoursDeGeneration,
+}: {
+  langage: string;
+  code: string;
+  estEnCoursDeGeneration?: boolean;
+}) {
   const [copie, setCopie] = useState(false);
   const [pleinEcran, setPleinEcran] = useState(false);
   const { enSortie, demarrerFermeture } = useFermetureAnimee();
 
+  // CORRECTIF 2026-09-04 (Bourama : "la section tremble" sur un bloc de
+  // code long pendant qu'il s'écrit) -- avant, `hljs.highlight()` (coûteux :
+  // reparse TOUT le code depuis le début) tournait sur CHAQUE caractère
+  // reçu en streaming. Sur un bloc long, ce recalcul complet et répété
+  // bloquait un instant le thread principal à chaque frappe -- perçu comme
+  // un tremblement/saut plutôt qu'un texte qui s'écrit tranquillement.
+  // On limite maintenant ce recalcul à au maximum une fois toutes les
+  // 150ms PENDANT la génération (`estEnCoursDeGeneration`) -- le texte
+  // affiché peut donc avoir un tout petit décalage (imperceptible à la
+  // vitesse de lecture) avec le texte réellement reçu, mais le calcul
+  // lourd ne se déclenche plus à chaque caractère. Une fois la génération
+  // terminée, `actif=false` fait retomber immédiatement sur le code exact
+  // (voir useValeurThrottle) -- jamais de résultat final approximatif.
+  const codeATraiter = useValeurThrottle(code, 150, Boolean(estEnCoursDeGeneration));
+
   const html = useMemo(() => {
     try {
       if (langage && hljs.getLanguage(langage)) {
-        return hljs.highlight(code, { language: langage }).value;
+        return hljs.highlight(codeATraiter, { language: langage }).value;
       }
-      return hljs.highlightAuto(code).value;
+      return hljs.highlightAuto(codeATraiter).value;
     } catch {
       // Langage non reconnu ou code encore incomplet (streaming) -- on
       // affiche le texte échappé tel quel plutôt que de planter.
-      return code.replace(/[&<>]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;" }[c] as string));
+      return codeATraiter.replace(/[&<>]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;" }[c] as string));
     }
-  }, [langage, code]);
+  }, [langage, codeATraiter]);
 
   function copier() {
     navigator.clipboard.writeText(code).then(() => {
