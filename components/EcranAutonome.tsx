@@ -1,7 +1,5 @@
 "use client";
 
-import { useEffect, useState } from "react";
-
 /**
  * Correctif du 31/08/2026 (Bourama : bug remonté sur Connexion/Inscription,
  * étendu après audit à TOUS les écrans hors AppShell.tsx -- "cherche bien
@@ -18,12 +16,16 @@ import { useEffect, useState } from "react";
  *
  * Reprend exactement la même logique qu'AppShell.tsx (même détection
  * Capacitor.isNativePlatform(), mêmes variables CSS) plutôt que d'en
- * inventer une nouvelle : natif -> --cap-native-navigation-top/bottom
- * (source de vérité pour le layout strictement natif, voir
- * app/globals.css) ; web -> --safe-top/--safe-bottom (encoche/île
- * dynamique ou barre de gestes du navigateur/PWA). Pas de
- * --dj-barre-onglets-web ici : ces 5 écrans n'affichent jamais la barre
- * d'onglets, donc rien à réserver pour elle.
+ * inventer une nouvelle. Pas de --dj-barre-onglets-web ici : ces 5 écrans
+ * n'affichent jamais la barre d'onglets, donc rien à réserver pour elle.
+ *
+ * Correctif (05/09/2026, Bourama : "l'appli deborde en haut et en bas") :
+ * natif et web utilisent maintenant tous les deux --safe-top/--safe-bottom
+ * (encoche/île dynamique ou barre système/de gestes), plus de branche
+ * séparée --cap-native-navigation-top/bottom -- cette variable vaut
+ * toujours 0px sur ces écrans (aucune barre d'onglets native ici pour la
+ * justifier, voir explication complète dans app/globals.css), la branche
+ * natif ne réservait donc jamais rien.
  *
  * `natif` reste `false` par défaut le temps que Capacitor réponde --
  * comme AppShell.tsx, pour ne pas faire clignoter la mise en page web au
@@ -36,32 +38,13 @@ export function EcranAutonome({
   className?: string;
   children: React.ReactNode;
 }) {
-  const [natif, setNatif] = useState(false);
-
-  useEffect(() => {
-    let annule = false;
-    import("@capacitor/core").then(({ Capacitor }) => {
-      if (!annule) setNatif(Capacitor.isNativePlatform());
-    });
-    return () => {
-      annule = true;
-    };
-  }, []);
-
   return (
     <main
       className={className}
-      style={
-        natif
-          ? {
-              paddingTop: "var(--cap-native-navigation-top, 0px)",
-              paddingBottom: "var(--cap-native-navigation-bottom, 0px)",
-            }
-          : {
-              paddingTop: "var(--safe-top)",
-              paddingBottom: "var(--safe-bottom)",
-            }
-      }
+      style={{
+        paddingTop: "var(--safe-top)",
+        paddingBottom: "var(--safe-bottom)",
+      }}
     >
       {children}
     </main>

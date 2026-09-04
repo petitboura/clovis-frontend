@@ -1042,18 +1042,17 @@ export function ChatIA({
           en plus du pb-6 existant -- s'additionne, ne le remplace pas
           (viewport-fit=cover posé dans app/layout.tsx rend cette variable
           non nulle sur iPhone, et sur Android via l'injection Capacitor,
-          voir app/globals.css). + var(--cap-native-navigation-bottom, 0px)
-          (26/08/2026, retour "boutons qui se cachent derrière" en app
-          native) : la barre d'onglets native (BarreOngletsNative.tsx) est
-          un vrai calque natif par-dessus la WebView (contentInsetMode:
-          "css"), pas un élément qui redimensionne la page, sans cette
-          variable, le champ de saisie et le bouton d'envoi se
-          retrouvaient sous elle en mode plein écran natif. Vaut 0px sur
-          le web (voir AppShell.tsx), donc purement additif, sans effet
-          hors app native -- pas de double comptage avec --safe-bottom,
-          qui couvre un espace différent (la vraie zone système, pas la
-          barre d'onglets elle-même). */}
-      <div className="px-4 [padding-bottom:calc(var(--safe-bottom)+var(--cap-native-navigation-bottom,0px)+1.5rem)]">
+          voir app/globals.css).
+          Correctif (05/09/2026, Bourama : "l'appli deborde en haut et en
+          bas") : l'ajout de --cap-native-navigation-bottom (26/08/2026)
+          partait d'une hypothèse fausse -- la barre d'onglets native
+          (BarreOngletsNative.tsx) est en fait masquée dès que le chat
+          passe en plein écran (hidden: etatChat === "plein_ecran"), donc
+          rien à réserver pour elle ici, et cette variable y valait de
+          toute façon toujours 0px (voir explication complète dans
+          app/globals.css). Retiré : --safe-bottom seul couvre le vrai
+          besoin (la zone système du bas). */}
+      <div className="px-4 [padding-bottom:calc(var(--safe-bottom)+1.5rem)]">
         <BarreDeSaisie
           onEnvoyer={envoyerMessage}
           desactive={genEnCours || affichageEnCours}

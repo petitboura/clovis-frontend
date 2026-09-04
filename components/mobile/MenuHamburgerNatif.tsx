@@ -142,7 +142,12 @@ function MenuHamburgerNatifInterne() {
       <button
         onClick={ouvrirMenu}
         aria-label="Ouvrir le menu"
-        className="group fixed left-2 top-[calc(0.5rem+var(--cap-native-navigation-top,var(--safe-top)))] z-40 flex h-8 w-8 items-center justify-center text-dj-texte"
+        // Correctif 05/09/2026 (Bourama : "l'appli deborde en haut et en
+        // bas") : n'utilise plus --cap-native-navigation-top, verifie
+        // toujours a 0px dans ce projet (voir explication complete dans
+        // app/globals.css) -- --safe-top seul, comme MenuHamburgerWeb.tsx
+        // et le bouton equivalent de AppSidebar.tsx (chat plein ecran).
+        className="group fixed left-2 top-[calc(0.5rem+var(--safe-top))] z-40 flex h-8 w-8 items-center justify-center text-dj-texte"
       >
         <IconeEscalier />
       </button>

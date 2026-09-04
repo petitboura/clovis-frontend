@@ -2360,18 +2360,25 @@ export function BarreDeSaisie({
           plate). Panneau Outils mobile équivalent retiré le 2026-08-20
           (mort, kill-switch AFFICHER_BOUTON_OUTILS du 13/08 jamais
           réactivé).
-          bottom-[calc(6rem+var(--cap-native-navigation-bottom,0px))]
+          bottom-[calc(6rem+var(--safe-bottom))]
           (26/08/2026, correctif "boutons qui se cachent derrière" en app
           native) : ces 4 panneaux (celui-ci + les 3 qui suivent) étaient
           ancrés à 6rem du bas de la WebView, juste au-dessus de la
           barre de saisie en web, mais sous la barre d'onglets native
           (calque par-dessus la WebView, voir BarreOngletsNative.tsx) en
-          app installée, qui les recouvrait partiellement. Vaut 0px sur
-          le web, donc purement additif ailleurs. */}
+          app installée, qui les recouvrait partiellement.
+          Correctif (05/09/2026, Bourama : "l'appli deborde en haut et en
+          bas") : ces panneaux ne vivent que dans le chat, toujours plein
+          écran sur natif (BarreOngletsNative.tsx masque alors la barre
+          d'onglets) -- l'ancienne variable --cap-native-navigation-bottom
+          y valait donc toujours 0px (voir explication complète dans
+          app/globals.css), le besoin réel ici est juste la barre système/
+          de gestes du bas, couverte par --safe-bottom. Vaut 0px sur le
+          web (hors encoche/île), donc purement additif ailleurs. */}
       {menuUtilitairesOuvert && (
         <div
           ref={menuUtilitairesMobileRef}
-          className="fixed inset-x-4 bottom-[calc(6rem+var(--cap-native-navigation-bottom,0px))] z-40 flex max-h-[60vh] flex-col overflow-hidden rounded-2xl border border-dj-bordure bg-dj-surface shadow-xl md:hidden"
+          className="fixed inset-x-4 bottom-[calc(6rem+var(--safe-bottom))] z-40 flex max-h-[60vh] flex-col overflow-hidden rounded-2xl border border-dj-bordure bg-dj-surface shadow-xl md:hidden"
         >
           <div className="flex items-center justify-between border-b border-dj-bordure px-3 py-2">
             <span className="text-xs font-medium text-dj-texte-muet">Utilitaires</span>
@@ -2412,7 +2419,7 @@ export function BarreDeSaisie({
       {menuAppliOuvert && (
         <div
           ref={menuAppliMobileRef}
-          className="fixed inset-x-4 bottom-[calc(6rem+var(--cap-native-navigation-bottom,0px))] z-40 max-h-[60vh] overflow-y-auto rounded-2xl border border-dj-bordure bg-dj-surface p-1 shadow-xl md:hidden"
+          className="fixed inset-x-4 bottom-[calc(6rem+var(--safe-bottom))] z-40 max-h-[60vh] overflow-y-auto rounded-2xl border border-dj-bordure bg-dj-surface p-1 shadow-xl md:hidden"
         >
           {[...applisPourAgent]
             .sort((a, b) => a.label.localeCompare(b.label, "fr"))
@@ -2445,7 +2452,7 @@ export function BarreDeSaisie({
       {selecteurOuvert && (
         <div
           ref={selecteurMobileRef}
-          className="fixed inset-x-4 bottom-[calc(6rem+var(--cap-native-navigation-bottom,0px))] z-40 max-h-[60vh] overflow-y-auto rounded-2xl border border-dj-bordure bg-dj-surface p-1 shadow-xl md:hidden"
+          className="fixed inset-x-4 bottom-[calc(6rem+var(--safe-bottom))] z-40 max-h-[60vh] overflow-y-auto rounded-2xl border border-dj-bordure bg-dj-surface p-1 shadow-xl md:hidden"
         >
           {depots === null && (
             <div className="space-y-1.5 px-3 py-2" aria-hidden>
@@ -2488,7 +2495,7 @@ export function BarreDeSaisie({
       {selecteurNotionOuvert && (
         <div
           ref={selecteurNotionMobileRef}
-          className="fixed inset-x-4 bottom-[calc(6rem+var(--cap-native-navigation-bottom,0px))] z-40 max-h-[60vh] overflow-y-auto rounded-2xl border border-dj-bordure bg-dj-surface p-1 shadow-xl md:hidden"
+          className="fixed inset-x-4 bottom-[calc(6rem+var(--safe-bottom))] z-40 max-h-[60vh] overflow-y-auto rounded-2xl border border-dj-bordure bg-dj-surface p-1 shadow-xl md:hidden"
         >
           {contenuSelecteurNotion("bg-dj-surface-haute", "bg-dj-surface-haute")}
         </div>

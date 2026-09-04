@@ -150,14 +150,28 @@ math-field {
    n'a rien injecte (donc web/desktop). Un seul jeu de variables ici,
    utilise PARTOUT dans le projet a la place d'un env() ecrit en dur a
    chaque endroit (avant cette tache : 6 fichiers le faisaient chacun de
-   son cote, aucun avec ce filet de secours). Ne concerne QUE le contexte
-   web/PWA et les elements communs (ex. l'entete plein ecran du chat,
-   atteignable aussi bien en natif qu'en web) -- ne remplace PAS
-   --cap-native-navigation-top/bottom, qui reste la source pour tout ce qui
-   est strictement dans le layout natif (voir AppShell.tsx) : ce plugin
-   fait deja lui meme sa propre remontee de safe area ("safe-area
-   reporting", doc @capgo/capacitor-native-navigation), les additionner
-   aux deux endroits reviendrait a compter deux fois le meme espace. */
+   son cote, aucun avec ce filet de secours).
+
+   Correctif (05/09/2026, Bourama : "l'appli deborde en haut et en bas") :
+   --safe-top est maintenant la SEULE source utilisee pour le haut d'ecran,
+   natif inclus -- --cap-native-navigation-top (pose par
+   @capgo/capacitor-native-navigation, voir BarreOngletsNative.tsx) a ete
+   verifie dans le code source Android du plugin : il ne vaut autre chose
+   que 0px que si un "navbar" natif du plugin est explicitement active
+   (setNavbar), ce que ce projet ne fait jamais (seul son "tabbar" est
+   utilise) -- cette variable etait donc TOUJOURS 0px, jamais absente, ce
+   qui empechait le filet de secours CSS (var(x, repli)) de jamais se
+   declencher (un repli ne joue que si la variable est absente/invalide,
+   pas si elle vaut deja 0px). --safe-top, lui, est fiable partout (System
+   Bars natif de @capacitor/core).
+   Meme souci pour le bas sur les ecrans/elements du CHAT (toujours plein
+   ecran sur natif, tabbar alors masquee -> --cap-native-navigation-bottom
+   vaut aussi 0px, toujours) : ces endroits utilisent maintenant
+   --safe-bottom directement. --cap-native-navigation-bottom reste par
+   contre la bonne source pour le contenu principal HORS chat (AppShell.tsx,
+   Bibliotheque) : la, la barre d'onglets native est reellement affichee et
+   ce plugin est le seul a connaitre sa vraie hauteur (--safe-bottom seul
+   ne la couvre pas, elle recouvrirait le bas du contenu). */
 :root {
   --safe-top: var(--safe-area-inset-top, env(safe-area-inset-top, 0px));
   --safe-right: var(--safe-area-inset-right, env(safe-area-inset-right, 0px));

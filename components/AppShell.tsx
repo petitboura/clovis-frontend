@@ -156,25 +156,27 @@ export function AppShell({ children }: { children: React.ReactNode }) {
               natif
                 ? {
                     // Correctif (31/08/2026, Bourama : "l'appli deborde
-                    // du haut") : --cap-native-navigation-top est pose
-                    // par @capgo/capacitor-native-navigation (voir
-                    // BarreOngletsNative.tsx), qui echoue silencieusement
-                    // tant que le plugin n'est pas synchronise cote
-                    // Android (voir android/capacitor.settings.gradle,
-                    // ne le liste pas encore) -- la variable ne valait
-                    // alors jamais rien et retombait sur 0px, collant le
-                    // contenu sous la barre de statut. Repli sur
-                    // --safe-top (deja fiable, injecte par le plugin
-                    // SystemBars natif de @capacitor/core, indépendant de
-                    // native-navigation) plutot que 0px : une fois
-                    // native-navigation reellement synchronise, sa valeur
-                    // (plus precise, tient compte de la tabbar) reprend
-                    // le dessus normalement, ce repli ne s'applique que
-                    // si elle est absente. Meme correctif en paddingBottom
-                    // avec --safe-bottom. --dj-hamburger-espace : voir
-                    // commentaire dans app/globals.css (reserve la
-                    // hauteur du bouton hamburger flottant).
-                    paddingTop: "calc(var(--cap-native-navigation-top, var(--safe-top)) + var(--dj-hamburger-espace))",
+                    // du haut") : --cap-native-navigation-top, pose par
+                    // @capgo/capacitor-native-navigation (voir
+                    // BarreOngletsNative.tsx), avait ete souponne de ne
+                    // jamais se declencher tant que le plugin n'etait pas
+                    // synchronise cote Android.
+                    // Correctif (05/09/2026, meme symptome revenu) :
+                    // cause reelle trouvee dans le code source Android du
+                    // plugin -- cette variable vaut TOUJOURS 0px (jamais
+                    // absente) tant qu'aucun "navbar" natif du plugin
+                    // n'est active, ce que ce projet ne fait jamais (voir
+                    // explication complete dans app/globals.css). Elle
+                    // est donc abandonnee pour le haut : --safe-top seul,
+                    // fiable (plugin SystemBars natif de @capacitor/core,
+                    // independant de native-navigation). --dj-hamburger-
+                    // espace : voir commentaire dans app/globals.css
+                    // (reserve la hauteur du bouton hamburger flottant).
+                    // paddingBottom inchange : --cap-native-navigation-
+                    // bottom reste correct ici, la barre d'onglets native
+                    // est reellement visible hors chat et ce plugin est
+                    // seul a connaitre sa vraie hauteur.
+                    paddingTop: "calc(var(--safe-top) + var(--dj-hamburger-espace))",
                     paddingBottom: "var(--cap-native-navigation-bottom, var(--safe-bottom))",
                   }
                 : {
