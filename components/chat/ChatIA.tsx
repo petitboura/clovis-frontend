@@ -51,6 +51,7 @@ export function ChatIA({
   iconePersonnalisee,
   outilsActifsAgent = null,
   pleinEcran = false,
+  natif = false,
 }: {
   agentId: string;
   nomAgent: string;
@@ -100,6 +101,12 @@ export function ChatIA({
   // Pour relancer l'animation du titre d'accueil à l'entrée en plein
   // écran (18/08/2026, demande Bourama) -- voir l'effet dédié plus bas.
   pleinEcran?: boolean;
+  // Appli installée (Capacitor.isNativePlatform(), calculé une fois dans
+  // AppShell.tsx et redescendu via ChatFlottant.tsx) -- transmis à
+  // /api/chat pour forcer gerer_dossier_telephone + explorer_dossier
+  // côté backend (04/09/2026, demande Bourama). Jamais recalculé ici :
+  // une seule source de vérité pour cette détection dans l'app.
+  natif?: boolean;
 }) {
   const [modeleSelectionne, setModeleSelectionne] = useState<string | null>(modeleChoisi);
   const [messages, setMessages] = useState<MessageAffiche[]>(messagesInitiaux);
@@ -811,6 +818,8 @@ export function ChatIA({
           // contenu d'aucun enseignant, même si l'étudiant a des
           // matières débloquées. Voir core/contenu_dynamique_matiere.py.
           sans_enseignant: sansEnseignant,
+          // Appli installée (04/09/2026) -- voir prop `natif` ci-dessus.
+          natif,
           // Selecteur de modele premium (02/08/2026) -- null tant que
           // l'agent n'a rien debloque ou que l'utilisateur n'a pas
           // change le defaut, voir modeleSelectionne plus haut. Revalide
