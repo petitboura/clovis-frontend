@@ -37,13 +37,28 @@ export function SelectPersonnalise({
   const { enSortie, demarrerFermeture } = useFermetureAnimee();
   const fermer = () => demarrerFermeture(() => setOuvert(false));
 
+  // 04/09/2026, bug signalé par Bourama (bibliothèque publique, panneau
+  // de filtre) : ce listener tournait en continu même quand le select
+  // était déjà fermé, donc n'importe quel clic ailleurs dans le
+  // panneau (un autre bouton, un autre select) rouvrait puis refermait
+  // ce select-ci pour rien, avec son animation de sortie. Résultat :
+  // plusieurs listes réapparaissaient brièvement en même temps et
+  // pouvaient recouvrir celle sur laquelle on cliquait vraiment. On
+  // utilise un ref (plutôt que "ouvert" dans les deps) pour garder un
+  // seul enregistrement du listener tout en lisant l'état à jour.
+  const ouvertRef = useRef(ouvert);
+  useEffect(() => {
+    ouvertRef.current = ouvert;
+  }, [ouvert]);
+
   useEffect(() => {
     function surClicExterieur(e: MouseEvent) {
+      if (!ouvertRef.current) return;
       if (ref.current && !ref.current.contains(e.target as Node)) fermer();
     }
     document.addEventListener("mousedown", surClicExterieur);
     return () => document.removeEventListener("mousedown", surClicExterieur);
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- fermer recrée une fonction stable via demarrerFermeture (useCallback)
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- fermer recrée une fonction stable via demarrerFermeture (useCallback), l'état ouvert est lu via ouvertRef
   }, []);
 
   function tronquer(texte: string) {

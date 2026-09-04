@@ -1,4 +1,4 @@
-import { useCallback, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 
 // 18/08/2026, demande Bourama ("ton truc là s'affiche et se ferme
 // brutement j'aime pas") : PanneauFlottant.tsx n'avait qu'une animation
@@ -24,12 +24,24 @@ export function useFermetureAnimee() {
   // bouton Fermer avant la fin du minuteur) qui appellerait deux fois la
   // fermeture réelle.
   const dejaDeclenche = useRef(false);
+  // 04/09/2026, bug signalé par Bourama : si le composant qui utilise ce
+  // hook se démonte pendant les 180ms de l'animation de sortie (ex. le
+  // panneau parent qui se ferme d'un coup), le minuteur ci-dessous
+  // s'exécutait quand même et appelait setEnSortie/setOuvert sur un
+  // composant déjà démonté (avertissement React, travail inutile).
+  const minuteurRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  useEffect(() => {
+    return () => {
+      if (minuteurRef.current) clearTimeout(minuteurRef.current);
+    };
+  }, []);
 
   const demarrerFermeture = useCallback((fermerReel: () => void) => {
     if (dejaDeclenche.current) return;
     dejaDeclenche.current = true;
     setEnSortie(true);
-    setTimeout(() => {
+    minuteurRef.current = setTimeout(() => {
       fermerReel();
       // Réinitialisé pour la prochaine ouverture de ce même panneau (le
       // composant appelant reste monté au-delà d'une fermeture, seul
@@ -37,6 +49,7 @@ export function useFermetureAnimee() {
       // zéro pour la prochaine fois).
       dejaDeclenche.current = false;
       setEnSortie(false);
+      minuteurRef.current = null;
     }, DUREE_FERMETURE_MS);
   }, []);
 
