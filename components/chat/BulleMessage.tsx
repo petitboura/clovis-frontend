@@ -103,23 +103,16 @@ function pluginMotsFade(options: { seuil: number; rapporterTotal: (n: number) =>
         }
         const monIndex = indexGlobal;
         indexGlobal += 1;
-        // CORRECTIF 2026-09-04 (Bourama : "la section tremble" sur les
-        // cartes/liens pendant qu'un message s'écrit) -- avant, un mot déjà
-        // révélé (monIndex < seuil) redevenait un simple nœud texte au lieu
-        // d'un <span>. Ce changement de TYPE de nœud (élément -> texte) à
-        // chaque nouveau caractère reçu décalait la position de tout ce qui
-        // suit dans la même phrase -- y compris une carte/un aperçu de lien
-        // plus loin -- ce qui forçait React à la recréer (donc à relancer
-        // son animation d'apparition et parfois son chargement) en boucle
-        // pendant tout le streaming. On garde maintenant TOUJOURS un <span>
-        // à cette position, qu'il soit encore à animer ou déjà révélé --
-        // seule la classe change, jamais le type du nœud.
-        resultat.push({
-          type: "element",
-          tagName: "span",
-          properties: monIndex >= seuil ? { className: ["dj-mot-fade"] } : {},
-          children: [{ type: "text", value: morceau }],
-        });
+        if (monIndex >= seuil) {
+          resultat.push({
+            type: "element",
+            tagName: "span",
+            properties: { className: ["dj-mot-fade"] },
+            children: [{ type: "text", value: morceau }],
+          });
+        } else {
+          resultat.push({ type: "text", value: morceau });
+        }
       }
       return resultat;
     }
@@ -733,9 +726,7 @@ function BulleMessageInterne({
                   case "html":
                     return <WidgetSandbox code={code} />;
                   default:
-                    return (
-                      <BlocCode langage={langage} code={code} estEnCoursDeGeneration={estEnCoursDeGeneration} />
-                    );
+                    return <BlocCode langage={langage} code={code} />;
                 }
               },
               // Code inline (`texte`) : ne passe jamais par `pre` ci-dessus
