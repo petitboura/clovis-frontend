@@ -92,6 +92,25 @@ function formatterElement(e: ElementDossier): ElementFormatte {
   return { nom: e.nom, estDossier: e.estDossier, tailleOctets: e.estDossier ? null : e.tailleOctets };
 }
 
+// Correctif 05/09/2026 (Bourama) : filet de securite si le modele laisse
+// malgre tout trainer un suffixe de plateforme du type " (android)"/" (ios)"
+// dans dossier_nom (ne devrait plus arriver depuis le nouveau format de
+// lister_dossiers cote backend, mais on ne fait jamais confiance aveuglement
+// a un texte genere par le modele). Egalite stricte d'abord, retente sans
+// le suffixe seulement si ca echoue. Utilise pour resoudre dossier_nom (le
+// dossier designe RACINE), jamais pour un segment de "chemin" en dessous
+// (ceux-la sont des noms reels d'elements, jamais annotes par lister_dossiers).
+const SUFFIXES_PLATEFORME = [" (android)", " (ios)"];
+
+function trouverDossierDesigne(dossiers: DossierDesigne[], dossierNom: string): DossierDesigne | undefined {
+  const exact = dossiers.find((d) => d.nom === dossierNom);
+  if (exact) return exact;
+  const suffixe = SUFFIXES_PLATEFORME.find((s) => dossierNom.toLowerCase().endsWith(s));
+  if (!suffixe) return undefined;
+  const nomSansSuffixe = dossierNom.slice(0, dossierNom.length - suffixe.length);
+  return dossiers.find((d) => d.nom === nomSansSuffixe);
+}
+
 // Popup non bloquante (décidée avec Bourama le 29/08, voir
 // components/PopupExplorationDossier.tsx) : simple pub/sub, ce module
 // n'est pas un composant React et ne peut pas gérer d'état lui-même.
@@ -122,7 +141,7 @@ async function repondreListerContenu(id: string, dossierNom: string) {
   }
   try {
     const { dossiers } = await pluginDossiers.listerDossiersDesignes();
-    const dossier = dossiers.find((d) => d.nom === dossierNom);
+    const dossier = trouverDossierDesigne(dossiers, dossierNom);
     if (!dossier) {
       envoyerReponse(id, { erreur: `Dossier désigné "${dossierNom}" introuvable sur cet appareil.` });
       return;
@@ -148,7 +167,7 @@ async function resoudreCheminUri(
   if (!pluginDossiers) return { erreur: "Plugin Dossiers indisponible sur cet appareil." };
 
   const { dossiers } = await pluginDossiers.listerDossiersDesignes();
-  const racine = dossiers.find((d) => d.nom === dossierNom);
+  const racine = trouverDossierDesigne(dossiers, dossierNom);
   if (!racine) return { erreur: `Dossier désigné "${dossierNom}" introuvable sur cet appareil.` };
 
   let uriCourant = racine.uri;
@@ -210,7 +229,7 @@ async function repondreChercherParNom(id: string, dossierNom: string, termeReche
   signalerExploration({ enCours: true, dossierNom });
   try {
     const { dossiers } = await pluginDossiers.listerDossiersDesignes();
-    const racine = dossiers.find((d) => d.nom === dossierNom);
+    const racine = trouverDossierDesigne(dossiers, dossierNom);
     if (!racine) {
       envoyerReponse(id, { erreur: `Dossier désigné "${dossierNom}" introuvable sur cet appareil.` });
       return;
@@ -240,7 +259,7 @@ async function resoudreCheminUriElement(
   if (chemin.length === 0) return { erreur: "Chemin vide." };
 
   const { dossiers } = await pluginDossiers.listerDossiersDesignes();
-  const racine = dossiers.find((d) => d.nom === dossierNom);
+  const racine = trouverDossierDesigne(dossiers, dossierNom);
   if (!racine) return { erreur: `Dossier désigné "${dossierNom}" introuvable sur cet appareil.` };
 
   let uriCourant = racine.uri;
@@ -317,7 +336,7 @@ async function repondreListerTousFichiers(id: string, dossierNom: string) {
   signalerExploration({ enCours: true, dossierNom });
   try {
     const { dossiers } = await pluginDossiers.listerDossiersDesignes();
-    const racine = dossiers.find((d) => d.nom === dossierNom);
+    const racine = trouverDossierDesigne(dossiers, dossierNom);
     if (!racine) {
       envoyerReponse(id, { erreur: `Dossier désigné "${dossierNom}" introuvable sur cet appareil.` });
       return;

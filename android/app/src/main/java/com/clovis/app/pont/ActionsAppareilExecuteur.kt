@@ -11,6 +11,7 @@ import android.content.Context
 import android.net.Uri
 import android.util.Log
 import com.clovis.app.accessibilite.AccessibiliteExecuteur
+import com.clovis.app.dossiers.DossierDesigne
 import com.clovis.app.dossiers.DossiersDesignesRepository
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.jsonArray
@@ -19,6 +20,11 @@ import kotlinx.serialization.json.jsonPrimitive
 object ActionsAppareilExecuteur {
 
     private const val TAG = "ActionsAppareil"
+
+    // Voir dossierParNom plus bas : filet de securite si un suffixe de
+    // plateforme trainait encore dans dossier_nom malgre le nouveau format
+    // cote backend (05/09/2026).
+    private val SUFFIXES_PLATEFORME = listOf(" (android)", " (ios)")
 
     suspend fun executerAction(context: Context, actionId: String) {
         val client = ClovisApiClient(context)
@@ -51,8 +57,22 @@ object ActionsAppareilExecuteur {
     private fun dispatcher(context: Context, typeAction: String, parametres: JsonObject): ResultatAction {
         val repo = DossiersDesignesRepository(context)
 
-        fun dossierParNom(nom: String) =
-            repo.listerDossiersDesignes().firstOrNull { it.nom == nom }
+        // Correctif 05/09/2026 (Bourama) : filet de securite si le modele
+        // laisse malgre tout trainer un suffixe de plateforme du type
+        // " (android)"/" (ios)" dans dossier_nom (celui-ci ne devrait plus
+        // jamais etre envoye depuis le 05/09/2026, voir le nouveau format
+        // de lister_dossiers cote backend, mais on ne fait jamais confiance
+        // aveuglement a un texte genere par le modele). Egalite stricte
+        // d'abord, retente sans le suffixe seulement si ca echoue.
+        fun dossierParNom(nom: String): DossierDesigne? {
+            val dossiers = repo.listerDossiersDesignes()
+            dossiers.firstOrNull { it.nom == nom }?.let { return it }
+            val nomSansSuffixe = SUFFIXES_PLATEFORME
+                .firstOrNull { nom.endsWith(it, ignoreCase = true) }
+                ?.let { nom.dropLast(it.length) }
+                ?: return null
+            return dossiers.firstOrNull { it.nom == nomSansSuffixe }
+        }
 
         // Descend "chemin" (noms de sous-dossiers, PARENTS uniquement)
         // depuis racineUri, niveau par niveau via listerContenu -- meme

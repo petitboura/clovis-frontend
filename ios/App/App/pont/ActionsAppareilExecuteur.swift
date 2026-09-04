@@ -43,8 +43,23 @@ enum ActionsAppareilExecuteur {
         func texte(_ cle: String) -> String? { parametres[cle]?.commeTexte }
         func liste(_ cle: String) -> [String] { parametres[cle]?.commeListe ?? [] }
 
+        // Correctif 05/09/2026 (Bourama) : filet de securite si le modele
+        // laisse malgre tout trainer un suffixe de plateforme du type
+        // " (android)"/" (ios)" dans dossier_nom (ne devrait plus arriver
+        // depuis le nouveau format de lister_dossiers cote backend, mais on
+        // ne fait jamais confiance aveuglement a un texte genere par le
+        // modele). Egalite stricte d'abord, retente sans le suffixe ensuite.
+        let suffixesPlateforme = [" (android)", " (ios)"]
         func dossierParNom(_ nom: String) -> DossierDesigne? {
-            DossiersDesignesRepository.listerDossiersDesignes().first { $0.url.lastPathComponent == nom }
+            let dossiers = DossiersDesignesRepository.listerDossiersDesignes()
+            if let exact = dossiers.first(where: { $0.url.lastPathComponent == nom }) {
+                return exact
+            }
+            guard let suffixe = suffixesPlateforme.first(where: { nom.lowercased().hasSuffix($0) }) else {
+                return nil
+            }
+            let nomSansSuffixe = String(nom.dropLast(suffixe.count))
+            return dossiers.first { $0.url.lastPathComponent == nomSansSuffixe }
         }
         // Descend "chemin" (sous-dossiers PARENTS uniquement) depuis
         // racine, niveau par niveau -- miroir exact de dossierParChemin
