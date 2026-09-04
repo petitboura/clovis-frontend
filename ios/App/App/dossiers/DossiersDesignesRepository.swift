@@ -39,6 +39,19 @@ struct ContenuFichier {
     let tailleOctets: Int64
 }
 
+// Ajoute le 04/09/2026 (vectorisation en masse des dossiers designes,
+// voir DossiersDesignesRepository.kt cote Android pour le meme role) :
+// un fichier trouve en parcourant recursivement un dossier designe, avec
+// son chemin de sous-dossiers depuis la racine (jamais le nom du dossier
+// designe lui-meme, ni le nom du fichier).
+struct FichierAVectoriser {
+    let url: URL
+    let nom: String
+    let chemin: [String]
+    let typeMime: String
+    let tailleOctets: Int64
+}
+
 enum DossiersDesignesRepository {
 
     // MARK: - Liste des dossiers designes
@@ -140,6 +153,44 @@ enum DossiersDesignesRepository {
             let destination = nouveauParent.appendingPathComponent(element.lastPathComponent)
             try FileManager.default.moveItem(at: element, to: destination)
         } != nil
+    }
+
+    // MARK: - Vectorisation en masse (04/09/2026)
+
+    // Parcourt recursivement dossier (et sous-dossiers), renvoie chaque
+    // FICHIER (jamais les dossiers), video exclue -- meme role que
+    // listerRecursif cote Android (DossiersDesignesRepository.kt), voir
+    // ce fichier pour le contexte complet. Contrairement aux autres
+    // fonctions de ce fichier, NE gere PAS elle-meme l'acces
+    // security-scoped : l'appelant (DossiersPlugin, voir
+    // demarrerVectorisationDossier) doit deja avoir ouvert
+    // startAccessingSecurityScopedResource() sur la racine et le garder
+    // ouvert pendant toute la duree du transfert (listage + lecture +
+    // upload de chaque fichier) -- rouvrir/refermer l'acces a chaque
+    // fichier serait inutilement couteux et fragile.
+    static func listerRecursif(_ dossier: URL, chemin: [String] = []) -> [FichierAVectoriser] {
+        let fm = FileManager.default
+        guard let enfants = try? fm.contentsOfDirectory(
+            at: dossier,
+            includingPropertiesForKeys: [.isDirectoryKey, .fileSizeKey],
+            options: [.skipsHiddenFiles]
+        ) else { return [] }
+        var resultat: [FichierAVectoriser] = []
+        for url in enfants {
+            let valeurs = try? url.resourceValues(forKeys: [.isDirectoryKey, .fileSizeKey])
+            let estDossier = valeurs?.isDirectory ?? false
+            if estDossier {
+                resultat.append(contentsOf: listerRecursif(url, chemin: chemin + [url.lastPathComponent]))
+            } else {
+                let typeMime = UTType(filenameExtension: url.pathExtension)?.preferredMIMEType
+                    ?? "application/octet-stream"
+                if !typeMime.hasPrefix("video/") {
+                    let taille = Int64(valeurs?.fileSize ?? 0)
+                    resultat.append(FichierAVectoriser(url: url, nom: url.lastPathComponent, chemin: chemin, typeMime: typeMime, tailleOctets: taille))
+                }
+            }
+        }
+        return resultat
     }
 
     // Ajoute le 30/08/2026 (correctif Claude chat, meme role que la version

@@ -57,6 +57,45 @@ public class DossiersPlugin: CAPPlugin, CAPBridgedPlugin, UIDocumentPickerDelega
         }
     }
 
+    // Ajoute le 04/09/2026, Bourama : "apres avoir choisi un dossier, tout
+    // ce qu'il contient hormis video est vectorise", declenchement
+    // automatique confirme par Bourama. La securite iOS (security-scoped
+    // bookmark) exige de garder l'acces ouvert pendant TOUTE la duree du
+    // transfert (voir DossiersDesignesRepository.listerRecursif) --
+    // startAccessingSecurityScopedResource() est donc ouvert ici une
+    // seule fois pour tout le parcours + tous les uploads, jamais
+    // rouvert/referme par fichier. Jamais bloquant pour l'utilisateur :
+    // un echec (reseau coupe, fichier illisible) est loggue et le
+    // parcours continue avec les fichiers suivants.
+    private func demarrerVectorisationDossier(_ dossier: DossierDesigne) {
+        Task {
+            guard dossier.url.startAccessingSecurityScopedResource() else {
+                print("DossiersPlugin: acces refuse pour la vectorisation de \(dossier.url.lastPathComponent).")
+                return
+            }
+            defer { dossier.url.stopAccessingSecurityScopedResource() }
+            let dossierNom = dossier.url.lastPathComponent
+            let fichiers = DossiersDesignesRepository.listerRecursif(dossier.url)
+            for fichier in fichiers {
+                guard let contenu = try? Data(contentsOf: fichier.url) else {
+                    print("DossiersPlugin: fichier illisible pour vectorisation : \(fichier.nom) (dossier \(dossierNom)).")
+                    continue
+                }
+                do {
+                    try await ClovisApiClient.uploaderFichierDossierDesigne(
+                        dossierNom: dossierNom,
+                        chemin: fichier.chemin,
+                        nomFichier: fichier.nom,
+                        typeMime: fichier.typeMime,
+                        contenu: contenu
+                    )
+                } catch {
+                    print("DossiersPlugin: echec transfert de \(fichier.nom) (dossier \(dossierNom)) pour vectorisation : \(error).")
+                }
+            }
+        }
+    }
+
     // Appel JS en attente pendant que le picker systeme est affiche (un seul
     // a la fois, coherent avec le fait que choisirDossier() bloque le JS
     // jusqu'a resolution de toute facon).
@@ -101,6 +140,7 @@ public class DossiersPlugin: CAPPlugin, CAPBridgedPlugin, UIDocumentPickerDelega
         DossiersDesignesRepository.ajouterDossierDesigne(url: url)
         if let dossier = DossiersDesignesRepository.listerDossiersDesignes().first(where: { $0.url == url }) {
             synchroniserAvecBackend()
+            demarrerVectorisationDossier(dossier)
             call.resolve(["uri": dossier.id, "nom": dossier.url.lastPathComponent])
         } else {
             call.reject("Dossier ajoute mais introuvable juste apres (cas inattendu).")

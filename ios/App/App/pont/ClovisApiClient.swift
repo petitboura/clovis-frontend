@@ -221,6 +221,47 @@ enum ClovisApiClient {
         _ = try await URLSession.shared.data(for: requete)
     }
 
+    // Ajoute le 04/09/2026, Bourama : vectorisation en masse des dossiers
+    // designes -- transfert brut de chaque fichier (multipart construit a
+    // la main, URLSession n'a pas d'equivalent de submitFormWithBinaryData
+    // de Ktor cote Android), voir clovis-backend/api/dossiers_designes.py.
+    // `chemin` (sous-dossiers traverses, jamais le nom du fichier) est
+    // envoye en JSON, tel qu'attendu cote serveur (Form(...), decode avec
+    // json.loads).
+    static func uploaderFichierDossierDesigne(
+        dossierNom: String,
+        chemin: [String],
+        nomFichier: String,
+        typeMime: String,
+        contenu: Data
+    ) async throws {
+        let url = URL(string: "\(baseURL)/api/dossiers-designes/upload")!
+        var requete = try requeteAuthentifiee(url, methode: "POST")
+        let frontiere = "Boundary-\(UUID().uuidString)"
+        requete.setValue("multipart/form-data; boundary=\(frontiere)", forHTTPHeaderField: "Content-Type")
+
+        var corps = Data()
+        func ajouterChamp(_ nom: String, _ valeur: String) {
+            corps.append("--\(frontiere)\r\n".data(using: .utf8)!)
+            corps.append("Content-Disposition: form-data; name=\"\(nom)\"\r\n\r\n".data(using: .utf8)!)
+            corps.append("\(valeur)\r\n".data(using: .utf8)!)
+        }
+        ajouterChamp("dossier_nom", dossierNom)
+        ajouterChamp("plateforme", "ios")
+        let cheminJson = (try? JSONEncoder().encode(chemin)).flatMap { String(data: $0, encoding: .utf8) } ?? "[]"
+        ajouterChamp("chemin", cheminJson)
+
+        corps.append("--\(frontiere)\r\n".data(using: .utf8)!)
+        corps.append("Content-Disposition: form-data; name=\"fichier\"; filename=\"\(nomFichier)\"\r\n".data(using: .utf8)!)
+        corps.append("Content-Type: \(typeMime)\r\n\r\n".data(using: .utf8)!)
+        corps.append(contenu)
+        corps.append("\r\n".data(using: .utf8)!)
+        corps.append("--\(frontiere)--\r\n".data(using: .utf8)!)
+
+        requete.httpBody = corps
+        _ = try await URLSession.shared.data(for: requete)
+    }
+
     // Ajoute le 25/08/2026, Lot 1B porte : recepteur d'actions distantes,
     // meme role qu'ActionsAppareilExecuteur.kt (Android).
     static func obtenirActionsEnAttente() async throws -> ReponseActionsEnAttente {
