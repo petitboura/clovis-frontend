@@ -103,7 +103,7 @@ export function CatalogueClovis({ onFerme }: { onFerme: () => void }) {
 
   return (
     <div
-      className={`fixed inset-0 z-[100] flex items-end justify-center bg-black/50 p-4 sm:items-center ${
+      className={`fixed inset-0 z-[100] flex items-start justify-center bg-black/50 p-4 sm:items-center ${
         enSortie ? "opacity-0 transition-opacity duration-150 ease-in" : "animate-dj-fade-in-rapide"
       }`}
       onClick={fermer}

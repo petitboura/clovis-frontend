@@ -1154,7 +1154,7 @@ async function envoyerFichiersDirect(fichiersChoisis: FileList | File[]) {
 
       {modaleAjout && (
         <div
-          className="fixed inset-0 z-50 flex items-end justify-center bg-black/40 p-4 animate-dj-fade-in-rapide sm:items-center"
+          className="fixed inset-0 z-50 flex items-start justify-center bg-black/40 p-4 animate-dj-fade-in-rapide sm:items-center"
           onClick={() => {
             setModaleAjout(null);
             setTitreAjout("");
@@ -1328,7 +1328,7 @@ async function envoyerFichiersDirect(fichiersChoisis: FileList | File[]) {
           peut être rattaché à plusieurs dossiers à la fois. */}
       {fichierARanger && (
         <div
-          className="fixed inset-0 z-50 flex items-end justify-center bg-black/40 p-4 animate-dj-fade-in-rapide sm:items-center"
+          className="fixed inset-0 z-50 flex items-start justify-center bg-black/40 p-4 animate-dj-fade-in-rapide sm:items-center"
           onClick={() => setFichierARanger(null)}
         >
           <div
@@ -1387,7 +1387,7 @@ async function envoyerFichiersDirect(fichiersChoisis: FileList | File[]) {
           cas). */}
       {pickerFichiersOuvert && dossierCourantId !== null && (
         <div
-          className="fixed inset-0 z-50 flex items-end justify-center bg-black/40 p-4 animate-dj-fade-in-rapide sm:items-center"
+          className="fixed inset-0 z-50 flex items-start justify-center bg-black/40 p-4 animate-dj-fade-in-rapide sm:items-center"
           onClick={() => setPickerFichiersOuvert(false)}
         >
           <div
