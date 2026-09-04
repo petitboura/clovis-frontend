@@ -277,6 +277,37 @@ export function ChatIA({
     setAffichageEnCours(false);
   }
 
+  // Ajouté 04/09/2026 (bug de cascade signalé par Bourama) : quand le
+  // backend bascule sur un autre modèle après avoir déjà streamé du
+  // texte "reponse" pour ce message (voir core/main.py, événement SSE
+  // "reponse_annulee"), ce texte doit disparaître proprement avant que
+  // la vraie tentative suivante ne commence à écrire, plutôt que de
+  // s'empiler dessus.
+  //
+  // repliEnAttenteRef reste vrai entre l'événement "reponse_annulee" et
+  // le TOUT PREMIER événement "reponse"/"raisonnement" qui suit -- c'est
+  // cet événement suivant (pas un délai arbitraire) qui vide vraiment le
+  // contenu, juste avant d'appliquer son propre texte. Volontairement
+  // pas de setTimeout ici : un délai fixe pourrait effacer du texte déjà
+  // légitimement arrivé du modèle suivant si celui-ci se met à répondre
+  // avant l'expiration du délai (l'inférence peut démarrer très vite) --
+  // se caler sur l'événement réel élimine ce risque de course.
+  // enRepli, lui, passe à true immédiatement pour lancer l'animation de
+  // repli (voir BulleMessage.tsx) : le contenu (donc invisible pendant
+  // le repli) n'a besoin d'être effacé qu'au moment où du nouveau texte
+  // doit apparaître.
+  const repliEnAttenteRef = useRef(false);
+
+  function annulerReponseAffichee() {
+    reinitialiserAffichageControle();
+    repliEnAttenteRef.current = true;
+    majMessages((prec) => {
+      const copie = [...prec];
+      copie[copie.length - 1] = { ...copie[copie.length - 1], enRepli: true };
+      return copie;
+    });
+  }
+
   useEffect(() => {
     return () => {
       if (tickerIdRef.current) clearTimeout(tickerIdRef.current);
@@ -295,15 +326,42 @@ export function ChatIA({
       // voir RaisonnementBulle.tsx.
       setStatuts([]);
       setRaisonnementEnCours(false);
+      // Relais de cascade juste avant (voir "reponse_annulee" plus haut) :
+      // ce texte est le premier du modèle qui prend le relais, et lui
+      // n'a émis aucun raisonnement avant -- on vide donc ici le contenu
+      // ET le raisonnement du modèle précédent (retiré), et on referme
+      // le repli visuel juste avant que ce nouveau texte ne commence à
+      // s'écrire.
+      if (repliEnAttenteRef.current) {
+        repliEnAttenteRef.current = false;
+        majMessages((prec) => {
+          const copie = [...prec];
+          copie[copie.length - 1] = { ...copie[copie.length - 1], content: "", raisonnement: "", enRepli: false };
+          return copie;
+        });
+      }
       pousserTexteAffichage(evenement.texte);
     } else if (evenement.type === "raisonnement") {
       setRaisonnementEnCours(true);
+      // Repart à zéro si ce raisonnement est le premier du modèle qui
+      // prend le relais après un "reponse_annulee" -- ne pas l'accumuler
+      // avec celui, obsolète, du modèle précédent, et refermer le repli
+      // visuel puisque du contenu neuf arrive.
+      const premierApresRepli = repliEnAttenteRef.current;
+      if (premierApresRepli) repliEnAttenteRef.current = false;
       majMessages((prec) => {
         const copie = [...prec];
         const dernier = copie[copie.length - 1];
-        copie[copie.length - 1] = { ...dernier, raisonnement: (dernier.raisonnement || "") + evenement.texte };
+        copie[copie.length - 1] = {
+          ...dernier,
+          content: premierApresRepli ? "" : dernier.content,
+          enRepli: premierApresRepli ? false : dernier.enRepli,
+          raisonnement: (premierApresRepli ? "" : dernier.raisonnement || "") + evenement.texte,
+        };
         return copie;
       });
+    } else if (evenement.type === "reponse_annulee") {
+      annulerReponseAffichee();
     } else if (evenement.type === "meta") {
       // `evenement.modele` = modele_id brut (voir core/main.py --
       // _sauvegarder_echange renvoie desormais ce champ pour TOUTE

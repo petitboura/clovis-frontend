@@ -281,6 +281,14 @@ export interface MessageAffiche {
   // ChatIA.tsx:reprendreAgent). Devient obsolète (ignoré) dès qu'un
   // nouveau message est envoyé -- voir envoyerMessage.
   repriseDisponible?: { type: "limite" | "repetition"; etatReprise: unknown } | null;
+  // Ajouté 04/09/2026 (bug de cascade signalé par Bourama : quand un
+  // modèle de la cascade échoue APRÈS avoir déjà streamé du texte, le
+  // relais suivant écrivait à la suite du texte déjà affiché, donnant un
+  // résultat combiné/cassé) -- true brièvement pendant que le texte déjà
+  // affiché se replie (voir ChatIA.tsx sur l'événement SSE
+  // "reponse_annulee" et le conteneur ci-dessous), avant que content ne
+  // soit vidé pour laisser la vraie tentative suivante repartir de zéro.
+  enRepli?: boolean;
 }
 
 // Ajouté le 2026-07-23 (bug repéré par Bourama : en rechargeant un fil de
@@ -656,23 +664,37 @@ function BulleMessageInterne({
             )}
           </div>
         )}
-        {/* Rendu Markdown unique et cohérent (gras/liens/tableaux/listes en
-            une seule fois) : ceci règle définitivement le bug hérité de
-            Streamlit (bloc HTML brut qui empêchait toute transformation
-            Markdown). Couleur des liens fixée sur l'accent de la charte,
-            jamais bleu. */}
+        {/* Repli du texte déjà affiché quand la cascade bascule sur un
+            autre modèle après avoir déjà streamé (04/09/2026, bug signalé
+            par Bourama) -- message.enRepli est mis à true par ChatIA.tsx
+            juste avant de vider content, le temps de cette transition.
+            Grille 1fr -> 0fr : replie n'importe quelle hauteur de
+            contenu sans avoir besoin de la mesurer en JS (contenu texte
+            variable). overflow-hidden sur l'intérieur uniquement, pour
+            ne jamais rogner une éventuelle ombre/bordure du conteneur
+            extérieur. */}
         <div
-          ref={conteneurRef}
-          onMouseUp={gererFinSelection}
-          className="dj-markdown [&_ul]:list-disc [&_ul]:pl-5 [&_ol]:list-decimal [&_ol]:pl-5 [&_p]:mb-2 last:[&_p]:mb-0 [&_h1]:font-lecture [&_h1]:font-semibold [&_h1]:tracking-[-0.01em] [&_h1]:text-dj-texte [&_h1]:text-xl [&_h1]:mb-2 [&_h1]:mt-3 [&_h2]:font-lecture [&_h2]:font-semibold [&_h2]:tracking-[-0.01em] [&_h2]:text-dj-texte [&_h2]:text-lg [&_h2]:mb-2 [&_h2]:mt-3 [&_h3]:font-lecture [&_h3]:font-semibold [&_h3]:tracking-[-0.01em] [&_h3]:text-dj-texte [&_h3]:text-base [&_h3]:mb-1.5 [&_h3]:mt-2"
+          className="grid transition-[grid-template-rows] duration-300 ease-in-out"
+          style={{ gridTemplateRows: message.enRepli ? "0fr" : "1fr" }}
         >
-          {/* remarkGfm (tableaux/gras/liens) + remarkMath/rehypeKatex
-              (LaTeX) tournent dans LA MÊME passe de parsing -- c'est ça
-              qui évite le jeu de whack-a-mole où corriger le gras/les
-              tableaux à la main cassait le LaTeX (ou l'inverse) : un seul
-              moteur, cohérent, jamais de manipulation du texte brut à
-              part la normalisation des délimiteurs ci-dessus. */}
-          <ReactMarkdown
+          <div className="overflow-hidden min-h-0">
+            {/* Rendu Markdown unique et cohérent (gras/liens/tableaux/listes en
+                une seule fois) : ceci règle définitivement le bug hérité de
+                Streamlit (bloc HTML brut qui empêchait toute transformation
+                Markdown). Couleur des liens fixée sur l'accent de la charte,
+                jamais bleu. */}
+            <div
+              ref={conteneurRef}
+              onMouseUp={gererFinSelection}
+              className="dj-markdown [&_ul]:list-disc [&_ul]:pl-5 [&_ol]:list-decimal [&_ol]:pl-5 [&_p]:mb-2 last:[&_p]:mb-0 [&_h1]:font-lecture [&_h1]:font-semibold [&_h1]:tracking-[-0.01em] [&_h1]:text-dj-texte [&_h1]:text-xl [&_h1]:mb-2 [&_h1]:mt-3 [&_h2]:font-lecture [&_h2]:font-semibold [&_h2]:tracking-[-0.01em] [&_h2]:text-dj-texte [&_h2]:text-lg [&_h2]:mb-2 [&_h2]:mt-3 [&_h3]:font-lecture [&_h3]:font-semibold [&_h3]:tracking-[-0.01em] [&_h3]:text-dj-texte [&_h3]:text-base [&_h3]:mb-1.5 [&_h3]:mt-2"
+            >
+              {/* remarkGfm (tableaux/gras/liens) + remarkMath/rehypeKatex
+                  (LaTeX) tournent dans LA MÊME passe de parsing -- c'est ça
+                  qui évite le jeu de whack-a-mole où corriger le gras/les
+                  tableaux à la main cassait le LaTeX (ou l'inverse) : un seul
+                  moteur, cohérent, jamais de manipulation du texte brut à
+                  part la normalisation des délimiteurs ci-dessus. */}
+              <ReactMarkdown
             remarkPlugins={PLUGINS_REMARK}
             rehypePlugins={
               // pluginMotsFade UNIQUEMENT pour le message en cours de
@@ -844,7 +866,9 @@ function BulleMessageInterne({
             }}
           >
             {normaliserCitations(normaliserLatex(message.content))}
-          </ReactMarkdown>
+              </ReactMarkdown>
+            </div>
+          </div>
         </div>
 
         {/* Bulle flottante "Expliquer" -- apparaît uniquement sur une
