@@ -370,6 +370,9 @@ export type EntreeBibliothequePublique = {
   pays?: string | null;
   niveau?: string | null;
   categorie?: string | null;
+  // 04/09/2026, demande Bourama : 2 filtres supplémentaires, même principe.
+  classe?: string | null;
+  specialite?: string | null;
 };
 
 // 03/09/2026, demande Bourama : filtres pays/niveau/catégorie en plus de
@@ -381,6 +384,9 @@ export type FiltresBibliothequePublique = {
   pays?: string;
   niveau?: string;
   categorie?: string;
+  // 04/09/2026, demande Bourama : 2 filtres supplémentaires, même principe.
+  classe?: string;
+  specialite?: string;
   dossierId?: string;
   decalage?: number;
   limite?: number;
@@ -392,6 +398,8 @@ export async function listerBibliothequePublique(q?: string, filtres?: FiltresBi
   if (filtres?.pays?.trim()) params.set("pays", filtres.pays.trim());
   if (filtres?.niveau?.trim()) params.set("niveau", filtres.niveau.trim());
   if (filtres?.categorie?.trim()) params.set("categorie", filtres.categorie.trim());
+  if (filtres?.classe?.trim()) params.set("classe", filtres.classe.trim());
+  if (filtres?.specialite?.trim()) params.set("specialite", filtres.specialite.trim());
   if (filtres?.dossierId) params.set("dossier_id", filtres.dossierId);
   if (filtres?.decalage !== undefined) params.set("decalage", String(filtres.decalage));
   if (filtres?.limite !== undefined) params.set("limite", String(filtres.limite));
@@ -408,6 +416,9 @@ export type ListesFiltresBibliothequePublique = {
   pays: string[];
   niveaux: string[];
   categories: string[];
+  // 04/09/2026, demande Bourama : 2 filtres supplémentaires, même principe.
+  classes: string[];
+  specialites: string[];
 };
 
 export async function listerListesFiltresBibliothequePublique() {
@@ -437,6 +448,8 @@ export async function ajouterABibliothequePublique(
   if (filtres?.pays?.trim()) corps.append("pays", filtres.pays.trim());
   if (filtres?.niveau?.trim()) corps.append("niveau", filtres.niveau.trim());
   if (filtres?.categorie?.trim()) corps.append("categorie", filtres.categorie.trim());
+  if (filtres?.classe?.trim()) corps.append("classe", filtres.classe.trim());
+  if (filtres?.specialite?.trim()) corps.append("specialite", filtres.specialite.trim());
 
   const reponse = await fetch(`${API_URL}/api/bibliotheque-publique`, {
     method: "POST",
@@ -471,6 +484,8 @@ export async function ajouterLienBibliothequePublique(
       pays: filtres?.pays || "",
       niveau: filtres?.niveau || "",
       categorie: filtres?.categorie || "",
+      classe: filtres?.classe || "",
+      specialite: filtres?.specialite || "",
     }),
   }) as Promise<EntreeBibliothequePublique>;
 }
@@ -490,6 +505,8 @@ export async function ajouterTexteBibliothequePublique(
       pays: filtres?.pays || "",
       niveau: filtres?.niveau || "",
       categorie: filtres?.categorie || "",
+      classe: filtres?.classe || "",
+      specialite: filtres?.specialite || "",
     }),
   }) as Promise<EntreeBibliothequePublique>;
 }
@@ -506,6 +523,9 @@ export type DossierCataloguePublic = {
   pays?: string | null;
   niveau?: string | null;
   categorie?: string | null;
+  // 04/09/2026, demande Bourama : 2 filtres supplémentaires, même principe.
+  classe?: string | null;
+  specialite?: string | null;
 };
 
 export async function listerDossiersCataloguePublic() {
@@ -527,6 +547,8 @@ export async function creerDossierCataloguePublic(
       pays: filtres?.pays || "",
       niveau: filtres?.niveau || "",
       categorie: filtres?.categorie || "",
+      classe: filtres?.classe || "",
+      specialite: filtres?.specialite || "",
     }),
   }) as Promise<DossierCataloguePublic>;
 }

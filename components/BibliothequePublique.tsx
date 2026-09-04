@@ -69,21 +69,29 @@ function ChampsFiltragePublication({
   pays,
   niveau,
   categorie,
+  classe,
+  specialite,
   onChangePays,
   onChangeNiveau,
   onChangeCategorie,
+  onChangeClasse,
+  onChangeSpecialite,
   listes,
 }: {
   pays: string;
   niveau: string;
   categorie: string;
+  classe: string;
+  specialite: string;
   onChangePays: (v: string) => void;
   onChangeNiveau: (v: string) => void;
   onChangeCategorie: (v: string) => void;
+  onChangeClasse: (v: string) => void;
+  onChangeSpecialite: (v: string) => void;
   listes: ListesFiltresBibliothequePublique;
 }) {
   return (
-    <div className="flex flex-col gap-2 sm:flex-row">
+    <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap">
       <input
         list="biblio-pub-liste-pays"
         value={pays}
@@ -105,6 +113,21 @@ function ChampsFiltragePublication({
         placeholder="Catégorie (optionnel)"
         className="min-w-0 flex-1 rounded-cgpt-bouton border border-dj-bordure bg-dj-fond px-3 py-2 text-xs text-dj-texte outline-none focus:border-dj-bordure-forte"
       />
+      {/* 04/09/2026, demande Bourama : 2 champs supplémentaires, même principe. */}
+      <input
+        list="biblio-pub-liste-classe"
+        value={classe}
+        onChange={(e) => onChangeClasse(e.target.value)}
+        placeholder="Classe (optionnel)"
+        className="min-w-0 flex-1 rounded-cgpt-bouton border border-dj-bordure bg-dj-fond px-3 py-2 text-xs text-dj-texte outline-none focus:border-dj-bordure-forte"
+      />
+      <input
+        list="biblio-pub-liste-specialite"
+        value={specialite}
+        onChange={(e) => onChangeSpecialite(e.target.value)}
+        placeholder="Spécialité (optionnel)"
+        className="min-w-0 flex-1 rounded-cgpt-bouton border border-dj-bordure bg-dj-fond px-3 py-2 text-xs text-dj-texte outline-none focus:border-dj-bordure-forte"
+      />
       <datalist id="biblio-pub-liste-pays">
         {listes.pays.map((v) => (
           <option key={v} value={v} />
@@ -117,6 +140,16 @@ function ChampsFiltragePublication({
       </datalist>
       <datalist id="biblio-pub-liste-categorie">
         {listes.categories.map((v) => (
+          <option key={v} value={v} />
+        ))}
+      </datalist>
+      <datalist id="biblio-pub-liste-classe">
+        {listes.classes.map((v) => (
+          <option key={v} value={v} />
+        ))}
+      </datalist>
+      <datalist id="biblio-pub-liste-specialite">
+        {listes.specialites.map((v) => (
           <option key={v} value={v} />
         ))}
       </datalist>
@@ -207,7 +240,12 @@ export function BibliothequePublique() {
   const [champPays, setChampPays] = useState("");
   const [champNiveau, setChampNiveau] = useState("");
   const [champCategorie, setChampCategorie] = useState("");
-  const [listesFiltres, setListesFiltres] = useState<ListesFiltresBibliothequePublique>({ pays: [], niveaux: [], categories: [] });
+  // 04/09/2026, demande Bourama : 2 filtres supplémentaires, même principe.
+  const [champClasse, setChampClasse] = useState("");
+  const [champSpecialite, setChampSpecialite] = useState("");
+  const [listesFiltres, setListesFiltres] = useState<ListesFiltresBibliothequePublique>({
+    pays: [], niveaux: [], categories: [], classes: [], specialites: [],
+  });
 
   function chargerListesFiltres() {
     listerListesFiltresBibliothequePublique()
@@ -219,6 +257,8 @@ export function BibliothequePublique() {
     setChampPays("");
     setChampNiveau("");
     setChampCategorie("");
+    setChampClasse("");
+    setChampSpecialite("");
   }
 
   // Filtres de recherche/parcours (même demande) : le type est filtré
@@ -229,14 +269,21 @@ export function BibliothequePublique() {
   const [filtrePays, setFiltrePays] = useState("");
   const [filtreNiveau, setFiltreNiveau] = useState("");
   const [filtreCategorie, setFiltreCategorie] = useState("");
+  // 04/09/2026, demande Bourama : 2 filtres supplémentaires, même principe.
+  const [filtreClasse, setFiltreClasse] = useState("");
+  const [filtreSpecialite, setFiltreSpecialite] = useState("");
   const [panneauFiltreOuvert, setPanneauFiltreOuvert] = useState(false);
-  const nombreFiltresActifs = [filtreType !== "tous", !!filtrePays, !!filtreNiveau, !!filtreCategorie].filter(Boolean).length;
+  const nombreFiltresActifs = [
+    filtreType !== "tous", !!filtrePays, !!filtreNiveau, !!filtreCategorie, !!filtreClasse, !!filtreSpecialite,
+  ].filter(Boolean).length;
 
   function reinitialiserFiltres() {
     setFiltreType("tous");
     setFiltrePays("");
     setFiltreNiveau("");
     setFiltreCategorie("");
+    setFiltreClasse("");
+    setFiltreSpecialite("");
   }
 
   // 29/08/2026, demande Bourama : upload d'un dossier entier (comme en
@@ -351,6 +398,8 @@ export function BibliothequePublique() {
       pays: filtrePays,
       niveau: filtreNiveau,
       categorie: filtreCategorie,
+      classe: filtreClasse,
+      specialite: filtreSpecialite,
       dossierId: dossierCourantId ?? undefined,
       decalage: 0,
       limite: TAILLE_PAGE_BIBLIO_PUBLIQUE,
@@ -375,6 +424,8 @@ export function BibliothequePublique() {
       pays: filtrePays,
       niveau: filtreNiveau,
       categorie: filtreCategorie,
+      classe: filtreClasse,
+      specialite: filtreSpecialite,
       dossierId: dossierCourantId ?? undefined,
       decalage,
       limite: TAILLE_PAGE_BIBLIO_PUBLIQUE,
@@ -398,6 +449,8 @@ export function BibliothequePublique() {
       pays: filtrePays,
       niveau: filtreNiveau,
       categorie: filtreCategorie,
+      classe: filtreClasse,
+      specialite: filtreSpecialite,
       dossierId: dossierCourantId ?? undefined,
       decalage: 0,
       limite: liste.length,
@@ -429,7 +482,7 @@ export function BibliothequePublique() {
     const id = setTimeout(() => charger(recherche), 250);
     return () => clearTimeout(id);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [recherche, filtrePays, filtreNiveau, filtreCategorie, dossierCourantId]);
+  }, [recherche, filtrePays, filtreNiveau, filtreCategorie, filtreClasse, filtreSpecialite, dossierCourantId]);
 
   // Scroll infini : observe la sentinelle en bas de la liste affichée,
   // charge le lot suivant dès qu'elle devient visible.
@@ -445,7 +498,7 @@ export function BibliothequePublique() {
     observateur.observe(cible);
     return () => observateur.disconnect();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [liste, dossierCourantId, recherche, filtrePays, filtreNiveau, filtreCategorie, plusDeResultats]);
+  }, [liste, dossierCourantId, recherche, filtrePays, filtreNiveau, filtreCategorie, filtreClasse, filtreSpecialite, plusDeResultats]);
 
   function choisirFichiers(fichiersChoisis: FileList | File[]) {
     const liste = Array.from(fichiersChoisis);
@@ -542,6 +595,8 @@ export function BibliothequePublique() {
           pays: champPays,
           niveau: champNiveau,
           categorie: champCategorie,
+          classe: champClasse,
+          specialite: champSpecialite,
         });
         if (ligne?.statut_vectorisation === "en_attente" && ligne.id) suivreVectorisation([ligne.id]);
       } else {
@@ -583,7 +638,13 @@ export function BibliothequePublique() {
     const titre = nom.trim();
     setEnvoi(true);
     setErreur(null);
-    const filtresSaisis = { pays: champPays, niveau: champNiveau, categorie: champCategorie };
+    const filtresSaisis = {
+      pays: champPays,
+      niveau: champNiveau,
+      categorie: champCategorie,
+      classe: champClasse,
+      specialite: champSpecialite,
+    };
     try {
       const ligne =
         modaleAjout === "lien"
@@ -620,6 +681,8 @@ export function BibliothequePublique() {
         pays: champPays,
         niveau: champNiveau,
         categorie: champCategorie,
+        classe: champClasse,
+        specialite: champSpecialite,
       });
       setNouveauNomDossier("");
       reinitialiserChampsFiltragePublication();
@@ -800,6 +863,22 @@ export function BibliothequePublique() {
             <span className="flex items-center gap-1 rounded-full border border-dj-bordure bg-dj-surface px-2.5 py-1 text-dj-texte">
               {filtreCategorie}
               <button onClick={() => setFiltreCategorie("")} aria-label="Retirer le filtre de catégorie" className="text-dj-texte-muet hover:text-dj-texte">
+                <X size={11} />
+              </button>
+            </span>
+          )}
+          {filtreClasse && (
+            <span className="flex items-center gap-1 rounded-full border border-dj-bordure bg-dj-surface px-2.5 py-1 text-dj-texte">
+              {filtreClasse}
+              <button onClick={() => setFiltreClasse("")} aria-label="Retirer le filtre de classe" className="text-dj-texte-muet hover:text-dj-texte">
+                <X size={11} />
+              </button>
+            </span>
+          )}
+          {filtreSpecialite && (
+            <span className="flex items-center gap-1 rounded-full border border-dj-bordure bg-dj-surface px-2.5 py-1 text-dj-texte">
+              {filtreSpecialite}
+              <button onClick={() => setFiltreSpecialite("")} aria-label="Retirer le filtre de spécialité" className="text-dj-texte-muet hover:text-dj-texte">
                 <X size={11} />
               </button>
             </span>
@@ -1000,9 +1079,13 @@ export function BibliothequePublique() {
                 pays={champPays}
                 niveau={champNiveau}
                 categorie={champCategorie}
+                classe={champClasse}
+                specialite={champSpecialite}
                 onChangePays={setChampPays}
                 onChangeNiveau={setChampNiveau}
                 onChangeCategorie={setChampCategorie}
+                onChangeClasse={setChampClasse}
+                onChangeSpecialite={setChampSpecialite}
                 listes={listesFiltres}
               />
               <div className="flex items-center justify-end gap-2">
@@ -1429,9 +1512,13 @@ export function BibliothequePublique() {
                   pays={champPays}
                   niveau={champNiveau}
                   categorie={champCategorie}
+                  classe={champClasse}
+                  specialite={champSpecialite}
                   onChangePays={setChampPays}
                   onChangeNiveau={setChampNiveau}
                   onChangeCategorie={setChampCategorie}
+                  onChangeClasse={setChampClasse}
+                  onChangeSpecialite={setChampSpecialite}
                   listes={listesFiltres}
                 />
               </>
@@ -1527,9 +1614,13 @@ export function BibliothequePublique() {
               pays={champPays}
               niveau={champNiveau}
               categorie={champCategorie}
+              classe={champClasse}
+              specialite={champSpecialite}
               onChangePays={setChampPays}
               onChangeNiveau={setChampNiveau}
               onChangeCategorie={setChampCategorie}
+              onChangeClasse={setChampClasse}
+              onChangeSpecialite={setChampSpecialite}
               listes={listesFiltres}
             />
             {erreur && <p className="text-xs text-[var(--dj-erreur)]">{erreur}</p>}
@@ -1567,7 +1658,8 @@ export function BibliothequePublique() {
       {panneauFiltreOuvert && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4" onClick={() => setPanneauFiltreOuvert(false)}>
           <div
-            className="flex w-full max-w-sm animate-dj-fade-in-rapide flex-col gap-3 rounded-cgpt-carte border border-dj-bordure bg-dj-surface p-4"
+            className="flex w-full max-w-sm animate-dj-fade-in-rapide flex-col gap-3 overflow-y-auto rounded-cgpt-carte border border-dj-bordure bg-dj-surface p-4"
+            style={{ maxHeight: "90vh" }}
             onClick={(e) => e.stopPropagation()}
           >
             <p className="text-sm font-semibold text-dj-texte">Filtrer</p>
@@ -1613,6 +1705,25 @@ export function BibliothequePublique() {
                 options={[{ id: "", label: "Toutes les catégories" }, ...listesFiltres.categories.map((v) => ({ id: v, label: v }))]}
                 valeur={filtreCategorie}
                 onChange={setFiltreCategorie}
+              />
+            </div>
+
+            {/* 04/09/2026, demande Bourama : 2 filtres supplémentaires, même principe. */}
+            <div className="flex flex-col gap-1.5">
+              <p className="text-xs font-medium text-dj-texte-muet">Classe</p>
+              <SelectPersonnalise
+                options={[{ id: "", label: "Toutes les classes" }, ...listesFiltres.classes.map((v) => ({ id: v, label: v }))]}
+                valeur={filtreClasse}
+                onChange={setFiltreClasse}
+              />
+            </div>
+
+            <div className="flex flex-col gap-1.5">
+              <p className="text-xs font-medium text-dj-texte-muet">Spécialité</p>
+              <SelectPersonnalise
+                options={[{ id: "", label: "Toutes les spécialités" }, ...listesFiltres.specialites.map((v) => ({ id: v, label: v }))]}
+                valeur={filtreSpecialite}
+                onChange={setFiltreSpecialite}
               />
             </div>
 
