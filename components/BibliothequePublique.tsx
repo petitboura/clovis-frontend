@@ -273,6 +273,19 @@ export function BibliothequePublique() {
   // raisonnement détaillé.
   const [progressionEnvoi, setProgressionEnvoi] = useState<{ total: number; envoyes: number } | null>(null);
 
+  // 04/09/2026, demande Bourama : scroll infini façon réseau social
+  // (charge les premiers, puis charge la suite quand le scroll y
+  // arrive, ou quand on cherche/filtre) -- remplace l'ancien plafond
+  // fixe côté serveur (limit(200)) qui cachait silencieusement les
+  // fichiers les plus anciens dès que le catalogue dépassait 200
+  // entrées (592 fichiers publiés au moment du diagnostic, seuls les
+  // 200 plus récents remontaient jamais).
+  const TAILLE_PAGE_BIBLIO_PUBLIQUE = 30;
+  const [decalage, setDecalage] = useState(0);
+  const [plusDeResultats, setPlusDeResultats] = useState(true);
+  const [chargementPage, setChargementPage] = useState(false);
+  const sentinelleRef = useRef<HTMLDivElement>(null);
+
   function suivreVectorisation(ids: string[]) {
     if (ids.length === 0) return;
     setLotVectorisation((precedent) => {
@@ -323,15 +336,74 @@ export function BibliothequePublique() {
 
   useEffect(() => {
     if (!lotVectorisation || lotVectorisation.enAttente.size === 0) return;
-    const intervalle = setInterval(() => charger(recherche), 3000);
+    const intervalle = setInterval(() => rafraichirStatuts(), 3000);
     return () => clearInterval(intervalle);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [lotVectorisation?.enAttente.size]);
 
+  // Recharge depuis le début (recherche/filtre/dossier changé, ou ajout/
+  // suppression d'une entrée) -- réinitialise la pagination.
   function charger(q?: string) {
-    listerBibliothequePublique(q, { pays: filtrePays, niveau: filtreNiveau, categorie: filtreCategorie })
+    setListe(undefined);
+    setDecalage(0);
+    setPlusDeResultats(true);
+    listerBibliothequePublique(q, {
+      pays: filtrePays,
+      niveau: filtreNiveau,
+      categorie: filtreCategorie,
+      dossierId: dossierCourantId ?? undefined,
+      decalage: 0,
+      limite: TAILLE_PAGE_BIBLIO_PUBLIQUE,
+    })
+      .then((resultat) => {
+        setListe(resultat);
+        setDecalage(resultat.length);
+        setPlusDeResultats(resultat.length === TAILLE_PAGE_BIBLIO_PUBLIQUE);
+      })
+      .catch(() => {
+        setListe([]);
+        setPlusDeResultats(false);
+      });
+  }
+
+  // Charge le lot suivant quand la sentinelle en bas de liste devient
+  // visible -- ajoute à la liste déjà affichée, ne réinitialise rien.
+  function chargerPlus() {
+    if (chargementPage || !plusDeResultats) return;
+    setChargementPage(true);
+    listerBibliothequePublique(recherche, {
+      pays: filtrePays,
+      niveau: filtreNiveau,
+      categorie: filtreCategorie,
+      dossierId: dossierCourantId ?? undefined,
+      decalage,
+      limite: TAILLE_PAGE_BIBLIO_PUBLIQUE,
+    })
+      .then((resultat) => {
+        setListe((precedent) => (precedent ?? []).concat(resultat));
+        setDecalage((d) => d + resultat.length);
+        setPlusDeResultats(resultat.length === TAILLE_PAGE_BIBLIO_PUBLIQUE);
+      })
+      .catch(() => setPlusDeResultats(false))
+      .finally(() => setChargementPage(false));
+  }
+
+  // Pendant du polling de vectorisation (voir plus bas) : ne rafraîchit
+  // que ce qui est déjà affiché (0 -> decalage actuel), pour mettre à
+  // jour les statuts sans faire sauter le scroll ni relancer la
+  // pagination depuis le début.
+  function rafraichirStatuts() {
+    if (!liste || liste.length === 0) return;
+    listerBibliothequePublique(recherche, {
+      pays: filtrePays,
+      niveau: filtreNiveau,
+      categorie: filtreCategorie,
+      dossierId: dossierCourantId ?? undefined,
+      decalage: 0,
+      limite: liste.length,
+    })
       .then(setListe)
-      .catch(() => setListe([]));
+      .catch(() => {});
   }
 
   function chargerDossiers() {
@@ -349,11 +421,31 @@ export function BibliothequePublique() {
   // 03/09/2026 : recharge aussi quand un des 3 filtres serveur change,
   // pas seulement la recherche texte -- même debounce (évite une
   // requête à chaque frappe si jamais recherche change en même temps).
+  // 04/09/2026 : + dossierCourantId -- depuis le passage au chargement
+  // par lots côté serveur, entrer/sortir d'un dossier doit relancer une
+  // vraie requête (avant, le contenu d'un dossier était juste filtré
+  // depuis la liste déjà en mémoire, donc pas besoin de recharger).
   useEffect(() => {
     const id = setTimeout(() => charger(recherche), 250);
     return () => clearTimeout(id);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [recherche, filtrePays, filtreNiveau, filtreCategorie]);
+  }, [recherche, filtrePays, filtreNiveau, filtreCategorie, dossierCourantId]);
+
+  // Scroll infini : observe la sentinelle en bas de la liste affichée,
+  // charge le lot suivant dès qu'elle devient visible.
+  useEffect(() => {
+    const cible = sentinelleRef.current;
+    if (!cible) return;
+    const observateur = new IntersectionObserver(
+      (entrees) => {
+        if (entrees[0]?.isIntersecting) chargerPlus();
+      },
+      { rootMargin: "200px" },
+    );
+    observateur.observe(cible);
+    return () => observateur.disconnect();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [liste, dossierCourantId, recherche, filtrePays, filtreNiveau, filtreCategorie, plusDeResultats]);
 
   function choisirFichiers(fichiersChoisis: FileList | File[]) {
     const liste = Array.from(fichiersChoisis);
@@ -600,13 +692,15 @@ export function BibliothequePublique() {
     .filter((d) => (d.dossier_parent_id ?? null) === dossierCourantId)
     .filter((d) => filtreStatutDossier === "tous" || d.statut === filtreStatutDossier);
   const dossierActuel = dossierCourantId ? (dossiers ?? []).find((d) => d.id === dossierCourantId) : null;
-  const listeApresDossier = dossierCourantId
-    ? (liste || []).filter((e) => dossierActuel?.fichier_ids.includes(e.id))
-    : liste;
+  // 04/09/2026 : le filtrage par dossier se fait désormais côté serveur
+  // (voir charger()/chargerPlus(), paramètre dossier_id) pour que le
+  // scroll infini fonctionne aussi à l'intérieur d'un dossier -- `liste`
+  // contient déjà exactement le bon sous-ensemble, plus besoin de le
+  // refiltrer ici avec dossierActuel.fichier_ids.
   // 03/09/2026, demande Bourama : filtre par type appliqué côté app
   // (comme en privé), sur "Tous" ET à l'intérieur d'un dossier ouvert --
   // pays/niveau/catégorie sont déjà filtrés côté serveur (voir charger()).
-  const listeAffichee = listeApresDossier?.filter((e) => filtreType === "tous" || typeDe(e) === filtreType);
+  const listeAffichee = liste?.filter((e) => filtreType === "tous" || typeDe(e) === filtreType);
 
   // Description fixe (+ rappel légal CGU/copyright) remplacée par le
   // bouton "i" du titre de page (géré par le parent EspaceBibliotheque.tsx
@@ -1101,6 +1195,16 @@ export function BibliothequePublique() {
           })}
         </div>
       )}
+          {/* Sentinelle du scroll infini : invisible, déclenche
+              chargerPlus() dès qu'elle entre dans le viewport (voir le
+              useEffect IntersectionObserver plus haut). Le petit loader
+              ne s'affiche que pendant le chargement d'un lot suivant, pas
+              au premier chargement (déjà couvert par le Skeleton). */}
+          {listeAffichee && listeAffichee.length > 0 && plusDeResultats && (
+            <div ref={sentinelleRef} className="flex justify-center py-2">
+              {chargementPage && <Loader2 size={16} className="animate-spin text-dj-texte-muet" />}
+            </div>
+          )}
         </>
       )}
 

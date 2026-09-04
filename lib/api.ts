@@ -374,10 +374,16 @@ export type EntreeBibliothequePublique = {
 
 // 03/09/2026, demande Bourama : filtres pays/niveau/catégorie en plus de
 // la recherche texte -- voir GET /api/bibliotheque-publique côté backend.
+// 04/09/2026 : + dossierId/decalage/limite pour le scroll infini (plus
+// de plafond fixe côté serveur, qui cachait les fichiers les plus
+// anciens dès que le catalogue dépassait 200 entrées).
 export type FiltresBibliothequePublique = {
   pays?: string;
   niveau?: string;
   categorie?: string;
+  dossierId?: string;
+  decalage?: number;
+  limite?: number;
 };
 
 export async function listerBibliothequePublique(q?: string, filtres?: FiltresBibliothequePublique) {
@@ -386,6 +392,9 @@ export async function listerBibliothequePublique(q?: string, filtres?: FiltresBi
   if (filtres?.pays?.trim()) params.set("pays", filtres.pays.trim());
   if (filtres?.niveau?.trim()) params.set("niveau", filtres.niveau.trim());
   if (filtres?.categorie?.trim()) params.set("categorie", filtres.categorie.trim());
+  if (filtres?.dossierId) params.set("dossier_id", filtres.dossierId);
+  if (filtres?.decalage !== undefined) params.set("decalage", String(filtres.decalage));
+  if (filtres?.limite !== undefined) params.set("limite", String(filtres.limite));
   const suffixe = params.toString() ? `?${params.toString()}` : "";
   const resultat = await appelerApi(`/api/bibliotheque-publique${suffixe}`);
   return resultat as EntreeBibliothequePublique[];
