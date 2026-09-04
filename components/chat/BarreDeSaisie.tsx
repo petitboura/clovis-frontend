@@ -17,6 +17,7 @@ import { Skeleton } from "../Skeleton";
 import { PanneauFlottant } from "@/components/PanneauFlottant";
 import { useFermetureAnimee } from "@/lib/useFermetureAnimee";
 import { BoutonRetour } from "@/components/BoutonRetour";
+import { ouvrirPosition } from "./visionneurPositionEvenement";
 
 // EditeurMathsRiche (tiptap + mathlive) et EditeurFormule (mathlive) ne
 // montent que quand leur modale respective s'ouvre (voir
@@ -1384,33 +1385,22 @@ export function BarreDeSaisie({
                   <X size={12} />
                 </button>
               </div>
-            ) : fichier.type === "application/pdf" ? (
-              // 17/08 (Bourama : "regarde partout où on upload") -- avant,
-              // un PDF choisi ici tombait dans le cas générique juste en
-              // dessous (ouverture en nouvel onglet). Ici le blob est
-              // forcément local (le fichier choisi par l'utilisateur sur
-              // sa machine, pas encore envoyé) donc intrinsèquement sûr à
-              // afficher en iframe, contrairement à FichierChip où
-              // estOrigineDeConfiance protège contre un lien externe
-              // arbitraire -- cette vérification n'a pas lieu d'être ici.
-              <div key={id} className="relative w-full max-w-xs">
-                <iframe
-                  src={URL.createObjectURL(fichier)}
-                  className="h-64 w-full rounded-xl border border-dj-bordure"
-                  title={fichier.name}
-                />
-                <button
-                  onClick={() => retirerFichier(id)}
-                  aria-label="Retirer le fichier"
-                  className="absolute -right-1.5 -top-1.5 flex h-5 w-5 items-center justify-center rounded-full bg-dj-fond text-dj-texte-muet hover:text-dj-texte"
-                >
-                  <X size={12} />
-                </button>
-              </div>
             ) : (
+              // 04/09/2026, demande Bourama : "grosse aperçu" = l'iframe PDF
+              // automatique (17/08) remplacée par la petite bulle
+              // nom+icône d'origine -- le clic ouvre désormais le vrai
+              // visionneur de l'appli (VisionneurPositionGlobal, même
+              // composant que pour un fichier reçu/de bibliothèque),
+              // fonctionne pour PDF et tout autre document, plus jamais
+              // de nouvel onglet. Le blob local est intrinsèquement sûr
+              // (fichier choisi par l'utilisateur sur sa machine, pas
+              // encore envoyé) donc pas besoin de vérification d'origine
+              // ici, contrairement à FichierChip.tsx.
               <div key={id} className="flex w-fit items-center gap-2 rounded-xl border border-dj-bordure bg-dj-surface-haute px-3 py-2 text-xs text-dj-texte-muet">
                 <button
-                  onClick={() => window.open(URL.createObjectURL(fichier), "_blank")}
+                  onClick={() =>
+                    ouvrirPosition({ url: URL.createObjectURL(fichier), titre: fichier.name, typeMime: fichier.type })
+                  }
                   aria-label="Ouvrir le fichier"
                   className="flex items-center gap-2 hover:text-dj-texte"
                 >

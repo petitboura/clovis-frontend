@@ -144,6 +144,19 @@ function texteBrut(node: ReactNode): string {
   return "";
 }
 
+// 04/09/2026 : piece.type ne connaît que la catégorie large ("document"),
+// pas le vrai type MIME dont VisionneurPositionGlobal a besoin pour
+// choisir le bon aperçu. PDF détecté par extension (cas le plus courant,
+// aperçu réel) ; tout le reste retombe sur "application/octet-stream" --
+// un type MIME quelconque mais non vide, pour que VisionneurPositionGlobal
+// ne le traite pas comme un résultat web (estSiteWeb) et affiche plutôt
+// son repli "Aperçu non disponible" + téléchargement, qui reste dans
+// l'appli (voir ContenuNonPrevisualisable).
+function typeMimeDepuisNom(nom: string): string {
+  const ext = nom.split(".").pop()?.toLowerCase() ?? "";
+  return ext === "pdf" ? "application/pdf" : "application/octet-stream";
+}
+
 // Nettoie le markdown avant lecture à voix haute (Web Speech API, voir
 // lireAVoixHaute() dans le composant) -- sans ça, la synthèse vocale lit
 // les symboles bruts tels quels (dièses, astérisques, syntaxe de lien),
@@ -651,9 +664,17 @@ function BulleMessageInterne({
                   <LecteurMedia href={piece.previewUrl} type={piece.type} />
                 </div>
               ) : (
+                // 04/09/2026, demande Bourama : window.open(_blank)
+                // faisait sortir de Clovis (surtout gênant sur mobile/
+                // appli native) -- remplacé par le même visionneur
+                // interne que pour un fichier reçu/de bibliothèque
+                // (VisionneurPositionGlobal), jamais de nouvel onglet.
                 <button
                   key={index}
-                  onClick={() => piece.previewUrl && window.open(piece.previewUrl, "_blank")}
+                  onClick={() =>
+                    piece.previewUrl &&
+                    ouvrirPosition({ url: piece.previewUrl, titre: piece.nom, typeMime: typeMimeDepuisNom(piece.nom) })
+                  }
                   aria-label="Ouvrir le fichier"
                   className="flex w-fit items-center gap-2 rounded-xl border border-dj-bordure bg-dj-fond/40 px-3 py-2 text-xs text-dj-texte-muet hover:text-dj-texte"
                 >
