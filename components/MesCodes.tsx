@@ -311,6 +311,10 @@ function ChampComportement({
   mesComportements: Comportement[];
   onSauver: (v: string[]) => void;
 }) {
+  // Replié par défaut (04/09/2026, demande Bourama) : même principe que le
+  // dépliage de chaque code -- évite qu'une longue liste de comportements
+  // prenne toute la place dès l'ouverture d'un code.
+  const [ouvert, setOuvert] = useState(false);
   const idsActuels = c.comportements.map((cm) => cm.id);
 
   function basculer(id: string) {
@@ -318,16 +322,32 @@ function ChampComportement({
     onSauver(nouveaux);
   }
 
-  return (
-    <div>
-      <label className="text-xs font-semibold text-dj-texte-muet">Skills</label>
-      {mesComportements.length === 0 ? (
+  if (mesComportements.length === 0) {
+    return (
+      <div>
+        <label className="text-xs font-semibold text-dj-texte-muet">Skills</label>
         <p className="mt-1 text-xs text-dj-texte-muet">
           Aucun comportement créé pour l&apos;instant. Crées-en un dans &quot;Mes comportements&quot; pour pouvoir
           l&apos;attacher ici.
         </p>
-      ) : (
-        <div className="mt-1 flex flex-col gap-1.5 rounded-lg border border-dj-bordure bg-dj-surface px-2.5 py-2">
+      </div>
+    );
+  }
+
+  return (
+    <div>
+      <button
+        type="button"
+        onClick={() => setOuvert((prec) => !prec)}
+        className="flex w-full items-center justify-between gap-2 rounded-lg border border-dj-bordure bg-dj-surface px-2.5 py-1.5 text-left"
+      >
+        <span className="text-xs font-semibold text-dj-texte-muet">
+          Skills <span className="text-dj-texte">· {idsActuels.length} sélectionné{idsActuels.length > 1 ? "s" : ""}</span>
+        </span>
+        {ouvert ? <ChevronUp size={14} className="flex-shrink-0 text-dj-texte-muet" /> : <ChevronDown size={14} className="flex-shrink-0 text-dj-texte-muet" />}
+      </button>
+      {ouvert && (
+        <div className="mt-1.5 flex animate-dj-fade-in-rapide flex-col gap-1.5 rounded-lg border border-dj-bordure bg-dj-surface px-2.5 py-2">
           {mesComportements.map((cm) => (
             <label key={cm.id} className="flex items-center gap-2 text-sm text-dj-texte">
               <CaseACocher checked={idsActuels.includes(cm.id)} onChange={() => basculer(cm.id)} />
@@ -383,6 +403,10 @@ function ChampDossiers({
 }) {
   const [nouveauNom, setNouveauNom] = useState("");
   const [creation, setCreation] = useState(false);
+  // Replié par défaut (04/09/2026, demande Bourama), même principe que
+  // ChampComportement -- la création d'un nouveau dossier reste toujours
+  // visible en dessous, elle n'est pas concernée par ce repli.
+  const [ouvert, setOuvert] = useState(false);
   const idsActuels = c.dossiers.map((d) => d.id);
   const ordonnes = ordonnerDossiers(mesDossiers);
 
@@ -415,18 +439,32 @@ function ChampDossiers({
           Aucun dossier créé pour l&apos;instant, crées-en un juste en dessous.
         </p>
       ) : (
-        <div className="mt-1 flex flex-col gap-1.5 rounded-lg border border-dj-bordure bg-dj-surface px-2.5 py-2">
-          {ordonnes.map(({ dossier, profondeur }) => (
-            <label
-              key={dossier.id}
-              className="flex items-center gap-2 text-sm text-dj-texte"
-              style={{ paddingLeft: profondeur * 16 }}
-            >
-              <CaseACocher checked={idsActuels.includes(dossier.id)} onChange={() => basculer(dossier.id)} />
-              <span className="min-w-0 truncate">{dossier.nom}</span>
-            </label>
-          ))}
-        </div>
+        <>
+          <button
+            type="button"
+            onClick={() => setOuvert((prec) => !prec)}
+            className="mt-1 flex w-full items-center justify-between gap-2 rounded-lg border border-dj-bordure bg-dj-surface px-2.5 py-1.5 text-left"
+          >
+            <span className="text-xs font-semibold text-dj-texte-muet">
+              Dossiers <span className="text-dj-texte">· {idsActuels.length} sélectionné{idsActuels.length > 1 ? "s" : ""}</span>
+            </span>
+            {ouvert ? <ChevronUp size={14} className="flex-shrink-0 text-dj-texte-muet" /> : <ChevronDown size={14} className="flex-shrink-0 text-dj-texte-muet" />}
+          </button>
+          {ouvert && (
+            <div className="mt-1.5 flex animate-dj-fade-in-rapide flex-col gap-1.5 rounded-lg border border-dj-bordure bg-dj-surface px-2.5 py-2">
+              {ordonnes.map(({ dossier, profondeur }) => (
+                <label
+                  key={dossier.id}
+                  className="flex items-center gap-2 text-sm text-dj-texte"
+                  style={{ paddingLeft: profondeur * 16 }}
+                >
+                  <CaseACocher checked={idsActuels.includes(dossier.id)} onChange={() => basculer(dossier.id)} />
+                  <span className="min-w-0 truncate">{dossier.nom}</span>
+                </label>
+              ))}
+            </div>
+          )}
+        </>
       )}
       <div className="mt-1.5 flex gap-1.5">
         <input

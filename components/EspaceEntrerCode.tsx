@@ -93,7 +93,7 @@ export function EspaceEntrerCode() {
         <Skeleton className="h-3 w-3/4 rounded" style={{ animationDelay: "160ms" }} />
 
         <div className="mt-4 flex items-center gap-2">
-          <Skeleton className="h-[52px] flex-1 rounded-xl" style={{ animationDelay: "240ms" }} />
+          <Skeleton className="h-[52px] w-40 flex-shrink-0 rounded-xl" style={{ animationDelay: "240ms" }} />
           <Skeleton className="h-11 w-24 flex-shrink-0 rounded-cgpt-bouton" style={{ animationDelay: "320ms" }} />
         </div>
 
@@ -139,12 +139,12 @@ export function EspaceEntrerCode() {
           onKeyDown={(e) => e.key === "Enter" && valider()}
           placeholder="Ex : AB3CD9"
           maxLength={6}
-          className="flex-1 rounded-xl border border-dj-bordure bg-dj-surface-haute px-4 py-3 text-center font-mono text-lg uppercase tracking-[0.2em] text-dj-texte placeholder:text-dj-texte-muet"
+          className="w-40 flex-shrink-0 rounded-xl border border-dj-bordure bg-dj-surface-haute px-4 py-3 text-center font-mono text-lg uppercase tracking-[0.2em] text-dj-texte placeholder:text-dj-texte-muet"
         />
         <button
           onClick={valider}
           disabled={enCours || !code.trim()}
-          className="rounded-cgpt-bouton bg-dj-accent-1 px-5 py-3 text-sm font-bold text-[#1A0D02] transition-colors hover:bg-dj-accent-2 disabled:opacity-50"
+          className="flex-shrink-0 rounded-cgpt-bouton bg-dj-accent-1 px-5 py-3 text-sm font-bold text-[#1A0D02] transition-colors hover:bg-dj-accent-2 disabled:opacity-50"
         >
           {enCours ? "…" : "Valider"}
         </button>
