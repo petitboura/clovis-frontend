@@ -478,25 +478,10 @@ export function ChatIA({
         return copie;
       });
     } else if (evenement.type === "fichiers_generes") {
-      // Lien(s) de fichier(s) générés, détectés côté backend de façon
-      // garantie (28/07, demande Bourama) -- indépendant de ce que le
-      // modèle écrit dans sa réponse texte. Un élément par appel d'outil,
-      // même logique d'accumulation que outil_resultat (pas de
-      // dédoublonnage : deux générations distinctes dans le même tour
-      // gardent chacune leur entrée).
-      majMessages((prec) => {
-        const copie = [...prec];
-        const dernier = copie[copie.length - 1];
-        const existants = dernier.fichiersGeneres || [];
-        copie[copie.length - 1] = {
-          ...dernier,
-          fichiersGeneres: [
-            ...existants,
-            { nomOutil: evenement.nom_outil, fichiers: evenement.fichiers || [] },
-          ],
-        };
-        return copie;
-      });
+      // Bloc "Fichier(s) généré(s)" retiré (04/09/2026, demande Bourama) :
+      // évènement toujours émis côté backend mais volontairement ignoré
+      // ici -- seul le lien que le modèle écrit lui-même dans sa réponse
+      // (rendu par BulleMessage.tsx) est affiché désormais.
     } else if (evenement.type === "confirmation_requise") {
       setConfirmation({
         nomLisible: evenement.nom_lisible,
@@ -996,7 +981,6 @@ export function ChatIA({
               raisonnement={message.raisonnement}
               raisonnementEnCours={estDernier ? raisonnementEnCours : false}
               outilsResultats={message.outilsResultats}
-              fichiersGeneres={message.fichiersGeneres}
               onRegenerer={
                 message.role === "assistant"
                   ? () => regenererDepuis(index)

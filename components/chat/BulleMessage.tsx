@@ -8,7 +8,7 @@ import remarkMath from "remark-math";
 import rehypeRaw from "rehype-raw";
 import rehypeSanitize, { defaultSchema } from "rehype-sanitize";
 import rehypeKatex from "rehype-katex";
-import { Copy, RotateCw, Pencil, Volume2, ThumbsUp, ThumbsDown, Check, MessageSquareQuote, FileText, AlertTriangle, ChevronDown, ChevronRight } from "lucide-react";
+import { Copy, RotateCw, Pencil, Volume2, ThumbsUp, ThumbsDown, Check, MessageSquareQuote, FileText, AlertTriangle } from "lucide-react";
 import { formaterHeure } from "@/lib/formatageHeure";
 import dynamic from "next/dynamic";
 import { BlocCode } from "./BlocCode";
@@ -267,14 +267,6 @@ export interface MessageAffiche {
   // résultat de leur outil, pas dans un bloc "Sources" à part à la fin
   // -- voir OutilResultatBulle.tsx.
   outilsResultats?: { nomOutil: string; nomLisible: string; resultat: string; sources?: { numero: number; titre: string; url: string; extrait?: string; url_extrait?: string; reperage?: string; position_type?: "page" | "timestamp"; position_valeur?: number; type_mime?: string | null }[] }[];
-  // Ajouté 2026-07-28 (demande Bourama) : lien(s) de fichier(s) générés
-  // par un outil, détectés côté backend de façon garantie (voir
-  // core/main.py, événement SSE "fichiers_generes") -- INDÉPENDANT de ce
-  // que le modèle écrit dans sa réponse texte, pour ne plus dépendre de
-  // sa fidélité à recopier le lien correctement. Affiché en carte fichier
-  // (FichierChip.tsx) à la fin du message, une entrée par appel d'outil,
-  // dans l'ordre chronologique réel (même logique que outilsResultats).
-  fichiersGeneres?: { nomOutil: string; fichiers: { url: string; nom: string }[] }[];
   // Ajouté 30/08/2026 (audit UX mobile, partie 5 : "pas de chemin de
   // récupération après une erreur") : la génération a échoué avant la
   // moindre réponse persistée -- message.id reste donc null pour
@@ -412,7 +404,6 @@ function BulleMessageInterne({
   raisonnement,
   raisonnementEnCours,
   outilsResultats,
-  fichiersGeneres,
 }: {
   message: MessageAffiche;
   onRegenerer?: () => void;
@@ -439,7 +430,6 @@ function BulleMessageInterne({
   raisonnement?: string;
   raisonnementEnCours?: boolean;
   outilsResultats?: { nomOutil: string; nomLisible: string; resultat: string; sources?: { numero: number; titre: string; url: string; extrait?: string; url_extrait?: string; reperage?: string; position_type?: "page" | "timestamp"; position_valeur?: number; type_mime?: string | null }[] }[];
-  fichiersGeneres?: { nomOutil: string; fichiers: { url: string; nom: string }[] }[];
 }) {
   const [copie, setCopie] = useState(false);
   const [pieceJointeOuverteIndex, setPieceJointeOuverteIndex] = useState<number | null>(null);
@@ -474,7 +464,6 @@ function BulleMessageInterne({
   }, [outilsResultats]);
   const [texteEdition, setTexteEdition] = useState(message.content);
   const [enLecture, setEnLecture] = useState(false);
-  const [fichiersOuverts, setFichiersOuverts] = useState(false);
   const estUtilisateur = message.role === "user";
 
   // Fade mot par mot, formatage live conservé (demande explicite de
@@ -914,49 +903,10 @@ function BulleMessageInterne({
       {!estUtilisateur && outilsResultats && outilsResultats.length > 0 && (
         <OutilResultatBulle resultats={outilsResultats} />
       )}
-      {/* Fichiers générés (28/07, demande Bourama) : lien(s) détecté(s) côté
-          backend de façon garantie (voir core/main.py, événement SSE
-          "fichiers_generes"), indépendant de ce que le modèle a écrit dans
-          sa réponse -- réutilise FichierChip.tsx tel quel, même rendu que
-          les liens que le modèle écrit correctement lui-même (PDF en aperçu
-          intégré, autre type en carte de téléchargement).
-
-          Repliable, fermé par défaut (2026-07-30, demande Bourama) : la
-          réponse du modèle n'est plus filtrée/masquée côté backend (round-
-          trip standard rétabli, voir core/main.py) -- si le modèle recopie
-          ou casse un lien, sa réponse s'affiche telle quelle, SANS y
-          toucher. Ce menu sert de filet fiable et discret : le résultat
-          garanti par le backend (URL correcte à coup sûr) reste disponible
-          juste en dessous, quel que soit ce que le modèle a écrit. */}
-      {!estUtilisateur && fichiersGeneres && fichiersGeneres.length > 0 && (
-        <div className="my-1.5 flex max-w-[85%] flex-col gap-1">
-          <button
-            onClick={() => setFichiersOuverts((prec) => !prec)}
-            className="flex items-center gap-1.5 text-[13px] text-dj-texte-muet transition-colors hover:text-dj-texte"
-          >
-            <FileText size={13} />
-            <span>
-              {fichiersGeneres.reduce((total, appel) => total + appel.fichiers.length, 0) > 1
-                ? "Fichiers générés"
-                : "Fichier généré"}
-            </span>
-            {fichiersOuverts ? <ChevronDown size={13} /> : <ChevronRight size={13} />}
-          </button>
-          <div
-            className={`grid transition-[grid-template-rows] duration-300 ease-out ${
-              fichiersOuverts ? "grid-rows-[1fr]" : "grid-rows-[0fr]"
-            }`}
-          >
-            <div className="overflow-hidden">
-              <div className="mt-1.5 flex flex-col gap-1">
-                {fichiersGeneres.flatMap((appel) =>
-                  appel.fichiers.map((f) => <FichierChip key={f.url} href={f.url} nom={f.nom} />)
-                )}
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
+      {/* Bloc "Fichier(s) généré(s)" retiré (04/09/2026, demande Bourama) :
+          ne reste plus que le lien que le modèle écrit lui-même dans sa
+          réponse (rendu ci-dessus par le composant `a` custom, qui bascule
+          déjà vers FichierChip/LinkPreview selon l'extension). */}
 
       {/* Ajouté 30/08/2026 (audit UX mobile, partie 5) : jusqu'ici, une
           génération en échec affichait un texte clair ("Une erreur est
@@ -1092,8 +1042,7 @@ function memeApparence(
     precedent.estEnCoursDeGeneration === suivant.estEnCoursDeGeneration &&
     precedent.raisonnement === suivant.raisonnement &&
     precedent.raisonnementEnCours === suivant.raisonnementEnCours &&
-    precedent.outilsResultats === suivant.outilsResultats &&
-    precedent.fichiersGeneres === suivant.fichiersGeneres
+    precedent.outilsResultats === suivant.outilsResultats
   );
 }
 
