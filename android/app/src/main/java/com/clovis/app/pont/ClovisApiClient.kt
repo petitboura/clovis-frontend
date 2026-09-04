@@ -10,15 +10,22 @@ import io.ktor.client.HttpClient
 import io.ktor.client.call.body
 import io.ktor.client.engine.android.Android
 import io.ktor.client.plugins.contentnegotiation.ContentNegotiation
+import io.ktor.client.request.forms.formData
+import io.ktor.client.request.forms.submitFormWithBinaryData
 import io.ktor.client.request.get
 import io.ktor.client.request.header
 import io.ktor.client.request.post
 import io.ktor.client.request.setBody
 import io.ktor.client.statement.HttpResponse
 import io.ktor.http.ContentType
+import io.ktor.http.Headers
+import io.ktor.http.HttpHeaders
+import io.ktor.http.append
 import io.ktor.http.contentType
 import io.ktor.serialization.kotlinx.json.json
 import kotlinx.serialization.Serializable
+import kotlinx.serialization.encodeToString
+import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonObject
 
 private const val BASE_URL = "https://clovis-backend-production.up.railway.app"
@@ -84,6 +91,34 @@ class ClovisApiClient(private val context: Context) {
             avecAuth(this)
             contentType(ContentType.Application.Json)
             setBody(CorpsSynchronisationDossiers("android", noms))
+        }
+    }
+
+    // Ajoute le 04/09/2026, Bourama : vectorisation en masse des dossiers
+    // designes -- transfert brut de chaque fichier (multipart), voir
+    // clovis-backend/api/dossiers_designes.py. `chemin` (sous-dossiers
+    // traverses, jamais le nom du fichier) est envoye en JSON, tel
+    // qu'attendu cote serveur (Form(...), decode avec json.loads).
+    suspend fun uploaderFichierDossierDesigne(
+        dossierNom: String,
+        chemin: List<String>,
+        nomFichier: String,
+        typeMime: String,
+        contenu: ByteArray
+    ): HttpResponse {
+        return http.submitFormWithBinaryData(
+            url = "$BASE_URL/api/dossiers-designes/upload",
+            formData = formData {
+                append("dossier_nom", dossierNom)
+                append("plateforme", "android")
+                append("chemin", Json.encodeToString(chemin))
+                append("fichier", contenu, Headers.build {
+                    append(HttpHeaders.ContentType, typeMime)
+                    append(HttpHeaders.ContentDisposition, "filename=\"$nomFichier\"")
+                })
+            }
+        ) {
+            avecAuth(this)
         }
     }
 

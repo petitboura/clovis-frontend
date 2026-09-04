@@ -49,6 +49,19 @@ data class ContenuFichier(
     val tailleOctets: Long
 )
 
+// Ajoute le 04/09/2026 (vectorisation en masse des dossiers designes,
+// voir clovis-backend/api/dossiers_designes.py) : un fichier trouve en
+// parcourant recursivement un dossier designe, avec son chemin de
+// sous-dossiers depuis la racine (JAMAIS le nom du dossier designe
+// lui-meme, ni le nom du fichier -- voir listerRecursif ci-dessous).
+data class FichierAVectoriser(
+    val uri: Uri,
+    val nom: String,
+    val chemin: List<String>,
+    val typeMime: String,
+    val tailleOctets: Long
+)
+
 class DossiersDesignesRepository(private val context: Context) {
 
     private val prefs = context.getSharedPreferences(PREFS_NOM, Context.MODE_PRIVATE)
@@ -130,19 +143,59 @@ class DossiersDesignesRepository(private val context: Context) {
         if (!doc.exists() || !doc.isFile) return null
         val nom = doc.name ?: return null
         val typeMime = doc.type ?: "application/octet-stream"
+        val octets = lireOctets(elementUri) ?: return null
+        return ContenuFichier(
+            contenuBase64 = Base64.encodeToString(octets, Base64.NO_WRAP),
+            typeMime = typeMime,
+            nomFichier = nom,
+            tailleOctets = octets.size.toLong()
+        )
+    }
+
+    // Ajoute le 04/09/2026 : contenu brut d'un fichier (pas de base64,
+    // contrairement a lireFichier ci-dessus qui l'encode pour le canal
+    // temps reel WebSocket) -- utilise par la vectorisation en masse, qui
+    // envoie les octets tels quels en multipart HTTP. lireFichier
+    // reutilise maintenant cette meme fonction (aucune logique dupliquee).
+    fun lireOctets(elementUri: Uri): ByteArray? {
         return try {
-            context.contentResolver.openInputStream(elementUri)?.use { flux ->
-                val octets = flux.readBytes()
-                ContenuFichier(
-                    contenuBase64 = Base64.encodeToString(octets, Base64.NO_WRAP),
-                    typeMime = typeMime,
-                    nomFichier = nom,
-                    tailleOctets = octets.size.toLong()
-                )
-            }
+            context.contentResolver.openInputStream(elementUri)?.use { it.readBytes() }
         } catch (e: Exception) {
             null
         }
+    }
+
+    // Ajoute le 04/09/2026, Bourama : "apres avoir choisi un dossier, tout
+    // ce qu'il contient hormis video est vectorise" -- parcourt
+    // recursivement TOUS les sous-dossiers d'un dossier designe et
+    // renvoie chaque FICHIER trouve (jamais les dossiers eux-memes), en
+    // excluant la video (trop couteuse a vectoriser, decision explicite
+    // de Bourama). `chemin` porte la liste ordonnee des noms de
+    // sous-dossiers traverses pour atteindre ce fichier, PAS le nom du
+    // dossier designe racine ni celui du fichier -- voir
+    // clovis-backend/migrations/2026_09_04_dossiers_designes_vectorisation.sql.
+    // Reutilise directement les DocumentFile enfants renvoyes par
+    // listFiles() pour recurser (pas besoin de refaire fromTreeUri a
+    // chaque niveau, l'URI enfant est deja valide dans l'arbre accorde).
+    fun listerRecursif(dossierUri: Uri): List<FichierAVectoriser> {
+        val racine = DocumentFile.fromTreeUri(context, dossierUri) ?: return emptyList()
+        return parcourirRecursivement(racine, emptyList())
+    }
+
+    private fun parcourirRecursivement(dossier: DocumentFile, chemin: List<String>): List<FichierAVectoriser> {
+        val resultat = mutableListOf<FichierAVectoriser>()
+        dossier.listFiles().forEach { enfant ->
+            val nom = enfant.name ?: return@forEach
+            if (enfant.isDirectory) {
+                resultat.addAll(parcourirRecursivement(enfant, chemin + nom))
+            } else {
+                val typeMime = enfant.type ?: "application/octet-stream"
+                if (!typeMime.startsWith("video/")) {
+                    resultat.add(FichierAVectoriser(enfant.uri, nom, chemin, typeMime, enfant.length()))
+                }
+            }
+        }
+        return resultat
     }
 
     fun renommer(elementUri: Uri, nouveauNom: String): Boolean {

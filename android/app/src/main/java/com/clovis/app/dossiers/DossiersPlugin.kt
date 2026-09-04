@@ -68,6 +68,43 @@ class DossiersPlugin : Plugin() {
         synchroniserAvecBackend()
     }
 
+    // Ajoute le 04/09/2026, Bourama : "apres avoir choisi un dossier, tout
+    // ce qu'il contient hormis video est vectorise", declenchement
+    // automatique confirme par Bourama (pas de confirmation utilisateur
+    // supplementaire). Parcourt tout l'arbre du dossier via
+    // repo.listerRecursif et transfere chaque fichier vers
+    // clovis-backend (api/dossiers_designes.py), qui gere seul la
+    // vectorisation elle-meme en arriere-plan cote serveur -- rien ici ne
+    // depend de l'app restant ouverte. Jamais bloquant pour
+    // l'utilisateur : un echec de transfert (reseau coupe en cours de
+    // route, fichier illisible) est loggue et le parcours continue avec
+    // les fichiers suivants, sans jamais faire echouer choisirDossier.
+    private fun demarrerVectorisationDossier(dossier: DossierDesigne) {
+        CoroutineScope(Dispatchers.IO).launch {
+            val client = ClovisApiClient(context)
+            val fichiers = try {
+                repo.listerRecursif(dossier.uri)
+            } catch (e: Exception) {
+                Log.w("DossiersPlugin", "Echec du parcours recursif du dossier ${dossier.nom} (vectorisation).", e)
+                return@launch
+            }
+            fichiers.forEach { fichier ->
+                try {
+                    val octets = repo.lireOctets(fichier.uri) ?: return@forEach
+                    client.uploaderFichierDossierDesigne(
+                        dossierNom = dossier.nom,
+                        chemin = fichier.chemin,
+                        nomFichier = fichier.nom,
+                        typeMime = fichier.typeMime,
+                        contenu = octets
+                    )
+                } catch (e: Exception) {
+                    Log.w("DossiersPlugin", "Echec transfert de ${fichier.nom} (dossier ${dossier.nom}) pour vectorisation.", e)
+                }
+            }
+        }
+    }
+
     private fun DossierDesigne.toJson() = JSObject().apply {
         put("uri", uri.toString())
         put("nom", nom)
@@ -114,6 +151,7 @@ class DossiersPlugin : Plugin() {
             return
         }
         synchroniserAvecBackend()
+        demarrerVectorisationDossier(dossier)
         call.resolve(dossier.toJson())
     }
 
