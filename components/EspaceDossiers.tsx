@@ -13,8 +13,10 @@ import {
   Move,
   ChevronRight,
   Smartphone,
+  Loader2,
 } from "lucide-react";
 import { usePluginNatif, messageErreurPlugin } from "@/lib/usePluginNatif";
+import { obtenirProgressionDossierDesigne } from "@/lib/api";
 import { Skeleton } from "./Skeleton";
 import { PanneauFlottant } from "./PanneauFlottant";
 import { BoutonRetour } from "./BoutonRetour";
@@ -74,6 +76,17 @@ export function EspaceDossiers() {
   const [dialoguePicker, setDialoguePicker] = useState<ElementDossier | null>(null);
   const [action, setAction] = useState(false);
 
+  // Ajoute le 04/09/2026, Bourama : "étape 5" de la vectorisation en
+  // masse (voir clovis-backend/api/dossiers_designes.py::progression_dossier)
+  // -- barre de progression par dossier désigné, clé = nom du dossier.
+  // Comptage fait côté serveur (rien à calculer ici), donc affichée telle
+  // quelle même après une fermeture/réouverture de l'app. Une entrée
+  // disparaît de cet état dès que "termine" est vrai (voir l'useEffect de
+  // polling plus bas), ce qui fait disparaître sa barre.
+  const [progressions, setProgressions] = useState<
+    Record<string, { total: number; prets: number; en_cours: number; echecs: number; termine: boolean }>
+  >({});
+
   const dossierCourant = pile[pile.length - 1] ?? null;
 
   const rafraichir = useCallback(() => {
@@ -98,6 +111,48 @@ export function EspaceDossiers() {
   useEffect(() => {
     rafraichir();
   }, [rafraichir]);
+
+  // Ajoute le 04/09/2026 : polling de la progression de vectorisation en
+  // masse pour chaque dossier désigné visible à l'écran racine (jamais
+  // dans la navigation à l'intérieur d'un dossier, pas concerné).
+  // Interroge le serveur toutes les 4s -- comptage déjà fait côté
+  // serveur, rien à recalculer ici. Une entrée est retirée dès que
+  // "termine" est vrai (fait disparaître sa barre) ou que total===0 (rien
+  // à vectoriser pour l'instant, pas encore de ligne insérée).
+  useEffect(() => {
+    if (dossierCourant || !dossiersDesignes || dossiersDesignes.length === 0) return;
+    let annule = false;
+
+    async function tick() {
+      const { Capacitor } = await import("@capacitor/core");
+      const plateforme = Capacitor.getPlatform();
+      for (const d of dossiersDesignes ?? []) {
+        if (annule) return;
+        try {
+          const p = await obtenirProgressionDossierDesigne(d.nom, plateforme);
+          if (annule) return;
+          setProgressions((etat) => {
+            if (p.total === 0 || p.termine) {
+              if (!(d.nom in etat)) return etat;
+              const { [d.nom]: _retire, ...reste } = etat;
+              return reste;
+            }
+            return { ...etat, [d.nom]: p };
+          });
+        } catch {
+          // Silencieux : simple affichage de progression, pas la peine de
+          // bloquer l'écran pour un échec d'une requête de polling.
+        }
+      }
+    }
+
+    tick();
+    const minuteur = setInterval(tick, 4000);
+    return () => {
+      annule = true;
+      clearInterval(minuteur);
+    };
+  }, [dossierCourant, dossiersDesignes]);
 
   async function ajouterDossier() {
     if (!plugin) return;
@@ -307,25 +362,48 @@ export function EspaceDossiers() {
         ) : (
           <div className="overflow-hidden rounded-cgpt-carte border border-dj-bordure bg-dj-surface">
             <div className="divide-y divide-dj-bordure">
-              {(dossiersDesignes ?? []).map((d) => (
-                <div key={d.uri} className="flex items-center gap-2 px-4 py-3">
-                  <button
-                    onClick={() => setPile([{ uri: d.uri, nom: d.nom }])}
-                    className="flex flex-1 items-center gap-3 overflow-hidden text-left"
-                  >
-                    <IconDossier size={18} className="flex-shrink-0 text-dj-texte-muet" />
-                    <span className="truncate text-sm text-dj-texte">{d.nom}</span>
-                  </button>
-                  <button
-                    onClick={() => retirerDossier(d.uri)}
-                    disabled={action}
-                    aria-label="Retirer ce dossier"
-                    className="flex-shrink-0 rounded-lg p-1.5 text-dj-texte-muet transition-colors hover:bg-dj-surface-haute hover:text-[var(--dj-erreur)] disabled:opacity-50"
-                  >
-                    <FolderX size={16} />
-                  </button>
-                </div>
-              ))}
+              {(dossiersDesignes ?? []).map((d) => {
+                const progression = progressions[d.nom];
+                return (
+                  <div key={d.uri} className="flex flex-col gap-1.5 px-4 py-3">
+                    <div className="flex items-center gap-2">
+                      <button
+                        onClick={() => setPile([{ uri: d.uri, nom: d.nom }])}
+                        className="flex flex-1 items-center gap-3 overflow-hidden text-left"
+                      >
+                        <IconDossier size={18} className="flex-shrink-0 text-dj-texte-muet" />
+                        <span className="truncate text-sm text-dj-texte">{d.nom}</span>
+                      </button>
+                      <button
+                        onClick={() => retirerDossier(d.uri)}
+                        disabled={action}
+                        aria-label="Retirer ce dossier"
+                        className="flex-shrink-0 rounded-lg p-1.5 text-dj-texte-muet transition-colors hover:bg-dj-surface-haute hover:text-[var(--dj-erreur)] disabled:opacity-50"
+                      >
+                        <FolderX size={16} />
+                      </button>
+                    </div>
+                    {/* Ajoute le 04/09/2026 : disparaît d'elle-même (voir
+                        l'useEffect de polling) dès que la vectorisation du
+                        dossier est terminée -- continue côté serveur même
+                        app fermée, cette barre n'en dépend pas. */}
+                    {progression && (
+                      <div className="flex items-center gap-2 pl-[30px]">
+                        <div className="h-1 flex-1 overflow-hidden rounded-full bg-dj-surface-haute">
+                          <div
+                            className="h-full rounded-full bg-dj-accent-1-texte transition-all"
+                            style={{ width: `${Math.round(((progression.prets + progression.echecs) / progression.total) * 100)}%` }}
+                          />
+                        </div>
+                        <span className="flex-shrink-0 text-[10px] text-dj-texte-muet">
+                          {progression.prets + progression.echecs}/{progression.total}
+                        </span>
+                        <Loader2 size={11} className="flex-shrink-0 animate-spin text-dj-texte-muet" />
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
             </div>
           </div>
         )

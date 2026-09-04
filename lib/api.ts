@@ -269,6 +269,34 @@ export type ResultatDiffusion = { diffuse_a: number; total_receveurs: number; ec
 // et partagé avec Djiguignè, pas de vérification de rôle dessus).
 
 /**
+ * Progression de la vectorisation en masse d'un dossier désigné (04/09/2026,
+ * voir clovis-backend/api/dossiers_designes.py::progression_dossier) --
+ * destinée à la barre de progression de EspaceDossiers.tsx ("étape 5" du
+ * chantier, demande Bourama). Comptage fait côté serveur, rien à calculer
+ * ici, donc survit à une fermeture/réouverture de l'app.
+ */
+export async function obtenirProgressionDossierDesigne(dossierNom: string, plateforme: string) {
+  const {
+    data: { session },
+  } = await supabase.auth.getSession();
+
+  if (!session?.access_token) {
+    throw new Error("Connecte-toi pour voir la progression.");
+  }
+
+  const params = new URLSearchParams({ dossier_nom: dossierNom, plateforme });
+  const reponse = await fetch(`${API_URL}/api/dossiers-designes/progression?${params}`, {
+    headers: { Authorization: `Bearer ${session.access_token}` },
+  });
+
+  if (!reponse.ok) {
+    throw await construireErreurApi(reponse, "/api/dossiers-designes/progression");
+  }
+
+  return reponse.json() as Promise<{ total: number; prets: number; en_cours: number; echecs: number; termine: boolean }>;
+}
+
+/**
  * Upload vers la bibliothèque PERSONNELLE de l'utilisateur connecté
  * (2026-08-01, nouvelle section "Mon espace" -- voir
  * api/bibliotheque_utilisateur.py:uploader_document). Même mécanique que
