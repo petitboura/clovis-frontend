@@ -512,17 +512,25 @@ function BulleMessageInterne({
   // passage concerné -- inhérent à l'analyse Markdown incrémentale
   // (impossible de savoir que c'est du gras avant la fermeture du
   // marqueur), pas un bug de notre plugin.
-  const motsDejaAnimesRef = useRef(0);
-  const totalMotsCourantRef = useRef(0);
+  // Un curseur PAR CLÉ (05/09/2026, chantier timeline) plutôt qu'un seul
+  // nombre : le chemin par défaut (message.content en un seul bloc) utilise
+  // la clé -1, exactement comme avant sur cette clé unique -- comportement
+  // inchangé. Chaque segment "texte" de la timeline (voir plus bas) a sa
+  // PROPRE clé (son index dans message.segments), donc son propre seuil :
+  // un segment déjà figé (plus le dernier de la liste) n'est simplement
+  // plus jamais remis à jour, pendant que le segment activement en train
+  // de grandir anime ses propres nouveaux mots sans se mélanger aux autres.
+  const motsDejaAnimesRef = useRef<Record<number, number>>({});
+  const totalMotsCourantRef = useRef<Record<number, number>>({});
   useEffect(() => {
-    motsDejaAnimesRef.current = totalMotsCourantRef.current;
+    motsDejaAnimesRef.current = { ...totalMotsCourantRef.current };
   }, [message.content, estEnCoursDeGeneration]);
   useEffect(() => {
     // Nouveau message (bulle vidée puis réutilisée, ex. régénération) :
     // repartir de zéro plutôt que de garder un seuil obsolète.
     if (message.content.length === 0) {
-      motsDejaAnimesRef.current = 0;
-      totalMotsCourantRef.current = 0;
+      motsDejaAnimesRef.current = {};
+      totalMotsCourantRef.current = {};
     }
   }, [message.content.length]);
 
@@ -620,20 +628,16 @@ function BulleMessageInterne({
   }
 
   // Extrait le 05/09/2026 (chantier timeline chronologique, demande
-  // Bourama) : identique au rendu d'origine, juste paramétré sur `texte`
-  // et `avecFade` au lieu d'être câblé en dur sur message.content et
+  // Bourama) : identique au rendu d'origine, juste paramétré sur `texte`,
+  // `avecFade` et `cle` au lieu d'être câblé en dur sur message.content et
   // estEnCoursDeGeneration -- le chemin par défaut (segments absent/vide)
-  // appelle cette fonction avec exactement les mêmes valeurs qu'avant,
-  // comportement inchangé. avecFade désactivé pour chaque segment de la
-  // nouvelle timeline (voir plus bas) : motsDejaAnimesRef/
-  // totalMotsCourantRef ne suivent qu'UN seul curseur pour tout le
-  // message, pas un par segment -- l'appliquer à plusieurs instances
-  // ReactMarkdown en même temps désynchroniserait le seuil d'animation.
-  // Seul le dernier segment (celui qui grandit encore) aurait besoin du
-  // fondu ; les précédents sont déjà figés. Non traité pour l'instant --
-  // le fondu mot-par-mot reste donc réservé au mode d'affichage groupé
-  // existant.
-  function rendreMarkdown(texte: string, avecFade: boolean) {
+  // appelle cette fonction avec exactement les mêmes valeurs qu'avant
+  // (cle=-1), comportement inchangé. Pour chaque segment "texte" de la
+  // timeline, avecFade n'est activé QUE pour le dernier segment (celui qui
+  // grandit encore -- les précédents sont déjà figés), avec sa propre clé
+  // (son index) pour ne pas mélanger son seuil d'animation avec celui d'un
+  // autre segment -- voir motsDejaAnimesRef/totalMotsCourantRef plus haut.
+  function rendreMarkdown(texte: string, avecFade: boolean, cle: number = -1) {
     return (
       <ReactMarkdown
         remarkPlugins={PLUGINS_REMARK}
@@ -644,9 +648,9 @@ function BulleMessageInterne({
                 [
                   pluginMotsFade,
                   {
-                    seuil: motsDejaAnimesRef.current,
+                    seuil: motsDejaAnimesRef.current[cle] ?? 0,
                     rapporterTotal: (n: number) => {
-                      totalMotsCourantRef.current = n;
+                      totalMotsCourantRef.current[cle] = n;
                     },
                   },
                 ],
@@ -888,7 +892,15 @@ function BulleMessageInterne({
                     if (segment.type === "outil") {
                       return <OutilResultatBulle key={index} resultats={[segment]} />;
                     }
-                    return <div key={index}>{rendreMarkdown(normaliserCitations(normaliserLatex(segment.texte)), false)}</div>;
+                    return (
+                      <div key={index}>
+                        {rendreMarkdown(
+                          normaliserCitations(normaliserLatex(segment.texte)),
+                          !!estEnCoursDeGeneration && index === message.segments!.length - 1,
+                          index,
+                        )}
+                      </div>
+                    );
                   })}
                 </div>
               ) : (
