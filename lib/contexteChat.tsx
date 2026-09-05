@@ -78,11 +78,28 @@ export function useOuvrirChat() {
 // chat est par dessus, rien ne bouge") : le fondu de fermerAvecFondu
 // prend 200ms avant de basculer etat sur "fermee", pendant lesquelles le
 // chat plein écran (fixed inset-0 z-[110]) reste affiché par dessus la
-// page de destination, déjà chargée derrière lui par router.push. Fermer
-// directement (setEtat("fermee"), sans fondu) supprime ce délai : la
-// page cible redevient visible dès que possible, plutôt que de dépendre
-// d'une animation qui se termine après coup.
+// page de destination, déjà chargée derrière lui par router.push.
+//
+// Correctif (05/09/2026, demande Bourama : "faut qu'il ne se ferme pas
+// brutement") : le choix ci-dessus (fermeture instantanée, sans fondu)
+// est abandonné pour fermerChatEtNaviguer (voir AppSidebar.tsx) au
+// profit de useFermerChatAvecFondu juste en dessous -- pendant les 200ms
+// de fondu, le chat plein écran reste affiché (opacité décroissante)
+// PAR-DESSUS la page de destination déjà chargée derrière lui, ce qui
+// est maintenant le comportement recherché plutôt qu'un défaut à éviter.
+// useFermerChat (fermeture instantanée) reste utilisé ailleurs (ex:
+// démontage sans navigation associée) là où aucun fondu n'est nécessaire.
 export function useFermerChat() {
   const ctx = useContext(ContexteChat);
   return () => ctx?.setEtat("fermee");
+}
+
+// 05/09/2026, demande Bourama (voir commentaire ci-dessus) : variante
+// avec fondu de useFermerChat, pour tout appelant qui ferme le chat en
+// réaction à une vraie navigation déjà déclenchée (fermerChatEtNaviguer)
+// -- même mécanisme que le bouton "Fermer" du chat plein écran
+// (ChatFlottant.tsx), qui utilise déjà directement ctx.fermerAvecFondu.
+export function useFermerChatAvecFondu() {
+  const ctx = useContext(ContexteChat);
+  return () => ctx?.fermerAvecFondu();
 }

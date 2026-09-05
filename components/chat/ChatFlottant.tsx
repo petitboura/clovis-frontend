@@ -166,25 +166,28 @@ export function ChatFlottant({
   });
 
   // 31/08/2026, demande Bourama : le bouton retour (natif + web mobile)
-  // doit d'abord repasser le chat plein écran en mini, PUIS seulement au
-  // retour suivant le fermer complètement -- jamais fermer l'appli
-  // directement. Deux calques distincts et mutuellement exclusifs (l'un
-  // des deux `actif` est toujours faux selon `etat`), voir
-  // lib/contexteRetour.tsx. Placés avant le early return de la bulle
-  // fermée, même raison que l'effet juste au-dessus (ordre des hooks
-  // stable peu importe `etat`).
-  // 03/09/2026, correctif Bourama ("clic Bibliothèque/Concentration/
-  // Bureau/Personnaliser Clovis depuis le tiroir mobile du chat ferme le
-  // chat mais n'ouvre pas la section") : la valeur de retour de ce hook
-  // était jusqu'ici ignorée. Sans marquerFermetureSansHistorique(), une
-  // fermeture du chat par vraie navigation (fermerChatEtNaviguer, voir
-  // AppSidebar.tsx) consomme quand même l'entrée d'historique de ce
-  // calque au démontage -- history.back() annule alors la navigation qui
-  // vient d'avoir lieu. Transmise à AppSidebar juste plus bas pour que
-  // fermerChatEtNaviguer puisse marquer ce calque avant de fermer.
+  // devait d'abord repasser le chat plein écran en mini, PUIS seulement
+  // au retour suivant le fermer complètement -- jamais fermer l'appli
+  // directement.
+  // Correctif (05/09/2026, Bourama : "le retour... ne le ferme pas ils
+  // le mettent en mini... faut qu'il ne se ferme pas brutement") :
+  // décision du 31/08 explicitement inversée -- le retour ferme
+  // maintenant directement le chat plein écran, avec le même fondu
+  // (fermerAvecFondu) que le bouton "Fermer" de l'en-tête, plutôt que de
+  // passer par mini. Le calque `etat === "mini"` juste en dessous reste
+  // utile pour un autre cas : la réduction manuelle en mini (bouton
+  // Réduire, onClick={() => setEtat("mini")} plus bas) reste inchangée,
+  // et un retour depuis cet état mini doit toujours fermer (avec fondu).
+  // 05/09/2026, marquerFermetureSansHistorique (issu de ce hook, voir
+  // lib/contexteRetour.tsx) reste transmis à AppSidebar.tsx : nécessaire
+  // dès qu'une fermeture de ce calque est déclenchée par une vraie
+  // navigation déjà en cours (fermerChatEtNaviguer) plutôt que par un
+  // vrai retour -- sans ça, le démontage du calque au changement d'état
+  // consommerait quand même une entrée d'historique et annulerait cette
+  // navigation (bug initialement corrigé le 03/09/2026).
   const { marquerFermetureSansHistorique: marquerPleinEcranSansHistorique } = useFermetureAuRetour(
     etat === "plein_ecran",
-    () => setEtat("mini")
+    fermerAvecFondu
   );
   useFermetureAuRetour(etat === "mini", fermerAvecFondu);
   // Sous-menu historique (mode mini, dropdown dans l'en-tête -- voir plus

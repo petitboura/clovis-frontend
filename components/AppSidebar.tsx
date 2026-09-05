@@ -31,7 +31,7 @@ import { NoteAgent } from "@/components/NoteAgent";
 import { CommentairesAgent } from "@/components/CommentairesAgent";
 import { BoutonInstaller } from "@/components/BoutonInstaller";
 import { MenuPlusChatFlottant } from "@/components/mobile/MenuPlusChatFlottant";
-import { useFermerChat } from "@/lib/contexteChat";
+import { useFermerChatAvecFondu } from "@/lib/contexteChat";
 import { useFermetureAnimee } from "@/lib/useFermetureAnimee";
 import { useFermetureAuRetour } from "@/lib/contexteRetour";
 
@@ -467,7 +467,7 @@ export function AppSidebar({
 }) {
   const pathname = usePathname();
   const router = useRouter();
-  const fermerChat = useFermerChat();
+  const fermerChatAvecFondu = useFermerChatAvecFondu();
   // 22/08/2026, demande Bourama : remplace le comportement précédent
   // (fermer le chat plein écran au clic sur une section, cf. commit du
   // même jour) -- désormais le clic ouvre la section dans une fenêtre
@@ -485,10 +485,13 @@ export function AppSidebar({
   function fermerChatEtNaviguer(href: string) {
     // Voir commentaire sur la prop marquerPleinEcranSansHistorique
     // ci-dessus : sans ça, le démontage du calque plein_ecran (déclenché
-    // juste après par fermerChat) consomme une entrée d'historique et
+    // par le fondu juste après) consomme une entrée d'historique et
     // annule le router.push juste en dessous.
+    // Correctif (05/09/2026, Bourama : "faut qu'il ne se ferme pas
+    // brutement") : fermerChatAvecFondu (200ms) remplace l'ancienne
+    // fermeture instantanée -- voir lib/contexteChat.tsx pour le detail.
     marquerPleinEcranSansHistorique?.();
-    fermerChat();
+    fermerChatAvecFondu();
     router.push(href);
   }
   const [ouverte, setOuverte] = useState(false);
