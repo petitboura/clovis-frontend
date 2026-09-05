@@ -17,6 +17,7 @@ import {
   MessageCircle,
   Smartphone,
   Accessibility,
+  LogOut,
   type LucideIcon,
 } from "lucide-react";
 import { BoutonRetour } from "./BoutonRetour";
@@ -46,9 +47,12 @@ import { EspaceAccessibilite } from "./EspaceAccessibilite";
  * retour), pour rester cohérent avec l'existant plutôt que d'inventer un
  * système de routes.
  *
- * "Se déconnecter" n'est plus dans cette page : accessible depuis le menu
- * qui s'ouvre au clic sur la photo de profil dans la sidebar (voir
- * AppSidebar.tsx:MenuProfil), pas la peine de le dupliquer ici.
+ * "Se déconnecter" (22/08/2026) : retiré de cette page à l'époque, au
+ * profit du menu qui s'ouvre au clic sur la photo de profil dans la
+ * sidebar (voir AppSidebar.tsx:MenuProfil). Revenu ici le 05/09/2026,
+ * demande explicite de Bourama -- les deux existent maintenant en
+ * parallèle (pas de suppression du menu profil, qui reste accessible
+ * ailleurs dans l'appli, ex. sidebar desktop).
  *
  * Rôles (2026-08-04) volontairement absents : voir app/inscription/page.tsx,
  * l'inscription n'attribue plus aucun rôle.
@@ -315,6 +319,11 @@ export function EspaceParametres() {
     }
   }
 
+  async function seDeconnecter() {
+    await supabase.auth.signOut();
+    window.location.href = "/connexion";
+  }
+
   async function confirmerSuppressionCompte() {
     const saisie = window.prompt(
       'Cette action est définitive : ton profil, tes IA, tes commentaires et tout ce qui t\'appartient sur Clovis seront supprimés. Tape "SUPPRIMER" pour confirmer.'
@@ -390,7 +399,20 @@ export function EspaceParametres() {
           </div>
         </div>
 
-        {/* Groupe 3 -- Supprimer mon compte (danger, pas de chevron dans le vrai contenu) */}
+        {/* Groupe 3 -- Se déconnecter (avec chevron, comme les autres
+            lignes non-danger : voir LigneListe, seul `danger` masque le
+            chevron) */}
+        <div className="overflow-hidden rounded-cgpt-carte border border-dj-bordure bg-dj-surface">
+          <div className="flex w-full items-center gap-3 px-4 py-3">
+            <Skeleton className="h-[18px] w-[18px] flex-shrink-0 rounded" />
+            <div className="flex-1 overflow-hidden">
+              <Skeleton className="h-3.5 w-28 rounded" />
+            </div>
+            <Skeleton className="h-4 w-4 flex-shrink-0 rounded" />
+          </div>
+        </div>
+
+        {/* Groupe 4 -- Supprimer mon compte (danger, pas de chevron dans le vrai contenu) */}
         <div className="overflow-hidden rounded-cgpt-carte border border-dj-bordure bg-dj-surface">
           <div className="flex w-full items-center gap-3 px-4 py-3">
             <Skeleton className="h-[18px] w-[18px] flex-shrink-0 rounded" />
@@ -462,6 +484,10 @@ export function EspaceParametres() {
           />
         </Liste>
         {erreurExport && <p className="text-sm text-[var(--dj-erreur)]">{erreurExport}</p>}
+
+        <Liste>
+          <LigneListe icone={LogOut} titre="Se déconnecter" onClick={seDeconnecter} />
+        </Liste>
 
         <Liste>
           <LigneListe
