@@ -105,9 +105,14 @@ enum ActionsAppareilExecuteur {
                 if case .echec(let msg) = resoluParenturl { return ResultatAction(succes: false, resultat: msg) }
                 return ResultatAction(succes: false, resultat: "Emplacement introuvable.")
             }
-            // Note : pas de gestion de type_mime cote iOS (limite existante de
-            // DossiersDesignesRepository.creerFichier, pas ajoutee par ce lot).
-            let succes = DossiersDesignesRepository.creerFichier(dansParent: parentUrl, nom: nom)
+            // Corrige le 05/09/2026, Bourama : "type_mime" est desormais transmis
+            // a DossiersDesignesRepository.creerFichier, qui s'en sert pour
+            // completer l'extension quand "nom" n'en a pas deja une (voir son
+            // en-tete). Avant ce correctif, "type_mime" etait recu ici mais
+            // jamais lu, un ecart avec Android silencieux jusqu'a ce que
+            // l'agent cree un fichier sans extension explicite.
+            let typeMime = texte("type_mime")
+            let succes = DossiersDesignesRepository.creerFichier(dansParent: parentUrl, nom: nom, typeMime: typeMime)
             return resultatBooleen(succes, "Fichier \"\(nom)\" créé dans \"\(libelle)\".", "Échec de la création de \"\(nom)\" dans \"\(libelle)\".")
 
         case "dossier_creer_sous_dossier":

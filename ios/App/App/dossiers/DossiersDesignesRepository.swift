@@ -126,13 +126,39 @@ enum DossiersDesignesRepository {
         } != nil
     }
 
-    static func creerFichier(dansParent parent: URL, nom: String) -> Bool {
+    // Modifie le 05/09/2026, Bourama : ajoute "typeMime" (optionnel, defaut
+    // nil pour ne rien changer au chemin d'appel existant depuis
+    // DossiersPlugin.creerFichier, cote UI web/JS). Corrige un ecart avec
+    // Android : la-bas, DocumentFile.createFile(typeMime, nom) via SAF
+    // choisit lui-meme l'extension a partir du type MIME quand "nom" n'en a
+    // pas deja une. Cote iOS, FileManager n'a aucune notion de type MIME,
+    // le type d'un fichier est entierement determine par l'extension dans
+    // son nom -- sans ce correctif, un "nom" recu sans extension (l'agent
+    // comptant sur "type_mime" pour l'implicite) donnait un fichier sans
+    // extension sur iPhone alors qu'Android l'aurait complete. Voir
+    // nomAvecExtension ci-dessous.
+    static func creerFichier(dansParent parent: URL, nom: String, typeMime: String? = nil) -> Bool {
         avecAcces(parent) {
-            let destination = parent.appendingPathComponent(nom, isDirectory: false)
+            let nomFinal = Self.nomAvecExtension(nom, typeMime: typeMime)
+            let destination = parent.appendingPathComponent(nomFinal, isDirectory: false)
             guard FileManager.default.createFile(atPath: destination.path, contents: Data()) else {
                 throw NSError(domain: "DossiersDesignesRepository", code: 1)
             }
         } != nil
+    }
+
+    // Si "nom" a deja une extension, ne jamais la toucher (meme principe
+    // que le reste du projet : ne jamais deviner par-dessus ce qui est deja
+    // explicite). Sinon, en deduire une a partir du type MIME recu, si
+    // fourni et reconnu -- sinon "nom" reste tel quel (aucune extension
+    // ajoutee), meme comportement qu'avant ce correctif.
+    private static func nomAvecExtension(_ nom: String, typeMime: String?) -> String {
+        guard (nom as NSString).pathExtension.isEmpty,
+              let typeMime = typeMime,
+              let ext = UTType(mimeType: typeMime)?.preferredFilenameExtension else {
+            return nom
+        }
+        return "\(nom).\(ext)"
     }
 
     static func renommer(_ element: URL, nouveauNom: String) -> Bool {
