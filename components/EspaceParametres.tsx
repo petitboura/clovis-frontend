@@ -308,6 +308,8 @@ export function EspaceParametres() {
   }
 
   async function handleExporterMesDonnees() {
+    if (!window.confirm("Télécharger une copie de toutes tes données Clovis ?")) return;
+
     setExportEnCours(true);
     setErreurExport(null);
     try {
@@ -320,11 +322,19 @@ export function EspaceParametres() {
   }
 
   async function seDeconnecter() {
+    if (!window.confirm("Se déconnecter de Clovis ?")) return;
+
     await supabase.auth.signOut();
     window.location.href = "/connexion";
   }
 
   async function confirmerSuppressionCompte() {
+    // Double confirmation (05/09/2026, demande Bourama : "la suppression
+    // même doit demander deux fois") -- un premier window.confirm ici,
+    // puis la saisie "SUPPRIMER" ci-dessous (déjà en place), pour cette
+    // action seule (Exporter/Se déconnecter n'en ont qu'une).
+    if (!window.confirm("Supprimer définitivement ton compte Clovis ?")) return;
+
     const saisie = window.prompt(
       'Cette action est définitive : ton profil, tes IA, tes commentaires et tout ce qui t\'appartient sur Clovis seront supprimés. Tape "SUPPRIMER" pour confirmer.'
     );
