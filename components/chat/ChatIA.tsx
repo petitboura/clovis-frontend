@@ -4,7 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import Image from "next/image";
 import { appelerApiStream, uploaderImageChat, uploaderDocumentChat, uploaderVideoChat, transcrireAudioChat } from "@/lib/api";
 import { useNotificationsPush, proposerNotificationsPushUneFois } from "@/lib/useNotificationsPush";
-import { BulleMessage, MessageAffiche } from "./BulleMessage";
+import { BulleMessage, MessageAffiche, SegmentMessage } from "./BulleMessage";
 import { BarreDeSaisie, LongueurReponse, LocalisationJointe } from "./BarreDeSaisie";
 import { PopupFeedback } from "./PopupFeedback";
 import { StatutOutil, EtatStatut } from "./StatutOutil";
@@ -236,6 +236,29 @@ export function ChatIA({
     return [buffer.slice(0, i), buffer.slice(i)];
   }
 
+  // Timeline en direct (05/09/2026, demande Bourama) : construit
+  // MessageAffiche.segments au fil des événements SSE, EN PLUS des champs
+  // existants (content/raisonnement/outilsResultats), sans y toucher --
+  // l'historique rechargé continue de dépendre uniquement de ces derniers.
+  // "raisonnement"/"texte" fusionnent dans le dernier segment s'il est de
+  // même nature (plusieurs événements consécutifs = un seul bloc visuel) ;
+  // un "outil" démarre toujours un nouveau segment, jamais fusionné.
+  function segmentsAvecTexteFusionne(
+    segments: SegmentMessage[] | undefined,
+    type: "raisonnement" | "texte",
+    morceau: string,
+  ): SegmentMessage[] {
+    const copie = segments ? [...segments] : [];
+    const iDernier = copie.length - 1;
+    const dernier = copie[iDernier];
+    if (dernier && dernier.type === type) {
+      copie[iDernier] = { ...dernier, texte: dernier.texte + morceau };
+    } else {
+      copie.push({ type, texte: morceau });
+    }
+    return copie;
+  }
+
   function tickAffichage() {
     const buffer = bufferAffichageRef.current;
     if (buffer.length === 0) {
@@ -263,7 +286,11 @@ export function ChatIA({
     majMessages((prec) => {
       const copie = [...prec];
       const dernier = copie[copie.length - 1];
-      copie[copie.length - 1] = { ...dernier, content: dernier.content + morceau };
+      copie[copie.length - 1] = {
+        ...dernier,
+        content: dernier.content + morceau,
+        segments: segmentsAvecTexteFusionne(dernier.segments, "texte", morceau),
+      };
       return copie;
     });
     tickerIdRef.current = setTimeout(tickAffichage, 42);
@@ -343,7 +370,7 @@ export function ChatIA({
         repliEnAttenteRef.current = false;
         majMessages((prec) => {
           const copie = [...prec];
-          copie[copie.length - 1] = { ...copie[copie.length - 1], content: "", raisonnement: "", enRepli: false };
+          copie[copie.length - 1] = { ...copie[copie.length - 1], content: "", raisonnement: "", segments: [], enRepli: false };
           return copie;
         });
       }
@@ -359,11 +386,13 @@ export function ChatIA({
       majMessages((prec) => {
         const copie = [...prec];
         const dernier = copie[copie.length - 1];
+        const segmentsBase = premierApresRepli ? [] : dernier.segments;
         copie[copie.length - 1] = {
           ...dernier,
           content: premierApresRepli ? "" : dernier.content,
           enRepli: premierApresRepli ? false : dernier.enRepli,
           raisonnement: (premierApresRepli ? "" : dernier.raisonnement || "") + evenement.texte,
+          segments: segmentsAvecTexteFusionne(segmentsBase, "raisonnement", evenement.texte),
         };
         return copie;
       });
@@ -450,7 +479,14 @@ export function ChatIA({
         if (!nouvelles.length) return prec;
         const outilsCopie = [...outils];
         outilsCopie[iDernierOutil] = { ...outilsCopie[iDernierOutil], sources: [...existantes, ...nouvelles] };
-        copie[copie.length - 1] = { ...dernier, outilsResultats: outilsCopie };
+        const segments = dernier.segments ? [...dernier.segments] : [];
+        const iDernierSegmentOutil = [...segments].reverse().findIndex((s) => s.type === "outil");
+        if (iDernierSegmentOutil !== -1) {
+          const i = segments.length - 1 - iDernierSegmentOutil;
+          const segmentOutil = segments[i] as Extract<SegmentMessage, { type: "outil" }>;
+          segments[i] = { ...segmentOutil, sources: [...(segmentOutil.sources || []), ...nouvelles] };
+        }
+        copie[copie.length - 1] = { ...dernier, outilsResultats: outilsCopie, segments };
         return copie;
       });
     } else if (evenement.type === "outil_resultat") {
@@ -468,12 +504,11 @@ export function ChatIA({
         const copie = [...prec];
         const dernier = copie[copie.length - 1];
         const existants = dernier.outilsResultats || [];
+        const nouvelEntree = { nomOutil: evenement.nom_outil, nomLisible: evenement.nom_lisible, resultat: evenement.resultat };
         copie[copie.length - 1] = {
           ...dernier,
-          outilsResultats: [
-            ...existants,
-            { nomOutil: evenement.nom_outil, nomLisible: evenement.nom_lisible, resultat: evenement.resultat },
-          ],
+          outilsResultats: [...existants, nouvelEntree],
+          segments: [...(dernier.segments || []), { type: "outil" as const, ...nouvelEntree }],
         };
         return copie;
       });
@@ -545,9 +580,9 @@ export function ChatIA({
       const suite: MessageAffiche[] = messageUtilisateur
         ? [
             { id: null, role: "user", content: messageUtilisateur, created_at: new Date().toISOString() },
-            { id: null, role: "assistant", content: "" },
+            { id: null, role: "assistant", content: "", segments: [] },
           ]
-        : [{ id: null, role: "assistant", content: "" }];
+        : [{ id: null, role: "assistant", content: "", segments: [] }];
       return copie.concat(suite);
     });
     reinitialiserAffichageControle();
@@ -645,7 +680,7 @@ export function ChatIA({
     majMessages((prec) => [
       ...prec.map((m) => (m.repriseDisponible ? { ...m, repriseDisponible: null } : m)),
       messageUtilisateur,
-      { id: null, role: "assistant", content: "" },
+      { id: null, role: "assistant", content: "", segments: [] },
     ]);
     reinitialiserAffichageControle();
     setGenEnCours(true);

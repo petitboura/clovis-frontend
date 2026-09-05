@@ -294,7 +294,34 @@ export interface MessageAffiche {
   // "reponse_annulee" et le conteneur ci-dessous), avant que content ne
   // soit vidé pour laisser la vraie tentative suivante repartir de zéro.
   enRepli?: boolean;
+  // Ajouté 05/09/2026 (demande Bourama, timeline chronologique) : séquence
+  // ORDONNÉE des étapes réellement traversées pendant CETTE génération
+  // (réflexion / texte / outil, dans l'ordre réel), construite en direct
+  // par ChatIA.tsx au fil des événements SSE -- voir SegmentMessage plus
+  // bas. Uniquement présent pour un message généré dans la session en
+  // cours ; jamais persisté en base, jamais rempli pour un message rechargé
+  // depuis l'historique (qui garde raisonnement/content/outilsResultats
+  // séparés, affichage groupé inchangé -- décision explicite de Bourama de
+  // ne pas toucher à l'historique). Quand présent et non vide, BulleMessage
+  // l'utilise à la place de l'affichage groupé pour CE message précis.
+  segments?: SegmentMessage[];
 }
+
+// Un bloc de la timeline en direct (voir MessageAffiche.segments). `texte`
+// s'accumule (plusieurs événements "reponse"/"raisonnement" consécutifs de
+// même nature forment UN seul segment, pas un par événement) ; `outil` est
+// la même forme qu'une entrée de outilsResultats, un nouveau segment par
+// appel (jamais fusionné, même nom d'outil répété).
+export type SegmentMessage =
+  | { type: "raisonnement"; texte: string }
+  | { type: "texte"; texte: string }
+  | {
+      type: "outil";
+      nomOutil: string;
+      nomLisible: string;
+      resultat: string;
+      sources?: { numero: number; titre: string; url: string; extrait?: string; url_extrait?: string; reperage?: string; position_type?: "page" | "timestamp"; position_valeur?: number; type_mime?: string | null }[];
+    };
 
 // Ajouté le 2026-07-23 (bug repéré par Bourama : en rechargeant un fil de
 // conversation depuis l'historique, la bulle utilisateur affichait le
@@ -592,6 +619,139 @@ function BulleMessageInterne({
     );
   }
 
+  // Extrait le 05/09/2026 (chantier timeline chronologique, demande
+  // Bourama) : identique au rendu d'origine, juste paramétré sur `texte`
+  // et `avecFade` au lieu d'être câblé en dur sur message.content et
+  // estEnCoursDeGeneration -- le chemin par défaut (segments absent/vide)
+  // appelle cette fonction avec exactement les mêmes valeurs qu'avant,
+  // comportement inchangé. avecFade désactivé pour chaque segment de la
+  // nouvelle timeline (voir plus bas) : motsDejaAnimesRef/
+  // totalMotsCourantRef ne suivent qu'UN seul curseur pour tout le
+  // message, pas un par segment -- l'appliquer à plusieurs instances
+  // ReactMarkdown en même temps désynchroniserait le seuil d'animation.
+  // Seul le dernier segment (celui qui grandit encore) aurait besoin du
+  // fondu ; les précédents sont déjà figés. Non traité pour l'instant --
+  // le fondu mot-par-mot reste donc réservé au mode d'affichage groupé
+  // existant.
+  function rendreMarkdown(texte: string, avecFade: boolean) {
+    return (
+      <ReactMarkdown
+        remarkPlugins={PLUGINS_REMARK}
+        rehypePlugins={
+          avecFade
+            ? [
+                ...PLUGINS_REHYPE,
+                [
+                  pluginMotsFade,
+                  {
+                    seuil: motsDejaAnimesRef.current,
+                    rapporterTotal: (n: number) => {
+                      totalMotsCourantRef.current = n;
+                    },
+                  },
+                ],
+              ]
+            : PLUGINS_REHYPE
+        }
+        components={{
+          pre({ children }) {
+            const enfant = Array.isArray(children) ? children[0] : children;
+            if (!isValidElement(enfant)) return <pre>{children}</pre>;
+
+            const props = enfant.props as { className?: string; children?: ReactNode };
+            const langage = (props.className || "").replace("language-", "").trim();
+            const code = texteBrut(props.children).replace(/\n$/, "");
+
+            switch (langage) {
+              case "mermaid":
+                return <Mermaid definition={code} />;
+              case "chart":
+                return <GraphiqueDonnees code={code} />;
+              case "carte":
+                return <CarteMessage code={code} />;
+              case "geometrie":
+                return <SchemaGeometrique code={code} />;
+              case "widget":
+              case "html":
+                return <WidgetSandbox code={code} />;
+              default:
+                return <BlocCode langage={langage} code={code} />;
+            }
+          },
+          code({ children }) {
+            return (
+              <code className="rounded bg-dj-surface-haute px-1.5 py-0.5 font-mono text-[13px] text-dj-texte">
+                {children}
+              </code>
+            );
+          },
+          img({ src, alt }) {
+            return <ImageMessage src={typeof src === "string" ? src : undefined} alt={alt} />;
+          },
+          table({ children }) {
+            return <TableauMessage>{children}</TableauMessage>;
+          },
+          a({ href, children }) {
+            if (!href) return <>{children}</>;
+            const matchCitation = /^citation:(\d+)$/.exec(href);
+            if (matchCitation) {
+              const numero = parseInt(matchCitation[1], 10);
+              const source = sourcesAplaties.find((s) => s.numero === numero);
+              if (!source) {
+                return <span className="text-dj-accent-1-texte">{children}</span>;
+              }
+              const libelle = source.reperage ? `${source.titre}, ${source.reperage}` : source.titre;
+              return (
+                <button
+                  type="button"
+                  onClick={() =>
+                    ouvrirPosition({
+                      url: source.url,
+                      titre: libelle,
+                      positionType: source.position_type,
+                      positionValeur: source.position_valeur,
+                      typeMime: source.type_mime,
+                    })
+                  }
+                  title={libelle}
+                  className="mx-0.5 rounded border border-dj-bordure px-1.5 py-0.5 align-middle text-[11px] font-medium text-dj-accent-1-texte no-underline hover:underline"
+                >
+                  {libelle}
+                </button>
+              );
+            }
+            const media = typeMedia(href);
+            if (media) return <LecteurMedia href={href} type={media} />;
+            if (estNoteTexteBibliotheque(href)) {
+              return <NoteTexteChip href={href} nom={texteBrut(children) || href} />;
+            }
+            if (extensionCode(href)) {
+              return <FichierCode href={href} nom={texteBrut(children) || href} />;
+            }
+            if (extensionFichier(href)) {
+              return <FichierChip href={href} nom={texteBrut(children) || href} />;
+            }
+            if (/^https?:\/\//i.test(href)) {
+              return <LinkPreview href={href} texteLien={texteBrut(children) || href} compact={estUtilisateur} />;
+            }
+            return (
+              <a
+                href={href}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-dj-texte-muet underline hover:text-dj-texte"
+              >
+                {children}
+              </a>
+            );
+          },
+        }}
+      >
+        {texte}
+      </ReactMarkdown>
+    );
+  }
+
   return (
     <div className={`group flex flex-col ${estUtilisateur ? "items-end" : "items-start"}`}>
       {/* Raisonnement tout en haut, avant le contenu de la réponse (31/07,
@@ -601,7 +761,7 @@ function BulleMessageInterne({
       {!estUtilisateur && enAttente && (
         <IndicateurReflexion nomAgent={nomAgent ?? "Clovis"} />
       )}
-      {!estUtilisateur && raisonnement && (
+      {!estUtilisateur && (!message.segments || message.segments.length === 0) && raisonnement && (
         <RaisonnementBulle nomAgent={nomAgent ?? "Clovis"} texte={raisonnement} enCours={!!raisonnementEnCours} />
       )}
       <div
@@ -704,179 +864,36 @@ function BulleMessageInterne({
                   tableaux à la main cassait le LaTeX (ou l'inverse) : un seul
                   moteur, cohérent, jamais de manipulation du texte brut à
                   part la normalisation des délimiteurs ci-dessus. */}
-              <ReactMarkdown
-            remarkPlugins={PLUGINS_REMARK}
-            rehypePlugins={
-              // pluginMotsFade UNIQUEMENT pour le message en cours de
-              // génération (voir estEnCoursDeGeneration) -- pour tous
-              // les autres (messages déjà terminés/historique), on garde
-              // la référence stable PLUGINS_REHYPE (voir le commentaire
-              // "Perf 10/08" plus haut : recréer ce tableau à chaque
-              // rendu a un coût, donc on ne le paie que là où c'est
-              // nécessaire).
-              estEnCoursDeGeneration
-                ? [
-                    ...PLUGINS_REHYPE,
-                    [
-                      pluginMotsFade,
-                      {
-                        seuil: motsDejaAnimesRef.current,
-                        rapporterTotal: (n: number) => {
-                          totalMotsCourantRef.current = n;
-                        },
-                      },
-                    ],
-                  ]
-                : PLUGINS_REHYPE
-            }
-            components={{
-              // Bloc de code (```lang ... ```) : ReactMarkdown structure ça
-              // en <pre><code className="language-xxx">...</code></pre> --
-              // on intercepte au niveau `pre` pour router selon le langage
-              // déclaré AVANT toute coloration syntaxique, pendant qu'on a
-              // encore le texte source intact (nécessaire pour Mermaid/
-              // Chart/Carte/Widget, qui ont besoin du texte brut, pas
-              // d'un HTML déjà transformé).
-              pre({ children }) {
-                const enfant = Array.isArray(children) ? children[0] : children;
-                if (!isValidElement(enfant)) return <pre>{children}</pre>;
-
-                const props = enfant.props as { className?: string; children?: ReactNode };
-                const langage = (props.className || "").replace("language-", "").trim();
-                const code = texteBrut(props.children).replace(/\n$/, "");
-
-                switch (langage) {
-                  case "mermaid":
-                    return <Mermaid definition={code} />;
-                  case "chart":
-                    return <GraphiqueDonnees code={code} />;
-                  case "carte":
-                    return <CarteMessage code={code} />;
-                  case "geometrie":
-                    return <SchemaGeometrique code={code} />;
-                  case "widget":
-                  case "html":
-                    return <WidgetSandbox code={code} />;
-                  default:
-                    return <BlocCode langage={langage} code={code} />;
-                }
-              },
-              // Code inline (`texte`) : ne passe jamais par `pre` ci-dessus
-              // -- juste un style discret, pas de coloration (pas assez de
-              // contexte pour un langage sur un fragment isolé).
-              code({ children }) {
-                return (
-                  <code className="rounded bg-dj-surface-haute px-1.5 py-0.5 font-mono text-[13px] text-dj-texte">
-                    {children}
-                  </code>
-                );
-              },
-              img({ src, alt }) {
-                return <ImageMessage src={typeof src === "string" ? src : undefined} alt={alt} />;
-              },
-              table({ children }) {
-                return <TableauMessage>{children}</TableauMessage>;
-              },
-              // Lien : bascule vers une carte fichier, un lecteur média, ou
-              // un aperçu (LinkPreview) selon ce que l'URL justifie -- le
-              // lien texte brut est désormais le CAS DE REPLI, plus le
-              // défaut (demande de Bourama, 2026-07-20 : un aperçu partout,
-              // comme sur les autres plateformes, le lien nu seulement si
-              // rien d'autre n'est exploitable).
-              a({ href, children }) {
-                if (!href) return <>{children}</>;
-                // Citation inline (26/08) : le modèle écrit [n](citation:n)
-                // au fil de sa réponse, juste après le passage concerné,
-                // en plus de la liste complète déjà affichée en bas par
-                // OutilResultatBulle/SourcesBulle -- même numérotation
-                // globale des deux côtés (voir sourcesAplaties ci-dessus).
-                // Volontairement PAS un lien classique (pas de LinkPreview
-                // ici) : juste un petit texte cliquable qui ouvre la
-                // source, pour rester léger au milieu d'une phrase.
-                //
-                // Affiche le NOM du fichier + le repérage ("page 4"/"à
-                // 02:15") en clair (26/08, retour Bourama : "un chiffre
-                // nu, on n'y comprend rien") -- jamais juste "[n]". Pour
-                // un PDF/audio, ouvre le visionneur EN APP à la bonne
-                // position plutôt qu'un lien externe (même raison que
-                // SourcesBulle.tsx : le fragment #page=/#t= est ignoré une
-                // fois hors de l'app).
-                const matchCitation = /^citation:(\d+)$/.exec(href);
-                if (matchCitation) {
-                  const numero = parseInt(matchCitation[1], 10);
-                  // CORRECTIF 2026-09-02 (Bourama : "c'est le frontend qui
-                  // ne sait pas l'afficher, pas un problème du modèle") --
-                  // avant : résolution par POSITION dans le tableau
-                  // (sourcesAplaties[numero - 1]), qui cassait dès que ce
-                  // tableau était réordonné/dédupliqué côté frontend (le
-                  // numéro ne correspondait plus au bon index). Chaque
-                  // source porte désormais son propre champ `numero`,
-                  // attribué une fois pour toutes côté backend -- on le
-                  // cherche ici directement, plus de dépendance à la
-                  // position.
-                  const source = sourcesAplaties.find((s) => s.numero === numero);
-                  // Le texte des enfants (ce que le modèle a écrit comme
-                  // libellé du lien) reste TOUJOURS visible même si la
-                  // source ne résout pas -- juste sans interactivité dans
-                  // ce cas précis.
-                  if (!source) {
-                    return <span className="text-dj-accent-1-texte">{children}</span>;
-                  }
-                  const libelle = source.reperage ? `${source.titre}, ${source.reperage}` : source.titre;
-                  // CORRECTIF 2026-08-27 (demande Bourama : "que tout
-                  // reste en popup interne, meme les sites") : toujours
-                  // le visionneur en app, plus jamais de <a
-                  // target="_blank"> en repli -- voir SourcesBulle.tsx,
-                  // même logique.
-                  return (
-                    <button
-                      type="button"
-                      onClick={() =>
-                        ouvrirPosition({
-                          url: source.url,
-                          titre: libelle,
-                          positionType: source.position_type,
-                          positionValeur: source.position_valeur,
-                          typeMime: source.type_mime,
-                        })
-                      }
-                      title={libelle}
-                      className="mx-0.5 rounded border border-dj-bordure px-1.5 py-0.5 align-middle text-[11px] font-medium text-dj-accent-1-texte no-underline hover:underline"
-                    >
-                      {libelle}
-                    </button>
-                  );
-                }
-                const media = typeMedia(href);
-                if (media) return <LecteurMedia href={href} type={media} />;
-                if (estNoteTexteBibliotheque(href)) {
-                  return <NoteTexteChip href={href} nom={texteBrut(children) || href} />;
-                }
-                if (extensionCode(href)) {
-                  return <FichierCode href={href} nom={texteBrut(children) || href} />;
-                }
-                if (extensionFichier(href)) {
-                  return <FichierChip href={href} nom={texteBrut(children) || href} />;
-                }
-                if (/^https?:\/\//i.test(href)) {
-                  return <LinkPreview href={href} texteLien={texteBrut(children) || href} compact={estUtilisateur} />;
-                }
-                // mailto:/tel:/ancres internes -- un aperçu n'a pas de sens ici.
-                return (
-                  <a
-                    href={href}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="text-dj-texte-muet underline hover:text-dj-texte"
-                  >
-                    {children}
-                  </a>
-                );
-              },
-            }}
-          >
-            {normaliserCitations(normaliserLatex(message.content))}
-              </ReactMarkdown>
+              {!estUtilisateur && message.segments && message.segments.length > 0 ? (
+                // Timeline chronologique (05/09/2026, demande Bourama) :
+                // réflexion/texte/outil dans l'ordre réel où ils se sont
+                // produits, au lieu du regroupement par catégorie
+                // ci-dessous. Uniquement pour un message généré dans la
+                // session en cours (voir MessageAffiche.segments) -- un
+                // message rechargé depuis l'historique n'a jamais ce
+                // champ rempli et retombe donc sur le rendu groupé
+                // normal, inchangé.
+                <div className="flex flex-col gap-1.5">
+                  {message.segments.map((segment, index) => {
+                    if (segment.type === "raisonnement") {
+                      return (
+                        <RaisonnementBulle
+                          key={index}
+                          nomAgent={nomAgent ?? "Clovis"}
+                          texte={segment.texte}
+                          enCours={!!raisonnementEnCours && index === message.segments!.length - 1}
+                        />
+                      );
+                    }
+                    if (segment.type === "outil") {
+                      return <OutilResultatBulle key={index} resultats={[segment]} />;
+                    }
+                    return <div key={index}>{rendreMarkdown(normaliserCitations(normaliserLatex(segment.texte)), false)}</div>;
+                  })}
+                </div>
+              ) : (
+                rendreMarkdown(normaliserCitations(normaliserLatex(message.content)), !!estEnCoursDeGeneration)
+              )}
             </div>
           </div>
         </div>
@@ -900,7 +917,7 @@ function BulleMessageInterne({
         )}
       </div>
 
-      {!estUtilisateur && outilsResultats && outilsResultats.length > 0 && (
+      {!estUtilisateur && (!message.segments || message.segments.length === 0) && outilsResultats && outilsResultats.length > 0 && (
         <OutilResultatBulle resultats={outilsResultats} />
       )}
       {/* Bloc "Fichier(s) généré(s)" retiré (04/09/2026, demande Bourama) :
