@@ -36,9 +36,13 @@ type ReleaseGitHub = {
 async function recupererDerniereRelease(): Promise<ReleaseGitHub | null> {
   try {
     // revalidate : évite de taper l'API GitHub à chaque visite (limite de
-    // taux basse sans authentification), une heure est amplement assez
-    // pour une page de téléchargement.
-    const reponse = await fetch(URL_DERNIERE_RELEASE, { next: { revalidate: 3600 } });
+    // taux basse sans authentification). Réduit de 1h à 1 min (05/09/2026,
+    // demande Bourama) pour que la page reflète une nouvelle release
+    // quasi-instantanément -- un webhook GitHub aurait été plus instantané
+    // encore, mais casserait l'export statique Capacitor de l'appli mobile
+    // (ce dépôt est volontairement sans route API, voir next.config.mjs) :
+    // ce cache court est le compromis retenu.
+    const reponse = await fetch(URL_DERNIERE_RELEASE, { next: { revalidate: 60 } });
     if (!reponse.ok) return null;
     return await reponse.json();
   } catch {

@@ -50,6 +50,19 @@ export function MiseAJourCarte() {
       .finally(() => setChargement(false));
   }, [plugin]);
 
+  // Demande Bourama (05/09/2026) : vérifier automatiquement à
+  // l'ouverture plutôt que d'attendre un clic manuel sur "Vérifier",
+  // en complément de la notif push (voir webhook GitHub côté backend).
+  // Ne se déclenche que si ce build gère bien les mises à jour
+  // (disponibleSurCeBuild), sinon la carte affiche déjà le message
+  // "gérées par le Play Store" sans jamais appeler verifier().
+  useEffect(() => {
+    if (disponibleSurCeBuild) {
+      verifier();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [disponibleSurCeBuild]);
+
   async function verifier() {
     if (!plugin) return;
     setErreur(null);
