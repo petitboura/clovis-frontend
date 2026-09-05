@@ -14,6 +14,7 @@ import io.ktor.client.request.forms.formData
 import io.ktor.client.request.forms.submitFormWithBinaryData
 import io.ktor.client.request.get
 import io.ktor.client.request.header
+import io.ktor.client.request.parameter
 import io.ktor.client.request.post
 import io.ktor.client.request.setBody
 import io.ktor.client.statement.HttpResponse
@@ -44,13 +45,23 @@ data class ReponseActionsEnAttente(val actions: List<ActionAppareil>)
 data class ResultatAction(val succes: Boolean, val resultat: String = "")
 
 @Serializable
-data class CorpsTokenPush(val plateforme: String, val token: String)
+data class CorpsTokenPush(val plateforme: String, val token: String, val appareil_id: String? = null)
 
 // Lot 2 (suite, 26/08/2026) : miroir des dossiers designes cote backend,
 // voir clovis-backend/core/dossiers_designes_mobile.py, uniquement les
 // NOMS, jamais l'URI (propre a l'appareil, sans sens cote serveur).
+//
+// Modifie le 04/09/2026, Bourama : ajoute appareil_id + appareil_nom
+// (voir IdentifiantAppareil.kt) -- avant cette date, deux telephones
+// Android du meme compte partageaient le meme "seau" cote backend
+// (indexe seulement par plateforme) et s'ecrasaient mutuellement.
 @Serializable
-data class CorpsSynchronisationDossiers(val plateforme: String, val noms: List<String>)
+data class CorpsSynchronisationDossiers(
+    val plateforme: String,
+    val appareil_id: String,
+    val appareil_nom: String?,
+    val noms: List<String>
+)
 
 // : Lot 5 : connecteurs tiers (Notion), porte le 25/08/2026 
 @Serializable
@@ -78,19 +89,19 @@ class ClovisApiClient(private val context: Context) {
         }
     }
 
-    suspend fun enregistrerTokenPush(plateforme: String, token: String): HttpResponse {
+    suspend fun enregistrerTokenPush(plateforme: String, token: String, appareilId: String): HttpResponse {
         return http.post("$BASE_URL/api/appareils-mobiles/push-token") {
             avecAuth(this)
             contentType(ContentType.Application.Json)
-            setBody(CorpsTokenPush(plateforme, token))
+            setBody(CorpsTokenPush(plateforme, token, appareilId))
         }
     }
 
-    suspend fun synchroniserDossiers(noms: List<String>): HttpResponse {
+    suspend fun synchroniserDossiers(appareilId: String, appareilNom: String?, noms: List<String>): HttpResponse {
         return http.post("$BASE_URL/api/appareils-mobiles/dossiers") {
             avecAuth(this)
             contentType(ContentType.Application.Json)
-            setBody(CorpsSynchronisationDossiers("android", noms))
+            setBody(CorpsSynchronisationDossiers("android", appareilId, appareilNom, noms))
         }
     }
 
@@ -122,9 +133,10 @@ class ClovisApiClient(private val context: Context) {
         }
     }
 
-    suspend fun obtenirActionsEnAttente(): ReponseActionsEnAttente {
+    suspend fun obtenirActionsEnAttente(appareilId: String): ReponseActionsEnAttente {
         val reponse: HttpResponse = http.get("$BASE_URL/api/appareils-mobiles/actions/en-attente") {
             avecAuth(this)
+            parameter("appareil_id", appareilId)
         }
         return reponse.body()
     }

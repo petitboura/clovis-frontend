@@ -29,6 +29,7 @@ import { Skeleton } from "./Skeleton";
 import { CTACompteRequis } from "./CTACompteRequis";
 import { ConnecteurNotionCarte } from "./ConnecteurNotionCarte";
 import { MiseAJourCarte } from "./MiseAJourCarte";
+import { NomAppareilCarte } from "./NomAppareilCarte";
 import { RUBRIQUES_AIDE, trouverRubriqueAide, type RubriqueAide } from "@/lib/aideSections";
 import { EspaceAccessibilite } from "./EspaceAccessibilite";
 
@@ -448,7 +449,7 @@ export function EspaceParametres() {
             deux lignes restent visibles mais mènent à un contenu qui
             explique lui-même l'indisponibilité sur le site. */}
         <Liste>
-          <LigneListe icone={Smartphone} titre="Capacités du téléphone" sousTitre="Connecteurs, mise à jour" onClick={() => setVue("capacites-telephone")} />
+          <LigneListe icone={Smartphone} titre="Capacités du téléphone" sousTitre="Connecteurs, mise à jour, nom de l'appareil" onClick={() => setVue("capacites-telephone")} />
           <LigneListe icone={Accessibility} titre="Accessibilité" onClick={() => setVue("accessibilite")} />
         </Liste>
 
@@ -482,6 +483,7 @@ export function EspaceParametres() {
         <EnTete titre="Capacités du téléphone" onRetour={() => setVue("liste")} />
         <ConnecteurNotionCarte />
         <MiseAJourCarte />
+        <NomAppareilCarte />
       </div>
     );
   }

@@ -33,7 +33,9 @@ class AppDelegate: UIResponder, UIApplicationDelegate, UNUserNotificationCenterD
         let token = deviceToken.map { String(format: "%02.2hhx", $0) }.joined()
         Task {
             do {
-                try await ClovisApiClient.enregistrerPushToken(TokenPush(plateforme: "ios", token: token))
+                try await ClovisApiClient.enregistrerPushToken(
+                    TokenPush(plateforme: "ios", token: token, appareil_id: IdentifiantAppareil.obtenirId())
+                )
             } catch {
                 // Pas grave : PontNatifPlugin.rattraperActionsEnAttente rattrape
                 // au prochain lancement de l'app, meme logique qu'Android.

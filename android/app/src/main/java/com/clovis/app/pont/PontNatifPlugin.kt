@@ -50,7 +50,8 @@ class PontNatifPlugin : Plugin() {
         CoroutineScope(Dispatchers.IO).launch {
             try {
                 val client = ClovisApiClient(context)
-                val actions = client.obtenirActionsEnAttente().actions
+                val appareilId = IdentifiantAppareil.obtenirId(context)
+                val actions = client.obtenirActionsEnAttente(appareilId).actions
                 for (action in actions) {
                     ActionsAppareilExecuteur.executerAction(context, action.id)
                 }

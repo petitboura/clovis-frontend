@@ -38,7 +38,9 @@ public class DossiersPlugin: CAPPlugin, CAPBridgedPlugin, UIDocumentPickerDelega
         CAPPluginMethod(name: "creerFichier", returnType: CAPPluginReturnPromise),
         CAPPluginMethod(name: "renommer", returnType: CAPPluginReturnPromise),
         CAPPluginMethod(name: "supprimer", returnType: CAPPluginReturnPromise),
-        CAPPluginMethod(name: "deplacer", returnType: CAPPluginReturnPromise)
+        CAPPluginMethod(name: "deplacer", returnType: CAPPluginReturnPromise),
+        CAPPluginMethod(name: "obtenirInfosAppareil", returnType: CAPPluginReturnPromise),
+        CAPPluginMethod(name: "definirNomAppareil", returnType: CAPPluginReturnPromise)
     ]
 
     // Ajoute le 26/08/2026 : miroir cote backend (voir
@@ -50,10 +52,16 @@ public class DossiersPlugin: CAPPlugin, CAPBridgedPlugin, UIDocumentPickerDelega
         synchroniserAvecBackend()
     }
 
+    // Modifie le 04/09/2026, Bourama : envoie desormais aussi appareil_id
+    // + appareil_nom (voir IdentifiantAppareil.swift), meme correction
+    // que cote Android (deux iPhone/iPad du meme compte partageaient
+    // sinon le meme miroir cote backend).
     private func synchroniserAvecBackend() {
         let noms = DossiersDesignesRepository.listerDossiersDesignes().map { $0.url.lastPathComponent }
+        let appareilId = IdentifiantAppareil.obtenirId()
+        let appareilNom = IdentifiantAppareil.obtenirNom()
         Task {
-            try? await ClovisApiClient.synchroniserDossiers(noms)
+            try? await ClovisApiClient.synchroniserDossiers(appareilId: appareilId, appareilNom: appareilNom, noms: noms)
         }
     }
 
@@ -268,5 +276,28 @@ public class DossiersPlugin: CAPPlugin, CAPBridgedPlugin, UIDocumentPickerDelega
         } else {
             call.reject("Echec du deplacement.")
         }
+    }
+
+    // Ajoute le 04/09/2026, Bourama : expose l'identifiant d'appareil
+    // (voir IdentifiantAppareil.swift) a la couche JS partagee
+    // (lib/canalTempsReel.ts), meme role que cote Android.
+    @objc func obtenirInfosAppareil(_ call: CAPPluginCall) {
+        call.resolve([
+            "appareilId": IdentifiantAppareil.obtenirId(),
+            "appareilNom": IdentifiantAppareil.obtenirNom(),
+            "nomPersonnalise": IdentifiantAppareil.aUnNomPersonnalise()
+        ])
+    }
+
+    // Ajoute le 04/09/2026, Bourama : permet a l'etudiant de renommer SON
+    // appareil, meme role que cote Android.
+    @objc func definirNomAppareil(_ call: CAPPluginCall) {
+        guard let nom = call.getString("nom"), !nom.trimmingCharacters(in: .whitespaces).isEmpty else {
+            call.reject("Parametre 'nom' manquant ou vide.")
+            return
+        }
+        IdentifiantAppareil.definirNomPersonnalise(nom)
+        synchroniserAvecBackend()
+        call.resolve()
     }
 }

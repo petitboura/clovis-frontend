@@ -39,10 +39,22 @@ type ResultatRecherche = ElementFormatte & { chemin: string[] };
 
 type ContenuFichierNatif = { contenuBase64: string; typeMime: string; nomFichier: string; tailleOctets: number };
 
+// Ajoute le 04/09/2026, Bourama : correction du bug "deux telephones du
+// meme compte se melangent" -- voir clovis-backend/migrations/
+// 2026_09_04_appareil_id_ciblage.sql pour le detail cote serveur et
+// IdentifiantAppareil.kt/.swift pour la generation/persistance cote
+// natif. Le WebSocket ouvert plus bas doit desormais s'identifier avec
+// cet appareil_id, sinon un deuxieme appareil (ou un onglet web) du
+// meme compte remplacerait la connexion active du premier cote backend
+// (core/canal_temps_reel.py).
+type InfosAppareil = { appareilId: string; appareilNom: string; nomPersonnalise: boolean };
+
 type PluginDossiers = {
   listerDossiersDesignes(): Promise<{ dossiers: DossierDesigne[] }>;
   listerContenu(options: { uri: string }): Promise<{ elements: ElementDossier[] }>;
   lireFichier(options: { uri: string }): Promise<ContenuFichierNatif>;
+  obtenirInfosAppareil(): Promise<InfosAppareil>;
+  definirNomAppareil(options: { nom: string }): Promise<void>;
 };
 
 // Meme principe que PROFONDEUR_MAX cote accessibilite
@@ -57,6 +69,12 @@ let tentativeReconnexion: ReturnType<typeof setTimeout> | null = null;
 let fermetureVoulue = false;
 let dejaInitialise = false;
 let pluginDossiers: PluginDossiers | null = null;
+// Resolu paresseusement au premier ouvrirCanal() natif (voir plus bas) :
+// rien ne sert de l'interroger avant d'avoir vraiment besoin d'ouvrir le
+// canal. Reste undefined tant que non resolu, "" sur le web (pas de
+// plugin Dossiers) -- distinct de "non encore resolu" pour ne jamais
+// rouvrir une connexion deja identifiee sous une cle vide par erreur.
+let appareilIdCourant: string | undefined = undefined;
 
 // Ajoute le 02/09/2026, Bourama : centre de notifications (bouton
 // cloche), doit fonctionner web ET mobile -- contrairement au plugin
@@ -77,10 +95,13 @@ export function ecouterNotifications(cb: (n: NotificationClovis) => void): () =>
   return () => ecouteursNotifications.delete(cb);
 }
 
-function urlWebSocket(token: string): string | null {
+function urlWebSocket(token: string, appareilId: string): string | null {
   if (!API_URL) return null;
   const base = API_URL.replace(/^http/, "ws");
-  return `${base}/api/canal-temps-reel/ws?token=${encodeURIComponent(token)}`;
+  // "" reste une cle valide et distincte de tout vrai telephone cote
+  // backend (core/canal_temps_reel.py) -- utilisee pour une session web
+  // ou tant que l'appareil_id natif n'est pas encore resolu.
+  return `${base}/api/canal-temps-reel/ws?token=${encodeURIComponent(token)}&appareil_id=${encodeURIComponent(appareilId)}`;
 }
 
 function envoyerReponse(id: string, reponse: unknown) {
@@ -407,12 +428,44 @@ async function ouvrirCanal() {
     return;
   }
 
+  // Ajoute le 04/09/2026 : resout l'appareil_id UNE SEULE fois (natif
+  // uniquement, voir InfosAppareil plus haut) avant la toute premiere
+  // ouverture. Se base sur window.Capacitor (present des le demarrage
+  // natif, avant meme l'enregistrement du plugin Dossiers, voir
+  // lib/supabase.ts) plutot que sur pluginDossiers directement : les
+  // deux enregistrements (canal + plugin Dossiers) partent d'imports
+  // dynamiques distincts, rien ne garantit que pluginDossiers soit deja
+  // pret au tout premier appel -- sur le web, "" est mis en cache tout
+  // de suite (jamais de plugin a attendre) ; en natif, tant que le
+  // plugin n'est pas encore pret, on retente au prochain ouvrirCanal()
+  // plutot que de figer "" par erreur.
+  if (appareilIdCourant === undefined) {
+    const estNatif = Boolean((window as unknown as { Capacitor?: { isNativePlatform?: () => boolean } }).Capacitor?.isNativePlatform?.());
+    if (!estNatif) {
+      appareilIdCourant = "";
+    } else if (pluginDossiers) {
+      try {
+        appareilIdCourant = (await pluginDossiers.obtenirInfosAppareil()).appareilId;
+      } catch {
+        // Echec inattendu (plugin enregistre mais methode indisponible,
+        // ex. ancienne version de l'app pas encore mise a jour) : ""
+        // reste un repli sur, jamais un blocage de l'ouverture du canal.
+        appareilIdCourant = "";
+      }
+    }
+    // Sinon (natif mais plugin pas encore enregistre) : appareilIdCourant
+    // reste undefined, reessaye au prochain ouvrirCanal() (ex. prochain
+    // visibilitychange), sans bloquer CETTE ouverture -- utilise "" pour
+    // cette premiere connexion seulement, non mis en cache plus bas.
+  }
+  const appareilIdPourCetteConnexion = appareilIdCourant ?? "";
+
   const {
     data: { session },
   } = await supabase.auth.getSession();
   if (!session?.access_token) return;
 
-  const url = urlWebSocket(session.access_token);
+  const url = urlWebSocket(session.access_token, appareilIdPourCetteConnexion);
   if (!url) return;
 
   fermetureVoulue = false;

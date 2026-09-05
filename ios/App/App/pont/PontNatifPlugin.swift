@@ -38,7 +38,7 @@ public class PontNatifPlugin: CAPPlugin, CAPBridgedPlugin {
     @objc func rattraperActionsEnAttente(_ call: CAPPluginCall) {
         Task {
             do {
-                let reponse = try await ClovisApiClient.obtenirActionsEnAttente()
+                let reponse = try await ClovisApiClient.obtenirActionsEnAttente(appareilId: IdentifiantAppareil.obtenirId())
                 for action in reponse.actions {
                     await ActionsAppareilExecuteur.executerAction(actionId: action.id)
                 }

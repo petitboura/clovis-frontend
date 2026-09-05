@@ -29,6 +29,7 @@ import android.content.Intent
 import android.net.Uri
 import android.util.Log
 import com.clovis.app.pont.ClovisApiClient
+import com.clovis.app.pont.IdentifiantAppareil
 import com.getcapacitor.JSArray
 import com.getcapacitor.JSObject
 import com.getcapacitor.Plugin
@@ -52,11 +53,21 @@ class DossiersPlugin : Plugin() {
     // bloquant pour l'utilisateur : echec silencieux (log seulement), la
     // prochaine synchronisation (ouverture suivante ou prochain
     // changement) rattrapera l'etat.
+    //
+    // Modifie le 04/09/2026, Bourama : envoie desormais aussi
+    // appareil_id (identifiant unique et persistant de CETTE
+    // installation, voir IdentifiantAppareil.kt) et appareil_nom (le
+    // libelle actuel, personnalise ou par defaut) -- avant cette date,
+    // deux telephones Android du meme compte partageaient le meme
+    // miroir cote backend (indexe seulement par plateforme) et
+    // s'ecrasaient mutuellement des que l'un des deux synchronisait.
     private fun synchroniserAvecBackend() {
         val noms = repo.listerDossiersDesignes().map { it.nom }
+        val appareilId = IdentifiantAppareil.obtenirId(context)
+        val appareilNom = IdentifiantAppareil.obtenirNom(context)
         CoroutineScope(Dispatchers.IO).launch {
             try {
-                ClovisApiClient(context).synchroniserDossiers(noms)
+                ClovisApiClient(context).synchroniserDossiers(appareilId, appareilNom, noms)
             } catch (e: Exception) {
                 Log.w("DossiersPlugin", "Echec synchronisation dossiers designes avec le backend.", e)
             }
@@ -122,6 +133,41 @@ class DossiersPlugin : Plugin() {
         val tableau = JSArray()
         repo.listerDossiersDesignes().forEach { tableau.put(it.toJson()) }
         call.resolve(JSObject().put("dossiers", tableau))
+    }
+
+    // Ajoute le 04/09/2026, Bourama : expose l'identifiant d'appareil
+    // (voir IdentifiantAppareil.kt) a la couche JS partagee
+    // (lib/canalTempsReel.ts), qui en a besoin pour ouvrir le WebSocket
+    // avec le bon appareil_id -- sans ca, deux telephones connectes en
+    // meme temps s'ecrasaient l'un l'autre cote backend (une seule
+    // connexion active par utilisateur avant cette date).
+    @PluginMethod
+    fun obtenirInfosAppareil(call: PluginCall) {
+        call.resolve(
+            JSObject().apply {
+                put("appareilId", IdentifiantAppareil.obtenirId(context))
+                put("appareilNom", IdentifiantAppareil.obtenirNom(context))
+                put("nomPersonnalise", IdentifiantAppareil.aUnNomPersonnalise(context))
+            }
+        )
+    }
+
+    // Ajoute le 04/09/2026, Bourama : permet a l'etudiant de renommer
+    // SON appareil (ex. "Mon Android") quand deux telephones du meme
+    // compte designent un dossier du meme nom -- optionnel, voir
+    // EspaceAccessibilite/Parametres cote clovis-frontend pour l'UI.
+    // Resynchronise immediatement pour que le nouveau libelle apparaisse
+    // sans attendre le prochain changement de dossier.
+    @PluginMethod
+    fun definirNomAppareil(call: PluginCall) {
+        val nom = call.getString("nom")
+        if (nom.isNullOrBlank()) {
+            call.reject("Parametre 'nom' manquant ou vide.")
+            return
+        }
+        IdentifiantAppareil.definirNomPersonnalise(context, nom)
+        synchroniserAvecBackend()
+        call.resolve()
     }
 
     /**

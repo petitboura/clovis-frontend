@@ -64,12 +64,19 @@ struct ReponseRechercheNotion: Codable {
 struct TokenPush: Codable {
     let plateforme: String
     let token: String
+    let appareil_id: String?
 }
 
 // MARK: Lot 2 (suite, 26/08/2026), miroir des dossiers designes
 
+// Modifie le 04/09/2026, Bourama : ajoute appareil_id + appareil_nom
+// (voir IdentifiantAppareil.swift) -- meme correction que cote Android,
+// deux appareils du meme compte partageaient sinon le meme miroir cote
+// backend (indexe seulement par plateforme).
 struct SynchronisationDossiers: Codable {
     let plateforme: String
+    let appareil_id: String
+    let appareil_nom: String?
     let noms: [String]
 }
 
@@ -214,10 +221,12 @@ enum ClovisApiClient {
     // Ajoute le 26/08/2026 : miroir cote backend des dossiers designes,
     // voir clovis-backend/core/dossiers_designes_mobile.py, uniquement
     // les noms, jamais le bookmark reel.
-    static func synchroniserDossiers(_ noms: [String]) async throws {
+    static func synchroniserDossiers(appareilId: String, appareilNom: String?, noms: [String]) async throws {
         let url = URL(string: "\(baseURL)/api/appareils-mobiles/dossiers")!
         var requete = try requeteAuthentifiee(url, methode: "POST")
-        requete.httpBody = try JSONEncoder().encode(SynchronisationDossiers(plateforme: "ios", noms: noms))
+        requete.httpBody = try JSONEncoder().encode(
+            SynchronisationDossiers(plateforme: "ios", appareil_id: appareilId, appareil_nom: appareilNom, noms: noms)
+        )
         _ = try await URLSession.shared.data(for: requete)
     }
 
@@ -264,9 +273,10 @@ enum ClovisApiClient {
 
     // Ajoute le 25/08/2026, Lot 1B porte : recepteur d'actions distantes,
     // meme role qu'ActionsAppareilExecuteur.kt (Android).
-    static func obtenirActionsEnAttente() async throws -> ReponseActionsEnAttente {
-        let url = URL(string: "\(baseURL)/api/appareils-mobiles/actions/en-attente")!
-        let requete = try requeteAuthentifiee(url, methode: "GET")
+    static func obtenirActionsEnAttente(appareilId: String) async throws -> ReponseActionsEnAttente {
+        var composants = URLComponents(string: "\(baseURL)/api/appareils-mobiles/actions/en-attente")!
+        composants.queryItems = [URLQueryItem(name: "appareil_id", value: appareilId)]
+        let requete = try requeteAuthentifiee(composants.url!, methode: "GET")
         let (data, _) = try await URLSession.shared.data(for: requete)
         return try JSONDecoder().decode(ReponseActionsEnAttente.self, from: data)
     }

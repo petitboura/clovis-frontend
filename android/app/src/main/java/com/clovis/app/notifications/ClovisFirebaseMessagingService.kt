@@ -7,6 +7,7 @@ package com.clovis.app.notifications
 import android.util.Log
 import com.clovis.app.pont.ActionsAppareilExecuteur
 import com.clovis.app.pont.ClovisApiClient
+import com.clovis.app.pont.IdentifiantAppareil
 import com.google.firebase.messaging.FirebaseMessagingService
 import com.google.firebase.messaging.RemoteMessage
 import kotlinx.coroutines.CoroutineScope
@@ -19,7 +20,8 @@ class ClovisFirebaseMessagingService : FirebaseMessagingService() {
         super.onNewToken(token)
         CoroutineScope(Dispatchers.IO).launch {
             try {
-                ClovisApiClient(applicationContext).enregistrerTokenPush("android", token)
+                val appareilId = IdentifiantAppareil.obtenirId(applicationContext)
+                ClovisApiClient(applicationContext).enregistrerTokenPush("android", token, appareilId)
             } catch (e: Exception) {
                 Log.w("ClovisFCM", "Echec enregistrement nouveau token push.", e)
             }
