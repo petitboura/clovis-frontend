@@ -1049,11 +1049,18 @@ export function AppSidebar({
           dans l'appli native, remplacé par BarreOngletsNative.tsx.
           30/08/2026, audit "aucune transition" : reste monté pendant
           tiroirEnSortie (même principe que le fond noir juste au-dessus)
-          pour laisser jouer le fondu de sortie avant le vrai démontage. */}
+          pour laisser jouer le fondu de sortie avant le vrai démontage.
+          pb-[calc(0.75rem+var(--safe-bottom))] (05/09/2026, Bourama :
+          "le bouton profil coincide avec les boutons [système], on ne
+          peut pas cliquer dessus") : ce tiroir réservait bien --safe-top
+          en haut (voir mt-top juste plus bas) mais rien en bas -- le
+          bloc profil, ancré via mt-auto, se retrouvait donc collé au
+          tout bas de l'écran (fixed inset-y-0), sous la barre système/
+          de gestes du téléphone qui le recouvrait. */}
       {(ouverte || tiroirEnSortie) && !masquerChromeMobile && (
         <div
           className={
-            `fixed inset-y-0 left-0 z-40 flex w-72 flex-col border-r border-dj-bordure bg-dj-fond px-2 py-3 md:hidden ${
+            `fixed inset-y-0 left-0 z-40 flex w-72 flex-col border-r border-dj-bordure bg-dj-fond px-2 pt-3 pb-[calc(0.75rem+var(--safe-bottom))] md:hidden ${
               historiqueDeplie || profilDeplie ? "overflow-visible" : "overflow-y-auto overflow-x-hidden"
             }` +
             (tiroirEnSortie
