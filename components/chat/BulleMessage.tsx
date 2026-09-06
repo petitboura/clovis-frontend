@@ -14,6 +14,7 @@ import dynamic from "next/dynamic";
 import { BlocCode } from "./BlocCode";
 import { Mermaid } from "./Mermaid";
 import { CarteMessage } from "./CarteMessage";
+import { MenuSignalementCorrection } from "./MenuSignalementCorrection";
 import { IndicateurReflexion } from "@/components/IndicateurReflexion";
 import { SchemaGeometrique } from "./SchemaGeometrique";
 import { WidgetSandbox } from "./WidgetSandbox";
@@ -424,6 +425,7 @@ function BulleMessageInterne({
   onEditer,
   onLike,
   onDislike,
+  onSignalerCorrection,
   onExpliquerSelection,
   nomAgent,
   enAttente,
@@ -437,6 +439,10 @@ function BulleMessageInterne({
   onEditer?: (nouveauTexte: string) => void;
   onLike?: () => void;
   onDislike?: () => void;
+  // Partie 4/5 (06/09/2026) : undefined tant que le message n'a pas
+  // d'id persisté (même garde que onLike/onDislike côté ChatIA.tsx),
+  // le type ("A"/"B") vient du choix fait DANS MenuSignalementCorrection.
+  onSignalerCorrection?: (type: "A" | "B") => Promise<void>;
   onExpliquerSelection?: (texteSelectionne: string) => void;
   // Ajouté 24/07 (retour Bourama : la bulle "réfléchit"/le raisonnement
   // apparaissaient trop loin du message, comme un bloc séparé en bas de
@@ -1021,6 +1027,7 @@ function BulleMessageInterne({
               <button onClick={onDislike} aria-label="Retour négatif" className="rounded-md p-1.5 text-dj-texte-muet hover:text-dj-texte">
                 <ThumbsDown size={14} />
               </button>
+              {onSignalerCorrection && <MenuSignalementCorrection onSignaler={onSignalerCorrection} />}
               <button onClick={onRegenerer} aria-label="Régénérer" className="rounded-md p-1.5 text-dj-texte-muet hover:text-dj-texte">
                 <RotateCw size={14} />
               </button>

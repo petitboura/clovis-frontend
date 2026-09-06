@@ -50,7 +50,8 @@ components/
 lib/
   api.ts                 client HTTP vers clovis-backend (NEXT_PUBLIC_API_URL)
   supabase.ts             client Supabase (auth + DB), enregistrement des plugins Capacitor natifs
-  contexteChat.tsx        état global du chat (dont l'état "plein_ecran" lu par la barre d'onglets)
+  contexteChat.tsx        état global du chat (état "plein_ecran" lu par la barre d'onglets,
+                          préremplissage d'une nouvelle conversation via useOuvrirChatAvecTexte)
   contexteCatalogue.tsx, contexteFenetres.tsx, contexteRetour.tsx  autres contextes React globaux
   canalTempsReel.ts      client du canal temps réel avec le backend (exploration de dossier mobile...)
   usePluginNatif.ts       hook d'accès générique aux plugins Capacitor
@@ -68,7 +69,7 @@ android/, ios/            projets Capacitor (capacitor.config.ts minimal, export
 | Route | Contenu |
 |---|---|
 | `/` | Accueil (raccourcis "Mon espace", activité récente) |
-| `/bureau` | Bureau |
+| `/bureau` | Bureau (Mes codes, entrer un code, corrections pédagogiques reçues) |
 | `/bibliotheque` | Bibliothèque personnelle (+ sous-section Dossiers du téléphone) |
 | `/memoire` | Ma mémoire |
 | `/comportements` | Mes skills ("comportements" en interne) |

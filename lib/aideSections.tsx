@@ -53,6 +53,25 @@ export const RUBRIQUES_AIDE: RubriqueAide[] = [
       "Coupe les sonneries et notifications, et active Ne pas déranger le temps de ta session de travail. L'activation se fait dans les réglages système (Accessibilité), en dehors de l'app.",
   },
   {
+    // Partie 5 (06/09/2026, chantier "confiance pédagogique") : côté
+    // élève, sur le drapeau qui apparaît sous une réponse de Clovis.
+    id: "corrections-elve",
+    titre: "Signaler un problème",
+    texteCourt:
+      "Sous une réponse de Clovis, le drapeau propose deux choix : une notion ou une méthode incorrecte (ton prof recevra ce message pour corriger directement dans le chat), ou un comportement général mal réglé (transmis pour supervision, rien à faire de ton côté).",
+    texteComplet:
+      "Sous une réponse de Clovis, le drapeau propose deux choix : une notion ou une méthode incorrecte (ton prof recevra ce message pour corriger directement dans le chat, et tu seras notifié une fois traité), ou un comportement général mal réglé (transmis pour supervision, rien à faire de ton côté). Entièrement séparé du pouce en l'air/en bas juste à côté, qui sert uniquement à noter la réponse.",
+  },
+  {
+    // Côté prof, sur la section "Corrections" du Bureau.
+    id: "corrections-prof",
+    titre: "Corrections",
+    texteCourt:
+      "Les signalements de tes élèves sur une notion ou une méthode incorrecte. Clique sur « Corriger » pour ouvrir une conversation déjà préparée avec le contexte, où tu n'as plus qu'à taper ou dicter ta correction.",
+    texteComplet:
+      "Les signalements de tes élèves sur une notion ou une méthode incorrecte apparaissent ici, dans l'onglet « À corriger ». Clique sur « Corriger » pour ouvrir une conversation neuve déjà préparée avec le contexte (question et réponse mise en cause), où tu n'as plus qu'à taper ou dicter ta correction à Clovis. Une fois traitée, elle apparaît dans « Traitées » : tu peux la désactiver temporairement, l'éditer, la dupliquer, ou la supprimer. Ton élève reçoit une notification dès que sa correction est traitée. Les signalements de comportement général (distincts de ceux-ci) ne sont pas affichés dans le Bureau : ils sont transmis directement pour supervision.",
+  },
+  {
     id: "diffuser",
     titre: "Diffuser",
     texteCourt: "Ajouté à la bibliothèque de chacun de ceux qui ont entré ce code, privé à ce lien.",

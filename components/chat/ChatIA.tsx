@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import Image from "next/image";
-import { appelerApiStream, uploaderImageChat, uploaderDocumentChat, uploaderVideoChat, transcrireAudioChat } from "@/lib/api";
+import { appelerApiStream, uploaderImageChat, uploaderDocumentChat, uploaderVideoChat, transcrireAudioChat, signalerCorrectionPedagogique } from "@/lib/api";
 import { useNotificationsPush, proposerNotificationsPushUneFois } from "@/lib/useNotificationsPush";
 import { BulleMessage, MessageAffiche, SegmentMessage } from "./BulleMessage";
 import { BarreDeSaisie, LongueurReponse, LocalisationJointe } from "./BarreDeSaisie";
@@ -44,6 +44,7 @@ export function ChatIA({
   sousTitreAccueil,
   conversationId,
   messagesInitiaux = [],
+  texteInitial,
   onMessagesChange,
   modelesDisponibles = [],
   modeleChoisi = null,
@@ -64,6 +65,11 @@ export function ChatIA({
   sousTitreAccueil?: string;
   conversationId: string;
   messagesInitiaux?: MessageAffiche[];
+  // Partie 5 (06/09/2026) : texte déposé dans la barre de saisie dès le
+  // montage de CETTE conversation (jamais renvoyé automatiquement),
+  // voir lib/contexteChat.tsx::useOuvrirChatAvecTexte. undefined dans
+  // tous les autres cas d'usage de ChatIA, comportement inchangé.
+  texteInitial?: string;
   onMessagesChange?: (nbMessages: number) => void;
   // Modeles premium (02/08/2026, voir core/fournisseurs_llm.py) : liste
   // vide = agent sans abonnement premium debloque, BarreDeSaisie
@@ -978,6 +984,7 @@ export function ChatIA({
             onEnvoyer={envoyerMessage}
             desactive={genEnCours || affichageEnCours || accesBloqueMineur}
             agentId={agentId}
+            texteInitial={texteInitial}
             modelesDisponibles={modelesDisponibles}
             modeleSelectionne={modeleSelectionne}
             onModeleChange={setModeleSelectionne}
@@ -1042,6 +1049,20 @@ export function ChatIA({
                       message.id
                         ? setPopupFeedback({ type: "negatif", messageId: message.id!, questionMessageId: messages[index - 1]?.id ?? null })
                         : alert("Connecte-toi pour noter Clovis.")
+                  : undefined
+              }
+              onSignalerCorrection={
+                message.role === "assistant" && message.id
+                  ? (type) =>
+                      signalerCorrectionPedagogique({
+                        agent_id: agentId,
+                        type,
+                        conversation_id: conversationId,
+                        question_message_id: messages[index - 1]?.id ?? null,
+                        reponse_message_id: message.id,
+                        question_texte: messages[index - 1]?.content ?? "",
+                        reponse_texte: message.content,
+                      }).then(() => {})
                   : undefined
               }
               onExpliquerSelection={message.role === "assistant" ? expliquerSelection : undefined}

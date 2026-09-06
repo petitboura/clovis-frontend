@@ -205,6 +205,7 @@ export function BarreDeSaisie({
   onModeleChange,
   boutonSansEnseignant = false,
   outilsActifsAgent = null,
+  texteInitial,
 }: {
   onEnvoyer: (
     texte: string,
@@ -241,8 +242,16 @@ export function BarreDeSaisie({
   // slots d'outils récents qui apparaissent après coup, ils sont déjà
   // là dès le premier rendu de la barre.
   outilsActifsAgent?: { outils: string[]; actions_locales: string[] } | null;
+  // Partie 5 (06/09/2026) : dépose ce texte dans le champ dès le
+  // montage, sans l'envoyer -- voir ChatIA.tsx et
+  // lib/contexteChat.tsx::useOuvrirChatAvecTexte. Lu UNIQUEMENT à
+  // l'initialisation de l'état ci-dessous (pas dans un useEffect) : ce
+  // composant est toujours remonté avec une conversation neuve (key
+  // changée dans ChatFlottant.tsx) quand cette prop est fournie, jamais
+  // réappliqué en cours de frappe.
+  texteInitial?: string;
 }) {
-  const [texte, setTexte] = useState("");
+  const [texte, setTexte] = useState(() => texteInitial ?? "");
   const [longueur, setLongueur] = useState<LongueurReponse>("moyenne");
   // Devenu un TABLEAU le 17/08 (demande Bourama : "permet l'upload de
   // plusieurs fichiers dans le chat" -- avant, un seul fichier possible
