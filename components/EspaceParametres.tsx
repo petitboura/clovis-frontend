@@ -23,7 +23,7 @@ import {
 import { BoutonRetour } from "./BoutonRetour";
 import { ChampMotDePasse } from "./ChampMotDePasse";
 import { supabase } from "@/lib/supabase";
-import { appelerApiFichier, lireMonProfil, enregistrerMonProfil, supprimerMonCompte, exporterMesDonnees } from "@/lib/api";
+import { appelerApiFichier, lireMonProfil, enregistrerMonProfil, supprimerMonCompte, exporterMesDonnees, obtenirMonStatut } from "@/lib/api";
 import { messageErreur, ErreurApi } from "@/lib/erreurs";
 import { useTheme, type ChoixTheme } from "@/lib/useTheme";
 import { Skeleton } from "./Skeleton";
@@ -196,6 +196,14 @@ export function EspaceParametres() {
   const [nomAffiche, setNomAffiche] = useState("");
   const [bio, setBio] = useState("");
   const [notifsActives, setNotifsActives] = useState(false);
+  // Partie 7 (06/09/2026, plan confiance pédagogique, Point 3) : null =
+  // jamais répondu, ne vient pas de ProfilMoi (public, voir
+  // api/profiles.py::ProfilPublic -- volontairement absent de ce modèle
+  // pour ne jamais l'exposer sur un profil public), lu séparément via
+  // GET /api/profiles/moi/statut.
+  const [estMajeur, setEstMajeur] = useState<boolean | null>(null);
+  const [enregistrementMajeur, setEnregistrementMajeur] = useState(false);
+  const [erreurMajeur, setErreurMajeur] = useState<string | null>(null);
 
   const [enregistrementProfil, setEnregistrementProfil] = useState(false);
   const [messageProfil, setMessageProfil] = useState<string | null>(null);
@@ -235,6 +243,12 @@ export function EspaceParametres() {
         }
       })
       .finally(() => setChargement(false));
+    obtenirMonStatut()
+      .then((s) => setEstMajeur(s.est_majeur))
+      .catch(() => {
+        // Silencieux : ce champ reste modifiable même si cette lecture
+        // échoue (juste sans présélection de la réponse déjà donnée).
+      });
   }, []);
 
   async function enregistrerProfil() {
@@ -278,6 +292,22 @@ export function EspaceParametres() {
       setMessageNotifs(messageErreur(e));
     } finally {
       setEnregistrementNotifs(false);
+    }
+  }
+
+  async function choisirMajeur(valeur: boolean) {
+    if (valeur === estMajeur) return;
+    const precedent = estMajeur;
+    setEstMajeur(valeur); // optimiste
+    setEnregistrementMajeur(true);
+    setErreurMajeur(null);
+    try {
+      await enregistrerMonProfil({ est_majeur: valeur });
+    } catch (e) {
+      setEstMajeur(precedent);
+      setErreurMajeur(messageErreur(e));
+    } finally {
+      setEnregistrementMajeur(false);
     }
   }
 
@@ -609,6 +639,41 @@ export function EspaceParametres() {
               placeholder="Quelques mots sur toi (optionnel)."
               className="w-full resize-y rounded-lg border border-dj-bordure bg-dj-surface-haute px-3 py-2 text-sm text-dj-texte outline-none focus:border-dj-bordure-forte"
             />
+          </div>
+
+          <div className="flex flex-col gap-1.5">
+            <span className="text-sm font-medium text-dj-texte">Âge</span>
+            <p className="text-xs leading-relaxed text-dj-texte-muet">
+              Sert uniquement à adapter la protection prévue pour les mineurs (mode unique par conversation, accès
+              réservé aux codes reçus d'un professeur ou établissement). Jamais affiché publiquement.
+            </p>
+            <div className="mt-1 flex gap-2">
+              <button
+                type="button"
+                onClick={() => choisirMajeur(true)}
+                disabled={enregistrementMajeur}
+                className={`flex-1 rounded-lg border px-3 py-2 text-sm font-medium transition-colors disabled:opacity-60 ${
+                  estMajeur === true
+                    ? "border-dj-accent-1 bg-dj-accent-1/10 text-dj-texte"
+                    : "border-dj-bordure bg-dj-surface-haute text-dj-texte-muet hover:bg-dj-surface"
+                }`}
+              >
+                J'ai 18 ans ou plus
+              </button>
+              <button
+                type="button"
+                onClick={() => choisirMajeur(false)}
+                disabled={enregistrementMajeur}
+                className={`flex-1 rounded-lg border px-3 py-2 text-sm font-medium transition-colors disabled:opacity-60 ${
+                  estMajeur === false
+                    ? "border-dj-accent-1 bg-dj-accent-1/10 text-dj-texte"
+                    : "border-dj-bordure bg-dj-surface-haute text-dj-texte-muet hover:bg-dj-surface"
+                }`}
+              >
+                J'ai moins de 18 ans
+              </button>
+            </div>
+            {erreurMajeur && <p className="text-sm text-[var(--dj-erreur)]">{erreurMajeur}</p>}
           </div>
 
           <div className="flex flex-wrap items-center gap-3">

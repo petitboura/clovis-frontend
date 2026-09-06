@@ -1135,11 +1135,22 @@ export async function enregistrerMonProfil(payload: {
   bio?: string;
   avatar_url?: string;
   notifications_proactives_actives?: boolean;
+  est_majeur?: boolean;
 }) {
   return appelerApi("/api/profiles/me", {
     method: "PATCH",
     body: JSON.stringify(payload),
   });
+}
+
+/** GET /api/profiles/moi/statut -- voir MonStatutReponse côté backend.
+ * est_majeur : null si jamais renseigné (traité comme majeur, voir
+ * core/restriction_mineur.py), boolean sinon. */
+export async function obtenirMonStatut() {
+  return appelerApi("/api/profiles/moi/statut") as Promise<{
+    est_createur: boolean;
+    est_majeur: boolean | null;
+  }>;
 }
 
 /** DELETE /api/profiles/me -- voir api/profiles.py:supprimer_mon_compte
@@ -1264,6 +1275,7 @@ export async function retirerRattachementCode(rattachementId: string) {
 export async function obtenirModeActif(conversationId: string) {
   return appelerApi(`/api/conversations/${conversationId}/mode-actif`) as Promise<{
     rattachement_id: string | null;
+    verrouille: boolean;
   }>;
 }
 
