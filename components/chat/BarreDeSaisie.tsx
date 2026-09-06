@@ -547,9 +547,9 @@ export function BarreDeSaisie({
         break;
       case "notion":
         cliquerNotion();
+        break;
       case "google_drive":
         cliquerGoogleDrive();
-        break;
         break;
     }
     enregistrerUtilisationAppli(nom);
@@ -869,6 +869,19 @@ export function BarreDeSaisie({
       try {
         const { url } = await demarrerConnexion("notion", agentId);
         window.location.href = url;
+      } catch (e) {
+        alert(messageErreur(e));
+        setNotionEnCours(false);
+      }
+      return;
+    }
+
+    // Déjà connecté : ouvre/ferme simplement le sélecteur -- le
+    // chargement se fait désormais via la recherche tapée (voir
+    // useEffect ci-dessus), pas au clic.
+    setSelecteurNotionOuvert((prec) => !prec);
+  }
+
   // Connexion Google Drive (01/09, demande Bourama) -- même pattern que
   // githubConnecte/notionConnecte ci-dessus, mais SANS sélecteur : les
   // outils Drive (chercher/lire/fichiers récents...) fonctionnent seuls
@@ -899,19 +912,6 @@ export function BarreDeSaisie({
       alert(messageErreur(e));
       setDriveEnCours(false);
     }
-  }
-
-      } catch (e) {
-        alert(messageErreur(e));
-        setNotionEnCours(false);
-      }
-      return;
-    }
-
-    // Déjà connecté : ouvre/ferme simplement le sélecteur -- le
-    // chargement se fait désormais via la recherche tapée (voir
-    // useEffect ci-dessus), pas au clic.
-    setSelecteurNotionOuvert((prec) => !prec);
   }
 
   function choisirPageNotion(url: string) {
