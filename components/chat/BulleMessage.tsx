@@ -879,30 +879,56 @@ function BulleMessageInterne({
                 // champ rempli et retombe donc sur le rendu groupé
                 // normal, inchangé.
                 <div className="flex flex-col gap-1.5">
-                  {message.segments.map((segment, index) => {
-                    if (segment.type === "raisonnement") {
-                      return (
-                        <RaisonnementBulle
-                          key={index}
-                          nomAgent={nomAgent ?? "Clovis"}
-                          texte={segment.texte}
-                          enCours={!!raisonnementEnCours && index === message.segments!.length - 1}
-                        />
-                      );
-                    }
-                    if (segment.type === "outil") {
-                      return <OutilResultatBulle key={index} resultats={[segment]} />;
-                    }
-                    return (
-                      <div key={index}>
-                        {rendreMarkdown(
-                          normaliserCitations(normaliserLatex(segment.texte)),
-                          !!estEnCoursDeGeneration && index === message.segments!.length - 1,
-                          index,
-                        )}
-                      </div>
+                  {/* Fusion des segments de raisonnement (06/09/2026, demande
+                      Bourama) -- une même génération peut contenir plusieurs
+                      segments "raisonnement" (le modèle réfléchit, appelle un
+                      outil, réfléchit encore...), ce qui affichait avant
+                      autant de bulles "Raisonnement de Clovis" séparées et
+                      éparpillées dans le message. On calcule ici une seule
+                      fois l'index du PREMIER segment de raisonnement et le
+                      texte de TOUS les segments de raisonnement concaténé :
+                      seule la bulle à cette première position s'affiche,
+                      avec le texte fusionné ; les segments de raisonnement
+                      suivants ne rendent plus rien. Rien n'est perdu, juste
+                      regroupé dans une seule bulle, à l'endroit où la
+                      réflexion a réellement commencé. */}
+                  {(() => {
+                    const premierIndexRaisonnement = message.segments!.findIndex(
+                      (s) => s.type === "raisonnement",
                     );
-                  })}
+                    const dernierSegment = message.segments![message.segments!.length - 1];
+                    const raisonnementFusionEnCours = !!raisonnementEnCours && dernierSegment.type === "raisonnement";
+                    const texteRaisonnementFusionne = message.segments!
+                      .filter((s): s is { type: "raisonnement"; texte: string } => s.type === "raisonnement")
+                      .map((s) => s.texte)
+                      .join("\n\n");
+
+                    return message.segments!.map((segment, index) => {
+                      if (segment.type === "raisonnement") {
+                        if (index !== premierIndexRaisonnement) return null;
+                        return (
+                          <RaisonnementBulle
+                            key={index}
+                            nomAgent={nomAgent ?? "Clovis"}
+                            texte={texteRaisonnementFusionne}
+                            enCours={raisonnementFusionEnCours}
+                          />
+                        );
+                      }
+                      if (segment.type === "outil") {
+                        return <OutilResultatBulle key={index} resultats={[segment]} />;
+                      }
+                      return (
+                        <div key={index}>
+                          {rendreMarkdown(
+                            normaliserCitations(normaliserLatex(segment.texte)),
+                            !!estEnCoursDeGeneration && index === message.segments!.length - 1,
+                            index,
+                          )}
+                        </div>
+                      );
+                    });
+                  })()}
                 </div>
               ) : (
                 rendreMarkdown(normaliserCitations(normaliserLatex(message.content)), !!estEnCoursDeGeneration)
