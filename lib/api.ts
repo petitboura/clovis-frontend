@@ -1256,6 +1256,24 @@ export async function retirerRattachementCode(rattachementId: string) {
   return appelerApi(`/api/rattachements-codes/${rattachementId}`, { method: "DELETE" });
 }
 
+// --- Mode actif par conversation (Partie 6, 06/09/2026, demande Bourama --
+// voir Point 3 : un utilisateur peut avoir plusieurs codes rattachés en
+// même temps, ce mécanisme retient lequel s'applique à la conversation
+// en cours, voir api/mode_actif_conversation.py) ---------------------------
+
+export async function obtenirModeActif(conversationId: string) {
+  return appelerApi(`/api/conversations/${conversationId}/mode-actif`) as Promise<{
+    rattachement_id: string | null;
+  }>;
+}
+
+export async function definirModeActif(conversationId: string, rattachementId: string | null) {
+  return appelerApi(`/api/conversations/${conversationId}/mode-actif`, {
+    method: "PUT",
+    body: JSON.stringify({ rattachement_id: rattachementId }),
+  }) as Promise<{ rattachement_id: string | null }>;
+}
+
 export type ContenuMatiere = {
   id: string;
   matiere: string;

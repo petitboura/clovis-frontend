@@ -10,6 +10,7 @@ import { PopupFeedback } from "./PopupFeedback";
 import { StatutOutil, EtatStatut } from "./StatutOutil";
 import { ConfirmationOutil } from "./ConfirmationOutil";
 import { BoutonRepriseAgent } from "./BoutonRepriseAgent";
+import { SelecteurModeActif } from "./SelecteurModeActif";
 import { messageErreur } from "@/lib/erreurs";
 import { emettreDonneesModifieesPourOutil } from "@/lib/evenementsDonnees";
 import { IconeGenerique } from "@/components/icones/IconeGenerique";
@@ -968,6 +969,10 @@ export function ChatIA({
           ) : (
             <p className="mb-8 text-center text-base text-dj-texte-muet">Pose ta question à {nomAgent}...</p>
           )}
+          {/* Mode actif (Partie 6, 06/09) : rendu fixe sur mobile (peu
+              importe l'emplacement DOM), juste au-dessus de la barre de
+              saisie sur PC -- voir SelecteurModeActif.tsx. */}
+          <SelecteurModeActif conversationId={conversationId} />
           <BarreDeSaisie
             onEnvoyer={envoyerMessage}
             desactive={genEnCours || affichageEnCours}
@@ -1088,6 +1093,9 @@ export function ChatIA({
           app/globals.css). Retiré : --safe-bottom seul couvre le vrai
           besoin (la zone système du bas). */}
       <div className="px-4 [padding-bottom:calc(var(--safe-bottom)+1.5rem)]">
+        {/* Mode actif (Partie 6, 06/09) : voir le commentaire équivalent
+            dans la branche d'accueil ci-dessus. */}
+        <SelecteurModeActif conversationId={conversationId} />
         <BarreDeSaisie
           onEnvoyer={envoyerMessage}
           desactive={genEnCours || affichageEnCours}
