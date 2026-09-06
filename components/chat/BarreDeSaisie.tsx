@@ -1738,6 +1738,8 @@ export function BarreDeSaisie({
                   <div className="absolute bottom-full left-0 z-30 mb-2 w-72 max-w-[calc(100vw-2rem)] rounded-xl border border-dj-bordure bg-dj-surface-haute p-1 shadow-xl">
                     {contenuSelecteurNotion("bg-dj-surface", "bg-dj-surface")}
                   </div>
+                )}
+              </div>
             )}
 
             {/* Google Drive (01/09) -- même raison d'être que les blocs
@@ -1765,8 +1767,6 @@ export function BarreDeSaisie({
                   <span className="absolute -right-0.5 -top-0.5 h-1.5 w-1.5 rounded-full bg-green-500" />
                 )}
               </button>
-                )}
-              </div>
             )}
 
 
