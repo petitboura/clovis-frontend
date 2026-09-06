@@ -1578,3 +1578,79 @@ export type AuditCorrections = {
 export async function obtenirAuditCorrections() {
   return appelerApi("/api/audit-corrections/mon-audit") as Promise<AuditCorrections>;
 }
+
+// Fondations du système établissement (Partie 9, 06/09/2026) : voir
+// api/etablissements.py côté backend pour les endpoints, core/etablissements.py
+// pour la logique et les trois états de rattachement (suivi / demande_en_attente
+// / accepte).
+export type Etablissement = {
+  id: string;
+  nom: string;
+  description: string | null;
+  site_web: string | null;
+  contact: string | null;
+  created_at: string;
+};
+
+export type EtatRattachementEtablissement = "suivi" | "demande_en_attente" | "accepte";
+
+export type RattachementEtablissement = {
+  id: string;
+  etablissement_id: string;
+  utilisateur_id: string;
+  etat: EtatRattachementEtablissement;
+  created_at: string;
+  // Présent uniquement sur listerMesRattachementsEtablissements (jointure
+  // Supabase "*, etablissements(id, nom)", voir lister_mes_rattachements).
+  etablissements?: { id: string; nom: string };
+};
+
+export type PublicationEtablissement = {
+  id: string;
+  etablissement_id: string;
+  auteur_id: string;
+  titre: string | null;
+  contenu: string;
+  visibilite: "publique" | "privee";
+  statut: "valide" | "en_attente" | "refuse";
+  valide_le: string | null;
+  valide_par: string | null;
+  created_at: string;
+};
+
+/** Section publique -- parcourable sans compte (voir lister_etablissements_publics). */
+export async function listerEtablissementsPublics() {
+  return appelerApi("/api/etablissements") as Promise<Etablissement[]>;
+}
+
+export async function obtenirEtablissement(etablissementId: string) {
+  return appelerApi(`/api/etablissements/${etablissementId}`) as Promise<Etablissement>;
+}
+
+/** Mes rattachements (tous établissements confondus), pour savoir quel
+ * bouton (Suivre / Se connecter) afficher sur chaque carte de la liste. */
+export async function listerMesRattachementsEtablissements() {
+  return appelerApi("/api/etablissements/mes/rattachements") as Promise<RattachementEtablissement[]>;
+}
+
+/** Action "Suivre" -- immédiate, jamais de validation requise. */
+export async function suivreEtablissement(etablissementId: string) {
+  return appelerApi(`/api/etablissements/${etablissementId}/suivre`, {
+    method: "POST",
+  }) as Promise<RattachementEtablissement>;
+}
+
+/** Action "Se connecter" -- part en demande_en_attente, doit être validée
+ * par l'établissement avant de devenir un vrai rattachement (accepte). */
+export async function demanderConnexionEtablissement(etablissementId: string) {
+  return appelerApi(`/api/etablissements/${etablissementId}/connecter`, {
+    method: "POST",
+  }) as Promise<RattachementEtablissement>;
+}
+
+/** Publications validées de cet établissement -- publiques pour tout le
+ * monde, privées en plus si mon rattachement est "accepte" (le backend
+ * filtre déjà selon le token envoyé, rien à décider ici). */
+export async function listerPublicationsEtablissement(etablissementId: string) {
+  return appelerApi(`/api/etablissements/${etablissementId}/publications`) as Promise<PublicationEtablissement[]>;
+}
