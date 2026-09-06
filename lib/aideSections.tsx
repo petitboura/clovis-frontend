@@ -94,6 +94,13 @@ export const RUBRIQUES_AIDE: RubriqueAide[] = [
     texteComplet:
       "Crée un code et partage-le : tous ceux qui l'entrent reçoivent tout ce que tu y mets (comportement, bibliothèque, texte). Modifiable après coup, tout le monde voit la mise à jour dès qu'elle est faite.",
   },
+  {
+    id: "programme-notions",
+    titre: "Programme",
+    texteCourt: "Organise les notions à enseigner pour ce code et coche leur avancement (à venir / en cours / acquis).",
+    texteComplet:
+      "Organise les notions à enseigner pour un code, avec des sous-notions si besoin (renommer, fusionner, réordonner, supprimer). Chaque notion a un statut que tu coches toi-même : à venir, en cours, ou acquis. Tu peux aussi importer un document (sommaire, plan de cours) pour proposer une structure de départ, à valider avant de l'appliquer.",
+  },
   // Les 6 rubriques suivantes ajoutées le 02/09/2026 -- écrans oubliés du
   // premier passage du 01/09 (signalé par Bourama), textes repris tels
   // quels des paragraphes fixes qu'ils remplacent, sans reformulation.

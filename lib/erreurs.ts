@@ -125,6 +125,15 @@ export const MESSAGES: Record<Locale, Record<string, string>> = {
     VIDEO_ILLISIBLE_REESSAIE_AVEC_UN_AUTRE: "Vidéo illisible, réessaie avec un autre fichier.",
     VIDEO_TROP_LONGUE: "Vidéo trop longue ({duree}s, {maximum}s max).",
     VIDEO_TROP_LOURDE_40_MO_MAX: "Vidéo trop lourde (40 Mo max).",
+    // Structure des notions et avancement (Partie 1/2, 06/09/2026) --
+    // préfixe NOTION_PROGRAMME_ pour ne jamais se confondre avec les
+    // codes NOTION_... de l'intégration Notion (voir core/erreurs.py).
+    NOTION_PROGRAMME_CODE_INTROUVABLE: "Ce code de partage est introuvable.",
+    NOTION_PROGRAMME_INTROUVABLE: "Cette notion est introuvable.",
+    NOTION_PROGRAMME_NOM_MANQUANT: "Donne un nom à cette notion.",
+    NOTION_PROGRAMME_STATUT_INVALIDE: "Statut de notion invalide.",
+    NOTION_PROGRAMME_FUSION_INVALIDE: "Cette fusion n'est pas possible.",
+    NOTION_PROGRAMME_GENERATION_ECHEC: "Échec de la génération de la structure, réessaie.",
   },
   en: {
     PRECISE_MATIERE_AUTRE: "Specify the subject in \"Other\".",
@@ -224,6 +233,12 @@ export const MESSAGES: Record<Locale, Record<string, string>> = {
     VIDEO_ILLISIBLE_REESSAIE_AVEC_UN_AUTRE: "Video unreadable, try again with a different file.",
     VIDEO_TROP_LONGUE: "Video too long ({duree}s, {maximum}s max).",
     VIDEO_TROP_LOURDE_40_MO_MAX: "Video too large (40 MB max).",
+    NOTION_PROGRAMME_CODE_INTROUVABLE: "This share code was not found.",
+    NOTION_PROGRAMME_INTROUVABLE: "This topic was not found.",
+    NOTION_PROGRAMME_NOM_MANQUANT: "Give this topic a name.",
+    NOTION_PROGRAMME_STATUT_INVALIDE: "Invalid topic status.",
+    NOTION_PROGRAMME_FUSION_INVALIDE: "This merge isn't possible.",
+    NOTION_PROGRAMME_GENERATION_ECHEC: "Structure generation failed, try again.",
   },
 };
 

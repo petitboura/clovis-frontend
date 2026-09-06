@@ -3,6 +3,7 @@ import { MesCodes } from "@/components/MesCodes";
 import { EspaceEntrerCode } from "@/components/EspaceEntrerCode";
 import { AuditCorrections } from "@/components/AuditCorrections";
 import { EspaceEtablissements } from "@/components/EspaceEtablissements";
+import { ProgrammeNotions } from "@/components/ProgrammeNotions";
 
 export default function PageBureau() {
   return (
@@ -10,6 +11,7 @@ export default function PageBureau() {
       <div className="flex flex-col gap-4">
         <AuditCorrections />
         <MesCodes />
+        <ProgrammeNotions />
         <EspaceEntrerCode />
         {/* Partie 9 (06/09/2026) : pas d'entrée globale ajoutée dans
             AppSidebar/EspacePlus (menu "Plus") pour cette fonctionnalité --

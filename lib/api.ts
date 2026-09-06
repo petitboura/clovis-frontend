@@ -1286,6 +1286,78 @@ export async function definirModeActif(conversationId: string, rattachementId: s
   }) as Promise<{ rattachement_id: string | null }>;
 }
 
+// Structure des notions et avancement (Partie 1/2 du chantier "confiance
+// pédagogique", 06/09/2026 -- voir djiguigne-backend/core/programme_notions.py).
+// Rattachée à un code de partage (codes_partage), pas à un rôle -- même
+// principe que le reste de "Mes codes" ci-dessus. Indépendante de
+// l'ancienne fonctionnalité "Programme" (supprimée le 28/08/2026).
+
+export type StatutNotion = "a_venir" | "en_cours" | "acquis";
+
+export type Notion = {
+  id: string;
+  code_id: string;
+  notion_parent_id: string | null;
+  nom: string;
+  statut: StatutNotion;
+  ordre: number;
+  created_at: string;
+  updated_at: string;
+};
+
+export async function listerNotions(codeId: string) {
+  return appelerApi(`/api/notions/${codeId}`) as Promise<Notion[]>;
+}
+
+export async function creerNotion(codeId: string, nom: string, notionParentId: string | null = null) {
+  return appelerApi(`/api/notions/${codeId}`, {
+    method: "POST",
+    body: JSON.stringify({ nom, notion_parent_id: notionParentId }),
+  }) as Promise<Notion>;
+}
+
+export async function renommerNotion(codeId: string, notionId: string, nom: string) {
+  return appelerApi(`/api/notions/${codeId}/${notionId}/nom`, {
+    method: "PATCH",
+    body: JSON.stringify({ nom }),
+  }) as Promise<Notion>;
+}
+
+export async function changerStatutNotion(codeId: string, notionId: string, statut: StatutNotion) {
+  return appelerApi(`/api/notions/${codeId}/${notionId}/statut`, {
+    method: "PATCH",
+    body: JSON.stringify({ statut }),
+  }) as Promise<Notion>;
+}
+
+export async function reordonnerNotions(codeId: string, notionParentId: string | null, notionIdsOrdonnes: string[]) {
+  return appelerApi(`/api/notions/${codeId}/reordonner`, {
+    method: "POST",
+    body: JSON.stringify({ notion_parent_id: notionParentId, notion_ids_ordonnes: notionIdsOrdonnes }),
+  }) as Promise<{ ok: boolean }>;
+}
+
+export async function fusionnerNotions(codeId: string, notionSourceId: string, notionCibleId: string) {
+  return appelerApi(`/api/notions/${codeId}/fusionner`, {
+    method: "POST",
+    body: JSON.stringify({ notion_source_id: notionSourceId, notion_cible_id: notionCibleId }),
+  }) as Promise<Notion>;
+}
+
+export async function supprimerNotion(codeId: string, notionId: string) {
+  return appelerApi(`/api/notions/${codeId}/${notionId}`, { method: "DELETE" });
+}
+
+/** Structure de notions PROPOSÉE depuis un document -- ne modifie rien en
+ * base (voir core/generation_notions_llm.py), à valider/éditer côté
+ * frontend avant de créer réellement chaque notion via creerNotion(). */
+export type NotionProposee = { nom: string; enfants: NotionProposee[] };
+
+export async function genererStructureNotions(codeId: string, fichier: File) {
+  const resultat = await appelerApiFichier(`/api/notions/${codeId}/generer`, fichier);
+  return resultat as { notions: NotionProposee[] };
+}
+
 export type ContenuMatiere = {
   id: string;
   matiere: string;
