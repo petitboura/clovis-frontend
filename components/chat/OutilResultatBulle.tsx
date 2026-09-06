@@ -4,6 +4,7 @@ import { useState } from "react";
 import { ChevronDown, ChevronRight, Wrench, Link2 } from "lucide-react";
 import { useOutilsRegistre } from "@/lib/outils";
 import { SourcesBulle } from "./SourcesBulle";
+import { GalerieImagesBulle } from "./GalerieImagesBulle";
 
 // Affiche, pour CHAQUE outil utilisé, ce qu'il a concrètement exécuté /
 // retourné -- dans sa propre section, avec l'icône de cet outil précis,
@@ -49,7 +50,7 @@ function iconePourOutil(outils: ReturnType<typeof useOutilsRegistre>["outils"], 
 export function OutilResultatBulle({
   resultats,
 }: {
-  resultats?: { nomOutil: string; nomLisible: string; resultat: string; sources?: { numero: number; titre: string; url: string; extrait?: string; url_extrait?: string; reperage?: string; position_type?: "page" | "timestamp"; position_valeur?: number; type_mime?: string | null }[] }[];
+  resultats?: { nomOutil: string; nomLisible: string; resultat: string; sources?: { numero: number; titre: string; url: string; extrait?: string; url_extrait?: string; reperage?: string; position_type?: "page" | "timestamp"; position_valeur?: number; type_mime?: string | null }[]; images?: { titre: string; url: string; miniature: string; credit?: string | null }[] }[];
 }) {
   const { outils } = useOutilsRegistre();
   const [ouverts, setOuverts] = useState<Record<number, boolean>>({});
@@ -86,6 +87,10 @@ export function OutilResultatBulle({
                 </button>
               )}
             </div>
+            {/* Galerie d'images (01/09) -- TOUJOURS visible, contrairement
+                au résultat brut replié juste en dessous : voir
+                GalerieImagesBulle.tsx pour le raisonnement. */}
+            <GalerieImagesBulle images={r.images} />
             <div
               className={`grid transition-[grid-template-rows] duration-300 ease-out ${
                 ouvert ? "grid-rows-[1fr]" : "grid-rows-[0fr]"

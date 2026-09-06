@@ -491,6 +491,31 @@ export function ChatIA({
         copie[copie.length - 1] = { ...dernier, outilsResultats: outilsCopie, segments };
         return copie;
       });
+    } else if (evenement.type === "images") {
+      // Même principe que "sources" juste au-dessus (rattaché au DERNIER
+      // outilsResultats ET au dernier segment "outil", voir SegmentMessage
+      // dans BulleMessage.tsx), mais pas de déduplication par clé complexe :
+      // un appel rechercher_image = une seule galerie, jamais plusieurs
+      // évènements "images" à fusionner pour le même appel.
+      majMessages((prec) => {
+        const copie = [...prec];
+        const dernier = copie[copie.length - 1];
+        const outils = dernier.outilsResultats || [];
+        if (!outils.length) return prec; // images sans outil_resultat correspondant -- ne devrait pas arriver
+        if (!evenement.images || !evenement.images.length) return prec;
+        const iDernierOutil = outils.length - 1;
+        const outilsCopie = [...outils];
+        outilsCopie[iDernierOutil] = { ...outilsCopie[iDernierOutil], images: evenement.images };
+        const segments = dernier.segments ? [...dernier.segments] : [];
+        const iDernierSegmentOutil = [...segments].reverse().findIndex((s) => s.type === "outil");
+        if (iDernierSegmentOutil !== -1) {
+          const i = segments.length - 1 - iDernierSegmentOutil;
+          const segmentOutil = segments[i] as Extract<SegmentMessage, { type: "outil" }>;
+          segments[i] = { ...segmentOutil, images: evenement.images };
+        }
+        copie[copie.length - 1] = { ...dernier, outilsResultats: outilsCopie, segments };
+        return copie;
+      });
     } else if (evenement.type === "outil_resultat") {
       // Généralisation (26/07, demande Bourama) : un élément par appel
       // d'outil, PAS de dédoublonnage (contrairement à "sources") -- deux

@@ -266,7 +266,7 @@ export interface MessageAffiche {
   // séparé du message) : elles doivent apparaître juste après le
   // résultat de leur outil, pas dans un bloc "Sources" à part à la fin
   // -- voir OutilResultatBulle.tsx.
-  outilsResultats?: { nomOutil: string; nomLisible: string; resultat: string; sources?: { numero: number; titre: string; url: string; extrait?: string; url_extrait?: string; reperage?: string; position_type?: "page" | "timestamp"; position_valeur?: number; type_mime?: string | null }[] }[];
+  outilsResultats?: { nomOutil: string; nomLisible: string; resultat: string; sources?: { numero: number; titre: string; url: string; extrait?: string; url_extrait?: string; reperage?: string; position_type?: "page" | "timestamp"; position_valeur?: number; type_mime?: string | null }[]; images?: { titre: string; url: string; miniature: string; credit?: string | null }[] }[];
   // Ajouté 30/08/2026 (audit UX mobile, partie 5 : "pas de chemin de
   // récupération après une erreur") : la génération a échoué avant la
   // moindre réponse persistée -- message.id reste donc null pour
@@ -321,6 +321,7 @@ export type SegmentMessage =
       nomLisible: string;
       resultat: string;
       sources?: { numero: number; titre: string; url: string; extrait?: string; url_extrait?: string; reperage?: string; position_type?: "page" | "timestamp"; position_valeur?: number; type_mime?: string | null }[];
+      images?: { titre: string; url: string; miniature: string; credit?: string | null }[];
     };
 
 // Ajouté le 2026-07-23 (bug repéré par Bourama : en rechargeant un fil de
@@ -456,7 +457,7 @@ function BulleMessageInterne({
   estEnCoursDeGeneration?: boolean;
   raisonnement?: string;
   raisonnementEnCours?: boolean;
-  outilsResultats?: { nomOutil: string; nomLisible: string; resultat: string; sources?: { numero: number; titre: string; url: string; extrait?: string; url_extrait?: string; reperage?: string; position_type?: "page" | "timestamp"; position_valeur?: number; type_mime?: string | null }[] }[];
+  outilsResultats?: { nomOutil: string; nomLisible: string; resultat: string; sources?: { numero: number; titre: string; url: string; extrait?: string; url_extrait?: string; reperage?: string; position_type?: "page" | "timestamp"; position_valeur?: number; type_mime?: string | null }[]; images?: { titre: string; url: string; miniature: string; credit?: string | null }[] }[];
 }) {
   const [copie, setCopie] = useState(false);
   const [pieceJointeOuverteIndex, setPieceJointeOuverteIndex] = useState<number | null>(null);

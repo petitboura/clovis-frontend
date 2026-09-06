@@ -41,6 +41,7 @@ import {
   SlidersHorizontal,
   Library,
   Wrench,
+  HardDrive,
 } from "lucide-react";
 import { IconeNotion } from "@/components/icons/IconeNotion";
 import { useEffect, useState } from "react";
@@ -262,4 +263,9 @@ export const APPLIS_DISPONIBLES: { nom: string; label: string; Icone: typeof Git
   // trait suit la couleur du bouton (text-dj-accent-1 / text-dj-texte-muet),
   // jamais une couleur de marque figée. Voir components/icons/IconeNotion.tsx.
   { nom: "notion", label: "Notion", Icone: IconeNotion },
+  // Ajouté 01/09 (demande Bourama) -- icône générique HardDrive plutôt
+  // qu'un logo Drive redessiné à la main (pas de moyen de vérifier
+  // visuellement un tracé SVG avant mise en prod) : à remplacer par un
+  // vrai logo (même logique que IconeNotion.tsx) si besoin plus tard.
+  { nom: "google_drive", label: "Google Drive", Icone: HardDrive },
 ];

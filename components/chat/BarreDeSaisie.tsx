@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { Pin, Mic, Square, AudioLines, ArrowUp, X, MapPin, Github, FileText, Maximize2, Minimize2, Search, Code, PenLine, Wrench, FileSearch, Globe, Map, FileType, FileSpreadsheet, Presentation, FolderSearch, Package, Archive, Download, Image as IconImage, Bell, FolderTree, FileCode, Edit3, Sigma, Check, LayoutGrid, ChevronDown, Plus, SlidersHorizontal, UserX } from "lucide-react";
+import { Pin, Mic, Square, AudioLines, ArrowUp, X, MapPin, Github, FileText, Maximize2, Minimize2, Search, Code, PenLine, Wrench, FileSearch, Globe, Map, FileType, FileSpreadsheet, Presentation, FolderSearch, Package, Archive, Download, Image as IconImage, Bell, FolderTree, FileCode, Edit3, Sigma, Check, LayoutGrid, ChevronDown, Plus, SlidersHorizontal, UserX, HardDrive } from "lucide-react";
 import { transcrireAudioChat, statutConnexion, demarrerConnexion, depotsGithub, pagesNotion, lignesBaseNotion, creerPageNotion, extraireFormuleImage, lireOutilsChatAgent } from "@/lib/api";
 import { APPLIS_DISPONIBLES, useOutilsRegistre } from "@/lib/outils";
 import { IconeNotion } from "@/components/icons/IconeNotion";
@@ -547,6 +547,9 @@ export function BarreDeSaisie({
         break;
       case "notion":
         cliquerNotion();
+      case "google_drive":
+        cliquerGoogleDrive();
+        break;
         break;
     }
     enregistrerUtilisationAppli(nom);
@@ -866,6 +869,38 @@ export function BarreDeSaisie({
       try {
         const { url } = await demarrerConnexion("notion", agentId);
         window.location.href = url;
+  // Connexion Google Drive (01/09, demande Bourama) -- même pattern que
+  // githubConnecte/notionConnecte ci-dessus, mais SANS sélecteur : les
+  // outils Drive (chercher/lire/fichiers récents...) fonctionnent seuls
+  // une fois connecté, rien à insérer dans le champ de texte. Un clic
+  // une fois connecté ne fait donc rien de plus que confirmer visuellement
+  // la connexion (point vert, comme GitHub/Notion).
+  const [driveConnecte, setDriveConnecte] = useState<boolean | null>(null);
+  const [driveEnCours, setDriveEnCours] = useState(false);
+
+  // Même correctif (02/09/2026) que githubConnecte/notionConnecte
+  // plus haut : ne vérifier le statut Drive que si le bouton Drive peut
+  // réellement s'afficher pour cet agent (évite un 404 répété en
+  // console sinon).
+  useEffect(() => {
+    if (appliSlotUnique?.nom !== "google_drive") return;
+    statutConnexion("google_drive")
+      .then((r) => setDriveConnecte(r.connecte))
+      .catch(() => setDriveConnecte(false));
+  }, [appliSlotUnique?.nom]);
+
+  async function cliquerGoogleDrive() {
+    if (driveConnecte) return;
+    setDriveEnCours(true);
+    try {
+      const { url } = await demarrerConnexion("google_drive", agentId);
+      window.location.href = url;
+    } catch (e) {
+      alert(messageErreur(e));
+      setDriveEnCours(false);
+    }
+  }
+
       } catch (e) {
         alert(messageErreur(e));
         setNotionEnCours(false);
@@ -1703,6 +1738,33 @@ export function BarreDeSaisie({
                   <div className="absolute bottom-full left-0 z-30 mb-2 w-72 max-w-[calc(100vw-2rem)] rounded-xl border border-dj-bordure bg-dj-surface-haute p-1 shadow-xl">
                     {contenuSelecteurNotion("bg-dj-surface", "bg-dj-surface")}
                   </div>
+            )}
+
+            {/* Google Drive (01/09) -- même raison d'être que les blocs
+                GitHub/Notion ci-dessus : couvre le cas où un agent n'a QUE
+                Drive d'activé (github/notion étant désactivés côté
+                plateforme au 01/09), sans quoi appliSlotUnique vaudrait
+                "google_drive" mais rien ne le rendrait (bug Nucleos). Pas
+                de sélecteur ici (contrairement à GitHub/Notion) : les
+                outils Drive n'ont besoin d'aucune sélection préalable dans
+                le champ de texte, juste d'être connecté. */}
+            {appliSlotUnique?.nom === "google_drive" && (
+              <button
+                onClick={() => executerActionAppli("google_drive")}
+                disabled={driveEnCours || !!driveConnecte}
+                aria-label={driveConnecte ? "Google Drive connecté" : "Connecter Google Drive"}
+                title={driveConnecte ? "Google Drive connecté" : "Connecter Google Drive"}
+                className={
+                  driveConnecte
+                    ? "relative text-dj-texte transition-colors"
+                    : "relative text-dj-texte-muet transition-colors hover:text-dj-texte disabled:opacity-60"
+                }
+              >
+                <HardDrive size={18} />
+                {driveConnecte && (
+                  <span className="absolute -right-0.5 -top-0.5 h-1.5 w-1.5 rounded-full bg-green-500" />
+                )}
+              </button>
                 )}
               </div>
             )}
