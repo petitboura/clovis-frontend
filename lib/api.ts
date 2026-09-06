@@ -1534,7 +1534,7 @@ export async function obtenirUsage(jours = 7) {
 // table (follow/comment/rating/...), laissés de côté pour l'instant.
 export type NotificationClovis = {
   id: number;
-  type: "rappel_echu" | "action_ia_terminee" | "document_recu_code" | "message_systeme";
+  type: "rappel_echu" | "action_ia_terminee" | "document_recu_code" | "message_systeme" | "audit_hebdomadaire_corrections";
   titre: string;
   contenu: string | null;
   lien: string | null;
@@ -1553,4 +1553,28 @@ export async function marquerNotificationLue(id: number) {
 
 export async function marquerToutesNotificationsLues() {
   await appelerApi("/api/notifications/tout-lu", { method: "POST" });
+}
+
+// Audit synthétique hebdomadaire des corrections pédagogiques (Point 4,
+// Partie 8, 06/09/2026) : voir api/audit_hebdomadaire_corrections.py.
+export type SignalementNonTraite = {
+  id: string;
+  type: "A" | "B";
+  question_texte: string;
+  reponse_texte: string;
+  created_at: string | null;
+};
+
+export type TendanceNotion = { notion_id: string; nombre: number };
+export type TendanceParType = { type: "A" | "B"; nombre: number };
+
+export type AuditCorrections = {
+  total: number;
+  nouveaux_non_traites: SignalementNonTraite[];
+  tendances_notions: TendanceNotion[];
+  tendances_par_type: TendanceParType[];
+};
+
+export async function obtenirAuditCorrections() {
+  return appelerApi("/api/audit-corrections/mon-audit") as Promise<AuditCorrections>;
 }

@@ -39,6 +39,13 @@ export const RUBRIQUES_AIDE: RubriqueAide[] = [
       "Autorise Clovis à lire et agir dans les apps que tu choisis, une par une. Le service d'accessibilité de Clovis doit être activé dans les réglages système du téléphone pour que ça fonctionne. Tu contrôles précisément quelles apps sont autorisées, et un journal garde la trace de ce que Clovis y a lu ou fait.",
   },
   {
+    id: "audit-corrections",
+    titre: "Audit hebdomadaire",
+    texteCourt: "Une fois par semaine, un résumé des signalements de tes élèves, même s'il n'y en a aucun.",
+    texteComplet:
+      "Chaque semaine, Clovis t'envoie un résumé des signalements reçus de tes élèves, même s'il n'y en a aucun. Les signalements de type A (correctif de fond) encore en attente sont listés en priorité, avec un accès direct pour les corriger.",
+  },
+  {
     id: "controle-session",
     titre: "Contrôle de session",
     texteCourt: "Coupe les sonneries et notifications, et active Ne pas déranger le temps de ta session.",

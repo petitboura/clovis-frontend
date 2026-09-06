@@ -13,11 +13,11 @@ import { ecouterNotifications } from "@/lib/canalTempsReel";
 import { dateRelative } from "@/lib/dateRelative";
 
 // Créé le 02/09/2026, demande Bourama : centre de notifications (bouton
-// cloche), ne couvre que les 4 nouveaux types Clovis (voir
-// api/notifications.py côté backend -- rappel_echu, action_ia_terminee,
-// document_recu_code, message_systeme), pas les anciens types de la
-// table notifications (follow/comment/rating/...), laissés de côté pour
-// l'instant (décision explicite de Bourama).
+// cloche), couvre les types Clovis (voir api/notifications.py côté
+// backend : rappel_echu, action_ia_terminee, document_recu_code,
+// message_systeme, audit_hebdomadaire_corrections), pas les anciens
+// types de la table notifications (follow/comment/rating/...), laissés
+// de côté pour l'instant (décision explicite de Bourama).
 //
 // Positionné en fixed top-right (miroir du hamburger top-left, voir
 // MenuHamburgerWeb.tsx/MenuHamburgerNatif.tsx) : contrairement au
