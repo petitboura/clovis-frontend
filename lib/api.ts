@@ -1606,7 +1606,16 @@ export async function obtenirUsage(jours = 7) {
 // table (follow/comment/rating/...), laissés de côté pour l'instant.
 export type NotificationClovis = {
   id: number;
-  type: "rappel_echu" | "action_ia_terminee" | "document_recu_code" | "message_systeme" | "audit_hebdomadaire_corrections";
+  // "audit_hebdomadaire_corrections" ajouté Partie 8, "correction_traitee"
+  // ajouté Partie 5 (tous deux 06/09/2026, chantier "confiance
+  // pédagogique") : voir core/notifications.py.
+  type:
+    | "rappel_echu"
+    | "action_ia_terminee"
+    | "document_recu_code"
+    | "message_systeme"
+    | "audit_hebdomadaire_corrections"
+    | "correction_traitee";
   titre: string;
   contenu: string | null;
   lien: string | null;
@@ -1725,4 +1734,96 @@ export async function demanderConnexionEtablissement(etablissementId: string) {
  * filtre déjà selon le token envoyé, rien à décider ici). */
 export async function listerPublicationsEtablissement(etablissementId: string) {
   return appelerApi(`/api/etablissements/${etablissementId}/publications`) as Promise<PublicationEtablissement[]>;
+}
+
+// Corrections pédagogiques élève -> prof (Partie 4/5, chantier
+// "confiance pédagogique", 06/09/2026). Voir
+// api/corrections_pedagogiques.py côté backend pour le contrat complet
+// -- type "A" (correctif de fond, traité par le prof) et "B"
+// (comportement mal configuré, capté seulement, destiné à la cascade de
+// la Partie 10, pas de flux de correction ici).
+export type TypeCorrectionPedagogique = "A" | "B";
+export type StatutCorrectionPedagogique = "nouveau" | "traite";
+
+export type CorrectionPedagogique = {
+  id: string;
+  agent_id: string;
+  etudiant_id: string;
+  prof_id: string | null;
+  type: TypeCorrectionPedagogique;
+  conversation_id: string | null;
+  question_texte: string;
+  reponse_texte: string;
+  contexte_conversation: { role: string; content: string }[];
+  statut: StatutCorrectionPedagogique;
+  correction_texte: string | null;
+  comportement_id: string | null;
+  // null tant qu'aucun comportement n'a encore été généré pour cette
+  // correction (nouveau signalement type A pas encore traité, ou type
+  // B qui n'en a jamais). Voir core/corrections_pedagogiques.py::_enrichir_comportement_actif.
+  comportement_actif: boolean | null;
+  notion_id: string | null;
+  statut_cascade: string;
+  created_at: string;
+  updated_at: string;
+};
+
+export async function signalerCorrectionPedagogique(payload: {
+  agent_id: string;
+  type: TypeCorrectionPedagogique;
+  conversation_id?: string | null;
+  question_message_id?: number | null;
+  reponse_message_id?: number | null;
+  question_texte: string;
+  reponse_texte: string;
+}) {
+  return appelerApi("/api/corrections-pedagogiques", {
+    method: "POST",
+    body: JSON.stringify(payload),
+  }) as Promise<CorrectionPedagogique>;
+}
+
+export async function listerCorrectionsACorrger(statut: StatutCorrectionPedagogique | "" = "nouveau") {
+  const suffixe = statut ? `?statut=${statut}` : "";
+  const resultat = await appelerApi(`/api/corrections-pedagogiques/a-corriger${suffixe}`);
+  return (resultat as { corrections: CorrectionPedagogique[] }).corrections;
+}
+
+export async function obtenirCorrectionPedagogique(correctionId: string) {
+  return appelerApi(`/api/corrections-pedagogiques/${correctionId}`) as Promise<CorrectionPedagogique>;
+}
+
+export async function activerCorrectionPedagogique(correctionId: string, actif: boolean) {
+  return appelerApi(`/api/corrections-pedagogiques/${correctionId}/actif`, {
+    method: "PATCH",
+    body: JSON.stringify({ actif }),
+  }) as Promise<CorrectionPedagogique>;
+}
+
+export async function editerCorrectionPedagogique(correctionId: string, correctionTexte: string) {
+  return appelerApi(`/api/corrections-pedagogiques/${correctionId}`, {
+    method: "PATCH",
+    body: JSON.stringify({ correction_texte: correctionTexte }),
+  }) as Promise<CorrectionPedagogique>;
+}
+
+export async function dupliquerCorrectionPedagogique(correctionId: string) {
+  return appelerApi(`/api/corrections-pedagogiques/${correctionId}/dupliquer`, {
+    method: "POST",
+  }) as Promise<CorrectionPedagogique>;
+}
+
+export async function supprimerCorrectionPedagogique(correctionId: string) {
+  await appelerApi(`/api/corrections-pedagogiques/${correctionId}`, { method: "DELETE" });
+}
+
+export async function deplacerCorrectionPedagogique(
+  correctionId: string,
+  lienType: string | null,
+  lienId: string | null
+) {
+  return appelerApi(`/api/corrections-pedagogiques/${correctionId}/deplacer`, {
+    method: "PATCH",
+    body: JSON.stringify({ lien_type: lienType, lien_id: lienId }),
+  }) as Promise<CorrectionPedagogique>;
 }

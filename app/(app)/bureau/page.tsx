@@ -4,6 +4,7 @@ import { EspaceEntrerCode } from "@/components/EspaceEntrerCode";
 import { AuditCorrections } from "@/components/AuditCorrections";
 import { EspaceEtablissements } from "@/components/EspaceEtablissements";
 import { ProgrammeNotions } from "@/components/ProgrammeNotions";
+import { ListeCorrectionsProf } from "@/components/ListeCorrectionsProf";
 
 export default function PageBureau() {
   return (
@@ -22,6 +23,7 @@ export default function PageBureau() {
             détail (/etablissements/[id]) reste, elle, déjà reliée depuis
             cette liste ET depuis les liens de notification du backend. */}
         <EspaceEtablissements />
+        <ListeCorrectionsProf />
       </div>
     </SectionPage>
   );

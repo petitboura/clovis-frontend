@@ -18,6 +18,16 @@ type ContexteChatValeur = {
   // passent par exactement le même mécanisme.
   enFermeture: boolean;
   fermerAvecFondu: () => void;
+  // Préremplissage d'une NOUVELLE conversation (Partie 5, chantier
+  // "confiance pédagogique", 06/09/2026) : un texte à déposer dans la
+  // barre de saisie dès l'ouverture, sans l'envoyer -- utilisé par le
+  // flux "corriger un signalement" (voir ListeCorrectionsProf.tsx et
+  // useOuvrirChatAvecTexte plus bas), qui prépare le contexte pour que
+  // le prof n'ait plus qu'à taper ou dicter sa correction. Consommé une
+  // seule fois par ChatFlottant.tsx (setDemandePrefill(null) juste
+  // après l'avoir lu), jamais réappliqué à une conversation suivante.
+  demandePrefill: string | null;
+  setDemandePrefill: (texte: string | null) => void;
 };
 
 // L'état du chat flottant (fermee/mini/plein_ecran) vivait auparavant
@@ -41,6 +51,7 @@ const DUREE_FERMETURE_MS = 200;
 export function useFournirContexteChat(): ContexteChatValeur {
   const [etat, setEtat] = useState<EtatChat>("fermee");
   const [enFermeture, setEnFermeture] = useState(false);
+  const [demandePrefill, setDemandePrefill] = useState<string | null>(null);
 
   const fermerAvecFondu = useCallback(() => {
     setEnFermeture(true);
@@ -50,7 +61,20 @@ export function useFournirContexteChat(): ContexteChatValeur {
     }, DUREE_FERMETURE_MS);
   }, []);
 
-  return { etat, setEtat, enFermeture, fermerAvecFondu };
+  return { etat, setEtat, enFermeture, fermerAvecFondu, demandePrefill, setDemandePrefill };
+}
+
+// Partie 5 (06/09/2026) : ouvre le chat plein écran sur une NOUVELLE
+// conversation préremplie avec `texte` -- seul point d'entrée de ce
+// mécanisme, pour que tout futur appelant (pas seulement
+// ListeCorrectionsProf.tsx) passe par le même chemin plutôt que de
+// manipuler etat/demandePrefill séparément et risquer de les désynchroniser.
+export function useOuvrirChatAvecTexte() {
+  const ctx = useContext(ContexteChat);
+  return (texte: string) => {
+    ctx?.setDemandePrefill(texte);
+    ctx?.setEtat("plein_ecran");
+  };
 }
 
 export function useOuvrirChat() {

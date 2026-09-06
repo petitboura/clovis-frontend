@@ -116,6 +116,24 @@ export function ChatFlottant({
   const enFermeture = ctxChat?.enFermeture ?? false;
   useHauteurVisuelle();
 
+  // Partie 5 (06/09/2026) : une demande de préremplissage (voir
+  // useOuvrirChatAvecTexte, lib/contexteChat.tsx) force une NOUVELLE
+  // conversation -- une correction à traiter n'a rien à faire mélangée
+  // au fil en cours -- puis passe le texte à ChatIA (texteInitial
+  // ci-dessous). Capturé dans un state LOCAL avant de vider la demande
+  // au niveau du contexte (sinon rien ne resterait à transmettre à
+  // ChatIA une fois le contexte remis à null) ; consommée une seule
+  // fois pour ne jamais la réappliquer à une conversation suivante.
+  const [texteInitialConversation, setTexteInitialConversation] = useState<string | null>(null);
+  const demandePrefill = ctxChat?.demandePrefill ?? null;
+  useEffect(() => {
+    if (demandePrefill === null) return;
+    setTexteInitialConversation(demandePrefill);
+    nouvelleConversation();
+    ctxChat?.setDemandePrefill(null);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- nouvelleConversation recréée à chaque rendu (pas dans useCallback), la comparer romprait l'effet ; seul demandePrefill doit déclencher ce passage.
+  }, [demandePrefill]);
+
   // Chargé dès le montage du layout (pas seulement à l'ouverture du
   // widget) : l'ouverture doit être instantanée, jamais un écran de
   // chargement qui apparaît après coup.
@@ -543,6 +561,7 @@ export function ChatFlottant({
               iconePersonnalisee={<Logo taille={40} />}
               conversationId={cle}
               messagesInitiaux={messagesInitiaux}
+              texteInitial={texteInitialConversation ?? undefined}
               onMessagesChange={setNbMessages}
               modelesDisponibles={agent.modeles_disponibles}
               modeleChoisi={agent.modele_choisi}
