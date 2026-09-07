@@ -103,7 +103,13 @@ export function CatalogueClovis({ onFerme }: { onFerme: () => void }) {
 
   return (
     <div
-      className={`fixed inset-0 z-[100] flex items-start justify-center bg-black/50 p-4 sm:items-center ${
+      // 07/09/2026, demande Bourama (annule le correctif précédent qui
+      // fermait le panneau "Plus" du tiroir avant d'ouvrir cette fenêtre --
+      // cassait d'autres comportements) : cette fenêtre catalogue doit
+      // s'ouvrir directement au-dessus de TOUT, sans rien fermer avant.
+      // z-[200] > z-[150] (panneau "Plus" du tiroir, seul calque plus
+      // haut que l'ancien z-[100]) suffit, aucune autre logique requise.
+      className={`fixed inset-0 z-[200] flex items-start justify-center bg-black/50 p-4 sm:items-center ${
         enSortie ? "opacity-0 transition-opacity duration-150 ease-in" : "animate-dj-fade-in-rapide"
       }`}
       onClick={fermer}
