@@ -206,13 +206,17 @@ function FenetreSection({
   }
 
   // Bouton "ouvrir en vraie page" (30/08/2026, audit navigation) : ferme
-  // cette fenêtre (avec fondu, comme le bouton Fermer) ET le chat plein
-  // écran qui vit en dessous (z-[110], voir ChatFlottant.tsx) avant de
-  // naviguer -- sinon la vraie page se charge derrière le chat toujours
-  // ouvert et reste invisible. Même raisonnement que
-  // naviguerDepuisPlusMobile dans AppSidebar.tsx, pas limité au mobile :
-  // le chat plein écran recouvre tout l'écran (fixed inset-0) sur
-  // desktop aussi.
+  // cette fenêtre (avec fondu, comme le bouton Fermer) ET le chat qui
+  // vit en dessous avant de naviguer -- sinon la vraie page se charge
+  // derrière le chat toujours ouvert et reste invisible.
+  // Étape 6 (07/09/2026, chantier "chat plein écran = vraie section") :
+  // ce cas ne peut plus se produire que sur desktop (mini popup, voir
+  // ChatFlottant.tsx) -- ces fenêtres flottantes ne s'ouvrent plus que
+  // depuis /chat sur desktop (AppSidebar.tsx, ouvrirFenetre), plus
+  // jamais sur mobile (fermerChatEtNaviguer, vraie navigation directe,
+  // sans fenêtre flottante à fermer). fermerChat() reste donc utile ici
+  // uniquement pour repasser le mini popup en "fermee" au cas où il
+  // était ouvert en même temps que cette fenêtre.
   function ouvrirVraiePage() {
     fermerCettePopup();
     fermerChat();
@@ -292,12 +296,20 @@ function FenetreSection({
   );
 }
 
-// Monté une seule fois dans AppShell.tsx, au même niveau que ChatFlottant
-// (z-[110]) -- les fenêtres vivent au-dessus (z-index 120+) et
-// persistent indépendamment de l'état du chat (fermer/réduire le chat ne
-// les referme pas ; seul leur propre bouton Fermer le fait -- ou cliquer
+// Monté une seule fois dans AppShell.tsx. Les fenêtres vivent en
+// position fixed (z-index 120+, voir plus bas) et persistent
+// indépendamment de l'état du chat (fermer/réduire le chat ne les
+// referme pas ; seul leur propre bouton Fermer le fait -- ou cliquer
 // dans l'interface du chat, qui les ferme TOUTES d'un coup, voir
 // fermerToutes dans ChatFlottant.tsx).
+// Étape 6 (07/09/2026, chantier "chat plein écran = vraie section") :
+// ne s'ouvrent plus que sur desktop, depuis le rail de AppSidebar.tsx
+// quand contexteChat=true (donc uniquement sur /chat, plus jamais sur
+// mobile -- voir ouvrirFenetre dans AppSidebar.tsx). Rendues en
+// position fixed, elles s'affichent déjà au-dessus de n'importe quel
+// contenu en flux normal (comme la page /chat elle-même depuis
+// l'étape 2, plus l'ancien calque fixed dédié du chat plein écran) --
+// z-index inchangé, aucun recalcul nécessaire.
 export function FenetresSections() {
   const { fenetres } = useFenetres();
   // Correctif (28/08/2026, audit) : le z-index affiché n'est plus le
@@ -312,8 +324,8 @@ export function FenetresSections() {
   // FenetreSection ajoute encore 120 (zIndex: 120 + z, inchangé) donc le
   // rendu final va de 120 à 124 max, jamais au-delà. Les popups qui
   // doivent repasser au-dessus (voir CompteRequisModal dans
-  // ChatFlottant.tsx, maintenant z-[150]) ont donc toujours de la marge,
-  // quelle que soit la durée de la session.
+  // ChatFlottant.tsx, z-[150]) ont donc toujours de la marge, quelle
+  // que soit la durée de la session.
   const ordonnees = [...fenetres].sort((a, b) => a.z - b.z);
   return (
     <>

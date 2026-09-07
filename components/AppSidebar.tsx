@@ -798,18 +798,44 @@ export function AppSidebar({
           (setOuverte(true) direct, l'entrée est portée par l'animation
           CSS au montage) -- seule la fermeture passe par le fondu partagé
           fermerTiroirMobile, pour laisser le temps à l'animation de
-          sortie de jouer avant le vrai démontage. */}
+          sortie de jouer avant le vrai démontage.
+          Correctif (07/09/2026, chantier "chat plein écran = vraie
+          section", étape 6, Bourama : "ils sont pas censés s'afficher en
+          même temps", "il faut pas les mêmes boutons") : depuis que
+          /chat est une vraie page (étape 2-5), ce bouton coexiste
+          désormais À L'ÉCRAN EN MÊME TEMPS que le hamburger global
+          (MenuHamburgerWeb.tsx), monté juste avant <main> dans
+          AppShell.tsx -- avant l'étape 5, le calque plein écran (fixed
+          inset-0) recouvrait ce dernier, les deux ne se voyaient jamais
+          ensemble. Repris à l'identique (même position, même icône)
+          quand contexteChat=false (nav principale -- ne se produit
+          jamais en pratique, masquerChromeMobile toujours true pour
+          cette instance-là, voir AppShell.tsx, gardé par cohérence).
+          En contexteChat=true : icône PanelLeft (déjà utilisée par le
+          rail desktop juste plus bas pour "Replier le panneau", donc
+          déjà associée à CE tiroir précis ailleurs dans ce même
+          fichier) au lieu du hamburger 3 barres, ET décalé à droite du
+          hamburger global (left-12 au lieu de left-2, même hauteur) --
+          les deux boutons restent distincts et cliquables en même
+          temps, plus de superposition exacte ni d'icônes identiques
+          menant à des tiroirs différents. */}
       {!masquerChromeMobile && (
         <button
           onClick={() => (ouverte ? fermerTiroirMobile(() => setOuverte(false)) : setOuverte(true))}
-          aria-label={ouverte ? "Replier le panneau" : "Déplier le panneau"}
-          className="group fixed left-2 top-[calc(0.5rem+var(--safe-top))] z-40 flex h-8 w-8 items-center justify-center text-dj-texte md:hidden"
+          aria-label={ouverte ? "Replier le panneau du chat" : "Déplier le panneau du chat"}
+          className={`group fixed top-[calc(0.5rem+var(--safe-top))] z-40 flex h-8 w-8 items-center justify-center text-dj-texte md:hidden ${
+            contexteChat ? "left-12" : "left-2"
+          }`}
         >
-          <svg viewBox="0 0 24 24" width={24} height={24} aria-hidden="true" className="transition-transform duration-200 group-hover:scale-95">
-            <rect x="3" y="6" width="18" height="3" rx="1.5" fill="currentColor" />
-            <rect x="3" y="11" width="12" height="3" rx="1.5" fill="currentColor" />
-            <rect x="3" y="16" width="6" height="3" rx="1.5" fill="currentColor" />
-          </svg>
+          {contexteChat ? (
+            <PanelLeft size={20} className="transition-transform duration-200 group-hover:scale-95" />
+          ) : (
+            <svg viewBox="0 0 24 24" width={24} height={24} aria-hidden="true" className="transition-transform duration-200 group-hover:scale-95">
+              <rect x="3" y="6" width="18" height="3" rx="1.5" fill="currentColor" />
+              <rect x="3" y="11" width="12" height="3" rx="1.5" fill="currentColor" />
+              <rect x="3" y="16" width="6" height="3" rx="1.5" fill="currentColor" />
+            </svg>
+          )}
         </button>
       )}
 
