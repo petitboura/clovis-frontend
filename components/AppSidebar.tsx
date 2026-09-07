@@ -811,16 +811,15 @@ export function AppSidebar({
           désormais sur /chat (voir MenuHamburgerWeb.tsx/
           MenuHamburgerNatif.tsx), donc les deux boutons ne coexistent
           plus jamais à l'écran. Revenu à la même icône capsule 3 barres
-          dans les deux cas (contexteChat true ou false), pour la
-          cohérence visuelle. Comportement au clic et position
-          (left-12 en contexteChat) inchangés, seule l'icône change. */}
+          ET à la même position (left-2, plus de décalage left-12) dans
+          les deux cas (contexteChat true ou false), pour une cohérence
+          visuelle complète avec le hamburger global. Comportement au
+          clic inchangé, seuls l'icône et la position changent. */}
       {!masquerChromeMobile && (
         <button
           onClick={() => (ouverte ? fermerTiroirMobile(() => setOuverte(false)) : setOuverte(true))}
           aria-label={ouverte ? "Replier le panneau du chat" : "Déplier le panneau du chat"}
-          className={`group fixed top-[calc(0.5rem+var(--safe-top))] z-40 flex h-8 w-8 items-center justify-center text-dj-texte md:hidden ${
-            contexteChat ? "left-12" : "left-2"
-          }`}
+          className="group fixed left-2 top-[calc(0.5rem+var(--safe-top))] z-40 flex h-8 w-8 items-center justify-center text-dj-texte md:hidden"
         >
           <svg viewBox="0 0 24 24" width={24} height={24} aria-hidden="true" className="transition-transform duration-200 group-hover:scale-95">
             <rect x="3" y="6" width="18" height="3" rx="1.5" fill="currentColor" />
