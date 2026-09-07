@@ -1,12 +1,59 @@
 "use client";
 
 import { createContext, useCallback, useContext, useState } from "react";
+import type { MessageAffiche } from "@/components/chat/BulleMessage";
 
 export type EtatChat = "fermee" | "mini" | "plein_ecran";
+
+// Étape 1 (07/09/2026, chantier "chat plein écran = vraie section") :
+// types + état de la conversation (agent, messages, historique...)
+// déplacés ici depuis ChatFlottant.tsx, où ils vivaient en state local.
+// Comportement inchangé -- ChatFlottant.tsx reste le seul composant qui
+// les lit/écrit pour l'instant, seule leur adresse mémoire change, pour
+// qu'une future route /chat (étape 2) puisse un jour lire exactement la
+// même conversation sans que ChatFlottant.tsx reste monté en permanence.
+export type AgentDetail = {
+  id: string;
+  nom: string;
+  icone_url: string | null;
+  titre_accueil: string;
+  sous_titre_accueil: string;
+  modeles_disponibles?: { modele_id: string; label: string; distributeur: string; palier: string }[];
+  modele_choisi?: string | null;
+  bouton_sans_enseignant?: boolean;
+  section_mes_comportements?: boolean;
+};
+
+export type FilConversation = {
+  conversation_id: string | null;
+  titre: string;
+  derniere_activite: string;
+};
 
 type ContexteChatValeur = {
   etat: EtatChat;
   setEtat: (etat: EtatChat) => void;
+  // Étape 1 -- état de la conversation, avant local à ChatFlottant.tsx.
+  chargement: "chargement" | "pret" | "erreur";
+  setChargement: (v: "chargement" | "pret" | "erreur") => void;
+  erreur: string | null;
+  setErreur: (v: string | null) => void;
+  agent: AgentDetail | null;
+  setAgent: (v: AgentDetail | null) => void;
+  cle: string;
+  setCle: (v: string) => void;
+  messagesInitiaux: MessageAffiche[];
+  setMessagesInitiaux: (v: MessageAffiche[]) => void;
+  nbMessages: number;
+  setNbMessages: (v: number) => void;
+  chargementFilConversation: boolean;
+  setChargementFilConversation: (v: boolean) => void;
+  outilsActifsAgent: { outils: string[]; actions_locales: string[] } | null;
+  setOutilsActifsAgent: (v: { outils: string[]; actions_locales: string[] } | null) => void;
+  historique: FilConversation[];
+  setHistorique: (v: FilConversation[]) => void;
+  texteInitialConversation: string | null;
+  setTexteInitialConversation: (v: string | null) => void;
   // Fondu de fermeture (18/08/2026, demande Bourama : "le popup disparaît
   // ... brut, j'aime pas"). Remonté ici depuis ChatFlottant.tsx le
   // 30/08/2026 (audit "fermeture brutale du chat depuis le tiroir mobile")
@@ -53,6 +100,21 @@ export function useFournirContexteChat(): ContexteChatValeur {
   const [enFermeture, setEnFermeture] = useState(false);
   const [demandePrefill, setDemandePrefill] = useState<string | null>(null);
 
+  // Étape 1 -- état de la conversation, avant local à ChatFlottant.tsx.
+  const [chargement, setChargement] = useState<"chargement" | "pret" | "erreur">("chargement");
+  const [erreur, setErreur] = useState<string | null>(null);
+  const [agent, setAgent] = useState<AgentDetail | null>(null);
+  const [cle, setCle] = useState(() => crypto.randomUUID());
+  const [messagesInitiaux, setMessagesInitiaux] = useState<MessageAffiche[]>([]);
+  const [nbMessages, setNbMessages] = useState(0);
+  const [chargementFilConversation, setChargementFilConversation] = useState(false);
+  const [outilsActifsAgent, setOutilsActifsAgent] = useState<{
+    outils: string[];
+    actions_locales: string[];
+  } | null>(null);
+  const [historique, setHistorique] = useState<FilConversation[]>([]);
+  const [texteInitialConversation, setTexteInitialConversation] = useState<string | null>(null);
+
   const fermerAvecFondu = useCallback(() => {
     setEnFermeture(true);
     window.setTimeout(() => {
@@ -61,7 +123,34 @@ export function useFournirContexteChat(): ContexteChatValeur {
     }, DUREE_FERMETURE_MS);
   }, []);
 
-  return { etat, setEtat, enFermeture, fermerAvecFondu, demandePrefill, setDemandePrefill };
+  return {
+    etat,
+    setEtat,
+    enFermeture,
+    fermerAvecFondu,
+    demandePrefill,
+    setDemandePrefill,
+    chargement,
+    setChargement,
+    erreur,
+    setErreur,
+    agent,
+    setAgent,
+    cle,
+    setCle,
+    messagesInitiaux,
+    setMessagesInitiaux,
+    nbMessages,
+    setNbMessages,
+    chargementFilConversation,
+    setChargementFilConversation,
+    outilsActifsAgent,
+    setOutilsActifsAgent,
+    historique,
+    setHistorique,
+    texteInitialConversation,
+    setTexteInitialConversation,
+  };
 }
 
 // Partie 5 (06/09/2026) : ouvre le chat plein écran sur une NOUVELLE

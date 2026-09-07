@@ -10,7 +10,7 @@ import { MessageAffiche, nettoyerMessageHistorique } from "./BulleMessage";
 import { CompteRequisModal } from "@/components/CompteRequisModal";
 import { Logo } from "@/components/Logo";
 import { useHauteurVisuelle } from "@/lib/useHauteurVisuelle";
-import { ContexteChat, type EtatChat } from "@/lib/contexteChat";
+import { ContexteChat, type EtatChat, type FilConversation, type AgentDetail } from "@/lib/contexteChat";
 import { useFenetres } from "@/lib/contexteFenetres";
 import { useFermetureAuRetour } from "@/lib/contexteRetour";
 import { texteAccueilSelonHeure } from "@/lib/salutations";
@@ -31,24 +31,6 @@ import { Skeleton } from "@/components/Skeleton";
 //   sur mobile, faute de place).
 // - "plein_ecran" : overlay plein écran, même logique de hauteur visuelle
 //   que l'ancien app/page.tsx (clavier mobile, voir useHauteurVisuelle).
-
-type AgentDetail = {
-  id: string;
-  nom: string;
-  icone_url: string | null;
-  titre_accueil: string;
-  sous_titre_accueil: string;
-  modeles_disponibles?: { modele_id: string; label: string; distributeur: string; palier: string }[];
-  modele_choisi?: string | null;
-  bouton_sans_enseignant?: boolean;
-  section_mes_comportements?: boolean;
-};
-
-type FilConversation = {
-  conversation_id: string | null;
-  titre: string;
-  derniere_activite: string;
-};
 
 const AGENT_INVITE_ID = "clovis";
 const LIMITE_MESSAGES_INVITE = 5;
@@ -83,25 +65,8 @@ export function ChatFlottant({
   // (mini/plein écran), rien ne change.
   natif?: boolean;
 }) {
-  const [chargement, setChargement] = useState<"chargement" | "pret" | "erreur">("chargement");
-  const [erreur, setErreur] = useState<string | null>(null);
-  const [agent, setAgent] = useState<AgentDetail | null>(null);
-  const [cle, setCle] = useState(() => crypto.randomUUID());
-  const [messagesInitiaux, setMessagesInitiaux] = useState<MessageAffiche[]>([]);
-  const [nbMessages, setNbMessages] = useState(0);
   const [compteRequis, setCompteRequis] = useState(false);
   const [historiqueOuvert, setHistoriqueOuvert] = useState(false);
-  // Absent jusqu'ici (audit Bourama 30/08) : rien ne signalait le
-  // chargement en cours quand on rouvre une conversation passée --
-  // l'ancien fil restait affiché tel quel jusqu'à l'arrivée brutale du
-  // nouveau. Ajouté pour piloter le skeleton de la zone de messages
-  // (voir plus bas, juste avant le rendu de ChatIA).
-  const [chargementFilConversation, setChargementFilConversation] = useState(false);
-  const [outilsActifsAgent, setOutilsActifsAgent] = useState<{
-    outils: string[];
-    actions_locales: string[];
-  } | null>(null);
-  const [historique, setHistorique] = useState<FilConversation[]>([]);
   // Fondu de fermeture (18/08/2026, demande Bourama : "le popup disparaît
   // ... brut, j'aime pas"). La fermeture change etat vers "fermee", ce qui
   // démonte immédiatement tout le panneau (voir le early return juste en
@@ -116,15 +81,48 @@ export function ChatFlottant({
   const enFermeture = ctxChat?.enFermeture ?? false;
   useHauteurVisuelle();
 
+  // Étape 1 (07/09/2026, chantier "chat plein écran = vraie section") :
+  // état de la conversation déplacé dans ContexteChat (lib/contexteChat.tsx)
+  // -- avant en state local ici (useState). Comportement inchangé, ce
+  // composant reste pour l'instant le seul à les lire/écrire ; valeurs
+  // par défaut (?? ) gardées uniquement pour le cas défensif où ce
+  // composant serait rendu hors de ContexteChat.Provider, comme
+  // enFermeture ci-dessus.
+  const chargement = ctxChat?.chargement ?? "chargement";
+  const setChargement = ctxChat?.setChargement ?? (() => {});
+  const erreur = ctxChat?.erreur ?? null;
+  const setErreur = ctxChat?.setErreur ?? (() => {});
+  const agent = ctxChat?.agent ?? null;
+  const setAgent = ctxChat?.setAgent ?? (() => {});
+  const cle = ctxChat?.cle ?? "";
+  const setCle = ctxChat?.setCle ?? (() => {});
+  const messagesInitiaux = ctxChat?.messagesInitiaux ?? [];
+  const setMessagesInitiaux = ctxChat?.setMessagesInitiaux ?? (() => {});
+  const nbMessages = ctxChat?.nbMessages ?? 0;
+  const setNbMessages = ctxChat?.setNbMessages ?? (() => {});
+  // Absent jusqu'ici (audit Bourama 30/08) : rien ne signalait le
+  // chargement en cours quand on rouvre une conversation passée --
+  // l'ancien fil restait affiché tel quel jusqu'à l'arrivée brutale du
+  // nouveau. Ajouté pour piloter le skeleton de la zone de messages
+  // (voir plus bas, juste avant le rendu de ChatIA).
+  const chargementFilConversation = ctxChat?.chargementFilConversation ?? false;
+  const setChargementFilConversation = ctxChat?.setChargementFilConversation ?? (() => {});
+  const outilsActifsAgent = ctxChat?.outilsActifsAgent ?? null;
+  const setOutilsActifsAgent = ctxChat?.setOutilsActifsAgent ?? (() => {});
+  const historique = ctxChat?.historique ?? [];
+  const setHistorique = ctxChat?.setHistorique ?? (() => {});
+
   // Partie 5 (06/09/2026) : une demande de préremplissage (voir
   // useOuvrirChatAvecTexte, lib/contexteChat.tsx) force une NOUVELLE
   // conversation -- une correction à traiter n'a rien à faire mélangée
   // au fil en cours -- puis passe le texte à ChatIA (texteInitial
-  // ci-dessous). Capturé dans un state LOCAL avant de vider la demande
-  // au niveau du contexte (sinon rien ne resterait à transmettre à
-  // ChatIA une fois le contexte remis à null) ; consommée une seule
-  // fois pour ne jamais la réappliquer à une conversation suivante.
-  const [texteInitialConversation, setTexteInitialConversation] = useState<string | null>(null);
+  // ci-dessous). Capturé dans le contexte partagé (étape 1, avant en
+  // state local ici) avant de vider la demande au niveau du contexte
+  // (sinon rien ne resterait à transmettre à ChatIA une fois le contexte
+  // remis à null) ; consommée une seule fois pour ne jamais la
+  // réappliquer à une conversation suivante.
+  const texteInitialConversation = ctxChat?.texteInitialConversation ?? null;
+  const setTexteInitialConversation = ctxChat?.setTexteInitialConversation ?? (() => {});
   const demandePrefill = ctxChat?.demandePrefill ?? null;
   useEffect(() => {
     if (demandePrefill === null) return;
