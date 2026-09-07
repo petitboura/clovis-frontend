@@ -802,23 +802,18 @@ export function AppSidebar({
           Correctif (07/09/2026, chantier "chat plein écran = vraie
           section", étape 6, Bourama : "ils sont pas censés s'afficher en
           même temps", "il faut pas les mêmes boutons") : depuis que
-          /chat est une vraie page (étape 2-5), ce bouton coexiste
-          désormais À L'ÉCRAN EN MÊME TEMPS que le hamburger global
-          (MenuHamburgerWeb.tsx), monté juste avant <main> dans
-          AppShell.tsx -- avant l'étape 5, le calque plein écran (fixed
-          inset-0) recouvrait ce dernier, les deux ne se voyaient jamais
-          ensemble. Repris à l'identique (même position, même icône)
-          quand contexteChat=false (nav principale -- ne se produit
-          jamais en pratique, masquerChromeMobile toujours true pour
-          cette instance-là, voir AppShell.tsx, gardé par cohérence).
-          En contexteChat=true : icône PanelLeft (déjà utilisée par le
-          rail desktop juste plus bas pour "Replier le panneau", donc
-          déjà associée à CE tiroir précis ailleurs dans ce même
-          fichier) au lieu du hamburger 3 barres, ET décalé à droite du
-          hamburger global (left-12 au lieu de left-2, même hauteur) --
-          les deux boutons restent distincts et cliquables en même
-          temps, plus de superposition exacte ni d'icônes identiques
-          menant à des tiroirs différents. */}
+          /chat est une vraie page (étape 2-5), ce bouton coexistait à
+          l'écran en même temps que le hamburger global
+          (MenuHamburgerWeb.tsx), d'où deux icônes différentes (PanelLeft
+          ici, hamburger 3 barres pour le global) pour ne pas mener à
+          deux tiroirs différents avec le même symbole.
+          07/09/2026, décision Bourama : le hamburger global se masque
+          désormais sur /chat (voir MenuHamburgerWeb.tsx/
+          MenuHamburgerNatif.tsx), donc les deux boutons ne coexistent
+          plus jamais à l'écran. Revenu à la même icône capsule 3 barres
+          dans les deux cas (contexteChat true ou false), pour la
+          cohérence visuelle. Comportement au clic et position
+          (left-12 en contexteChat) inchangés, seule l'icône change. */}
       {!masquerChromeMobile && (
         <button
           onClick={() => (ouverte ? fermerTiroirMobile(() => setOuverte(false)) : setOuverte(true))}
@@ -827,15 +822,11 @@ export function AppSidebar({
             contexteChat ? "left-12" : "left-2"
           }`}
         >
-          {contexteChat ? (
-            <PanelLeft size={20} className="transition-transform duration-200 group-hover:scale-95" />
-          ) : (
-            <svg viewBox="0 0 24 24" width={24} height={24} aria-hidden="true" className="transition-transform duration-200 group-hover:scale-95">
-              <rect x="3" y="6" width="18" height="3" rx="1.5" fill="currentColor" />
-              <rect x="3" y="11" width="12" height="3" rx="1.5" fill="currentColor" />
-              <rect x="3" y="16" width="6" height="3" rx="1.5" fill="currentColor" />
-            </svg>
-          )}
+          <svg viewBox="0 0 24 24" width={24} height={24} aria-hidden="true" className="transition-transform duration-200 group-hover:scale-95">
+            <rect x="3" y="6" width="18" height="3" rx="1.5" fill="currentColor" />
+            <rect x="3" y="11" width="12" height="3" rx="1.5" fill="currentColor" />
+            <rect x="3" y="16" width="6" height="3" rx="1.5" fill="currentColor" />
+          </svg>
         </button>
       )}
 
