@@ -215,7 +215,7 @@ export function useOuvrirChatAvecTexte() {
   // vraie route /chat au lieu de passer etat sur "plein_ecran" (état
   // retiré, voir EtatChat ci-dessus). fermerAvecFondu d'abord : si un
   // popup mini était déjà ouvert, il ne doit pas rester affiché
-  // par-dessus la page /chat, même mécanique que agrandirEnPleinEcran
+  // par-dessus la page /chat, même mécanique que fermerMiniAvantNavigation
   // (ChatFlottant.tsx) et l'action Cmd+K (PaletteCommandes.tsx).
   return (texte: string) => {
     ctx?.setDemandePrefill(texte);

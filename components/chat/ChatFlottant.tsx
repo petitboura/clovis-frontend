@@ -1,7 +1,7 @@
 "use client";
 
 import { useContext, useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
+import Link from "next/link";
 import { Bird, X, Maximize2, MessageSquarePlus, History } from "lucide-react";
 import { appelerApi } from "@/lib/api";
 import { ChatIA } from "./ChatIA";
@@ -31,8 +31,10 @@ import { Skeleton } from "@/components/Skeleton";
 // l'ancien troisième état "plein_ecran" (overlay fixed inset-0 par-dessus
 // l'app) est retiré -- plus aucun déclencheur ne le pose (bulle, barres
 // d'onglets, palette de commandes, préremplissage automatique naviguent
-// tous vers la vraie route /chat désormais, voir agrandirEnPleinEcran
-// plus bas et lib/contexteChat.tsx::useOuvrirChatAvecTexte). Le mode
+// tous vers la vraie route /chat désormais -- pour le bouton Maximize2
+// du mini, via un vrai <Link href="/chat"> plus bas, voir
+// fermerMiniAvantNavigation ; pour le reste, voir
+// lib/contexteChat.tsx::useOuvrirChatAvecTexte). Le mode
 // plein écran vit maintenant uniquement dans ChatSection.tsx (/chat).
 
 const LIMITE_MESSAGES_INVITE = 5;
@@ -135,7 +137,6 @@ export function ChatFlottant({
   }, [demandePrefill]);
 
   const fermerAvecFondu = ctxChat?.fermerAvecFondu ?? (() => setEtat("fermee"));
-  const router = useRouter();
 
   function nouvelleConversation() {
     setCle(crypto.randomUUID());
@@ -161,18 +162,22 @@ export function ChatFlottant({
   const { marquerFermetureSansHistorique: marquerMiniSansHistorique } = useFermetureAuRetour(etat === "mini", fermerAvecFondu);
 
   // Étape 4 (07/09/2026, chantier "chat plein écran = vraie section") :
-  // agrandir le popup mini (bouton Maximize2 plus bas) navigue désormais
-  // vers la vraie route /chat (app/(app)/chat/page.tsx, étape 2) au lieu
-  // de passer etat sur "plein_ecran" -- même fondu de fermeture que
-  // fermerChatEtNaviguer (AppSidebar.tsx) pour éviter que ce popup mini
-  // reste affiché par-dessus la page /chat, et marquerMiniSansHistorique
-  // pour que le démontage du calque "mini" (déclenché par ce même fondu)
-  // ne consomme pas une entrée d'historique et n'annule pas cette
-  // navigation.
-  function agrandirEnPleinEcran() {
+  // agrandir le popup mini (bouton Maximize2 plus bas) navigue vers la
+  // vraie route /chat (app/(app)/chat/page.tsx, étape 2) au lieu de
+  // passer etat sur "plein_ecran".
+  // Correctif (07/09/2026, demande Bourama : "mets le lien directement
+  // dans le bouton" -- un onClick + router.push() n'est pas un vrai
+  // lien, pas de preview d'URL au survol contrairement aux autres
+  // boutons de section de l'app, potentiel de bug pour rien) : la
+  // navigation elle-même passe désormais par un vrai <Link href="/chat">
+  // (voir plus bas) -- cette fonction ne gère plus QUE l'effet de bord
+  // (fermer le mini avec le même fondu que fermerChatEtNaviguer, et
+  // marquerMiniSansHistorique pour que le démontage du calque "mini" ne
+  // consomme pas une entrée d'historique et n'annule pas la navigation
+  // du Link).
+  function fermerMiniAvantNavigation() {
     marquerMiniSansHistorique?.();
     fermerAvecFondu();
-    router.push("/chat");
   }
   // Sous-menu historique (mode mini, dropdown dans l'en-tête -- voir plus
   // bas) et modale "compte requis" : mêmes calques de retour que le reste
@@ -369,13 +374,14 @@ export function ChatFlottant({
               )}
             </div>
           )}
-          <button
-            onClick={agrandirEnPleinEcran}
+          <Link
+            href="/chat"
+            onClick={fermerMiniAvantNavigation}
             title="Plein écran"
             className="group flex h-8 w-8 items-center justify-center rounded-cgpt-bouton text-dj-texte-muet transition-colors hover:bg-dj-surface-haute hover:text-dj-texte"
           >
             <Maximize2 size={16} className="transition-transform duration-200 group-hover:scale-110" />
-          </button>
+          </Link>
           <button
             onClick={fermerAvecFondu}
             title="Fermer"
