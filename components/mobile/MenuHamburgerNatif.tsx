@@ -137,6 +137,14 @@ function MenuHamburgerNatifInterne() {
     router.replace(href);
   }
 
+  // 07/09/2026, décision Bourama : masqué sur /chat, même logique que
+  // BarreOngletsNative.tsx (return null placé après tous les hooks, pas
+  // avant, pour ne jamais les appeler de façon conditionnelle). Sans
+  // perte de contenu : le tiroir du chat (MenuPlusChatFlottant.tsx)
+  // reprend déjà tout ce que ce menu propose (BlocsMenuPlus, même
+  // source), en plus de ses propres extras.
+  if (pathname === "/chat") return null;
+
   return (
     <>
       <button
