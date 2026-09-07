@@ -1,6 +1,6 @@
 "use client";
 
-import { createContext, useCallback, useContext, useEffect, useRef } from "react";
+import { createContext, useCallback, useContext, useEffect, useMemo, useRef } from "react";
 
 // 31/08/2026, demande Bourama : "le bouton retour du téléphone, toute
 // l'appli est comptée comme un tout, donc peu importe où t'es le bouton
@@ -141,7 +141,27 @@ export function useFournirContexteRetour(): ContexteRetourValeur {
     };
   }, []);
 
-  return { empiler, depiler, remonterAuSommet };
+  // 07/09/2026, correctif Bourama ("le bouton plein écran du chat mini
+  // ne fait rien, ça revient en arrière") : avant, cet objet était
+  // recréé (littéral `{ empiler, depiler, remonterAuSommet }`) à chaque
+  // nouveau rendu d'AppShell.tsx (qui fournit ce contexte), même si
+  // empiler/depiler/remonterAuSommet eux-mêmes ne changent jamais
+  // (useCallback à deps vides ci-dessus). Un nouveau rendu d'AppShell se
+  // produit notamment à chaque changement de page (usePathname), ce qui
+  // arrive AVANT que le fondu de fermeture du popup mini (200ms) soit
+  // terminé quand on navigue via son bouton "Plein écran". Comme
+  // useFermetureAuRetour (plus bas dans ce fichier) redéclenche son
+  // effet chaque fois que cet objet change d'identité -- et que cet
+  // effet remet consommerHistoriqueRef.current à true dès qu'il se
+  // redéclenche pendant que le calque est encore actif -- le signal posé
+  // par marquerFermetureSansHistorique() (juste avant la navigation)
+  // était effacé avant que la fermeture réelle du popup mini (200ms
+  // plus tard) ait pu le lire, et cette fermeture consommait alors une
+  // entrée d'historique par erreur (history.back()), annulant la
+  // navigation qui venait juste d'avoir lieu. Mémoiser l'objet ici (ses
+  // dépendances ne changent jamais) le garde stable, donc plus aucun
+  // effet ne se redéclenche pour cette mauvaise raison.
+  return useMemo(() => ({ empiler, depiler, remonterAuSommet }), [empiler, depiler, remonterAuSommet]);
 }
 
 // Hook générique pour un calque simple (sous-menu, tiroir, modale) piloté
