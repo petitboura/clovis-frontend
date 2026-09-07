@@ -1,6 +1,6 @@
 "use client";
 
-import { createContext, useCallback, useContext, useRef, useState } from "react";
+import { createContext, useCallback, useContext, useMemo, useRef, useState } from "react";
 import type { OngletId } from "@/components/AppSidebar";
 
 // Fenêtres flottantes de sections par-dessus le chat plein écran
@@ -158,7 +158,18 @@ export function useFournirFenetres(): ContexteFenetresValeur {
     []
   );
 
-  return { fenetres, ouvrir, fermer, fermerToutes, monterAuPremierPlan, deplacer, redimensionner };
+  // 07/09/2026, même correctif préventif que useFournirContexteRetour
+  // (lib/contexteRetour.tsx) : cet objet était recréé à chaque re-rendu
+  // d'AppShell.tsx (qui fournit ce contexte), même quand rien ici n'avait
+  // réellement changé -- toutes les fonctions ci-dessus sont déjà stables
+  // (useCallback à deps vides), seule `fenetres` change vraiment. Mémoiser
+  // évite que du code dépendant de l'identité de cet objet (dans un
+  // useEffect par exemple) se redéclenche pour une mauvaise raison, comme
+  // ça a causé le bug corrigé dans contexteRetour.tsx.
+  return useMemo(
+    () => ({ fenetres, ouvrir, fermer, fermerToutes, monterAuPremierPlan, deplacer, redimensionner }),
+    [fenetres, ouvrir, fermer, fermerToutes, monterAuPremierPlan, deplacer, redimensionner]
+  );
 }
 
 export function useFenetres() {

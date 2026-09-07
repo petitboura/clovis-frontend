@@ -1,6 +1,6 @@
 "use client";
 
-import { createContext, useCallback, useContext, useEffect, useState } from "react";
+import { createContext, useCallback, useContext, useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import type { MessageAffiche } from "@/components/chat/BulleMessage";
 import { appelerApi, lireOutilsChatAgent } from "@/lib/api";
@@ -172,34 +172,60 @@ export function useFournirContexteChat(): ContexteChatValeur {
     }, DUREE_FERMETURE_MS);
   }, []);
 
-  return {
-    etat,
-    setEtat,
-    enFermeture,
-    fermerAvecFondu,
-    demandePrefill,
-    setDemandePrefill,
-    chargement,
-    setChargement,
-    erreur,
-    setErreur,
-    agent,
-    setAgent,
-    cle,
-    setCle,
-    messagesInitiaux,
-    setMessagesInitiaux,
-    nbMessages,
-    setNbMessages,
-    chargementFilConversation,
-    setChargementFilConversation,
-    outilsActifsAgent,
-    setOutilsActifsAgent,
-    historique,
-    setHistorique,
-    texteInitialConversation,
-    setTexteInitialConversation,
-  };
+  // 07/09/2026, même correctif préventif que useFournirContexteRetour
+  // (lib/contexteRetour.tsx) : cet objet était recréé à chaque re-rendu
+  // d'AppShell.tsx (qui fournit ce contexte), même quand rien ici n'avait
+  // réellement changé -- les fonctions setState/fermerAvecFondu sont déjà
+  // stables, seules les valeurs d'état ci-dessous changent vraiment.
+  // Mémoiser évite que du code dépendant de l'identité de cet objet (dans
+  // un useEffect par exemple) se redéclenche pour une mauvaise raison,
+  // comme ça a causé le bug corrigé dans contexteRetour.tsx.
+  return useMemo(
+    () => ({
+      etat,
+      setEtat,
+      enFermeture,
+      fermerAvecFondu,
+      demandePrefill,
+      setDemandePrefill,
+      chargement,
+      setChargement,
+      erreur,
+      setErreur,
+      agent,
+      setAgent,
+      cle,
+      setCle,
+      messagesInitiaux,
+      setMessagesInitiaux,
+      nbMessages,
+      setNbMessages,
+      chargementFilConversation,
+      setChargementFilConversation,
+      outilsActifsAgent,
+      setOutilsActifsAgent,
+      historique,
+      setHistorique,
+      texteInitialConversation,
+      setTexteInitialConversation,
+    }),
+    [
+      etat,
+      enFermeture,
+      fermerAvecFondu,
+      demandePrefill,
+      chargement,
+      erreur,
+      agent,
+      cle,
+      messagesInitiaux,
+      nbMessages,
+      chargementFilConversation,
+      outilsActifsAgent,
+      historique,
+      texteInitialConversation,
+    ]
+  );
 }
 
 // Partie 5 (06/09/2026) : ouvre le chat plein écran sur une NOUVELLE
