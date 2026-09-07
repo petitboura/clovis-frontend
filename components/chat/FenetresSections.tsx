@@ -101,12 +101,28 @@ function FenetreSection({
   // que celle visuellement au-dessus.
   const ctxRetour = useContext(ContexteRetour);
   const fermerCettePopup = () => demarrerFermeture(() => fermer(cle));
+  // Correctif (07/09/2026, bug signalé Bourama : "ouvrir en vraie page"
+  // rouvrait le chat plein écran) : depiler(cle) ci-dessous consomme par
+  // défaut l'entrée d'historique posée par empiler à l'ouverture (appelle
+  // history.back()) -- correct pour une fermeture "normale" (bouton
+  // Fermer, clic dans le chat). Mais quand cette fenêtre se ferme PARCE
+  // QU'une vraie navigation vient d'être déclenchée (ouvrirVraiePage,
+  // plus bas), ce history.back() différé (après les 180ms de fondu de
+  // fermeture) atterrit sur l'entrée d'historique de la popup, dont
+  // l'URL enregistrée est encore /chat (l'URL au moment de l'ouverture)
+  // -- il renavigue donc vers /chat et rouvre le chat plein écran
+  // par-dessus la page qu'on vient d'ouvrir. Même mécanisme que
+  // marquerFermetureSansHistorique (lib/contexteRetour.tsx,
+  // useFermetureAuRetour) : ouvrirVraiePage le passe à false juste avant
+  // de fermer + naviguer, pour que cette fermeture-là ne consomme rien.
+  const consommerHistoriqueRef = useRef(true);
 
   // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => {
     if (!ctxRetour) return;
+    consommerHistoriqueRef.current = true;
     ctxRetour.empiler(cle, fermerCettePopup);
-    return () => ctxRetour.depiler(cle);
+    return () => ctxRetour.depiler(cle, consommerHistoriqueRef.current);
     // Montage/démontage uniquement (cle est stable pour la durée de vie
     // de cette fenêtre) -- volontairement pas de dépendance sur
     // fermerCettePopup, qui change de référence à chaque rendu.
@@ -206,21 +222,23 @@ function FenetreSection({
   // Bouton "ouvrir en vraie page" (30/08/2026, audit navigation) : ferme
   // cette fenêtre (avec fondu, comme le bouton Fermer) puis navigue vers
   // la vraie page de la section.
-  // Correctif (07/09/2026, bug signalé Bourama) : appelait aussi
-  // fermerChat() (ancien fonctionnement -- à l'époque, ces fenêtres ne
-  // pouvaient s'ouvrir que par-dessus le calque fixed inset-0 du chat
-  // plein écran overlay, qu'il fallait donc fermer explicitement avant
-  // de naviguer, sinon la vraie page se chargeait derrière lui et
-  // restait invisible). Depuis l'étape 6 du chantier "chat plein écran =
-  // vraie section", ces fenêtres ne s'ouvrent plus QUE depuis la vraie
-  // route /chat (AppSidebar.tsx, ouvrirFenetre, desktop uniquement) --
-  // il n'y a donc plus jamais de calque chat à fermer : /chat se démonte
-  // normalement comme n'importe quelle page au moment du router.push
-  // ci-dessous. Retenir cet appel obsolète était le bug : fermerChat()
-  // forçait le chat plein écran (redevenu une vraie section comme les
-  // autres) à se comporter comme s'il fallait encore le "fermer" avant
-  // de pouvoir afficher la section, ce qui n'a plus lieu d'être.
+  // Correctif 1 (07/09/2026, bug signalé Bourama "ça bug") : appelait
+  // aussi fermerChat() (ancien fonctionnement -- à l'époque, ces
+  // fenêtres ne pouvaient s'ouvrir que par-dessus le calque fixed
+  // inset-0 du chat plein écran overlay, qu'il fallait donc fermer
+  // explicitement avant de naviguer, sinon la vraie page se chargeait
+  // derrière lui et restait invisible). Depuis l'étape 6 du chantier
+  // "chat plein écran = vraie section", ces fenêtres ne s'ouvrent plus
+  // QUE depuis la vraie route /chat (AppSidebar.tsx, ouvrirFenetre,
+  // desktop uniquement) -- il n'y a donc plus jamais de calque chat à
+  // fermer : /chat se démonte normalement comme n'importe quelle page au
+  // moment du router.push ci-dessous. Appel retiré.
+  // Correctif 2 (07/09/2026, suite -- bug signalé Bourama "ça rouvre le
+  // chat plein écran tout seul") : retirer fermerChat() a révélé un
+  // second bug resté masqué jusque-là, voir consommerHistoriqueRef
+  // plus haut -- marqué à false ici juste avant de fermer + naviguer.
   function ouvrirVraiePage() {
+    consommerHistoriqueRef.current = false;
     fermerCettePopup();
     router.push(href);
   }
