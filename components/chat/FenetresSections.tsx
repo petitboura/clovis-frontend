@@ -5,7 +5,6 @@ import { useRouter } from "next/navigation";
 import { X, ExternalLink } from "lucide-react";
 import { ONGLETS, type OngletId } from "@/components/AppSidebar";
 import { useFenetres, TAILLE_MIN } from "@/lib/contexteFenetres";
-import { useFermerChat } from "@/lib/contexteChat";
 import { useFermetureAnimee } from "@/lib/useFermetureAnimee";
 import { ContexteRetour } from "@/lib/contexteRetour";
 import { MesCodes } from "@/components/MesCodes";
@@ -82,7 +81,6 @@ function FenetreSection({
 }) {
   const { fermer, monterAuPremierPlan, deplacer, redimensionner } = useFenetres();
   const router = useRouter();
-  const fermerChat = useFermerChat();
   const glissement = useRef<{ x: number; y: number; fx: number; fy: number } | null>(null);
   const { label, href, Icone } = INFOS_PAR_ONGLET[ongletId];
   // Fondu d'apparition/disparition (30/08/2026, audit "aucune transition"
@@ -206,20 +204,24 @@ function FenetreSection({
   }
 
   // Bouton "ouvrir en vraie page" (30/08/2026, audit navigation) : ferme
-  // cette fenêtre (avec fondu, comme le bouton Fermer) ET le chat qui
-  // vit en dessous avant de naviguer -- sinon la vraie page se charge
-  // derrière le chat toujours ouvert et reste invisible.
-  // Étape 6 (07/09/2026, chantier "chat plein écran = vraie section") :
-  // ce cas ne peut plus se produire que sur desktop (mini popup, voir
-  // ChatFlottant.tsx) -- ces fenêtres flottantes ne s'ouvrent plus que
-  // depuis /chat sur desktop (AppSidebar.tsx, ouvrirFenetre), plus
-  // jamais sur mobile (fermerChatEtNaviguer, vraie navigation directe,
-  // sans fenêtre flottante à fermer). fermerChat() reste donc utile ici
-  // uniquement pour repasser le mini popup en "fermee" au cas où il
-  // était ouvert en même temps que cette fenêtre.
+  // cette fenêtre (avec fondu, comme le bouton Fermer) puis navigue vers
+  // la vraie page de la section.
+  // Correctif (07/09/2026, bug signalé Bourama) : appelait aussi
+  // fermerChat() (ancien fonctionnement -- à l'époque, ces fenêtres ne
+  // pouvaient s'ouvrir que par-dessus le calque fixed inset-0 du chat
+  // plein écran overlay, qu'il fallait donc fermer explicitement avant
+  // de naviguer, sinon la vraie page se chargeait derrière lui et
+  // restait invisible). Depuis l'étape 6 du chantier "chat plein écran =
+  // vraie section", ces fenêtres ne s'ouvrent plus QUE depuis la vraie
+  // route /chat (AppSidebar.tsx, ouvrirFenetre, desktop uniquement) --
+  // il n'y a donc plus jamais de calque chat à fermer : /chat se démonte
+  // normalement comme n'importe quelle page au moment du router.push
+  // ci-dessous. Retenir cet appel obsolète était le bug : fermerChat()
+  // forçait le chat plein écran (redevenu une vraie section comme les
+  // autres) à se comporter comme s'il fallait encore le "fermer" avant
+  // de pouvoir afficher la section, ce qui n'a plus lieu d'être.
   function ouvrirVraiePage() {
     fermerCettePopup();
-    fermerChat();
     router.push(href);
   }
 
