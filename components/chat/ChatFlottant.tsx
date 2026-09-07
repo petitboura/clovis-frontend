@@ -2,6 +2,7 @@
 
 import { useContext, useEffect, useState } from "react";
 import Link from "next/link";
+import { usePathname } from "next/navigation";
 import { Bird, X, Maximize2, MessageSquarePlus, History } from "lucide-react";
 import { appelerApi } from "@/lib/api";
 import { ChatIA } from "./ChatIA";
@@ -84,6 +85,15 @@ export function ChatFlottant({
   const ctxChat = useContext(ContexteChat);
   const enFermeture = ctxChat?.enFermeture ?? false;
   useHauteurVisuelle();
+  // 07/09/2026, correctif Bourama ("la bulle réapparaît par-dessus le
+  // chat plein écran") : ce composant reste monté sur toutes les pages
+  // (voir AppShell.tsx), /chat compris -- rien ne le masquait
+  // spécifiquement là-bas, contrairement à la sidebar/au hamburger
+  // (mêmes raisons, voir leurs commentaires respectifs dans
+  // AppShell.tsx : la page /chat affiche déjà sa propre interface de
+  // chat, cette bulle/ce popup y feraient doublon). Voir le early return
+  // plus bas.
+  const pathname = usePathname();
 
   // Étape 1 (07/09/2026, chantier "chat plein écran = vraie section") :
   // état de la conversation déplacé dans ContexteChat (lib/contexteChat.tsx)
@@ -251,6 +261,11 @@ export function ChatFlottant({
     window.localStorage.setItem(CLE_COMPTEUR_INVITE, String(compte + 1));
     return true;
   }
+
+  // Voir le commentaire plus haut (déclaration de `pathname`) : la page
+  // /chat a déjà sa propre interface de chat, donc ni la bulle fermée ni
+  // le popup mini ne doivent s'afficher par-dessus elle.
+  if (pathname === "/chat") return null;
 
   // Bulle fermée : affichée sur desktop uniquement, seul endroit où
   // elle sert encore, faute d'un onglet "Chat" dédié là-bas. Masquée en
