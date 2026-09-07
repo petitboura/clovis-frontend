@@ -31,7 +31,6 @@ import { NoteAgent } from "@/components/NoteAgent";
 import { CommentairesAgent } from "@/components/CommentairesAgent";
 import { BoutonInstaller } from "@/components/BoutonInstaller";
 import { MenuPlusChatFlottant } from "@/components/mobile/MenuPlusChatFlottant";
-import { useFermerChatAvecFondu } from "@/lib/contexteChat";
 import { useFermetureAnimee } from "@/lib/useFermetureAnimee";
 import { useFermetureAuRetour } from "@/lib/contexteRetour";
 
@@ -299,7 +298,7 @@ function MenuGroupe({
   pathname,
   contexteChat,
   ouvrirFenetre,
-  fermerChatEtNaviguer,
+  naviguerVersSection,
   ouvert,
   onOuvrir,
   onFermer,
@@ -314,9 +313,13 @@ function MenuGroupe({
   contexteChat: boolean;
   ouvrirFenetre: (id: OngletId) => void;
   // 03/09/2026, demande Bourama : requis quand mobile=true, voir onClick
-  // des sous-sections plus bas -- fermer le chat + naviguer au lieu
-  // d'ouvrir la fenêtre flottante (ne fonctionne pas sur mobile).
-  fermerChatEtNaviguer: (href: string) => void;
+  // des sous-sections plus bas -- naviguer vraiment au lieu d'ouvrir la
+  // fenêtre flottante (ne fonctionne pas sur mobile). Renommée le
+  // 07/09/2026 (ex-fermerChatEtNaviguer) : depuis que /chat est une
+  // vraie route (étape 5, "chat plein écran = vraie section"), il n'y a
+  // plus de calque de chat à fermer avant de naviguer, plus juste une
+  // navigation normale.
+  naviguerVersSection: (href: string) => void;
   ouvert: boolean;
   onOuvrir: () => void;
   onFermer: () => void;
@@ -391,7 +394,7 @@ function MenuGroupe({
                   if (contexteChat) {
                     e.preventDefault();
                     if (mobile) {
-                      fermerChatEtNaviguer(o.href);
+                      naviguerVersSection(o.href);
                     } else {
                       ouvrirFenetre(o.id);
                     }
@@ -422,7 +425,6 @@ export function AppSidebar({
   onNouvelleConversation,
   onSelectionnerConversation,
   masquerChromeMobile = false,
-  marquerPleinEcranSansHistorique,
 }: {
   connecte: boolean;
   // Ajouté le 26/08/2026, Bourama : refonte navigation mobile native
@@ -455,19 +457,9 @@ export function AppSidebar({
   aDesMessages?: boolean;
   onNouvelleConversation?: () => void;
   onSelectionnerConversation?: (fil: FilConversation) => void;
-  // 03/09/2026, correctif Bourama : le calque "plein_ecran" du chat
-  // (ChatFlottant.tsx) s'enregistre dans contexteRetour.tsx mais ne
-  // marquait jamais sa propre fermeture "sans historique" quand elle
-  // venait d'une vraie navigation (fermerChatEtNaviguer plus bas) ce
-  // qui déclenchait un history.back() parasite et annulait la
-  // navigation. ChatFlottant.tsx transmet ici la fonction de marquage
-  // de ce calque, uniquement pour l'instance contexteChat de ce
-  // composant.
-  marquerPleinEcranSansHistorique?: () => void;
 }) {
   const pathname = usePathname();
   const router = useRouter();
-  const fermerChatAvecFondu = useFermerChatAvecFondu();
   // 22/08/2026, demande Bourama : remplace le comportement précédent
   // (fermer le chat plein écran au clic sur une section, cf. commit du
   // même jour) -- désormais le clic ouvre la section dans une fenêtre
@@ -479,19 +471,17 @@ export function AppSidebar({
   // 03/09/2026, demande Bourama, audit "clic sur une section ne fait
   // rien en plein écran mobile web/natif" : la fenêtre flottante
   // (ouvrirFenetre ci-dessus) ne fonctionne que sur desktop. Sur mobile
-  // (tiroir plein écran chat, mobile=true plus bas dans ce fichier), le
-  // clic doit fermer le chat et naviguer vraiment vers la page, même
-  // mécanique que naviguerDepuisPlusMobile plus bas.
-  function fermerChatEtNaviguer(href: string) {
-    // Voir commentaire sur la prop marquerPleinEcranSansHistorique
-    // ci-dessus : sans ça, le démontage du calque plein_ecran (déclenché
-    // par le fondu juste après) consomme une entrée d'historique et
-    // annule le router.push juste en dessous.
-    // Correctif (05/09/2026, Bourama : "faut qu'il ne se ferme pas
-    // brutement") : fermerChatAvecFondu (200ms) remplace l'ancienne
-    // fermeture instantanée -- voir lib/contexteChat.tsx pour le detail.
-    marquerPleinEcranSansHistorique?.();
-    fermerChatAvecFondu();
+  // (tiroir du chat, mobile=true plus bas dans ce fichier), le clic doit
+  // naviguer vraiment vers la page, même mécanique que
+  // naviguerDepuisPlusMobile plus bas.
+  // 07/09/2026, demande Bourama (chantier "chat plein écran = vraie
+  // section" terminé, étape 5) : ex-fermerChatEtNaviguer. Avant, /chat
+  // était un calque flottant par-dessus l'app qu'il fallait fermer
+  // (marquerPleinEcranSansHistorique + fermerChatAvecFondu) avant de
+  // naviguer, sinon la page cible se chargeait invisible derrière lui.
+  // /chat est désormais une vraie route comme les autres : il n'y a plus
+  // de calque à fermer, juste une navigation normale.
+  function naviguerVersSection(href: string) {
     router.push(href);
   }
   const [ouverte, setOuverte] = useState(false);
@@ -679,7 +669,7 @@ export function AppSidebar({
         href={onglet.href}
         onClick={(e) => {
           // 03/09/2026 : ce clic navigue toujours vraiment (Link par
-          // défaut, ou fermerChatEtNaviguer juste plus bas) -- marquer
+          // défaut, ou naviguerVersSection juste plus bas) -- marquer
           // AVANT de lancer la fermeture du tiroir, sinon son
           // history.back() (déclenché après le fondu 180ms) annule
           // cette navigation.
@@ -692,14 +682,14 @@ export function AppSidebar({
           // navigation classique) s'ouvre en fenêtre flottante par-dessus
           // le chat au lieu de naviguer -- SEULEMENT sur desktop
           // (mobile=false, rail). 03/09/2026, demande Bourama : sur
-          // mobile web et natif (mobile=true, tiroir plein écran chat),
-          // la fenêtre flottante ne fonctionne pas -- comportement
-          // aligné sur naviguerDepuisPlusMobile, fermer le chat puis
-          // naviguer vraiment, comme depuis la barre du bas.
+          // mobile web et natif (mobile=true, tiroir du chat), la
+          // fenêtre flottante ne fonctionne pas -- comportement aligné
+          // sur naviguerDepuisPlusMobile, naviguer vraiment, comme depuis
+          // la barre du bas.
           if (contexteChat && onglet.id) {
             e.preventDefault();
             if (mobile) {
-              fermerChatEtNaviguer(onglet.href);
+              naviguerVersSection(onglet.href);
             } else {
               ouvrirFenetre(onglet.id);
             }
@@ -751,20 +741,18 @@ export function AppSidebar({
   // de section (claude), donc s'ouvre en fenêtre flottante par-dessus
   // le chat comme les autres (même mécanique que LienOnglet). Les
   // autres (Accueil, Paramètres, Rappels) n'ont pas d'id de section
-  // (pas de fenêtre flottante possible) : le chat doit d'abord se
-  // fermer, sinon la page cible se charge derrière lui et reste
-  // invisible (fixed inset-0 z-[110]).
+  // (pas de fenêtre flottante possible), donc naviguent directement.
   function naviguerDepuisPlusMobile(href: string) {
     // 03/09/2026, même correctif que LienOnglet plus haut : marquer
     // avant de fermer, sinon le history.back() différé annule le
-    // router.push de fermerChatEtNaviguer juste en dessous.
+    // router.push de naviguerVersSection juste en dessous.
     marquerTiroirSansHistorique();
     fermerTiroirMobile(() => setOuverte(false));
     // 03/09/2026, demande Bourama : "Connecter Claude" avait un cas
     // spécial ici (ouvrirFenetre, fenêtre flottante), qui ne fonctionne
     // pas sur mobile -- retiré, traité maintenant comme tous les autres
-    // liens du menu Plus (ferme le chat, navigue vraiment).
-    fermerChatEtNaviguer(href);
+    // liens du menu Plus (navigue vraiment).
+    naviguerVersSection(href);
   }
 
   return (
@@ -915,7 +903,7 @@ export function AppSidebar({
             pathname={pathname}
             contexteChat={contexteChat}
             ouvrirFenetre={ouvrirFenetre}
-            fermerChatEtNaviguer={fermerChatEtNaviguer}
+            naviguerVersSection={naviguerVersSection}
             ouvert={groupeOuvertId === g.id}
             onOuvrir={() => setGroupeOuvertId(g.id)}
             onFermer={() => setGroupeOuvertId((v) => (v === g.id ? null : v))}
@@ -1035,19 +1023,16 @@ export function AppSidebar({
             enSortieMenu={profilEnSortie}
             onNaviguerVersParametres={() => {
               // Même calque profilDeplie que la version mobile (voir
-              // MenuProfil mobile plus bas), même correctif du
-              // 04/09/2026 : fermerChatEtNaviguer ferme aussi le chat
-              // plein écran s'il est ouvert (sans effet sinon), pour ne
-              // pas laisser la page Paramètres cachée derrière lui.
+              // MenuProfil mobile plus bas).
               marquerProfilSansHistorique();
-              fermerChatEtNaviguer("/parametres");
+              naviguerVersSection("/parametres");
             }}
             onNaviguerVersProfil={() => {
               // Même besoin que onNaviguerVersParametres juste au dessus,
               // mais vers la section Profil directement (voir
               // EspaceParametres.tsx, ?vue=profil).
               marquerProfilSansHistorique();
-              fermerChatEtNaviguer("/parametres?vue=profil");
+              naviguerVersSection("/parametres?vue=profil");
             }}
             onSeDeconnecter={seDeconnecter}
           />
@@ -1153,7 +1138,7 @@ export function AppSidebar({
                   pathname={pathname}
                   contexteChat={contexteChat}
                   ouvrirFenetre={ouvrirFenetre}
-                  fermerChatEtNaviguer={fermerChatEtNaviguer}
+                  naviguerVersSection={naviguerVersSection}
                   ouvert={groupeOuvertId === g.id}
                   onOuvrir={() => setGroupeOuvertId(g.id)}
                   onFermer={() => setGroupeOuvertId((v) => (v === g.id ? null : v))}
@@ -1161,7 +1146,7 @@ export function AppSidebar({
                   onNaviguer={() => {
                     // 03/09/2026, même correctif que LienOnglet plus
                     // haut : ce callback est toujours suivi d'une vraie
-                    // navigation (fermerChatEtNaviguer, voir MenuGroupe).
+                    // navigation (naviguerVersSection, voir MenuGroupe).
                     marquerTiroirSansHistorique();
                     fermerTiroirMobile(() => setOuverte(false));
                     // Le popup du groupe (groupeOuvertId, voir MenuGroupe
@@ -1248,10 +1233,10 @@ export function AppSidebar({
                   // liens du tiroir), la page Paramètres se chargeait
                   // donc bien derrière, mais restait invisible, cachée
                   // par le chat toujours affiché par dessus. Remplacé
-                  // par fermerChatEtNaviguer, la même fonction déjà
+                  // par naviguerVersSection, la même fonction déjà
                   // utilisée par naviguerDepuisPlusMobile/LienOnglet/
                   // MenuGroupe juste au dessus dans ce fichier.
-                  fermerChatEtNaviguer("/parametres");
+                  naviguerVersSection("/parametres");
                 }}
                 onNaviguerVersProfil={() => {
                   // Même besoin que onNaviguerVersParametres juste au
@@ -1261,7 +1246,7 @@ export function AppSidebar({
                   setProfilDeplie(false);
                   marquerTiroirSansHistorique();
                   fermerTiroirMobile(() => setOuverte(false));
-                  fermerChatEtNaviguer("/parametres?vue=profil");
+                  naviguerVersSection("/parametres?vue=profil");
                 }}
                 onSeDeconnecter={seDeconnecter}
               />
