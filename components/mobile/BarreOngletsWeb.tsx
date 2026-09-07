@@ -3,7 +3,6 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { Library, Hourglass, MessageCircle, Briefcase, Wand2, type LucideIcon } from "lucide-react";
-import { useOuvrirChat } from "@/lib/contexteChat";
 
 // Créé le 28/08/2026, Bourama : chantier "web mobile façon appli",
 // remplace le menu hamburger + tiroir (AppSidebar en mode mobile, masqué
@@ -35,20 +34,22 @@ import { useOuvrirChat } from "@/lib/contexteChat";
 // dans app/globals.css pour la marge réservée en bas de <main> et des
 // éléments flottants (ChatFlottant.tsx, EspaceBibliotheque.tsx) afin que
 // rien ne se retrouve caché derrière cette barre.
-const ONGLETS_WEB: (
-  | { type: "lien"; href: string; label: string; Icone: LucideIcon }
-  | { type: "chat"; label: string; Icone: LucideIcon }
-)[] = [
-  { type: "lien", href: "/bibliotheque", label: "Bibliothèque", Icone: Library },
-  { type: "lien", href: "/controle-session", label: "Concentration", Icone: Hourglass },
-  { type: "chat", label: "Chat", Icone: MessageCircle },
-  { type: "lien", href: "/bureau", label: "Bureau", Icone: Briefcase },
-  { type: "lien", href: "/personnaliser", label: "Personnaliser Clovis", Icone: Wand2 },
+//
+// Étape 3 (07/09/2026, chantier "chat plein écran = vraie section") :
+// l'onglet Chat est désormais un Link normal vers /chat (voir
+// app/(app)/chat/page.tsx et components/chat/ChatSection.tsx, étape 2)
+// au lieu d'ouvrirChat("plein_ecran") sur ChatFlottant.tsx -- même
+// mécanisme que les autres onglets, y compris l'état actif visuel.
+const ONGLETS_WEB: { href: string; label: string; Icone: LucideIcon }[] = [
+  { href: "/bibliotheque", label: "Bibliothèque", Icone: Library },
+  { href: "/controle-session", label: "Concentration", Icone: Hourglass },
+  { href: "/chat", label: "Chat", Icone: MessageCircle },
+  { href: "/bureau", label: "Bureau", Icone: Briefcase },
+  { href: "/personnaliser", label: "Personnaliser Clovis", Icone: Wand2 },
 ];
 
 export function BarreOngletsWeb() {
   const pathname = usePathname();
-  const ouvrirChat = useOuvrirChat();
 
   return (
     <nav
@@ -57,19 +58,6 @@ export function BarreOngletsWeb() {
       aria-label="Navigation principale"
     >
       {ONGLETS_WEB.map((o) => {
-        if (o.type === "chat") {
-          return (
-            <button
-              key="chat"
-              type="button"
-              onClick={() => ouvrirChat("plein_ecran")}
-              className="group flex flex-1 flex-col items-center justify-center gap-0.5 text-dj-texte-muet transition-colors"
-            >
-              <o.Icone size={20} className="flex-shrink-0" />
-              <span className="text-[11px] leading-none">{o.label}</span>
-            </button>
-          );
-        }
         const actif = pathname === o.href || pathname.startsWith(o.href + "/");
         return (
           <Link
