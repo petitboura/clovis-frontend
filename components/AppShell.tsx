@@ -124,19 +124,38 @@ export function AppShell({ children }: { children: React.ReactNode }) {
               dans cette appli, voir commentaire dans
               BoutonNotifications.tsx. */}
           <BoutonNotifications connecte={connecte} />
-          <AppSidebar
-            connecte={connecte}
-            onOuvrirCatalogue={() => setCatalogueOuvert(true)}
-            // Toujours masqué désormais (avant : uniquement natif) --
-            // chantier "web mobile façon appli" (28/08/2026) : le menu
-            // hamburger + tiroir mobile est remplacé aussi bien côté web
-            // (BarreOngletsWeb ci-dessus) que côté natif (BarreOngletsNative,
-            // déjà le cas). Ne concerne QUE cette instance-ci d'AppSidebar
-            // (nav principale) -- celle montée dans ChatFlottant.tsx pour
-            // le chat plein écran (contexteChat) garde son hamburger/tiroir
-            // mobile inchangé, jamais touchée par ce chantier.
-            masquerChromeMobile
-          />
+          {/* 07/09/2026, décision Bourama (bug PC web signalé : profil et
+              "..." affichés en double) : cette instance-ci d'AppSidebar
+              (nav principale, hors chat) reste montée en permanence,
+              rail visible sur desktop -- correct tant que /chat était un
+              calque fixed par-dessus tout (ChatFlottant.tsx, avant étape
+              5 du chantier "chat plein écran = vraie section"), qui
+              recouvrait ce rail. Depuis que /chat est une vraie page
+              dans <main>, ChatSection.tsx monte SA PROPRE instance
+              d'AppSidebar (contexteChat=true, voir plus haut dans ce
+              fichier : contexteChat=true est un sur-ensemble de la nav
+              de base, ajoute juste Nouvelle conversation/historique) --
+              les deux rails se retrouvaient donc affichés côte à côte
+              sur desktop, chacun avec son propre profil/bouton "...".
+              Masquée ici sur /chat, même logique que le hamburger global
+              masqué sur /chat plus haut (MenuHamburgerWeb.tsx) : sans
+              perte de contenu, l'instance chat couvre déjà tout ce que
+              celle-ci propose. */}
+          {pathname !== "/chat" && (
+            <AppSidebar
+              connecte={connecte}
+              onOuvrirCatalogue={() => setCatalogueOuvert(true)}
+              // Toujours masqué désormais (avant : uniquement natif) --
+              // chantier "web mobile façon appli" (28/08/2026) : le menu
+              // hamburger + tiroir mobile est remplacé aussi bien côté web
+              // (BarreOngletsWeb ci-dessus) que côté natif (BarreOngletsNative,
+              // déjà le cas). Ne concerne QUE cette instance-ci d'AppSidebar
+              // (nav principale) -- celle montée dans ChatSection.tsx pour
+              // le chat plein écran (contexteChat) garde son hamburger/tiroir
+              // mobile inchangé, jamais touchée par ce chantier.
+              masquerChromeMobile
+            />
+          )}
           {/* Marges via les variables CSS du plugin (voir "CSS insets" de
               la doc @capgo/capacitor-native-navigation) : valent 0px sur le
               web, donc ce padding est un no-op hors de l'appli native.
