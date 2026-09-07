@@ -29,9 +29,45 @@ export function MenuSignalementCorrection({
   const [ouvert, setOuvert] = useState(false);
   const [envoiEnCours, setEnvoiEnCours] = useState(false);
   const [envoye, setEnvoye] = useState<TypeCorrectionPedagogique | null>(null);
+  const [ouvrirVersHaut, setOuvrirVersHaut] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
   const { enSortie, demarrerFermeture } = useFermetureAnimee();
   const fermer = () => demarrerFermeture(() => setOuvert(false));
+
+  // Hauteur approximative du popup (2 options) -- sert uniquement à
+  // décider du sens d'ouverture avant le premier rendu réel, voir
+  // ouvrir() ci-dessous.
+  const HAUTEUR_POPUP_ESTIMEE = 190;
+
+  // Corrige le popup qui s'ouvrait toujours vers le bas (top-full) et se
+  // faisait couper par le bord de l'interface quand le message signalé
+  // est proche du bas -- capture Bourama du 07/09/2026, sur le dernier
+  // message d'une conversation. Deux contextes différents à couvrir : la
+  // page complète (limite = la fenêtre) ET le widget de chat flottant en
+  // mode mini (limite = son propre cadre en overflow-hidden, voir
+  // ChatFlottant.tsx, plus petit que la fenêtre) -- d'où la recherche du
+  // premier ancêtre qui coupe réellement le contenu, plutôt qu'un calcul
+  // fixe sur window.innerHeight qui ignorerait ce second cas.
+  function trouverLimiteBasse(el: HTMLElement): number {
+    let noeud: HTMLElement | null = el.parentElement;
+    while (noeud) {
+      const style = window.getComputedStyle(noeud);
+      if (/(auto|scroll|hidden)/.test(style.overflowY) || /(auto|scroll|hidden)/.test(style.overflow)) {
+        return noeud.getBoundingClientRect().bottom;
+      }
+      noeud = noeud.parentElement;
+    }
+    return window.innerHeight;
+  }
+
+  function ouvrir() {
+    if (ref.current) {
+      const rectBouton = ref.current.getBoundingClientRect();
+      const limiteBasse = trouverLimiteBasse(ref.current);
+      setOuvrirVersHaut(limiteBasse - rectBouton.bottom < HAUTEUR_POPUP_ESTIMEE);
+    }
+    setOuvert(true);
+  }
 
   useEffect(() => {
     if (!ouvert) return;
@@ -80,7 +116,7 @@ export function MenuSignalementCorrection({
     <div ref={ref} className="relative inline-flex">
       <button
         type="button"
-        onClick={() => (ouvert ? fermer() : setOuvert(true))}
+        onClick={() => (ouvert ? fermer() : ouvrir())}
         aria-label="Signaler un problème pédagogique"
         aria-expanded={ouvert}
         className="rounded-md p-1.5 text-dj-texte-muet hover:text-dj-texte"
@@ -90,9 +126,9 @@ export function MenuSignalementCorrection({
 
       {(ouvert || enSortie) && (
         <div
-          className={`absolute right-0 top-full z-40 mt-2 w-72 max-w-[calc(100vw-2rem)] rounded-cgpt-carte border border-dj-bordure bg-dj-surface p-2 text-left shadow-xl ${
-            enSortie ? "animate-cgpt-sortie-modal" : "animate-cgpt-entree-modal"
-          }`}
+          className={`absolute right-0 z-40 w-72 max-w-[calc(100vw-2rem)] rounded-cgpt-carte border border-dj-bordure bg-dj-surface p-2 text-left shadow-xl ${
+            ouvrirVersHaut ? "bottom-full mb-2" : "top-full mt-2"
+          } ${enSortie ? "animate-cgpt-sortie-modal" : "animate-cgpt-entree-modal"}`}
         >
           <button
             type="button"
