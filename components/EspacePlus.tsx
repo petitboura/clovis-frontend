@@ -135,10 +135,21 @@ const AGENT_ID = "clovis";
 export function BlocsMenuPlus({
   sectionsNavigation,
   onNaviguer,
+  avantOuvrirCatalogue,
   plat = false,
 }: {
   sectionsNavigation: typeof SECTIONS_BASE;
   onNaviguer?: (href: string) => void;
+  // 07/09/2026, correctif Bourama : dans le tiroir mobile du chat plein
+  // écran, ce panneau "Plus" est un panneau flottant (MenuPlusChatFlottant.tsx,
+  // zIndex="z-[150]") plus haut que la fenêtre catalogue "Pourquoi Clovis ?"
+  // (CatalogueClovis.tsx, z-[100]) : cliquer sur "Pourquoi Clovis ?" ouvrait
+  // la fenêtre catalogue SANS fermer ce panneau d'abord, qui restait donc
+  // affiché par-dessus (la fenêtre catalogue semblait s'ouvrir "derrière").
+  // Optionnel : les deux menus hamburger (MenuHamburgerWeb.tsx/
+  // MenuHamburgerNatif.tsx) n'en ont pas besoin, leur panneau reste à son
+  // z-index par défaut (z-50), déjà sous la fenêtre catalogue.
+  avantOuvrirCatalogue?: () => void;
   // 30/08/2026, audit "bouton Plus mal aligné" -- voir le commentaire sur
   // LigneSection ci-dessus pour le détail. Passé tel quel à chaque ligne
   // rendue ici (navigation ET actions Partager/Avis/Pourquoi Clovis, pour
@@ -190,7 +201,15 @@ export function BlocsMenuPlus({
           <CommentairesAgent agentId={AGENT_ID} />
         </div>
       )}
-      <LigneSection icone={Compass} titre="Pourquoi Clovis ?" onClick={ouvrirCatalogue} plat={plat} />
+      <LigneSection
+        icone={Compass}
+        titre="Pourquoi Clovis ?"
+        onClick={() => {
+          avantOuvrirCatalogue?.();
+          ouvrirCatalogue();
+        }}
+        plat={plat}
+      />
     </>
   );
 

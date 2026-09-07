@@ -58,6 +58,12 @@ function MenuPlusChatFlottant({ onNaviguer }: { onNaviguer: (href: string) => vo
     onNaviguer(href);
   }
 
+  // 07/09/2026, correctif Bourama (bug "Pourquoi Clovis ? s'ouvre
+  // derrière le chat") : ce panneau flottant est à z-[150], plus haut
+  // que la fenêtre catalogue CatalogueClovis (z-[100]) -- sans fermer
+  // ce panneau avant, la fenêtre catalogue s'ouvrait dessous, invisible.
+  // avantOuvrirCatalogue={fermerMenu} déclenche le même fondu de
+  // fermeture que les autres boutons avant d'ouvrir la fenêtre.
   return (
     <div>
       <button
@@ -80,7 +86,7 @@ function MenuPlusChatFlottant({ onNaviguer }: { onNaviguer: (href: string) => vo
           zIndex="z-[150]"
           gererRetour={false}
         >
-          <BlocsMenuPlus sectionsNavigation={SECTIONS_BASE} onNaviguer={naviguerEtFermer} />
+          <BlocsMenuPlus sectionsNavigation={SECTIONS_BASE} onNaviguer={naviguerEtFermer} avantOuvrirCatalogue={fermerMenu} />
         </PanneauFlottant>
       )}
     </div>

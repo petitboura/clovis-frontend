@@ -1065,7 +1065,14 @@ export function AppSidebar({
         <div
           className={
             `fixed inset-y-0 left-0 z-40 flex w-72 flex-col border-r border-dj-bordure bg-dj-fond px-2 pt-3 pb-[calc(0.75rem+var(--safe-bottom))] md:hidden ${
-              historiqueDeplie || profilDeplie ? "overflow-visible" : "overflow-y-auto overflow-x-hidden"
+              // 07/09/2026, correctif Bourama (bug "sous-sections de
+              // Personnaliser Clovis ne marchent pas") : groupeOuvertId
+              // manquait ici, contrairement au rail desktop juste plus
+              // haut dans ce fichier (ligne ~823) qui l'inclut déjà --
+              // le sous-menu (MenuGroupe, position absolute) se
+              // retrouvait recadré/coupé par overflow-y-auto/x-hidden au
+              // lieu de rester visible comme sur desktop.
+              historiqueDeplie || profilDeplie || groupeOuvertId ? "overflow-visible" : "overflow-y-auto overflow-x-hidden"
             }` +
             (tiroirEnSortie
               ? " pointer-events-none translate-x-2 opacity-0 transition-all duration-200 ease-cgpt-doux"
