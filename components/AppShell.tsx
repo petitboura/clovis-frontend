@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { usePathname } from "next/navigation";
 import { supabase } from "@/lib/supabase";
 import { AppSidebar } from "@/components/AppSidebar";
 import { ChatFlottant } from "@/components/chat/ChatFlottant";
@@ -31,6 +32,7 @@ import { BoutonNotifications } from "@/components/BoutonNotifications";
 //   PaletteCommandes (onOuvrirCatalogue), rien n'est perdu en
 //   accessibilité, juste plus imposé par défaut.
 export function AppShell({ children }: { children: React.ReactNode }) {
+  const pathname = usePathname();
   const [connecte, setConnecte] = useState(false);
   const [catalogueOuvert, setCatalogueOuvert] = useState(false);
   // Ajouté le 26/08/2026, Bourama : refonte navigation mobile native.
@@ -185,7 +187,20 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                     // desktop et hors mobile, voir --dj-barre-onglets-web
                     // dans app/globals.css) pour que le bas de chaque
                     // page ne se retrouve pas caché derrière la barre.
-                    paddingBottom: "var(--dj-barre-onglets-web, 0px)",
+                    //
+                    // Correctif (07/09/2026, signalé Bourama : "la barre
+                    // de saisie est emmenée si haut") : --dj-barre-
+                    // onglets-web est une variable CSS globale (calculée
+                    // sur la largeur d'écran, pas sur la route) -- sur
+                    // /chat, BarreOngletsWeb.tsx est désormais masquée
+                    // (voir son propre correctif du même jour) mais
+                    // continuait de réserver ses ~4rem+safe-bottom sous
+                    // ChatIA, qui ajoute déjà son propre padding de
+                    // sécurité pour le clavier/safe-bottom (voir
+                    // ChatIA.tsx) -- les deux s'additionnaient et
+                    // poussaient la barre de saisie bien plus haut que
+                    // nécessaire. /chat n'a plus cette barre à réserver.
+                    paddingBottom: pathname === "/chat" ? "0px" : "var(--dj-barre-onglets-web, 0px)",
                   }
             }
           >

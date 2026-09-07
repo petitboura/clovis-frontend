@@ -3,7 +3,6 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { Library, Hourglass, MessageCircle, Briefcase, Wand2, type LucideIcon } from "lucide-react";
-
 // Créé le 28/08/2026, Bourama : chantier "web mobile façon appli",
 // remplace le menu hamburger + tiroir (AppSidebar en mode mobile, masqué
 // pour de bon désormais via masquerChromeMobile, voir AppShell.tsx) par
@@ -50,6 +49,17 @@ const ONGLETS_WEB: { href: string; label: string; Icone: LucideIcon }[] = [
 
 export function BarreOngletsWeb() {
   const pathname = usePathname();
+  // Correctif (07/09/2026, signalé Bourama : "la barre du bas ne doit
+  // pas apparaître dans le chat plein écran") : avant l'étape 3 du
+  // chantier "chat plein écran = vraie section", l'onglet Chat ouvrait
+  // un calque fixed par-dessus tout (ChatFlottant.tsx, "plein_ecran"),
+  // qui recouvrait déjà cette barre visuellement -- inutile de la
+  // masquer explicitement à l'époque. Depuis l'étape 3, /chat est une
+  // vraie page dans le flux normal, donc cette barre restait affichée
+  // par-dessus elle. Alignée ici sur BarreOngletsNative.tsx, qui a déjà
+  // ce même masquage sur pathname === "/chat" depuis l'étape 3 -- raté
+  // ici à l'époque, corrigé maintenant.
+  if (pathname === "/chat") return null;
 
   return (
     <nav
