@@ -7,7 +7,7 @@ import { Bird, MessageSquare, Library, type LucideIcon } from "lucide-react";
 import { supabase } from "@/lib/supabase";
 import { appelerApi } from "@/lib/api";
 import { dateRelative } from "@/lib/dateRelative";
-import { useOuvrirChat } from "@/lib/contexteChat";
+import { useOuvrirChat, useOuvrirConversation } from "@/lib/contexteChat";
 import { texteAccueilTableauDeBordSelonHeure } from "@/lib/salutations";
 import { Logo } from "@/components/Logo";
 import { Skeleton } from "@/components/Skeleton";
@@ -31,6 +31,14 @@ type ActiviteItem = {
   label: string;
   date: string;
   href: string;
+  // Bug signalé Bourama (07/09/2026) : cliquer sur une conversation
+  // récente ouvrait le chat mais ne chargeait jamais cette conversation
+  // précise -- il manquait son conversation_id pour pouvoir la
+  // sélectionner (voir useOuvrirConversation, lib/contexteChat.tsx).
+  // Seules les entrées type "conversation" le renseignent ; null est une
+  // vraie valeur (conversation "legacy" sans conversation_id), d'où le
+  // champ optionnel plutôt qu'un simple null par défaut.
+  conversationId?: string | null;
 };
 
 // Un seul mouvement de survol, appliqué à toutes les cartes (refonte
@@ -45,6 +53,7 @@ const MOUVEMENT_CARTE = "group-hover:-translate-y-1";
 export function EcranAccueil() {
   const router = useRouter();
   const ouvrirChat = useOuvrirChat();
+  const ouvrirConversation = useOuvrirConversation();
   const [activite, setActivite] = useState<ActiviteItem[] | null>(null);
 
   // 31/08/2026, demande Bourama : "plus de tolérance", création de
@@ -112,6 +121,7 @@ export function EcranAccueil() {
             label: `Conversation : ${f.titre}`,
             date: f.derniere_activite,
             href: "#chat",
+            conversationId: f.conversation_id,
           });
         }
       } catch {
@@ -275,7 +285,7 @@ export function EcranAccueil() {
               item.href === "#chat" ? (
                 <button
                   key={item.id}
-                  onClick={() => ouvrirChat()}
+                  onClick={() => ouvrirConversation(item.conversationId ?? null)}
                   className="group flex items-center gap-3 rounded-xl px-3 py-2.5 text-left transition-colors hover:bg-dj-surface"
                 >
                   <item.Icone size={16} className="flex-shrink-0 text-dj-texte transition-transform group-hover:scale-110" />

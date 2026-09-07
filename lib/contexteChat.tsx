@@ -84,6 +84,18 @@ type ContexteChatValeur = {
   // après l'avoir lu), jamais réappliqué à une conversation suivante.
   demandePrefill: string | null;
   setDemandePrefill: (texte: string | null) => void;
+  // 07/09/2026, bug signalé Bourama : cliquer sur une conversation
+  // récente (EcranAccueil.tsx, "Activité récente") ouvrait bien le chat
+  // mais ne chargeait jamais cette conversation précise -- rien ne
+  // transmettait son conversation_id jusqu'à ChatFlottant.tsx (seul
+  // composant qui sait charger un fil via selectionnerConversation).
+  // Même esprit que demandePrefill ci-dessus, pour sélectionner une
+  // conversation EXISTANTE plutôt que d'en préremplir une nouvelle.
+  // Distinguer une conversation "legacy" (conversationId: null, sans
+  // conversation_id réel) d'une absence de demande (pas d'objet du
+  // tout) exige un objet ici plutôt qu'un simple string | null.
+  demandeOuvrirConversation: { conversationId: string | null } | null;
+  setDemandeOuvrirConversation: (v: { conversationId: string | null } | null) => void;
 };
 
 // L'état du chat flottant (fermee/mini/plein_ecran) vivait auparavant
@@ -108,6 +120,9 @@ export function useFournirContexteChat(): ContexteChatValeur {
   const [etat, setEtat] = useState<EtatChat>("fermee");
   const [enFermeture, setEnFermeture] = useState(false);
   const [demandePrefill, setDemandePrefill] = useState<string | null>(null);
+  const [demandeOuvrirConversation, setDemandeOuvrirConversation] = useState<{ conversationId: string | null } | null>(
+    null
+  );
 
   // Étape 1 -- état de la conversation, avant local à ChatFlottant.tsx.
   const [chargement, setChargement] = useState<"chargement" | "pret" | "erreur">("chargement");
@@ -188,6 +203,8 @@ export function useFournirContexteChat(): ContexteChatValeur {
       fermerAvecFondu,
       demandePrefill,
       setDemandePrefill,
+      demandeOuvrirConversation,
+      setDemandeOuvrirConversation,
       chargement,
       setChargement,
       erreur,
@@ -214,6 +231,7 @@ export function useFournirContexteChat(): ContexteChatValeur {
       enFermeture,
       fermerAvecFondu,
       demandePrefill,
+      demandeOuvrirConversation,
       chargement,
       erreur,
       agent,
@@ -261,6 +279,22 @@ export function useOuvrirChat() {
   // bouton "Ouvrir le chat" de EcranAccueil.tsx), non concernés par
   // cette demande.
   return (etat: EtatChat = "mini") => ctx?.setEtat(etat);
+}
+
+// 07/09/2026, bug signalé Bourama : cliquer sur une conversation
+// récente dans "Activité récente" (EcranAccueil.tsx) ouvrait le chat
+// mais ne chargeait rien -- ouvrirChat() ci-dessus n'a jamais eu de
+// notion de QUELLE conversation ouvrir. Dépose l'id demandé dans le
+// contexte partagé (demandeOuvrirConversation) puis ouvre le chat en
+// mini (même format que le bouton "Ouvrir le chat" de EcranAccueil) --
+// consommé par ChatFlottant.tsx, seul composant qui sait charger un fil
+// via selectionnerConversation, une fois l'agent chargé.
+export function useOuvrirConversation() {
+  const ctx = useContext(ContexteChat);
+  return (conversationId: string | null) => {
+    ctx?.setDemandeOuvrirConversation({ conversationId });
+    ctx?.setEtat("mini");
+  };
 }
 
 // 30/08/2026, tiroir mobile du chat plein écran (AppSidebar.tsx,

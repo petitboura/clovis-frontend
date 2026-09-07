@@ -146,6 +146,27 @@ export function ChatFlottant({
     // eslint-disable-next-line react-hooks/exhaustive-deps -- nouvelleConversation recréée à chaque rendu (pas dans useCallback), la comparer romprait l'effet ; seul demandePrefill doit déclencher ce passage.
   }, [demandePrefill]);
 
+  // 07/09/2026, bug signalé Bourama : cliquer sur une conversation
+  // récente de EcranAccueil.tsx ("Activité récente") ouvrait le chat
+  // sans jamais charger cette conversation précise (voir
+  // useOuvrirConversation, lib/contexteChat.tsx). L'agent doit être
+  // chargé avant d'appeler selectionnerConversation (elle a besoin
+  // d'agent.id) -- si la demande arrive avant, l'effet se redéclenche
+  // dès qu'`agent` arrive (dépendance ci-dessous) plutôt que de perdre
+  // la demande. Consommée une seule fois (setDemandeOuvrirConversation(null)),
+  // jamais réappliquée à une conversation suivante.
+  const demandeOuvrirConversation = ctxChat?.demandeOuvrirConversation ?? null;
+  useEffect(() => {
+    if (demandeOuvrirConversation === null || !agent) return;
+    selectionnerConversation({
+      conversation_id: demandeOuvrirConversation.conversationId,
+      titre: "",
+      derniere_activite: "",
+    });
+    ctxChat?.setDemandeOuvrirConversation(null);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- selectionnerConversation recréée à chaque rendu (pas dans useCallback) ; seuls demandeOuvrirConversation et agent doivent déclencher ce passage.
+  }, [demandeOuvrirConversation, agent]);
+
   const fermerAvecFondu = ctxChat?.fermerAvecFondu ?? (() => setEtat("fermee"));
 
   function nouvelleConversation() {
