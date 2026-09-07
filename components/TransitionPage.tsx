@@ -65,11 +65,29 @@ import { usePathname } from "next/navigation";
 // key={pathname} est ce qui déclenche AnimatePresence : sans lui, React
 // verrait toujours "la même" instance de <motion.div> d'une route à
 // l'autre (même position dans l'arbre) et ne jouerait jamais exit/enter.
+//
+// 07/09/2026, correctif Bourama ("la barre de saisie monte trop haut,
+// pas centrée avant le premier message, pas collée en bas après") :
+// aucune des deux divs ci-dessous n'avait de hauteur définie (juste
+// position/width), ce qui cassait la chaîne de hauteur entre <main>
+// (AppShell.tsx, hauteur définie via flex-1) et ChatSection.tsx/
+// ChatIA.tsx, qui comptent sur un h-full transmis jusqu'à eux pour
+// centrer verticalement l'écran d'accueil du chat et faire tenir la
+// zone de messages + barre de saisie sur toute la hauteur disponible.
+// Sans hauteur définie ici, ces divs ne prenaient que la hauteur de
+// leur contenu, donc tout remontait en haut au lieu d'être centré ou
+// étiré. height: "100%" ajouté aux deux (pas juste min-height : un
+// enfant en pourcentage de hauteur, comme h-full, n'a besoin que la
+// hauteur du bloc englobant soit définie, pas juste minimale) --
+// overflow reste visible par défaut sur les deux, donc les pages plus
+// longues que l'écran (paramètres, bibliothèque) continuent de
+// déborder normalement et de faire défiler <main> comme avant, rien
+// n'est coupé.
 export function TransitionPage({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
 
   return (
-    <div style={{ position: "relative" }}>
+    <div style={{ position: "relative", height: "100%" }}>
       <AnimatePresence initial={false}>
         <motion.div
           key={pathname}
@@ -77,7 +95,7 @@ export function TransitionPage({ children }: { children: React.ReactNode }) {
           animate={{ opacity: 1, position: "relative" }}
           exit={{ opacity: 0, position: "absolute", top: 0, left: 0, right: 0 }}
           transition={{ duration: 0.18, ease: "easeInOut" }}
-          style={{ width: "100%" }}
+          style={{ width: "100%", height: "100%" }}
         >
           {children}
         </motion.div>
