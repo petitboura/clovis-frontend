@@ -236,7 +236,20 @@ function MenuProfil({
             mobile ? "left-2" : "left-0"
           } ${enSortie ? "animate-cgpt-sortie-modal" : "animate-cgpt-entree-modal"}`}
         >
-          <button
+          {/* 07/09/2026, demande Bourama : "Paramètres" doit être une
+              section normale comme les autres, accessible par un vrai
+              lien Next.js (comme Bibliothèque/Notes/Chat, voir Link plus
+              haut dans ce fichier) au lieu d'un bouton qui navigue par
+              code -- seule façon d'obtenir le préchargement automatique
+              de Next.js et éviter le délai au premier clic (bug signalé :
+              "rien ne se passe" la première fois qu'on ouvre
+              Paramètres). Les effets de bord (fermeture du menu/tiroir,
+              marquage historique) restent dans onNaviguerVersProfil/
+              onNaviguerVersParametres (AppSidebar), qui ne font plus
+              eux-mêmes de router.push -- la navigation vient maintenant
+              du href du Link. */}
+          <Link
+            href="/parametres?vue=profil"
             onClick={() => {
               fermer();
               onNaviguerVersProfil();
@@ -248,11 +261,12 @@ function MenuProfil({
               <span className="truncate text-sm font-medium text-dj-texte">{libelle}</span>
               <span className="text-xs text-dj-texte-muet">Voir le profil</span>
             </div>
-          </button>
+          </Link>
 
           <div className="border-t border-dj-bordure" />
 
-          <button
+          <Link
+            href="/parametres"
             onClick={() => {
               fermer();
               onNaviguerVersParametres();
@@ -261,7 +275,7 @@ function MenuProfil({
           >
             <Settings size={16} className="text-dj-texte-muet" />
             Paramètres
-          </button>
+          </Link>
 
           <ThemeToggle LibelleRail={LibelleRail} ouverte />
 
@@ -1023,16 +1037,17 @@ export function AppSidebar({
             enSortieMenu={profilEnSortie}
             onNaviguerVersParametres={() => {
               // Même calque profilDeplie que la version mobile (voir
-              // MenuProfil mobile plus bas).
+              // MenuProfil mobile plus bas). Plus de naviguerVersSection
+              // ici (07/09/2026) : la navigation vient désormais du Link
+              // dans MenuProfil, ce callback ne gère plus que l'effet de
+              // bord (fermeture du menu profil).
               marquerProfilSansHistorique();
-              naviguerVersSection("/parametres");
             }}
             onNaviguerVersProfil={() => {
               // Même besoin que onNaviguerVersParametres juste au dessus,
               // mais vers la section Profil directement (voir
               // EspaceParametres.tsx, ?vue=profil).
               marquerProfilSansHistorique();
-              naviguerVersSection("/parametres?vue=profil");
             }}
             onSeDeconnecter={seDeconnecter}
           />
@@ -1239,11 +1254,17 @@ export function AppSidebar({
                   // marquer son calque, contrairement à tous les autres
                   // liens du tiroir), la page Paramètres se chargeait
                   // donc bien derrière, mais restait invisible, cachée
-                  // par le chat toujours affiché par dessus. Remplacé
-                  // par naviguerVersSection, la même fonction déjà
-                  // utilisée par naviguerDepuisPlusMobile/LienOnglet/
-                  // MenuGroupe juste au dessus dans ce fichier.
-                  naviguerVersSection("/parametres");
+                  // par le chat toujours affiché par dessus. Corrigé le
+                  // même jour en passant par naviguerVersSection au lieu
+                  // du router.push brut.
+                  // 07/09/2026 : naviguerVersSection (donc le router.push)
+                  // retiré d'ici -- MenuProfil utilise maintenant un vrai
+                  // Link pour "Paramètres"/"Voir le profil" (même
+                  // technique que les autres sections), qui gère la
+                  // navigation lui-même. Les effets de bord ci-dessus
+                  // (fermeture du tiroir/menu, marquage historique)
+                  // restent nécessaires et inchangés, seule la navigation
+                  // en double a été retirée.
                 }}
                 onNaviguerVersProfil={() => {
                   // Même besoin que onNaviguerVersParametres juste au
@@ -1253,7 +1274,6 @@ export function AppSidebar({
                   setProfilDeplie(false);
                   marquerTiroirSansHistorique();
                   fermerTiroirMobile(() => setOuverte(false));
-                  naviguerVersSection("/parametres?vue=profil");
                 }}
                 onSeDeconnecter={seDeconnecter}
               />
