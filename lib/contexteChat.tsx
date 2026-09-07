@@ -1,9 +1,13 @@
 "use client";
 
-import { createContext, useCallback, useContext, useState } from "react";
+import { createContext, useCallback, useContext, useEffect, useState } from "react";
 import type { MessageAffiche } from "@/components/chat/BulleMessage";
+import { appelerApi, lireOutilsChatAgent } from "@/lib/api";
+import { messageErreur } from "@/lib/erreurs";
 
 export type EtatChat = "fermee" | "mini" | "plein_ecran";
+
+const AGENT_INVITE_ID = "clovis";
 
 // Étape 1 (07/09/2026, chantier "chat plein écran = vraie section") :
 // types + état de la conversation (agent, messages, historique...)
@@ -114,6 +118,46 @@ export function useFournirContexteChat(): ContexteChatValeur {
   } | null>(null);
   const [historique, setHistorique] = useState<FilConversation[]>([]);
   const [texteInitialConversation, setTexteInitialConversation] = useState<string | null>(null);
+
+  // Étape 2 (07/09/2026, chantier "chat plein écran = vraie section") :
+  // ce chargement initial (détail agent + outils + historique) vivait
+  // avant dans ChatFlottant.tsx, monté une seule fois au niveau du
+  // layout. Déplacé ici, dans le fournisseur de contexte lui-même
+  // (également monté une seule fois dans AppShell.tsx), pour qu'il ne
+  // se déclenche qu'UNE FOIS quel que soit le nombre de composants qui
+  // liront ce contexte ensuite (ChatFlottant.tsx aujourd'hui, la future
+  // route /chat demain) -- sans ce déplacement, une future page /chat
+  // montée EN PLUS de ChatFlottant (toujours présent au niveau du
+  // layout) aurait redéclenché son propre fetch en double.
+  useEffect(() => {
+    let annule = false;
+    (async () => {
+      try {
+        const detail: AgentDetail = await appelerApi(`/api/agents/${AGENT_INVITE_ID}`);
+        const [outils, fils] = await Promise.all([
+          lireOutilsChatAgent(AGENT_INVITE_ID).catch(() => ({ outils: [], actions_locales: [] })),
+          appelerApi(`/api/historique/${AGENT_INVITE_ID}/conversations`).catch((e) => {
+            console.error("Erreur chargement historique conversations:", e);
+            return [] as FilConversation[];
+          }),
+        ]);
+        if (!annule) {
+          setAgent(detail);
+          setOutilsActifsAgent(outils);
+          setHistorique(fils as FilConversation[]);
+          setChargement("pret");
+        }
+      } catch (e) {
+        if (!annule) {
+          setErreur(messageErreur(e));
+          setChargement("erreur");
+        }
+      }
+    })();
+    return () => {
+      annule = true;
+    };
+  }, []);
 
   const fermerAvecFondu = useCallback(() => {
     setEnFermeture(true);

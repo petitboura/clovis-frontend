@@ -2,15 +2,14 @@
 
 import { useContext, useEffect, useRef, useState } from "react";
 import { Bird, X, Maximize2, Minimize2, MessageSquarePlus, History } from "lucide-react";
-import { appelerApi, lireOutilsChatAgent } from "@/lib/api";
-import { messageErreur } from "@/lib/erreurs";
+import { appelerApi } from "@/lib/api";
 import { ChatIA } from "./ChatIA";
 import { AppSidebar } from "@/components/AppSidebar";
 import { MessageAffiche, nettoyerMessageHistorique } from "./BulleMessage";
 import { CompteRequisModal } from "@/components/CompteRequisModal";
 import { Logo } from "@/components/Logo";
 import { useHauteurVisuelle } from "@/lib/useHauteurVisuelle";
-import { ContexteChat, type EtatChat, type FilConversation, type AgentDetail } from "@/lib/contexteChat";
+import { ContexteChat, type EtatChat, type FilConversation } from "@/lib/contexteChat";
 import { useFenetres } from "@/lib/contexteFenetres";
 import { useFermetureAuRetour } from "@/lib/contexteRetour";
 import { texteAccueilSelonHeure } from "@/lib/salutations";
@@ -32,7 +31,6 @@ import { Skeleton } from "@/components/Skeleton";
 // - "plein_ecran" : overlay plein écran, même logique de hauteur visuelle
 //   que l'ancien app/page.tsx (clavier mobile, voir useHauteurVisuelle).
 
-const AGENT_INVITE_ID = "clovis";
 const LIMITE_MESSAGES_INVITE = 5;
 const CLE_COMPTEUR_INVITE = "clovis_nb_messages_invite";
 const SOUS_TITRE_ACCUEIL_CLOVIS = "Ton compagnon d'études, à tes côtés.";
@@ -131,39 +129,6 @@ export function ChatFlottant({
     ctxChat?.setDemandePrefill(null);
     // eslint-disable-next-line react-hooks/exhaustive-deps -- nouvelleConversation recréée à chaque rendu (pas dans useCallback), la comparer romprait l'effet ; seul demandePrefill doit déclencher ce passage.
   }, [demandePrefill]);
-
-  // Chargé dès le montage du layout (pas seulement à l'ouverture du
-  // widget) : l'ouverture doit être instantanée, jamais un écran de
-  // chargement qui apparaît après coup.
-  useEffect(() => {
-    let annule = false;
-    (async () => {
-      try {
-        const detail: AgentDetail = await appelerApi(`/api/agents/${AGENT_INVITE_ID}`);
-        const [outils, fils] = await Promise.all([
-          lireOutilsChatAgent(AGENT_INVITE_ID).catch(() => ({ outils: [], actions_locales: [] })),
-          appelerApi(`/api/historique/${AGENT_INVITE_ID}/conversations`).catch((e) => {
-            console.error("Erreur chargement historique conversations:", e);
-            return [] as FilConversation[];
-          }),
-        ]);
-        if (!annule) {
-          setAgent(detail);
-          setOutilsActifsAgent(outils);
-          setHistorique(fils as FilConversation[]);
-          setChargement("pret");
-        }
-      } catch (e) {
-        if (!annule) {
-          setErreur(messageErreur(e));
-          setChargement("erreur");
-        }
-      }
-    })();
-    return () => {
-      annule = true;
-    };
-  }, []);
 
   const fermerAvecFondu = ctxChat?.fermerAvecFondu ?? (() => setEtat("fermee"));
 

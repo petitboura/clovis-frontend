@@ -44,14 +44,22 @@ components/
                             panneau flottant, reprend le contenu de l'ancien onglet Plus
     MenuHamburgerWeb.tsx    même menu, variante web
     GestionRetourNatif.tsx  gestion du bouton retour matériel Android
-  chat/                  composants du chat (ChatIA.tsx, ChatFlottant.tsx, BarreDeSaisie.tsx...)
+  chat/                  composants du chat (ChatIA.tsx, ChatFlottant.tsx, BarreDeSaisie.tsx...) ;
+                          ChatSection.tsx (07/09/2026) : version "page normale" du chat plein écran
+                          pour la route /chat (chantier en cours "chat plein écran = vraie section" --
+                          ChatFlottant.tsx gère encore l'ancien overlay fixed en parallèle tant que le
+                          chantier n'est pas terminé)
   icones/, icons/        icônes du produit
 
 lib/
   api.ts                 client HTTP vers clovis-backend (NEXT_PUBLIC_API_URL)
   supabase.ts             client Supabase (auth + DB), enregistrement des plugins Capacitor natifs
   contexteChat.tsx        état global du chat (état "plein_ecran" lu par la barre d'onglets,
-                          préremplissage d'une nouvelle conversation via useOuvrirChatAvecTexte)
+                          préremplissage d'une nouvelle conversation via useOuvrirChatAvecTexte) ;
+                          porte aussi l'état de la conversation elle-même (agent, messages,
+                          historique...) depuis le 07/09/2026, remonté depuis ChatFlottant.tsx pour
+                          qu'il soit lisible à la fois par ChatFlottant.tsx et par la future route
+                          /chat (ChatSection.tsx) sans dupliquer le chargement initial
   contexteCatalogue.tsx, contexteFenetres.tsx, contexteRetour.tsx  autres contextes React globaux
   canalTempsReel.ts      client du canal temps réel avec le backend (exploration de dossier mobile...)
   usePluginNatif.ts       hook d'accès générique aux plugins Capacitor
