@@ -1,11 +1,16 @@
 "use client";
 
 import { createContext, useCallback, useContext, useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
 import type { MessageAffiche } from "@/components/chat/BulleMessage";
 import { appelerApi, lireOutilsChatAgent } from "@/lib/api";
 import { messageErreur } from "@/lib/erreurs";
 
-export type EtatChat = "fermee" | "mini" | "plein_ecran";
+// "plein_ecran" retiré du type le 07/09/2026 (chantier "chat plein écran
+// = vraie section", étape 5) : /chat est désormais une route comme les
+// autres, plus un état de ce contexte -- ChatFlottant.tsx ne gère plus
+// que la bulle fermée et le popup mini.
+export type EtatChat = "fermee" | "mini";
 
 const AGENT_INVITE_ID = "clovis";
 
@@ -204,9 +209,18 @@ export function useFournirContexteChat(): ContexteChatValeur {
 // manipuler etat/demandePrefill séparément et risquer de les désynchroniser.
 export function useOuvrirChatAvecTexte() {
   const ctx = useContext(ContexteChat);
+  const router = useRouter();
+  // 07/09/2026 (chantier "chat plein écran = vraie section", étape 5,
+  // demande Bourama : "tout va vers /chat tout") : navigue vers la
+  // vraie route /chat au lieu de passer etat sur "plein_ecran" (état
+  // retiré, voir EtatChat ci-dessus). fermerAvecFondu d'abord : si un
+  // popup mini était déjà ouvert, il ne doit pas rester affiché
+  // par-dessus la page /chat, même mécanique que agrandirEnPleinEcran
+  // (ChatFlottant.tsx) et l'action Cmd+K (PaletteCommandes.tsx).
   return (texte: string) => {
     ctx?.setDemandePrefill(texte);
-    ctx?.setEtat("plein_ecran");
+    ctx?.fermerAvecFondu();
+    router.push("/chat");
   };
 }
 

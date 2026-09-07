@@ -1,17 +1,15 @@
 "use client";
 
-import { useContext, useEffect, useRef, useState } from "react";
+import { useContext, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { Bird, X, Maximize2, Minimize2, MessageSquarePlus, History } from "lucide-react";
+import { Bird, X, Maximize2, MessageSquarePlus, History } from "lucide-react";
 import { appelerApi } from "@/lib/api";
 import { ChatIA } from "./ChatIA";
-import { AppSidebar } from "@/components/AppSidebar";
 import { MessageAffiche, nettoyerMessageHistorique } from "./BulleMessage";
 import { CompteRequisModal } from "@/components/CompteRequisModal";
 import { Logo } from "@/components/Logo";
 import { useHauteurVisuelle } from "@/lib/useHauteurVisuelle";
 import { ContexteChat, type EtatChat, type FilConversation } from "@/lib/contexteChat";
-import { useFenetres } from "@/lib/contexteFenetres";
 import { useFermetureAuRetour } from "@/lib/contexteRetour";
 import { texteAccueilSelonHeure } from "@/lib/salutations";
 import { Skeleton } from "@/components/Skeleton";
@@ -24,20 +22,18 @@ import { Skeleton } from "@/components/Skeleton";
 // l'app (voir components/AppShell.tsx) -- jamais remontée en changeant de
 // section de Mon espace, pour ne jamais perdre la conversation en cours.
 //
-// Trois états, jamais de démontage de ChatIA entre eux (juste un
+// Deux états, jamais de démontage de ChatIA entre eux (juste un
 // changement d'habillage CSS) pour préserver la conversation :
 // - "fermee" : uniquement la bulle icône, ChatIA reste monté mais caché.
 // - "mini" : petite fenêtre utilisable en bas à droite (bas de l'écran
 //   sur mobile, faute de place).
-// - "plein_ecran" : overlay plein écran, même logique de hauteur visuelle
-//   que l'ancien app/page.tsx (clavier mobile, voir useHauteurVisuelle).
-//   Étape 4 (07/09/2026, chantier "chat plein écran = vraie section") :
-//   plus aucun déclencheur de ce composant ne pose directement cet état
-//   désormais (le bouton Maximize2 plus bas navigue vers la vraie route
-//   /chat, voir agrandirEnPleinEcran) -- cette branche ne reste ici que
-//   pour la palette de commandes (PaletteCommandes.tsx, migrée dans le
-//   même chantier) et sera retirée à l'étape 5 une fois plus personne ne
-//   l'utilise.
+// Étape 5 (07/09/2026, chantier "chat plein écran = vraie section") :
+// l'ancien troisième état "plein_ecran" (overlay fixed inset-0 par-dessus
+// l'app) est retiré -- plus aucun déclencheur ne le pose (bulle, barres
+// d'onglets, palette de commandes, préremplissage automatique naviguent
+// tous vers la vraie route /chat désormais, voir agrandirEnPleinEcran
+// plus bas et lib/contexteChat.tsx::useOuvrirChatAvecTexte). Le mode
+// plein écran vit maintenant uniquement dans ChatSection.tsx (/chat).
 
 const LIMITE_MESSAGES_INVITE = 5;
 const CLE_COMPTEUR_INVITE = "clovis_nb_messages_invite";
@@ -156,29 +152,12 @@ export function ChatFlottant({
   });
 
   // 31/08/2026, demande Bourama : le bouton retour (natif + web mobile)
-  // devait d'abord repasser le chat plein écran en mini, PUIS seulement
-  // au retour suivant le fermer complètement -- jamais fermer l'appli
-  // directement.
-  // Correctif (05/09/2026, Bourama : "le retour... ne le ferme pas ils
-  // le mettent en mini... faut qu'il ne se ferme pas brutement") :
-  // décision du 31/08 explicitement inversée -- le retour ferme
-  // maintenant directement le chat plein écran, avec le même fondu
-  // (fermerAvecFondu) que le bouton "Fermer" de l'en-tête, plutôt que de
-  // passer par mini. Le calque `etat === "mini"` juste en dessous reste
-  // utile pour un autre cas : la réduction manuelle en mini (bouton
-  // Réduire, onClick={() => setEtat("mini")} plus bas) reste inchangée,
-  // et un retour depuis cet état mini doit toujours fermer (avec fondu).
-  // 05/09/2026, marquerFermetureSansHistorique (issu de ce hook, voir
-  // lib/contexteRetour.tsx) reste transmis à AppSidebar.tsx : nécessaire
-  // dès qu'une fermeture de ce calque est déclenchée par une vraie
-  // navigation déjà en cours (fermerChatEtNaviguer) plutôt que par un
-  // vrai retour -- sans ça, le démontage du calque au changement d'état
-  // consommerait quand même une entrée d'historique et annulerait cette
-  // navigation (bug initialement corrigé le 03/09/2026).
-  const { marquerFermetureSansHistorique: marquerPleinEcranSansHistorique } = useFermetureAuRetour(
-    etat === "plein_ecran",
-    fermerAvecFondu
-  );
+  // ferme le popup mini avec le même fondu (fermerAvecFondu) que le
+  // bouton "Fermer" de l'en-tête plutôt que de fermer sec.
+  // Étape 5 (07/09/2026) : le calque équivalent pour l'ancien overlay
+  // "plein_ecran" (marquerPleinEcranSansHistorique) est retiré avec lui.
+  // Le comportement du bouton retour sur la vraie page /chat reste à
+  // trancher séparément avec Bourama (voir ChatSection.tsx).
   const { marquerFermetureSansHistorique: marquerMiniSansHistorique } = useFermetureAuRetour(etat === "mini", fermerAvecFondu);
 
   // Étape 4 (07/09/2026, chantier "chat plein écran = vraie section") :
@@ -294,114 +273,68 @@ export function ChatFlottant({
     );
   }
 
-  const pleinEcran = etat === "plein_ecran";
-  // 22/08/2026, demande Bourama : cliquer dans l'interface du CHAT
-  // lui-même (pas la sidebar-rail à côté, qui a déjà sa propre logique
-  // d'ouverture/premier-plan) ferme TOUTES les fenêtres flottantes de
-  // sections. Voir les deux onMouseDownCapture posés plus bas (en-tête +
-  // zone de contenu du chat), jamais sur le conteneur englobant qui
-  // contiendrait aussi la sidebar.
-  const { fenetres, fermerToutes } = useFenetres();
-  function fermerFenetresAuClic() {
-    if (pleinEcran && fenetres.length > 0) fermerToutes();
-  }
+  // 22/08/2026, demande Bourama : "cliquer dans l'interface du CHAT ferme
+  // toutes les fenêtres flottantes de sections" -- ne concernait que
+  // l'ancien overlay plein écran (seul endroit où FenetresSections.tsx
+  // pouvait s'ouvrir par-dessus le chat, via l'instance AppSidebar
+  // contexteChat qui vivait ici). Retiré avec l'overlay à l'étape 5
+  // (07/09/2026) : le popup mini n'a jamais eu de fenêtres de section à
+  // fermer.
 
   return (
     <div
       className={
-        (pleinEcran
-          ? "fixed inset-0 z-[110] flex flex-col bg-dj-fond"
-          : // Mini popup : centré au milieu de l'écran en desktop (demande
-            // Bourama, 17/08/2026 -- "le popup se met à gauche, au coin, je
-            // veux qu'il soit au milieu"), inchangé en bas à droite sur
-            // mobile (faute de place, clavier virtuel). La bulle fermée,
-            // elle, reste toujours en bas à droite (voir le bouton
-            // ci-dessus) -- seule la fenêtre une fois ouverte est concernée.
-            //
-            // CORRECTIF 18/08/2026 (Bourama : "le popup ... trop en bas") :
-            // le centrage se faisait avant via left-1/2 top-1/2 +
-            // -translate-x/y-1/2, mais cgpt-entree-modal (juste en
-            // dessous) anime aussi la propriété transform -- une fois
-            // l'animation finie (fill-mode "both"), son état final
-            // "translateY(0) scale(1)" écrasait complètement notre
-            // décalage de centrage, qui utilisait aussi transform. Le
-            // popup perdait son -50% vertical et se retrouvait affiché
-            // une demi-hauteur trop bas. Centrage refait ici avec
-            // inset-0 + margin:auto (propriétés indépendantes de
-            // transform), qui coexiste sans conflit avec l'animation.
-            //
-            // 28/08/2026, chantier "web mobile façon appli" : bottom-5
-            // remplacé par un calc() incluant --dj-barre-onglets-web
-            // (vaut 0px en natif et sur desktop, voir app/globals.css),
-            // pour lever le popup au-dessus de BarreOngletsWeb sur mobile web.
-            "fixed bottom-[calc(1.25rem+var(--dj-barre-onglets-web,0px))] right-5 z-40 flex h-[min(70dvh,600px)] w-[min(92vw,380px)] flex-col overflow-hidden rounded-cgpt-carte border border-dj-bordure bg-dj-fond shadow-[0_4px_30px_rgba(0,0,0,0.45)] md:inset-0 md:m-auto") +
+        // Mini popup : centré au milieu de l'écran en desktop (demande
+        // Bourama, 17/08/2026 -- "le popup se met à gauche, au coin, je
+        // veux qu'il soit au milieu"), inchangé en bas à droite sur
+        // mobile (faute de place, clavier virtuel). La bulle fermée,
+        // elle, reste toujours en bas à droite (voir le bouton
+        // ci-dessus) -- seule la fenêtre une fois ouverte est concernée.
+        //
+        // CORRECTIF 18/08/2026 (Bourama : "le popup ... trop en bas") :
+        // le centrage se faisait avant via left-1/2 top-1/2 +
+        // -translate-x/y-1/2, mais cgpt-entree-modal (juste en dessous)
+        // anime aussi la propriété transform -- une fois l'animation
+        // finie (fill-mode "both"), son état final "translateY(0)
+        // scale(1)" écrasait complètement notre décalage de centrage,
+        // qui utilisait aussi transform. Le popup perdait son -50%
+        // vertical et se retrouvait affiché une demi-hauteur trop bas.
+        // Centrage refait ici avec inset-0 + margin:auto (propriétés
+        // indépendantes de transform), qui coexiste sans conflit avec
+        // l'animation.
+        //
+        // 28/08/2026, chantier "web mobile façon appli" : bottom-5
+        // remplacé par un calc() incluant --dj-barre-onglets-web (vaut
+        // 0px en natif et sur desktop, voir app/globals.css), pour lever
+        // le popup au-dessus de BarreOngletsWeb sur mobile web.
+        "fixed bottom-[calc(1.25rem+var(--dj-barre-onglets-web,0px))] right-5 z-40 flex h-[min(70dvh,600px)] w-[min(92vw,380px)] flex-col overflow-hidden rounded-cgpt-carte border border-dj-bordure bg-dj-fond shadow-[0_4px_30px_rgba(0,0,0,0.45)] md:inset-0 md:m-auto" +
         // Fondu d'ouverture (mount -- reprend l'animation standard des
         // modals du projet, cgpt-entree-modal) et de fermeture (juste
         // avant le démontage réel, voir fermerAvecFondu) -- demande
         // Bourama 18/08/2026 : "le popup disparaît ... apparaît brut".
-        //
-        // 01/09/2026 : en plein écran, jamais de scale() ici -- une
-        // transform (même figée à scale(1) par le fill-mode "both" de
-        // cgpt-entree-modal) fait de ce conteneur le containing block de
-        // tous ses descendants position:fixed (ex. le tiroir Historique
-        // dans AppSidebar), qui ne flottent plus par rapport au vrai
-        // écran mais sont piégés dedans -- et pousse Chrome à composer
-        // toute la zone comme un calque à part, ce qui abîmait le texte
-        // de l'historique (illisible/coloré tant qu'on ne forçait pas un
-        // redessin en zoomant). Le plein écran garde donc un fondu pur
-        // (dj-fade-in-rapide, opacity uniquement), le popup mini
-        // conserve le zoom existant (rien à piéger à l'intérieur).
-        (pleinEcran
-          ? enFermeture
-            ? " pointer-events-none opacity-0 transition-opacity duration-200 ease-cgpt-doux"
-            : " animate-dj-fade-in-rapide"
-          : enFermeture
-            ? " pointer-events-none scale-95 opacity-0 transition-all duration-200 ease-cgpt-doux"
-            : " animate-cgpt-entree-modal transition-all duration-200 ease-cgpt-doux")
+        (enFermeture
+          ? " pointer-events-none scale-95 opacity-0 transition-all duration-200 ease-cgpt-doux"
+          : " animate-cgpt-entree-modal transition-all duration-200 ease-cgpt-doux")
       }
-      style={pleinEcran ? { height: "var(--vh-visuelle, 100dvh)" } : undefined}
     >
-      {/* En-tête compact. En mode mini : nouvelle conversation +
-          historique en dropdown, faute de place pour un vrai rail. En
-          mode plein écran, ces deux-là vivent désormais dans AppSidebar
-          (contexteChat=true) juste en dessous, RailChatPleinEcran.tsx
-          supprimé le 21/08/2026 (demande Bourama : "il faut qu'il soit
-          la barre latérale de l'app avec les deux nouveaux boutons rien
-          d'autre") -- pas de doublon ici. Partager / Avis / Pourquoi
-          Clovis restent dans le dropdown Actions de cette même
-          AppSidebar, jamais dupliqués dans l'en-tête du chat. */}
+      {/* En-tête compact du popup mini : nouvelle conversation +
+          historique en dropdown, faute de place pour un vrai rail
+          (l'équivalent en plein écran vit dans AppSidebar, rendue par
+          ChatSection.tsx sur la route /chat depuis l'étape 5). */}
       <div
-        onMouseDownCapture={fermerFenetresAuClic}
-        // Correctif (26/08/2026) : en mode plein écran (fixed inset-0),
-        // cet en-tête touche littéralement le tout haut du viewport,
-        // sous encoche/île dynamique en PWA installée (display:standalone
-        // + viewportFit:"cover", voir app/layout.tsx/manifest.ts), le
-        // logo/titre se retrouvait coincé sous la barre de statut. Ajout
-        // sur le py-2.5 existant, pas un remplacement (0px sur desktop/
-        // appareil sans encoche, donc sans effet là où ce n'est pas
-        // nécessaire), pas de concernement en mode mini (jamais ancré
-        // en haut d'écran, voir bottom-5 right-5 ci-dessus).
-        //
-        // 30/08/2026, demande Bourama : plus de bouton Réduire qui ait
-        // un sens sur mobile (le mode mini est un widget flottant
-        // desktop, jamais atteignable depuis mobile, voir
-        // BarreOngletsNative.tsx/BarreOngletsWeb.tsx qui appellent
-        // toujours ouvrirChat("plein_ecran") directement) -- logo/titre,
-        // Réduire et Fermer retirés d'un coup en masquant tout l'en-tête
-        // sur mobile (hidden md:flex), plutôt que de garder une barre
-        // vide avec juste sa bordure. Desktop plein écran (atteint en
-        // agrandissant le mini widget) inchangé, même en-tête qu'avant.
-        // Le padding de sécurité (encoche) qui vivait ici sur mobile est
-        // du coup déplacé sur le conteneur du contenu juste en dessous.
-        className={`${pleinEcran ? "hidden md:flex" : "flex"} flex-shrink-0 items-center gap-2 border-b border-dj-bordure px-3 pb-2.5 ${
-          pleinEcran ? "pt-[calc(0.625rem+var(--safe-top))]" : "pt-2.5"
-        }`}
+        // Étape 5 (07/09/2026) : cet en-tête ne gère plus que le mode
+        // mini (popup, desktop uniquement, voir le early return "fermee"
+        // plus haut et BarreOngletsNative.tsx/BarreOngletsWeb.tsx qui
+        // naviguent vers /chat pour mobile) -- toujours visible, plus de
+        // ternaire hidden md:flex qui ne servait qu'à le masquer en mode
+        // plein écran mobile, cas qui n'existe plus ici.
+        className="flex flex-shrink-0 items-center gap-2 border-b border-dj-bordure px-3 pb-2.5 pt-2.5"
       >
         <Logo taille={20} />
         <span className="font-display text-sm font-bold text-dj-texte">Clovis</span>
 
         <div className="ml-auto flex items-center gap-1">
-          {!pleinEcran && nbMessages > 0 && (
+          {nbMessages > 0 && (
             <button
               onClick={nouvelleConversation}
               title="Nouvelle conversation"
@@ -410,7 +343,7 @@ export function ChatFlottant({
               <MessageSquarePlus size={16} className="transition-transform duration-200 group-hover:-translate-y-0.5 group-hover:rotate-6" />
             </button>
           )}
-          {!pleinEcran && historique.length > 0 && (
+          {historique.length > 0 && (
             <div className="relative">
               <button
                 onClick={() => setHistoriqueOuvert((v) => !v)}
@@ -437,15 +370,11 @@ export function ChatFlottant({
             </div>
           )}
           <button
-            onClick={() => (pleinEcran ? setEtat("mini") : agrandirEnPleinEcran())}
-            title={pleinEcran ? "Réduire" : "Plein écran"}
+            onClick={agrandirEnPleinEcran}
+            title="Plein écran"
             className="group flex h-8 w-8 items-center justify-center rounded-cgpt-bouton text-dj-texte-muet transition-colors hover:bg-dj-surface-haute hover:text-dj-texte"
           >
-            {pleinEcran ? (
-              <Minimize2 size={16} className="transition-transform duration-200 group-hover:scale-90" />
-            ) : (
-              <Maximize2 size={16} className="transition-transform duration-200 group-hover:scale-110" />
-            )}
+            <Maximize2 size={16} className="transition-transform duration-200 group-hover:scale-110" />
           </button>
           <button
             onClick={fermerAvecFondu}
@@ -458,37 +387,7 @@ export function ChatFlottant({
       </div>
 
       <div className="flex min-h-0 flex-1">
-        {pleinEcran && (
-          <AppSidebar
-            connecte={connecte}
-            onOuvrirCatalogue={onOuvrirCatalogue}
-            contexteChat
-            aDesMessages={nbMessages > 0}
-            conversationActiveId={cle}
-            historique={historique}
-            onNouvelleConversation={nouvelleConversation}
-            onSelectionnerConversation={selectionnerConversation}
-            marquerPleinEcranSansHistorique={marquerPleinEcranSansHistorique}
-          />
-        )}
-
-        <div
-          onMouseDownCapture={fermerFenetresAuClic}
-          // 30/08/2026 : reprend le padding de sécurité (encoche) que
-          // l'en-tête portait avant sur mobile plein écran, maintenant
-          // masqué (hidden md:flex) -- sans ça le contenu remonterait
-          // sous la barre de statut. Seulement pour ce cas précis
-          // (md:pt-0 annule sur desktop, où l'en-tête est toujours là et
-          // gère déjà l'encoche lui-même).
-          //
-          // Correctif (31/08/2026, meme bug hamburger que AppShell.tsx) :
-          // AppSidebar rendue juste au-dessus (contexteChat, donc son
-          // propre bouton hamburger mobile, voir AppSidebar.tsx ~L647)
-          // flotte aussi par-dessus ce conteneur -- ajout de
-          // --dj-hamburger-espace (voir app/globals.css) au safe-top deja
-          // present, vaut 0px sur desktop donc md:pt-0 reste inchange.
-          className={`relative min-h-0 flex-1 ${pleinEcran ? "pt-[calc(var(--safe-top)+var(--dj-hamburger-espace))] md:pt-0" : ""}`}
-        >
+        <div className="relative min-h-0 flex-1">
           {/* Comble le trou identifié dans l'audit (30/08) : avant, rien
               ne s'affichait entre le clic sur une conversation passée et
               l'arrivée de la réponse -- l'ancien fil restait figé à
@@ -555,7 +454,6 @@ export function ChatFlottant({
               outilsActifsAgent={outilsActifsAgent}
               boutonSansEnseignant={false}
               avantEnvoi={verifierLimiteInvite}
-              pleinEcran={pleinEcran}
               natif={natif}
             />
           )}
@@ -564,18 +462,17 @@ export function ChatFlottant({
 
       {compteRequis && (
         // CORRECTIF (audit 25/08/2026) : z-[100] par défaut du composant
-        // passait DERRIÈRE le chat plein écran (z-[110] plus haut dans ce
-        // même fichier) -- le popup "compte requis" devenait invisible,
-        // présent dans le DOM mais inaccessible, si déclenché pendant que
-        // le chat est en plein écran.
-        // z-[150] (relevé le 28/08/2026, ex z-[120]) : les fenêtres de
-        // section (FenetresSections.tsx) montent aussi jusqu'à 120+,
-        // z-[120] ne suffisait donc plus dès qu'une fenêtre de section
-        // était ouverte en même temps. Ces fenêtres sont maintenant
-        // bornées à 120-124 max (voir le correctif dans
-        // FenetresSections.tsx) -- z-[150] garde une marge large et
-        // durable au-dessus, quel que soit le nombre de fenêtres
-        // ouvertes ou la durée de la session.
+        // passait derrière ce popup mini (z-40 plus haut dans ce même
+        // fichier) -- le popup "compte requis" devenait invisible,
+        // présent dans le DOM mais inaccessible, si déclenché pendant
+        // que le chat est ouvert.
+        // z-[150] (relevé le 28/08/2026, ex z-[120]) : à l'époque, les
+        // fenêtres de section (FenetresSections.tsx) montaient aussi
+        // jusqu'à 120+, z-[120] ne suffisait donc plus dès qu'une
+        // fenêtre de section était ouverte en même temps que le chat en
+        // plein écran (overlay retiré depuis, voir étape 5 en tête de
+        // fichier, mais cette valeur n'a pas encore été réévaluée --
+        // étape 6 du même chantier, pas encore faite).
         <CompteRequisModal
           texte="Crée un compte pour continuer."
           onFerme={() => setCompteRequis(false)}
