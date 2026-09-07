@@ -568,7 +568,10 @@ export function AppSidebar({
   // sert donc plus qu'au popup "Plus" du rail desktop juste au-dessus
   // dans ce fichier, qui n'a besoin d'aucun marqueur (jamais fermé par
   // une navigation qui viendrait d'avoir lieu depuis l'intérieur).
-  useFermetureAuRetour(actionsDeplie, () => setActionsDeplie(false));
+  const { marquerFermetureSansHistorique: marquerActionsSansHistorique } = useFermetureAuRetour(
+    actionsDeplie,
+    () => setActionsDeplie(false)
+  );
   const { marquerFermetureSansHistorique: marquerGroupeSansHistorique } = useFermetureAuRetour(groupeOuvertId !== null, () => setGroupeOuvertId(null));
   useFermetureAuRetour(historiqueDeplie, () => setHistoriqueDeplie(false));
   const { marquerFermetureSansHistorique: marquerProfilSansHistorique } = useFermetureAuRetour(profilDeplie, () => fermerProfilMenu(() => setProfilDeplie(false)));
@@ -954,6 +957,16 @@ export function AppSidebar({
                         key={o.href}
                         href={o.href}
                         onClick={(e) => {
+                          // 07/09/2026, correctif Bourama : ce dropdown
+                          // s'enregistre dans la pile de contexteRetour.tsx
+                          // (voir useFermetureAuRetour(actionsDeplie, ...)
+                          // plus haut) -- sans marquer AVANT de fermer, le
+                          // démontage consommait une entrée d'historique
+                          // (history.back()) et annulait la navigation qui
+                          // venait d'avoir lieu (clic clignotait puis
+                          // revenait en arrière). Même correctif déjà en
+                          // place pour le tiroir/le groupe/le menu profil.
+                          marquerActionsSansHistorique();
                           setActionsDeplie(false);
                           if (contexteChat) {
                             e.preventDefault();
