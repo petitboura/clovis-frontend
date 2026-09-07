@@ -1,6 +1,7 @@
 "use client";
 
 import { useContext, useEffect, useRef, useState } from "react";
+import { useRouter } from "next/navigation";
 import { Bird, X, Maximize2, Minimize2, MessageSquarePlus, History } from "lucide-react";
 import { appelerApi } from "@/lib/api";
 import { ChatIA } from "./ChatIA";
@@ -30,6 +31,13 @@ import { Skeleton } from "@/components/Skeleton";
 //   sur mobile, faute de place).
 // - "plein_ecran" : overlay plein écran, même logique de hauteur visuelle
 //   que l'ancien app/page.tsx (clavier mobile, voir useHauteurVisuelle).
+//   Étape 4 (07/09/2026, chantier "chat plein écran = vraie section") :
+//   plus aucun déclencheur de ce composant ne pose directement cet état
+//   désormais (le bouton Maximize2 plus bas navigue vers la vraie route
+//   /chat, voir agrandirEnPleinEcran) -- cette branche ne reste ici que
+//   pour la palette de commandes (PaletteCommandes.tsx, migrée dans le
+//   même chantier) et sera retirée à l'étape 5 une fois plus personne ne
+//   l'utilise.
 
 const LIMITE_MESSAGES_INVITE = 5;
 const CLE_COMPTEUR_INVITE = "clovis_nb_messages_invite";
@@ -131,6 +139,7 @@ export function ChatFlottant({
   }, [demandePrefill]);
 
   const fermerAvecFondu = ctxChat?.fermerAvecFondu ?? (() => setEtat("fermee"));
+  const router = useRouter();
 
   function nouvelleConversation() {
     setCle(crypto.randomUUID());
@@ -170,7 +179,22 @@ export function ChatFlottant({
     etat === "plein_ecran",
     fermerAvecFondu
   );
-  useFermetureAuRetour(etat === "mini", fermerAvecFondu);
+  const { marquerFermetureSansHistorique: marquerMiniSansHistorique } = useFermetureAuRetour(etat === "mini", fermerAvecFondu);
+
+  // Étape 4 (07/09/2026, chantier "chat plein écran = vraie section") :
+  // agrandir le popup mini (bouton Maximize2 plus bas) navigue désormais
+  // vers la vraie route /chat (app/(app)/chat/page.tsx, étape 2) au lieu
+  // de passer etat sur "plein_ecran" -- même fondu de fermeture que
+  // fermerChatEtNaviguer (AppSidebar.tsx) pour éviter que ce popup mini
+  // reste affiché par-dessus la page /chat, et marquerMiniSansHistorique
+  // pour que le démontage du calque "mini" (déclenché par ce même fondu)
+  // ne consomme pas une entrée d'historique et n'annule pas cette
+  // navigation.
+  function agrandirEnPleinEcran() {
+    marquerMiniSansHistorique?.();
+    fermerAvecFondu();
+    router.push("/chat");
+  }
   // Sous-menu historique (mode mini, dropdown dans l'en-tête -- voir plus
   // bas) et modale "compte requis" : mêmes calques de retour que le reste
   // de l'appli.
@@ -413,7 +437,7 @@ export function ChatFlottant({
             </div>
           )}
           <button
-            onClick={() => setEtat(pleinEcran ? "mini" : "plein_ecran")}
+            onClick={() => (pleinEcran ? setEtat("mini") : agrandirEnPleinEcran())}
             title={pleinEcran ? "Réduire" : "Plein écran"}
             className="group flex h-8 w-8 items-center justify-center rounded-cgpt-bouton text-dj-texte-muet transition-colors hover:bg-dj-surface-haute hover:text-dj-texte"
           >

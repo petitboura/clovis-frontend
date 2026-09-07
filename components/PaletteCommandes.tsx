@@ -142,7 +142,16 @@ export function PaletteCommandes({
         id: "chat-plein-ecran",
         label: "Ouvrir Clovis en plein écran",
         Icone: Maximize2,
-        action: () => setEtatChat("plein_ecran"),
+        // Étape 4 (07/09/2026, chantier "chat plein écran = vraie
+        // section") : navigue vers la vraie route /chat (voir
+        // app/(app)/chat/page.tsx, étape 2) au lieu de passer etatChat
+        // sur "plein_ecran" (ChatFlottant.tsx, mode overlay). setEtatChat
+        // ("fermee") d'abord : si un popup mini était déjà ouvert, il ne
+        // doit pas rester affiché par-dessus la page /chat.
+        action: () => {
+          setEtatChat("fermee");
+          router.push("/chat");
+        },
       },
       {
         id: "theme",
