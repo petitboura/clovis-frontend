@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { ScrollText } from "lucide-react";
 import { listerMesRattachementsCodes, type RattachementCode } from "@/lib/api";
+import { VoirSkillRecuModal } from "@/components/VoirSkillRecuModal";
 
 /**
  * Comportements reçus via un code (14/08/2026, voir
@@ -22,9 +23,14 @@ import { listerMesRattachementsCodes, type RattachementCode } from "@/lib/api";
  * brut qui n'existe plus à ce niveau (le texte complet reste lu à la
  * demande via consulter_comportement, jamais affiché d'office, même
  * principe que pour les comportements propres).
+ *
+ * 07/09/2026, demande Bourama (bug remonté : ces skills n'étaient
+ * ouvrables nulle part, ni ici ni dans Bureau) : chaque nom est
+ * maintenant cliquable, ouvre VoirSkillRecuModal en lecture seule.
  */
 export function ComportementsRecus() {
   const [rattachements, setRattachements] = useState<RattachementCode[] | undefined>(undefined);
+  const [skillOuvert, setSkillOuvert] = useState<{ id: string; nom: string; proprietaireNom: string } | null>(null);
 
   useEffect(() => {
     listerMesRattachementsCodes()
@@ -46,12 +52,33 @@ export function ComportementsRecus() {
           <ScrollText size={16} className="mt-0.5 flex-shrink-0 text-dj-texte-muet" />
           <div className="min-w-0 flex-1">
             <p className="text-xs text-dj-texte-muet">Reçu de {r.proprietaire_nom}</p>
-            <p className="mt-0.5 text-sm leading-relaxed text-dj-texte">
-              {r.comportements.map((cmp) => cmp.nom).filter(Boolean).join(", ")}
+            <p className="mt-0.5 flex flex-wrap gap-x-1.5 gap-y-1 text-sm leading-relaxed text-dj-texte">
+              {r.comportements
+                .filter((cmp) => cmp.nom)
+                .map((cmp, i) => (
+                  <span key={cmp.id}>
+                    <button
+                      onClick={() => setSkillOuvert({ id: cmp.id, nom: cmp.nom, proprietaireNom: r.proprietaire_nom })}
+                      className="underline decoration-dj-bordure-forte underline-offset-2 transition-colors hover:text-dj-accent-1"
+                    >
+                      {cmp.nom}
+                    </button>
+                    {i < r.comportements.filter((c) => c.nom).length - 1 ? "," : ""}
+                  </span>
+                ))}
             </p>
           </div>
         </div>
       ))}
+
+      {skillOuvert && (
+        <VoirSkillRecuModal
+          comportementId={skillOuvert.id}
+          nom={skillOuvert.nom}
+          proprietaireNom={skillOuvert.proprietaireNom}
+          onFermer={() => setSkillOuvert(null)}
+        />
+      )}
     </div>
   );
 }

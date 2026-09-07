@@ -12,6 +12,7 @@ import { messageErreur, ErreurApi } from "@/lib/erreurs";
 import { Skeleton } from "./Skeleton";
 import { CTACompteRequis } from "./CTACompteRequis";
 import { BoutonInfoSection } from "./BoutonInfoSection";
+import { VoirSkillRecuModal } from "@/components/VoirSkillRecuModal";
 
 /**
  * Bloc "Entrer un code" (réécrit le 14/08/2026, demande Bourama --
@@ -35,6 +36,9 @@ export function EspaceEntrerCode() {
   // Refonte "Mon espace = l'app" : section auparavant inatteignable sans
   // compte, même détection 401 que les autres.
   const [sansCompte, setSansCompte] = useState(false);
+  // 07/09/2026, demande Bourama (bug remonté : skills reçus jamais
+  // ouvrables ici) : même popup en lecture seule que ComportementsRecus.tsx.
+  const [skillOuvert, setSkillOuvert] = useState<{ id: string; nom: string; proprietaireNom: string } | null>(null);
 
   function charger() {
     setChargement(true);
@@ -165,7 +169,16 @@ export function EspaceEntrerCode() {
                 <span className="text-dj-texte">{r.nom_code || r.code}</span>
                 <span className="text-dj-texte-muet"> · reçu de {r.proprietaire_nom}</span>
                 <div className="mt-1 flex flex-wrap gap-1">
-                  {r.a_comportement && <Badge>Skill</Badge>}
+                  {r.comportements.map((cmp) => (
+                    <button
+                      key={cmp.id}
+                      onClick={() => setSkillOuvert({ id: cmp.id, nom: cmp.nom, proprietaireNom: r.proprietaire_nom })}
+                      title="Voir ce skill"
+                      className="appearance-none border-0 bg-transparent p-0 transition-opacity hover:opacity-75"
+                    >
+                      <Badge>{cmp.nom || "Skill"}</Badge>
+                    </button>
+                  ))}
                   {r.dossiers.map((d) => (
                     <Badge key={d.id}>{d.nom}</Badge>
                   ))}
@@ -194,6 +207,15 @@ export function EspaceEntrerCode() {
             </div>
           ))}
         </div>
+      )}
+
+      {skillOuvert && (
+        <VoirSkillRecuModal
+          comportementId={skillOuvert.id}
+          nom={skillOuvert.nom}
+          proprietaireNom={skillOuvert.proprietaireNom}
+          onFermer={() => setSkillOuvert(null)}
+        />
       )}
     </section>
   );

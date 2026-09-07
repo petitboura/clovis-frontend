@@ -1267,6 +1267,12 @@ export async function retirerRattachementCode(rattachementId: string) {
   return appelerApi(`/api/rattachements-codes/${rattachementId}`, { method: "DELETE" });
 }
 
+/** 07/09/2026, demande Bourama : lecture seule du contenu d'un skill reçu
+ * via un code (avant, seul le LLM pouvait le consulter). */
+export async function voirSkillRecu(comportementId: string) {
+  return appelerApi(`/api/rattachements-codes/comportements/${comportementId}/skill`) as Promise<{ skill_md: string }>;
+}
+
 // --- Mode actif par conversation (Partie 6, 06/09/2026, demande Bourama --
 // voir Point 3 : un utilisateur peut avoir plusieurs codes rattachés en
 // même temps, ce mécanisme retient lequel s'applique à la conversation
