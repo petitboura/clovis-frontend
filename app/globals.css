@@ -431,6 +431,20 @@ select:focus-visible {
   transform: translateZ(0);
   contain: paint;
 }
+
+/* 08/09/2026, demande Bourama (Bureau + tous les autres écrans utilisant
+   OngletsSegment.tsx) : la rangée d'onglets défile horizontalement
+   (overflow-x-auto) quand ils débordent, mais laisser la barre de
+   défilement native visible en dessous ressemblait à une barre de
+   progression parasite. Le défilement au doigt/souris reste actif,
+   seule la barre visuelle est masquée. */
+.dj-scrollbar-cachee {
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+.dj-scrollbar-cachee::-webkit-scrollbar {
+  display: none;
+}
 @media (prefers-reduced-motion: reduce) {
   .dj-reveal {
     opacity: 1;

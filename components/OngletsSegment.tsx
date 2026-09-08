@@ -37,7 +37,7 @@ export function OngletsSegment({ onglets, valeur, onChange, ariaLabel, taille = 
   const paddingBouton = taille === "compact" ? "px-3 py-1.5 text-xs" : "px-3.5 py-2 text-sm";
 
   return (
-    <div role="tablist" aria-label={ariaLabel} className="flex w-full gap-1 overflow-x-auto">
+    <div role="tablist" aria-label={ariaLabel} className="dj-scrollbar-cachee flex w-full gap-1 overflow-x-auto">
       {onglets.map(({ valeur: v, libelle, icone: Icone }) => {
         const actif = v === valeur;
         return (
