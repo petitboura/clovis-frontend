@@ -1837,3 +1837,46 @@ export async function deplacerCorrectionPedagogique(
     body: JSON.stringify({ lien_type: lienType, lien_id: lienId }),
   }) as Promise<CorrectionPedagogique>;
 }
+
+// Cascade de supervision (Point 6, Partie 10, 07/09/2026) : voir
+// api/cascade_supervision.py côté backend. Ne concerne que les
+// signalements de type B (comportement général mal configuré, pas les
+// corrections type A qui restent dans le flux de la Partie 4/5).
+export type CascadeSupervision = {
+  id: string;
+  prof_id: string;
+  agent_id: string;
+  statut: "j2_prof" | "j5_etablissement" | "equipe_clovis" | "resolu";
+  compteur_signalements: number;
+  declenchee_le: string;
+  j2_le: string;
+  j5_le: string;
+  etablissement_id: string | null;
+  comportement_neutralise_id: string | null;
+  neutralisee_le: string | null;
+  resolue_le: string | null;
+  note_resolution: string | null;
+  signalements: { question_texte: string; reponse_texte: string; created_at: string | null }[];
+};
+
+export async function obtenirMesCascadesSupervision() {
+  const resultat = await appelerApi("/api/cascades-supervision/mon-etat");
+  return (resultat as { cascades: CascadeSupervision[] }).cascades;
+}
+
+export async function obtenirCascadesSupervisionEtablissement() {
+  const resultat = await appelerApi("/api/cascades-supervision/etablissement");
+  return (resultat as { cascades: CascadeSupervision[] }).cascades;
+}
+
+export async function obtenirCascadesSupervisionEquipeClovis() {
+  const resultat = await appelerApi("/api/cascades-supervision/equipe-clovis");
+  return (resultat as { cascades: CascadeSupervision[] }).cascades;
+}
+
+export async function resoudreCascadeSupervision(cascadeId: string, note?: string) {
+  return appelerApi(`/api/cascades-supervision/${cascadeId}/resoudre`, {
+    method: "POST",
+    body: JSON.stringify({ note: note || null }),
+  }) as Promise<CascadeSupervision>;
+}

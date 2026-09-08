@@ -5,11 +5,17 @@ import { AuditCorrections } from "@/components/AuditCorrections";
 import { EspaceEtablissements } from "@/components/EspaceEtablissements";
 import { ProgrammeNotions } from "@/components/ProgrammeNotions";
 import { ListeCorrectionsProf } from "@/components/ListeCorrectionsProf";
+import { IndicateurCascadeSupervision } from "@/components/IndicateurCascadeSupervision";
 
 export default function PageBureau() {
   return (
     <SectionPage title="Bureau">
       <div className="flex flex-col gap-4">
+        {/* Partie 10 (07/09/2026) : au-dessus du reste, seule carte de
+            cette page qui n'affiche rien tant qu'il n'y a rien d'actif --
+            volontairement en tête quand elle apparaît, c'est le seul cas
+            de cette page qui appelle une action à faire sous 2 jours. */}
+        <IndicateurCascadeSupervision />
         <AuditCorrections />
         <MesCodes />
         <ProgrammeNotions />

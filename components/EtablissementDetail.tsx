@@ -15,6 +15,7 @@ import {
 import { messageErreur, ErreurApi } from "@/lib/erreurs";
 import { Skeleton } from "./Skeleton";
 import { CompteRequisModal } from "./CompteRequisModal";
+import { CascadesEtablissement } from "./CascadesEtablissement";
 
 /** Créé le 06/09/2026, Partie 9 (frontend) : profil d'un établissement +
  * ses publications validées (publiques pour tout le monde, privées en
@@ -87,6 +88,11 @@ export function EtablissementDetail({ etablissementId }: { etablissementId: stri
 
   return (
     <div className="flex flex-col gap-4">
+      {/* Partie 10 (07/09/2026) : ne s'affiche que pour le propriétaire
+          de CET établissement précis, silencieusement invisible sinon
+          (voir le filtrage dans CascadesEtablissement lui-même). */}
+      <CascadesEtablissement etablissementId={etablissementId} />
+
       <section className="rounded-cgpt-carte border border-dj-bordure bg-dj-surface p-5">
         <div className="flex items-start justify-between gap-3">
           <div className="flex items-center gap-2">
