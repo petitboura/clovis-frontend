@@ -134,6 +134,16 @@ function ChipComportement({
           {c.actif ? <ToggleRight size={18} /> : <ToggleLeft size={18} />}
         </span>
       </div>
+      {/* Description courte sous le nom (08/09/2026, retour Bourama : "les
+          descriptions n'apparaissent nulle part") -- avant, elle n'était
+          visible que dans le panneau d'édition d'un skill déjà existant.
+          Même convention que le badge lien_libelle juste en dessous : sa
+          propre ligne, sa propre troncature, jamais dans la ligne du nom. */}
+      {c.description && (
+        <span className="ml-[22px] block max-w-full truncate text-xs text-dj-texte-muet">
+          {c.description}
+        </span>
+      )}
       {/* Badge de rattachement (lien_libelle) sur sa propre ligne, sous le
           nom -- CORRECTIF 22/08/2026 (Bourama : "le texte des sources
           déborde, on ne voit plus les noms") : avant, ce badge partageait
