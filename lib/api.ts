@@ -944,6 +944,7 @@ export type ComportementPublic = {
   texte: string;
   skill_md: string;
   activations_count: number;
+  est_a_moi: boolean;
 };
 
 export async function rechercherComportementsPublics(q?: string) {
@@ -987,6 +988,14 @@ export async function uploaderSkillPublic(fichier: File, nom: string, descriptio
   }
 
   return (await reponse.json()) as ComportementPublic;
+}
+
+// 07/09/2026, demande Bourama : l'auteur d'un skill public peut le
+// retirer du catalogue (n'existait pas avant). Retrait doux côté
+// backend (statut='retire'), pas une suppression -- voir
+// core/comportements_etudiants.py::retirer_skill_public.
+export async function retirerSkillPublic(comportementPublicId: string) {
+  return appelerApi(`/api/comportements-publics/${comportementPublicId}/retirer`, { method: "POST" });
 }
 
 // nom = null/undefined -> mode "auto" (nom généré côté serveur avec le

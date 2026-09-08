@@ -18,6 +18,13 @@ import { useFermetureAnimee } from "@/lib/useFermetureAnimee";
  * langage visuel que les autres popups (voir SignalerContenuModal.tsx),
  * même extraction du corps (sans le frontmatter) que
  * MesComportements.tsx::extraireCorpsSkill.
+ *
+ * Même jour, réutilisé pour l'aperçu au clic du catalogue public de
+ * skills (ComportementsPublics.tsx, demande Bourama) : le contenu y est
+ * déjà chargé en mémoire (skill_md de la liste), donc `skillMdInitial`
+ * évite un appel réseau inutile et saute l'état de chargement. Sans lui,
+ * comportement inchangé (fetch via `comportementId`, sous-titre "Reçu
+ * de..."). `sousTitre` permet d'adapter ce texte au contexte public.
  */
 function extraireCorpsSkill(skillMd: string): string {
   const correspondance = skillMd.match(/^---\r?\n[\s\S]*?\r?\n---\r?\n([\s\S]*)$/);
@@ -28,25 +35,31 @@ export function VoirSkillRecuModal({
   comportementId,
   nom,
   proprietaireNom,
+  skillMdInitial,
+  sousTitre,
   onFermer,
 }: {
-  comportementId: string;
+  comportementId?: string;
   nom: string;
-  proprietaireNom: string;
+  proprietaireNom?: string;
+  skillMdInitial?: string;
+  sousTitre?: string;
   onFermer: () => void;
 }) {
-  const [skillMd, setSkillMd] = useState<string | null>(null);
-  const [chargement, setChargement] = useState(true);
+  const [skillMd, setSkillMd] = useState<string | null>(skillMdInitial ?? null);
+  const [chargement, setChargement] = useState(skillMdInitial === undefined);
   const [erreur, setErreur] = useState<string | null>(null);
 
   const { enSortie, demarrerFermeture } = useFermetureAnimee();
   const fermer = () => demarrerFermeture(onFermer);
 
   useEffect(() => {
+    if (skillMdInitial !== undefined || !comportementId) return;
     voirSkillRecu(comportementId)
       .then((res) => setSkillMd(res.skill_md))
       .catch((e) => setErreur(messageErreur(e)))
       .finally(() => setChargement(false));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [comportementId]);
 
   return (
@@ -72,7 +85,7 @@ export function VoirSkillRecuModal({
           </button>
         </div>
         <p className="text-xs text-dj-texte-muet">
-          Reçu de {proprietaireNom} · lecture seule
+          {sousTitre ?? `Reçu de ${proprietaireNom} · lecture seule`}
         </p>
 
         {chargement ? (
