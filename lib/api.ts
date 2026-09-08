@@ -1526,6 +1526,9 @@ export type DossierBibliotheque = {
   dossier_parent_id: string | null;
   created_at: string;
   fichier_ids: string[];
+  // 07/09/2026, demande Bourama : nom du propriétaire si ce dossier est
+  // en réalité un miroir reçu via un code, undefined/null sinon.
+  recu_de?: string | null;
 };
 
 export async function listerDossiersBibliotheque() {

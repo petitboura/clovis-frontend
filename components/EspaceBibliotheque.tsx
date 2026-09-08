@@ -409,6 +409,13 @@ export function EspaceBibliotheque() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [enfantsDe, dossierCourantId, sousOnglet, origineOnglet, fichiersParId]);
 
+  // 07/09/2026, demande Bourama (bug remonté : un dossier reçu via un
+  // code était indiscernable d'un dossier perso, aucune section dédiée)
+  // -- backend expose désormais recu_de sur chaque dossier miroir (voir
+  // api/dossiers_bibliotheque.py::lister), on sépare juste l'affichage ici.
+  const dossiersPersos = useMemo(() => sousDossiersAffiches.filter((d) => !d.recu_de), [sousDossiersAffiches]);
+  const dossiersRecus = useMemo(() => sousDossiersAffiches.filter((d) => d.recu_de), [sousDossiersAffiches]);
+
   const fichiersAffiches = useMemo(() => {
     // CORRECTIF 2026-08-27 (bug remonté par Bourama : "d'abord liste
     // plate, ensuite ça se range") -- fichiers et dossiers se chargent
@@ -895,62 +902,45 @@ async function envoyerFichiersDirect(fichiersChoisis: FileList | File[]) {
       )}
 
       {sousDossiersAffiches.length > 0 && (
-        <div className="flex flex-col gap-2">
-          {sousDossiersAffiches.map((d) => (
-            <div
-              key={d.id}
-              onDragOver={(e) => {
-                e.preventDefault();
-                if (dossierSurvole !== d.id) setDossierSurvole(d.id);
-              }}
-              onDragLeave={() => setDossierSurvole((id) => (id === d.id ? null : id))}
-              onDrop={(e) => {
-                e.preventDefault();
-                const fichierId = e.dataTransfer.getData("text/fichier-bibliotheque-id");
-                if (fichierId) deposerFichierDansDossier(d.id, fichierId);
-              }}
-              className={`flex items-center justify-between gap-3 rounded-xl border px-4 py-3 transition-colors ${
-                dossierSurvole === d.id ? "border-dj-accent-1 bg-dj-surface-haute" : "border-dj-bordure bg-dj-surface"
-              }`}
-            >
-              {dossierEnRenommage === d.id ? (
-                <input
-                  autoFocus
-                  type="text"
-                  defaultValue={d.nom}
-                  onKeyDown={(e) => e.key === "Enter" && renommerDossier(d.id, (e.target as HTMLInputElement).value)}
-                  onBlur={(e) => renommerDossier(d.id, e.target.value)}
-                  className="flex-1 rounded-cgpt-bouton border border-dj-bordure bg-dj-fond px-2 py-1 text-sm text-dj-texte outline-none"
+        <div className="flex flex-col gap-4">
+          {dossiersPersos.length > 0 && (
+            <div className="flex flex-col gap-2">
+              {dossiersPersos.map((d) => (
+                <CarteDossier
+                  key={d.id}
+                  d={d}
+                  dossierSurvole={dossierSurvole}
+                  dossierEnRenommage={dossierEnRenommage}
+                  setPileDossiers={setPileDossiers}
+                  setDossierSurvole={setDossierSurvole}
+                  setDossierEnRenommage={setDossierEnRenommage}
+                  deposerFichierDansDossier={deposerFichierDansDossier}
+                  renommerDossier={renommerDossier}
+                  supprimerDossier={supprimerDossier}
                 />
-              ) : (
-                <button
-                  onClick={() => setPileDossiers((p) => [...p, { id: d.id, nom: d.nom }])}
-                  className="flex min-w-0 items-center gap-2 text-sm text-dj-texte hover:text-dj-texte"
-                >
-                  {/* Conteneur tonal (30/08/2026, tâche 3, Material 3
-                      Expressive) : même traitement que EspacePlus.tsx --
-                      un vrai fond coloré derrière l'icône plutôt qu'une
-                      icône simplement grisée sur fond transparent. */}
-                  <span className="flex h-7 w-7 flex-shrink-0 items-center justify-center rounded-full bg-dj-accent-1-conteneur">
-                    <IconDossier size={14} className="text-dj-accent-1-texte" />
-                  </span>
-                  <span className="truncate font-medium">{d.nom}</span>
-                </button>
-              )}
-              <div className="flex flex-shrink-0 items-center gap-3 text-xs text-dj-texte-muet">
-                <button onClick={() => setDossierEnRenommage(d.id)} className="hover:text-dj-texte" title="Renommer">
-                  <Pencil size={14} />
-                </button>
-                <button
-                  onClick={() => supprimerDossier(d.id, d.nom)}
-                  className="hover:text-[var(--dj-erreur)]"
-                  title="Supprimer le dossier"
-                >
-                  <FolderX size={14} />
-                </button>
-              </div>
+              ))}
             </div>
-          ))}
+          )}
+
+          {dossiersRecus.length > 0 && (
+            <div className="flex flex-col gap-2">
+              <p className="text-xs font-semibold uppercase tracking-wide text-dj-texte-muet">Reçus via un code</p>
+              {dossiersRecus.map((d) => (
+                <CarteDossier
+                  key={d.id}
+                  d={d}
+                  dossierSurvole={dossierSurvole}
+                  dossierEnRenommage={dossierEnRenommage}
+                  setPileDossiers={setPileDossiers}
+                  setDossierSurvole={setDossierSurvole}
+                  setDossierEnRenommage={setDossierEnRenommage}
+                  deposerFichierDansDossier={deposerFichierDansDossier}
+                  renommerDossier={renommerDossier}
+                  supprimerDossier={supprimerDossier}
+                />
+              ))}
+            </div>
+          )}
         </div>
       )}
 
@@ -1475,6 +1465,86 @@ async function envoyerFichiersDirect(fichiersChoisis: FileList | File[]) {
       )}
         </>
       )}
+    </div>
+  );
+}
+
+// 07/09/2026, extrait de la carte inline qui existait avant (demande
+// Bourama : distinguer dossiers perso / reçus via un code) -- même rendu
+// exact, juste réutilisé pour les deux groupes, plus le badge "Reçu de X"
+// quand d.recu_de est renseigné (voir api/dossiers_bibliotheque.py::lister).
+function CarteDossier({
+  d,
+  dossierSurvole,
+  dossierEnRenommage,
+  setPileDossiers,
+  setDossierSurvole,
+  setDossierEnRenommage,
+  deposerFichierDansDossier,
+  renommerDossier,
+  supprimerDossier,
+}: {
+  d: DossierBibliotheque;
+  dossierSurvole: string | null;
+  dossierEnRenommage: string | null;
+  setPileDossiers: (fn: (p: { id: string; nom: string }[]) => { id: string; nom: string }[]) => void;
+  setDossierSurvole: (fn: (id: string | null) => string | null) => void;
+  setDossierEnRenommage: (id: string) => void;
+  deposerFichierDansDossier: (dossierId: string, fichierId: string) => void;
+  renommerDossier: (dossierId: string, nouveauNom: string) => void;
+  supprimerDossier: (dossierId: string, nom: string) => void;
+}) {
+  return (
+    <div
+      onDragOver={(e) => {
+        e.preventDefault();
+        if (dossierSurvole !== d.id) setDossierSurvole(() => d.id);
+      }}
+      onDragLeave={() => setDossierSurvole((id) => (id === d.id ? null : id))}
+      onDrop={(e) => {
+        e.preventDefault();
+        const fichierId = e.dataTransfer.getData("text/fichier-bibliotheque-id");
+        if (fichierId) deposerFichierDansDossier(d.id, fichierId);
+      }}
+      className={`flex items-center justify-between gap-3 rounded-xl border px-4 py-3 transition-colors ${
+        dossierSurvole === d.id ? "border-dj-accent-1 bg-dj-surface-haute" : "border-dj-bordure bg-dj-surface"
+      }`}
+    >
+      {dossierEnRenommage === d.id ? (
+        <input
+          autoFocus
+          type="text"
+          defaultValue={d.nom}
+          onKeyDown={(e) => e.key === "Enter" && renommerDossier(d.id, (e.target as HTMLInputElement).value)}
+          onBlur={(e) => renommerDossier(d.id, e.target.value)}
+          className="flex-1 rounded-cgpt-bouton border border-dj-bordure bg-dj-fond px-2 py-1 text-sm text-dj-texte outline-none"
+        />
+      ) : (
+        <button
+          onClick={() => setPileDossiers((p) => [...p, { id: d.id, nom: d.nom }])}
+          className="flex min-w-0 items-center gap-2 text-sm text-dj-texte hover:text-dj-texte"
+        >
+          <span className="flex h-7 w-7 flex-shrink-0 items-center justify-center rounded-full bg-dj-accent-1-conteneur">
+            <IconDossier size={14} className="text-dj-accent-1-texte" />
+          </span>
+          <span className="flex min-w-0 flex-col items-start">
+            <span className="truncate font-medium">{d.nom}</span>
+            {d.recu_de && <span className="text-xs text-dj-texte-muet">Reçu de {d.recu_de}</span>}
+          </span>
+        </button>
+      )}
+      <div className="flex flex-shrink-0 items-center gap-3 text-xs text-dj-texte-muet">
+        <button onClick={() => setDossierEnRenommage(d.id)} className="hover:text-dj-texte" title="Renommer">
+          <Pencil size={14} />
+        </button>
+        <button
+          onClick={() => supprimerDossier(d.id, d.nom)}
+          className="hover:text-[var(--dj-erreur)]"
+          title="Supprimer le dossier"
+        >
+          <FolderX size={14} />
+        </button>
+      </div>
     </div>
   );
 }
