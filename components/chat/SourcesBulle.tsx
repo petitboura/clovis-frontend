@@ -4,6 +4,7 @@ import { useState } from "react";
 import { ExternalLink, Quote } from "lucide-react";
 import { ouvrirPosition } from "./visionneurPositionEvenement";
 import { useFermetureAnimee } from "@/lib/useFermetureAnimee";
+import { BulleSurvol } from "@/components/BulleSurvol";
 
 // Rendu "bête" d'une liste de puces de sources cliquables -- PLUS de
 // toggle propre depuis le 26/07 (retour Bourama : les sources d'une
@@ -146,11 +147,12 @@ export function SourcesBulle({ sources }: { sources?: Source[] }) {
                   typeMime: source.type_mime,
                 })
               }
-              title={source.titre}
               className="flex max-w-[220px] items-center gap-1 rounded-cgpt-bouton border border-dj-bordure px-2.5 py-1 text-[12px] text-dj-texte-muet transition-colors hover:text-dj-texte"
             >
               <Favicon url={source.url} />
-              <span className="truncate">{source.titre}</span>
+              <BulleSurvol texte={source.titre} className="truncate" revelerAuClic={false}>
+                {source.titre}
+              </BulleSurvol>
               <sup className="shrink-0 font-semibold text-dj-texte-muet">{source.numero}</sup>
             </button>
             {aUnParagrapheDistinct && <ExtraitPuce source={source} />}

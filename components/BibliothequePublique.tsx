@@ -1204,11 +1204,6 @@ export function BibliothequePublique() {
                         }}
                         onMouseEnter={() => setBadgeInfoId(entree.id)}
                         onMouseLeave={() => setBadgeInfoId((id) => (id === entree.id ? null : id))}
-                        title={
-                          entree.statut_vectorisation === "echec"
-                            ? "Échec du traitement -- l'IA ne peut pas retrouver ce fichier par son contenu."
-                            : "Traitement en cours : l'IA ne peut pas encore retrouver ce fichier facilement."
-                        }
                         className={entree.statut_vectorisation === "echec" ? "text-[var(--dj-erreur)]" : "text-dj-accent-1-texte"}
                       >
                         {entree.statut_vectorisation === "echec" ? (

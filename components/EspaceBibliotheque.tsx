@@ -1263,11 +1263,6 @@ async function envoyerFichiersDirect(fichiersChoisis: FileList | File[]) {
                         }}
                         onMouseEnter={() => setBadgeInfoId(f.id)}
                         onMouseLeave={() => setBadgeInfoId((id) => (id === f.id ? null : id))}
-                        title={
-                          f.statut_vectorisation === "echec"
-                            ? "Échec du traitement -- l'IA ne peut pas retrouver ce fichier par son contenu."
-                            : "Traitement en cours : l'IA ne peut pas encore retrouver ce fichier facilement."
-                        }
                         className={f.statut_vectorisation === "echec" ? "text-[var(--dj-erreur)]" : "text-dj-accent-1-texte"}
                       >
                         {f.statut_vectorisation === "echec" ? (

@@ -14,6 +14,7 @@ import { CTACompteRequis } from "@/components/CTACompteRequis";
 import { telechargerTexte, nomFichierDepuis } from "@/lib/telechargerTexte";
 import { Skeleton } from "./Skeleton";
 import { VoirSkillRecuModal } from "@/components/VoirSkillRecuModal";
+import { BulleSurvol } from "@/components/BulleSurvol";
 
 // Catalogue public des comportements (21/08/2026, demande Bourama : "les
 // comportements aussi, je veux un onglet public, c'est à dire quelqu'un
@@ -354,9 +355,9 @@ export function ComportementsPublics({ onActive }: { onActive: () => void }) {
                   <ScrollText size={16} className="mt-0.5 flex-shrink-0 self-start text-dj-texte-muet" />
                   <div className="min-w-0">
                     <p className="truncate text-sm text-dj-texte">{c.nom}</p>
-                    <p title={descriptionComplete} className="line-clamp-2 text-xs text-dj-texte-muet">
+                    <BulleSurvol texte={descriptionComplete} className="line-clamp-2 text-xs text-dj-texte-muet">
                       {descriptionComplete} · {c.activations_count} activation(s)
-                    </p>
+                    </BulleSurvol>
                   </div>
                 </div>
                 {c.est_a_moi && (
