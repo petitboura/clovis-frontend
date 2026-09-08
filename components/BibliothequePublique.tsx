@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import {
   Search, Plus, Trash2, Paperclip, FileText, Image as IconImage, Music as IconAudio, Video as IconVideo,
   Flag, FolderPlus, Check, Link as IconLien, Upload, FolderX, X, Globe, Lock, Loader2, Download, ChevronLeft,
+  SlidersHorizontal,
 } from "lucide-react";
 import {
   listerBibliothequePublique,
@@ -277,9 +278,6 @@ export function BibliothequePublique() {
   const [filtreClasse, setFiltreClasse] = useState("");
   const [filtreSpecialite, setFiltreSpecialite] = useState("");
   const [panneauFiltreOuvert, setPanneauFiltreOuvert] = useState(false);
-  const nombreFiltresActifs = [
-    filtreType !== "tous", !!filtrePays, !!filtreNiveau, !!filtreCategorie, !!filtreClasse, !!filtreSpecialite,
-  ].filter(Boolean).length;
 
   function reinitialiserFiltres() {
     setFiltreType("tous");
@@ -765,9 +763,19 @@ export function BibliothequePublique() {
   // dossierCourantId est null) -- corrigé 01/09/2026, remplace
   // l'ancien "dossiersRacine" qui ne regardait jamais que le niveau 0
   // et empêchait donc toute arborescence.
+  // 08/09/2026, demande Bourama : les dossiers filtrables par pays/
+  // niveau/catégorie/classe/spécialité, même principe que les fichiers
+  // (mêmes états filtrePays/filtreNiveau/etc, filtrage côté app -- la
+  // liste des dossiers est déjà chargée intégralement, pas de scroll
+  // infini côté dossiers contrairement aux fichiers).
   const sousDossiersAffiches = (dossiers ?? [])
     .filter((d) => (d.dossier_parent_id ?? null) === dossierCourantId)
-    .filter((d) => filtreStatutDossier === "tous" || d.statut === filtreStatutDossier);
+    .filter((d) => filtreStatutDossier === "tous" || d.statut === filtreStatutDossier)
+    .filter((d) => !filtrePays || d.pays === filtrePays)
+    .filter((d) => !filtreNiveau || d.niveau === filtreNiveau)
+    .filter((d) => !filtreCategorie || d.categorie === filtreCategorie)
+    .filter((d) => !filtreClasse || d.classe === filtreClasse)
+    .filter((d) => !filtreSpecialite || d.specialite === filtreSpecialite);
   const dossierActuel = dossierCourantId ? (dossiers ?? []).find((d) => d.id === dossierCourantId) : null;
   // 04/09/2026 : le filtrage par dossier se fait désormais côté serveur
   // (voir charger()/chargerPlus(), paramètre dossier_id) pour que le
@@ -778,6 +786,16 @@ export function BibliothequePublique() {
   // (comme en privé), sur "Tous" ET à l'intérieur d'un dossier ouvert --
   // pays/niveau/catégorie sont déjà filtrés côté serveur (voir charger()).
   const listeAffichee = liste?.filter((e) => filtreType === "tous" || typeDe(e) === filtreType);
+  // 08/09/2026 : vrai quand une liste de FICHIERS est affichée à l'écran
+  // (onglet "Tous", ou à l'intérieur d'un dossier ouvert où fichiers ET
+  // sous-dossiers apparaissent ensemble) -- sert à savoir si le filtre
+  // "Type" (qui n'a pas de sens pour un dossier) doit apparaître dans le
+  // panneau.
+  const listeFichiersVisible = ongletBiblioPublique === "tous" || !!dossierCourantId;
+  // 08/09/2026 : "Type" ne compte dans le badge que là où il s'applique réellement (voir listeFichiersVisible ci-dessus).
+  const nombreFiltresActifs = [
+    filtreType !== "tous" && listeFichiersVisible, !!filtrePays, !!filtreNiveau, !!filtreCategorie, !!filtreClasse, !!filtreSpecialite,
+  ].filter(Boolean).length;
 
   // Description fixe (+ rappel légal CGU/copyright) remplacée par le
   // bouton "i" du titre de page (géré par le parent EspaceBibliotheque.tsx
@@ -820,37 +838,37 @@ export function BibliothequePublique() {
             Tous
           </button>
         </div>
-        {/* 03/09/2026, demande Bourama : filtre par type + pays/niveau/
-            catégorie -- visible seulement là où une liste de FICHIERS est
-            montrée (onglet "Tous", ou à l'intérieur d'un dossier ouvert),
-            pas sur l'écran de navigation des dossiers eux-mêmes (qui a
-            déjà son propre filtre Libre/Privé, une autre notion). */}
-        {(ongletBiblioPublique === "tous" || dossierCourantId) && (
-          <button
-            type="button"
-            onClick={() => setPanneauFiltreOuvert(true)}
-            className={`flex flex-shrink-0 items-center gap-1 rounded-cgpt-bouton border px-3 py-1.5 font-semibold transition-colors ${
-              nombreFiltresActifs > 0
-                ? "border-dj-accent-1 bg-dj-accent-1-conteneur text-dj-accent-1-texte"
-                : "border-dj-bordure text-dj-texte-muet hover:text-dj-texte"
-            }`}
-          >
-            Filtre
-            {nombreFiltresActifs > 0 && (
-              <span className="rounded-full bg-dj-accent-1 px-1.5 py-0.5 text-[10px] leading-none text-[#1A0D02]">
-                {nombreFiltresActifs}
-              </span>
-            )}
-          </button>
-        )}
+        {/* 08/09/2026, demande Bourama : le bouton Filtre est désormais
+            toujours visible (avant, absent sur l'écran racine de l'onglet
+            Dossiers) -- il filtre soit les fichiers (Tous / dans un
+            dossier ouvert), soit les dossiers eux-mêmes par pays/niveau/
+            catégorie/classe/spécialité (racine de l'onglet Dossiers), les
+            deux listes utilisant les mêmes champs, comme demandé. */}
+        <button
+          type="button"
+          onClick={() => setPanneauFiltreOuvert(true)}
+          className={`flex flex-shrink-0 items-center gap-1 rounded-cgpt-bouton border px-3 py-1.5 font-semibold transition-colors ${
+            nombreFiltresActifs > 0
+              ? "border-dj-accent-1 bg-dj-accent-1-conteneur text-dj-accent-1-texte"
+              : "border-dj-bordure text-dj-texte-muet hover:text-dj-texte"
+          }`}
+        >
+          <SlidersHorizontal size={13} />
+          Filtre
+          {nombreFiltresActifs > 0 && (
+            <span className="rounded-full bg-dj-accent-1 px-1.5 py-0.5 text-[10px] leading-none text-[#1A0D02]">
+              {nombreFiltresActifs}
+            </span>
+          )}
+        </button>
       </div>
 
       {/* Étiquettes des filtres actifs (03/09/2026) -- "filter feedback
           bar", chaque filtre reste visible et retirable individuellement
           sans rouvrir le panneau. */}
-      {(ongletBiblioPublique === "tous" || dossierCourantId) && nombreFiltresActifs > 0 && (
+      {nombreFiltresActifs > 0 && (
         <div className="flex flex-wrap items-center gap-1.5 text-xs">
-          {filtreType !== "tous" && (
+          {filtreType !== "tous" && listeFichiersVisible && (
             <span className="flex items-center gap-1 rounded-full border border-dj-bordure bg-dj-surface px-2.5 py-1 text-dj-texte">
               {TYPES_BIBLIO_PUBLIQUE.find((t) => t.id === filtreType)?.label}
               <button onClick={() => setFiltreType("tous")} aria-label="Retirer le filtre de type" className="text-dj-texte-muet hover:text-dj-texte">
@@ -1693,22 +1711,27 @@ export function BibliothequePublique() {
           >
             <p className="text-sm font-semibold text-dj-texte">Filtrer</p>
 
-            <div className="flex flex-col gap-1.5">
-              <p className="text-xs font-medium text-dj-texte-muet">Type</p>
-              <div className="flex flex-wrap gap-1">
-                {TYPES_BIBLIO_PUBLIQUE.map((t) => (
-                  <button
-                    key={t.id}
-                    onClick={() => setFiltreType(t.id)}
-                    className={`rounded-cgpt-bouton px-2.5 py-1 text-xs font-medium transition-colors ${
-                      filtreType === t.id ? "bg-dj-accent-1 text-[#1A0D02]" : "border border-dj-bordure text-dj-texte-muet hover:text-dj-texte"
-                    }`}
-                  >
-                    {t.label}
-                  </button>
-                ))}
+            {/* 08/09/2026, demande Bourama : "Type" n'a de sens que pour
+                une liste de fichiers -- masqué à la racine de l'onglet
+                Dossiers, où le panneau filtre les dossiers eux-mêmes. */}
+            {listeFichiersVisible && (
+              <div className="flex flex-col gap-1.5">
+                <p className="text-xs font-medium text-dj-texte-muet">Type</p>
+                <div className="flex flex-wrap gap-1">
+                  {TYPES_BIBLIO_PUBLIQUE.map((t) => (
+                    <button
+                      key={t.id}
+                      onClick={() => setFiltreType(t.id)}
+                      className={`rounded-cgpt-bouton px-2.5 py-1 text-xs font-medium transition-colors ${
+                        filtreType === t.id ? "bg-dj-accent-1 text-[#1A0D02]" : "border border-dj-bordure text-dj-texte-muet hover:text-dj-texte"
+                      }`}
+                    >
+                      {t.label}
+                    </button>
+                  ))}
+                </div>
               </div>
-            </div>
+            )}
 
             <div className="flex flex-col gap-1.5">
               <p className="text-xs font-medium text-dj-texte-muet">Pays</p>
