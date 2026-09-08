@@ -549,6 +549,7 @@ export function ProgrammeNotions() {
           </span>
           <span className="truncate font-medium">{noeud.nom}</span>
         </button>
+        <PastilleStatut statut={noeud.statut} onChange={(s) => changerStatut(noeud, s)} />
         <button
           type="button"
           onClick={onAjouter}
