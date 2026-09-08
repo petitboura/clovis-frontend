@@ -681,8 +681,28 @@ export function MesComportements({ agentId }: { agentId: string }) {
           }
           entete={
             <div className="flex items-center justify-between">
-              <span className="text-sm font-medium text-dj-texte">
-                {panneau.type === "creation" ? "Nouveau skill" : "Modifier ce skill"}
+              {/* "i" placé exactement comme les autres boutons "i" de l'app
+                  (voir TitreSection dans SectionPage.tsx : titre puis "i"
+                  juste à côté, même ligne, petit espace) -- 09/09/2026,
+                  retour Bourama : "c'est quelque chose qui explique la
+                  section, regarde l'emplacement des autres i". Ici la
+                  "section" que ce texte explique est ce panneau
+                  d'édition/génération de skill dans son ensemble, donc à
+                  côté de SON titre, pas ailleurs. Uniquement pour un skill
+                  déjà existant (édition) -- rien à "lire" tant qu'aucun
+                  skill n'a encore été généré (création). */}
+              <span className="flex items-center gap-1.5">
+                <span className="text-sm font-medium text-dj-texte">
+                  {panneau.type === "creation" ? "Nouveau skill" : "Modifier ce skill"}
+                </span>
+                {panneau.type === "edition" && (
+                  <BulleSurvol
+                    texte="Ce que l'IA lit vraiment quand elle consulte ce comportement. Tu peux le corriger directement ici -- si tu réédites le texte brut plus tard, il sera régénéré et remplacera ce que tu écris ici."
+                    className="flex h-4 w-4 flex-shrink-0 items-center justify-center rounded-full text-dj-texte-muet hover:text-dj-texte"
+                  >
+                    <Info size={12} />
+                  </BulleSurvol>
+                )}
               </span>
               <button
                 onClick={() => demarrerFermeture(fermer)}
@@ -871,24 +891,17 @@ export function MesComportements({ agentId }: { agentId: string }) {
           ) : (
             <>
               {/* Inversion demandée par Bourama (09/09/2026) : "Ce que l'IA
-                  lit vraiment..." est un texte qui explique la SECTION
-                  (comme les autres boutons "i" de l'app, voir
-                  BoutonInfoSection.tsx) -- il va donc dans le bouton "i".
-                  La description du skill (propre à CE skill précis, pas
-                  une explication générale) prend sa place, affichée à
-                  plat comme avant. */}
-              <div className="flex items-center justify-between gap-2 pb-2">
-                <div className="flex min-w-0 items-center gap-1.5">
-                  <p className="min-w-0 truncate text-xs text-dj-texte-muet">
-                    {panneau.type === "edition" ? panneau.c.description || "Pas de description." : ""}
-                  </p>
-                  <BulleSurvol
-                    texte="Ce que l'IA lit vraiment quand elle consulte ce comportement. Tu peux le corriger directement ici -- si tu réédites le texte brut plus tard, il sera régénéré et remplacera ce que tu écris ici."
-                    className="flex h-4 w-4 flex-shrink-0 items-center justify-center rounded-full text-dj-texte-muet hover:text-dj-texte"
-                  >
-                    <Info size={12} />
-                  </BulleSurvol>
-                </div>
+                  lit vraiment..." est un texte qui explique la SECTION,
+                  déplacé dans le bouton "i" à côté du titre du panneau
+                  (voir plus haut, entete). La description du skill (propre
+                  à CE skill précis) prend sa place ici, affichée à plat,
+                  en entier -- pas tronquée (retour Bourama : "on ne peut
+                  pas voir la description en entier"), elle peut donc
+                  passer sur plusieurs lignes. */}
+              <div className="flex items-start justify-between gap-2 pb-2">
+                <p className="min-w-0 flex-1 text-xs text-dj-texte-muet">
+                  {panneau.type === "edition" ? panneau.c.description || "Pas de description." : ""}
+                </p>
                 <div className="flex flex-shrink-0 gap-1 rounded-lg border border-dj-bordure p-0.5">
                   <button
                     onClick={() => setSkillVue("texte")}
