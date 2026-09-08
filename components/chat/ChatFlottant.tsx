@@ -4,7 +4,7 @@ import { useContext, useEffect, useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { Bird, X, Maximize2, MessageSquarePlus, History } from "lucide-react";
-import { appelerApi } from "@/lib/api";
+import { appelerApi, lireMonProfil, enregistrerMonProfil } from "@/lib/api";
 import { ChatIA } from "./ChatIA";
 import { MessageAffiche, nettoyerMessageHistorique } from "./BulleMessage";
 import { CompteRequisModal } from "@/components/CompteRequisModal";
@@ -12,6 +12,8 @@ import { Logo } from "@/components/Logo";
 import { useHauteurVisuelle } from "@/lib/useHauteurVisuelle";
 import { ContexteChat, type EtatChat, type FilConversation } from "@/lib/contexteChat";
 import { useFermetureAuRetour } from "@/lib/contexteRetour";
+import { useFenetreDeplacable, POIGNEES_REDIMENSIONNEMENT } from "@/lib/useFenetreDeplacable";
+import { TAILLE_MIN } from "@/lib/contexteFenetres";
 import { texteAccueilSelonHeure } from "@/lib/salutations";
 import { Skeleton } from "@/components/Skeleton";
 
@@ -41,6 +43,35 @@ import { Skeleton } from "@/components/Skeleton";
 const LIMITE_MESSAGES_INVITE = 5;
 const CLE_COMPTEUR_INVITE = "clovis_nb_messages_invite";
 const SOUS_TITRE_ACCUEIL_CLOVIS = "Ton compagnon d'études, à tes côtés.";
+
+// 07/09/2026, demande Bourama : le popup mini (desktop) doit être
+// déplaçable/redimensionnable comme les fenêtres de section (voir
+// lib/useFenetreDeplacable.ts, extrait de FenetresSections.tsx), et
+// retrouver sa taille/position sur n'importe quel appareil où le
+// compte se connecte (voir profil, ProfilPublic côté backend). Reprend
+// la même taille visuelle que le centrage CSS d'avant (min(92vw,380px)
+// x min(70dvh,600px)) -- calculée ici en pixels réels une fois, plutôt
+// qu'en CSS, puisque la position/taille devient un état JS piloté par
+// le glissement/redimensionnement (voir POPUP_TAILLE_MIN plus bas).
+function positionEtTailleParDefaut() {
+  if (typeof window === "undefined") {
+    return { x: 0, y: 0, largeur: 380, hauteur: 600 };
+  }
+  const largeur = Math.min(window.innerWidth * 0.92, 380);
+  const hauteur = Math.min(window.innerHeight * 0.7, 600);
+  return {
+    x: Math.max(0, (window.innerWidth - largeur) / 2),
+    y: Math.max(0, (window.innerHeight - hauteur) / 2),
+    largeur,
+    hauteur,
+  };
+}
+
+// Taille minimale du popup mini une fois redimensionné -- même valeurs
+// que les fenêtres de section (TAILLE_MIN, contexteFenetres.tsx), pour
+// rester cohérent : en dessous, le contenu (en-tête + zone de messages)
+// ne serait plus vraiment utilisable.
+const POPUP_TAILLE_MIN = TAILLE_MIN;
 
 export function ChatFlottant({
   connecte,
@@ -94,6 +125,91 @@ export function ChatFlottant({
   // chat, cette bulle/ce popup y feraient doublon). Voir le early return
   // plus bas.
   const pathname = usePathname();
+
+  // 07/09/2026, demande Bourama : popup mini déplaçable/redimensionnable
+  // (desktop uniquement) avec taille/position retrouvée par compte.
+  // `estDesktop` calculé une seule fois au montage (même convention que
+  // `natif` dans AppShell.tsx) -- un redimensionnement de fenêtre qui
+  // traverserait le point de rupture pendant que le popup est déjà
+  // ouvert reste un cas limite non couvert, comme pour `natif`.
+  const [estDesktop] = useState(
+    () => typeof window !== "undefined" && window.matchMedia("(min-width: 768px)").matches
+  );
+  // Valeur par défaut tout de suite (calcul synchrone, pas d'attente
+  // réseau) -- affichée immédiatement, puis éventuellement remplacée par
+  // la vraie sauvegarde du compte une fois lireMonProfil() résolu
+  // (voir l'effet plus bas). Ordre des champs choisi pour matcher
+  // exactement l'API (popup_chat_x/y/largeur/hauteur).
+  const [popup, setPopup] = useState(() => positionEtTailleParDefaut());
+
+  useEffect(() => {
+    if (!estDesktop) return;
+    let annule = false;
+    lireMonProfil()
+      .then((p) => {
+        if (annule) return;
+        const { popup_chat_x, popup_chat_y, popup_chat_largeur, popup_chat_hauteur } = p ?? {};
+        if (
+          popup_chat_x == null ||
+          popup_chat_y == null ||
+          popup_chat_largeur == null ||
+          popup_chat_hauteur == null
+        ) {
+          return; // jamais personnalisé par ce compte -- on garde la valeur par défaut déjà affichée.
+        }
+        // Bornage (même esprit que le glissement/redimensionnement à la
+        // main) : l'écran actuel peut être plus petit que celui où la
+        // taille/position a été sauvegardée la dernière fois (autre
+        // appareil), donc on ne fait pas confiance aveuglément aux
+        // valeurs brutes du profil.
+        const largeur = Math.max(POPUP_TAILLE_MIN.width, Math.min(popup_chat_largeur, window.innerWidth - 24));
+        const hauteur = Math.max(POPUP_TAILLE_MIN.height, Math.min(popup_chat_hauteur, window.innerHeight - 24));
+        const x = Math.max(-400, Math.min(popup_chat_x, window.innerWidth - 80));
+        const y = Math.max(0, Math.min(popup_chat_y, window.innerHeight - 40));
+        setPopup({ x, y, largeur, hauteur });
+      })
+      .catch(() => {
+        // Invité (401) ou échec réseau : on garde la valeur par défaut
+        // déjà affichée, rien de grave à signaler ici.
+      });
+    return () => {
+      annule = true;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- une seule fois au montage, comme le chargement du profil dans AppSidebar.tsx.
+  }, [estDesktop]);
+
+  // Sauvegarde (07/09/2026) : SEULEMENT au relâchement du glissement/
+  // redimensionnement (surFinGeste ci-dessous), jamais pendant le geste
+  // -- voir lib/useFenetreDeplacable.ts. Échec silencieux volontaire
+  // (comme le chargement ci-dessus) : une préférence de confort qui ne
+  // se sauvegarde pas une fois ne justifie pas d'interrompre le chat.
+  function sauvegarderPopup(rect: { x: number; y: number; width: number; height: number }) {
+    enregistrerMonProfil({
+      popup_chat_x: Math.round(rect.x),
+      popup_chat_y: Math.round(rect.y),
+      popup_chat_largeur: Math.round(rect.width),
+      popup_chat_hauteur: Math.round(rect.height),
+    }).catch(() => {});
+  }
+
+  const { demarrerGlissement: demarrerGlissementPopup, demarrerRedimensionnement: demarrerRedimensionnementPopup } =
+    useFenetreDeplacable({
+      x: popup.x,
+      y: popup.y,
+      width: popup.largeur,
+      height: popup.hauteur,
+      largeurMin: POPUP_TAILLE_MIN.width,
+      hauteurMin: POPUP_TAILLE_MIN.height,
+      deplacer: (nx, ny) => setPopup((p) => ({ ...p, x: nx, y: ny })),
+      redimensionner: (patch) =>
+        setPopup((p) => ({
+          x: patch.x ?? p.x,
+          y: patch.y ?? p.y,
+          largeur: patch.width ?? p.largeur,
+          hauteur: patch.height ?? p.hauteur,
+        })),
+      surFinGeste: (rect) => sauvegarderPopup(rect),
+    });
 
   // Étape 1 (07/09/2026, chantier "chat plein écran = vraie section") :
   // état de la conversation déplacé dans ContexteChat (lib/contexteChat.tsx)
@@ -324,31 +440,29 @@ export function ChatFlottant({
 
   return (
     <div
+      // 07/09/2026, demande Bourama : popup mini déplaçable/redimensionnable
+      // sur desktop, avec taille/position mémorisée par compte (voir
+      // `popup` plus haut). L'ancien centrage CSS (md:inset-0 md:m-auto)
+      // est retiré : sur desktop, la position ET la taille viennent
+      // maintenant entièrement du style inline ci-dessous (left/top/
+      // width/height, piloté par le glissement/redimensionnement) --
+      // aucune classe de largeur/hauteur/position ne doit donc rester
+      // active en même temps sur desktop, sous peine de conflit. Sur
+      // mobile (estDesktop=false), rien ne change : mêmes classes
+      // qu'avant (bas-droite, taille fixe), pas de style inline.
+      style={estDesktop ? { left: popup.x, top: popup.y, width: popup.largeur, height: popup.hauteur } : undefined}
       className={
-        // Mini popup : centré au milieu de l'écran en desktop (demande
-        // Bourama, 17/08/2026 -- "le popup se met à gauche, au coin, je
-        // veux qu'il soit au milieu"), inchangé en bas à droite sur
-        // mobile (faute de place, clavier virtuel). La bulle fermée,
-        // elle, reste toujours en bas à droite (voir le bouton
-        // ci-dessus) -- seule la fenêtre une fois ouverte est concernée.
-        //
-        // CORRECTIF 18/08/2026 (Bourama : "le popup ... trop en bas") :
-        // le centrage se faisait avant via left-1/2 top-1/2 +
-        // -translate-x/y-1/2, mais cgpt-entree-modal (juste en dessous)
-        // anime aussi la propriété transform -- une fois l'animation
-        // finie (fill-mode "both"), son état final "translateY(0)
-        // scale(1)" écrasait complètement notre décalage de centrage,
-        // qui utilisait aussi transform. Le popup perdait son -50%
-        // vertical et se retrouvait affiché une demi-hauteur trop bas.
-        // Centrage refait ici avec inset-0 + margin:auto (propriétés
-        // indépendantes de transform), qui coexiste sans conflit avec
-        // l'animation.
-        //
-        // 28/08/2026, chantier "web mobile façon appli" : bottom-5
-        // remplacé par un calc() incluant --dj-barre-onglets-web (vaut
-        // 0px en natif et sur desktop, voir app/globals.css), pour lever
-        // le popup au-dessus de BarreOngletsWeb sur mobile web.
-        "fixed bottom-[calc(1.25rem+var(--dj-barre-onglets-web,0px))] right-5 z-40 flex h-[min(70dvh,600px)] w-[min(92vw,380px)] flex-col overflow-hidden rounded-cgpt-carte border border-dj-bordure bg-dj-fond shadow-[0_4px_30px_rgba(0,0,0,0.45)] md:inset-0 md:m-auto" +
+        "fixed z-40 flex flex-col overflow-hidden rounded-cgpt-carte border border-dj-bordure bg-dj-fond shadow-[0_4px_30px_rgba(0,0,0,0.45)]" +
+        // Classes de position/taille : uniquement sur mobile désormais
+        // (desktop les reçoit via le style inline ci-dessus -- voir
+        // commentaire juste au-dessus). 28/08/2026, chantier "web mobile
+        // façon appli" : bottom-5 remplacé par un calc() incluant
+        // --dj-barre-onglets-web (vaut 0px en natif et sur desktop, voir
+        // app/globals.css), pour lever le popup au-dessus de
+        // BarreOngletsWeb sur mobile web.
+        (estDesktop
+          ? ""
+          : " bottom-[calc(1.25rem+var(--dj-barre-onglets-web,0px))] right-5 h-[min(70dvh,600px)] w-[min(92vw,380px)]") +
         // Fondu d'ouverture (mount -- reprend l'animation standard des
         // modals du projet, cgpt-entree-modal) et de fermeture (juste
         // avant le démontage réel, voir fermerAvecFondu) -- demande
@@ -361,15 +475,27 @@ export function ChatFlottant({
       {/* En-tête compact du popup mini : nouvelle conversation +
           historique en dropdown, faute de place pour un vrai rail
           (l'équivalent en plein écran vit dans AppSidebar, rendue par
-          ChatSection.tsx sur la route /chat depuis l'étape 5). */}
+          ChatSection.tsx sur la route /chat depuis l'étape 5). Sert
+          aussi de poignée de glissement sur desktop (07/09/2026, même
+          principe que l'en-tête des fenêtres de section, voir
+          FenetresSections.tsx) -- touch-action:none nécessaire même si
+          ce popup n'existe qu'en pratique sur desktop, par cohérence
+          avec ce même correctif ailleurs (évite qu'un trackpad/écran
+          tactile capte le geste comme un scroll avant que le glissement
+          démarre). */}
       <div
+        onPointerDown={estDesktop ? demarrerGlissementPopup : undefined}
+        style={estDesktop ? { touchAction: "none" } : undefined}
         // Étape 5 (07/09/2026) : cet en-tête ne gère plus que le mode
         // mini (popup, desktop uniquement, voir le early return "fermee"
         // plus haut et BarreOngletsNative.tsx/BarreOngletsWeb.tsx qui
         // naviguent vers /chat pour mobile) -- toujours visible, plus de
         // ternaire hidden md:flex qui ne servait qu'à le masquer en mode
         // plein écran mobile, cas qui n'existe plus ici.
-        className="flex flex-shrink-0 items-center gap-2 border-b border-dj-bordure px-3 pb-2.5 pt-2.5"
+        className={
+          "flex flex-shrink-0 items-center gap-2 border-b border-dj-bordure px-3 pb-2.5 pt-2.5" +
+          (estDesktop ? " cursor-grab select-none active:cursor-grabbing" : "")
+        }
       >
         <Logo taille={20} />
         <span className="font-display text-sm font-bold text-dj-texte">Clovis</span>
@@ -378,6 +504,7 @@ export function ChatFlottant({
           {nbMessages > 0 && (
             <button
               onClick={nouvelleConversation}
+              onPointerDown={(e) => e.stopPropagation()}
               title="Nouvelle conversation"
               className="group flex h-8 w-8 items-center justify-center rounded-cgpt-bouton text-dj-texte-muet transition-colors hover:bg-dj-surface-haute hover:text-dj-texte"
             >
@@ -388,6 +515,7 @@ export function ChatFlottant({
             <div className="relative">
               <button
                 onClick={() => setHistoriqueOuvert((v) => !v)}
+                onPointerDown={(e) => e.stopPropagation()}
                 title="Historique"
                 className={`group flex h-8 w-8 items-center justify-center rounded-cgpt-bouton transition-colors ${
                   historiqueOuvert ? "bg-dj-surface-haute text-dj-texte" : "text-dj-texte-muet hover:bg-dj-surface-haute hover:text-dj-texte"
@@ -396,7 +524,10 @@ export function ChatFlottant({
                 <History size={16} className="transition-transform duration-300 group-hover:rotate-45" />
               </button>
               {historiqueOuvert && (
-                <div className="dj-scroll-isole absolute right-0 top-9 z-10 max-h-64 w-56 animate-dj-fade-in-rapide overflow-y-auto rounded-cgpt-carte border border-dj-bordure bg-dj-surface p-1 shadow-lg">
+                <div
+                  onPointerDown={(e) => e.stopPropagation()}
+                  className="dj-scroll-isole absolute right-0 top-9 z-10 max-h-64 w-56 animate-dj-fade-in-rapide overflow-y-auto rounded-cgpt-carte border border-dj-bordure bg-dj-surface p-1 shadow-lg"
+                >
                   {historique.map((fil) => (
                     <button
                       key={fil.conversation_id ?? "legacy"}
@@ -413,6 +544,7 @@ export function ChatFlottant({
           <Link
             href="/chat"
             onClick={fermerMiniAvantNavigation}
+            onPointerDown={(e) => e.stopPropagation()}
             title="Plein écran"
             className="group flex h-8 w-8 items-center justify-center rounded-cgpt-bouton text-dj-texte-muet transition-colors hover:bg-dj-surface-haute hover:text-dj-texte"
           >
@@ -420,6 +552,7 @@ export function ChatFlottant({
           </Link>
           <button
             onClick={fermerAvecFondu}
+            onPointerDown={(e) => e.stopPropagation()}
             title="Fermer"
             className="group flex h-8 w-8 items-center justify-center rounded-cgpt-bouton text-dj-texte-muet transition-colors hover:bg-dj-surface-haute hover:text-dj-texte"
           >
@@ -521,6 +654,19 @@ export function ChatFlottant({
           zIndex="z-[150]"
         />
       )}
+
+      {/* Poignées de redimensionnement (07/09/2026, desktop uniquement,
+          même principe que FenetresSections.tsx -- voir
+          lib/useFenetreDeplacable.ts). */}
+      {estDesktop &&
+        POIGNEES_REDIMENSIONNEMENT.map((p) => (
+          <div
+            key={p.direction}
+            onPointerDown={(e) => demarrerRedimensionnementPopup(e, p.direction)}
+            className={`absolute ${p.classe}`}
+            style={{ touchAction: "none" }}
+          />
+        ))}
     </div>
   );
 }

@@ -1,12 +1,13 @@
 "use client";
 
-import { useEffect, useRef, useContext } from "react";
+import { useEffect, useContext, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { X, ExternalLink } from "lucide-react";
 import { ONGLETS, type OngletId } from "@/components/AppSidebar";
 import { useFenetres, TAILLE_MIN } from "@/lib/contexteFenetres";
 import { useFermetureAnimee } from "@/lib/useFermetureAnimee";
 import { ContexteRetour } from "@/lib/contexteRetour";
+import { useFenetreDeplacable, POIGNEES_REDIMENSIONNEMENT } from "@/lib/useFenetreDeplacable";
 import { MesCodes } from "@/components/MesCodes";
 import { EspaceEntrerCode } from "@/components/EspaceEntrerCode";
 import { MesComportements } from "@/components/MesComportements";
@@ -47,21 +48,6 @@ const INFOS_PAR_ONGLET: Record<OngletId, { label: string; href: string; Icone: (
     { label: string; href: string; Icone: (typeof ONGLETS)[number]["Icone"] }
   >;
 
-// Les 8 poignées de redimensionnement (22/08/2026, demande Bourama :
-// "que je puisse les agrandir en tirant par les côtés ou les angles").
-// direction encode quels bords bougent : n/s = haut/bas, e/w = droite/
-// gauche, combinés pour les 4 coins.
-const POIGNEES: { direction: string; classe: string }[] = [
-  { direction: "n", classe: "left-2 right-2 top-0 h-1.5 cursor-ns-resize" },
-  { direction: "s", classe: "left-2 right-2 bottom-0 h-1.5 cursor-ns-resize" },
-  { direction: "e", classe: "right-0 top-2 bottom-2 w-1.5 cursor-ew-resize" },
-  { direction: "w", classe: "left-0 top-2 bottom-2 w-1.5 cursor-ew-resize" },
-  { direction: "ne", classe: "right-0 top-0 h-3 w-3 cursor-nesw-resize" },
-  { direction: "nw", classe: "left-0 top-0 h-3 w-3 cursor-nwse-resize" },
-  { direction: "se", classe: "right-0 bottom-0 h-3 w-3 cursor-nwse-resize" },
-  { direction: "sw", classe: "left-0 bottom-0 h-3 w-3 cursor-nesw-resize" },
-];
-
 function FenetreSection({
   cle,
   ongletId,
@@ -81,7 +67,6 @@ function FenetreSection({
 }) {
   const { fermer, monterAuPremierPlan, deplacer, redimensionner } = useFenetres();
   const router = useRouter();
-  const glissement = useRef<{ x: number; y: number; fx: number; fy: number } | null>(null);
   const { label, href, Icone } = INFOS_PAR_ONGLET[ongletId];
   // Fondu d'apparition/disparition (30/08/2026, audit "aucune transition"
   // -- même mécanisme que le chat lui-même, voir useFermetureAnimee.ts et
@@ -137,87 +122,23 @@ function FenetreSection({
     ctxRetour.remonterAuSommet(cle, fermerCettePopup);
   }, [ctxRetour, cle, z]);
 
-  // Correctif (26/08/2026, retour "pas déplaçable à la main sur mobile") :
-  // onMouseDown/mousemove/mouseup ne réagissent pas de façon fiable au
-  // doigt sur mobile (au mieux un mousedown synthétique isolé, sans les
-  // mousemove qui suivent pendant le geste). Remplacé par les Pointer
-  // Events (onPointerDown/pointermove/pointerup), qui unifient souris,
-  // doigt et stylet, même logique de calcul, juste la source de
-  // l'événement qui change. setPointerCapture garde tous les événements
-  // suivants rattachés à cet élément même si le doigt glisse hors de sa
-  // zone d'origine (comportement natif du drag, pas garanti sans ça sur
-  // mobile).
-  function demarrerGlissement(e: React.PointerEvent) {
-    // Bouton gauche uniquement : laisse clic droit/milieu tranquilles
-    // (le doigt/stylet rapporte toujours button 0, donc jamais bloqué ici).
-    if (e.button !== 0) return;
-    monterAuPremierPlan(cle);
-    e.currentTarget.setPointerCapture(e.pointerId);
-    glissement.current = { x: e.clientX, y: e.clientY, fx: x, fy: y };
-    function onMove(ev: PointerEvent) {
-      if (!glissement.current) return;
-      const dx = ev.clientX - glissement.current.x;
-      const dy = ev.clientY - glissement.current.y;
-      // Garde la fenêtre au moins partiellement visible sur les 4 côtés.
-      // AVANT (audit 28/08/2026) : seuls la gauche (-400) et le haut (0)
-      // étaient bornés -- rien n'empêchait de la traîner hors écran à
-      // droite ou en bas, où son bouton Fermer devenait alors
-      // inaccessible (seul recours : "fermer toutes" en cliquant dans le
-      // chat, qui ferme aussi les autres fenêtres ouvertes). Bornes
-      // calculées sur la taille d'écran actuelle plutôt qu'une valeur
-      // fixe, pour rester correct sur petit comme grand écran.
-      const nx = Math.max(-400, Math.min(glissement.current.fx + dx, window.innerWidth - 80));
-      const ny = Math.max(0, Math.min(glissement.current.fy + dy, window.innerHeight - 40));
-      deplacer(cle, nx, ny);
-    }
-    function onUp() {
-      glissement.current = null;
-      window.removeEventListener("pointermove", onMove);
-      window.removeEventListener("pointerup", onUp);
-      window.removeEventListener("pointercancel", onUp);
-    }
-    window.addEventListener("pointermove", onMove);
-    window.addEventListener("pointerup", onUp);
-    window.addEventListener("pointercancel", onUp);
-  }
-
-  function demarrerRedimensionnement(e: React.PointerEvent, direction: string) {
-    if (e.button !== 0) return;
-    e.stopPropagation();
-    monterAuPremierPlan(cle);
-    e.currentTarget.setPointerCapture(e.pointerId);
-    const depart = { x: e.clientX, y: e.clientY, fx: x, fy: y, fw: width, fh: height };
-    function onMove(ev: PointerEvent) {
-      const dx = ev.clientX - depart.x;
-      const dy = ev.clientY - depart.y;
-      const patch: Partial<{ x: number; y: number; width: number; height: number }> = {};
-      if (direction.includes("e")) {
-        patch.width = Math.max(TAILLE_MIN.width, depart.fw + dx);
-      }
-      if (direction.includes("s")) {
-        patch.height = Math.max(TAILLE_MIN.height, depart.fh + dy);
-      }
-      if (direction.includes("w")) {
-        const nouvelleLargeur = Math.max(TAILLE_MIN.width, depart.fw - dx);
-        patch.width = nouvelleLargeur;
-        patch.x = depart.fx + (depart.fw - nouvelleLargeur);
-      }
-      if (direction.includes("n")) {
-        const nouvelleHauteur = Math.max(TAILLE_MIN.height, depart.fh - dy);
-        patch.height = nouvelleHauteur;
-        patch.y = depart.fy + (depart.fh - nouvelleHauteur);
-      }
-      redimensionner(cle, patch);
-    }
-    function onUp() {
-      window.removeEventListener("pointermove", onMove);
-      window.removeEventListener("pointerup", onUp);
-      window.removeEventListener("pointercancel", onUp);
-    }
-    window.addEventListener("pointermove", onMove);
-    window.addEventListener("pointerup", onUp);
-    window.addEventListener("pointercancel", onUp);
-  }
+  // 07/09/2026 : logique de glissement/redimensionnement extraite dans
+  // lib/useFenetreDeplacable.ts (réutilisée par le popup mini du chat,
+  // voir ChatFlottant.tsx) -- comportement inchangé, monterAuPremierPlan
+  // passé en `surDebutGeste` pour garder exactement le même effet qu'avant
+  // (remonter cette fenêtre au premier plan dès qu'on commence à la
+  // glisser ou à la redimensionner).
+  const { demarrerGlissement, demarrerRedimensionnement } = useFenetreDeplacable({
+    x,
+    y,
+    width,
+    height,
+    largeurMin: TAILLE_MIN.width,
+    hauteurMin: TAILLE_MIN.height,
+    deplacer: (nx, ny) => deplacer(cle, nx, ny),
+    redimensionner: (patch) => redimensionner(cle, patch),
+    surDebutGeste: () => monterAuPremierPlan(cle),
+  });
 
   // Bouton "ouvrir en vraie page" (30/08/2026, audit navigation) : ferme
   // cette fenêtre (avec fondu, comme le bouton Fermer) puis navigue vers
@@ -304,7 +225,7 @@ function FenetreSection({
             (TAILLE_MIN/largeur d'écran, voir contexteFenetres.tsx). */}
         <div className="mx-auto w-full">{CONTENU_PAR_ONGLET[ongletId]}</div>
       </div>
-      {POIGNEES.map((p) => (
+      {POIGNEES_REDIMENSIONNEMENT.map((p) => (
         <div
           key={p.direction}
           onPointerDown={(e) => demarrerRedimensionnement(e, p.direction)}

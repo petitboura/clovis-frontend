@@ -1136,6 +1136,10 @@ export async function enregistrerMonProfil(payload: {
   avatar_url?: string;
   notifications_proactives_actives?: boolean;
   est_majeur?: boolean;
+  popup_chat_x?: number;
+  popup_chat_y?: number;
+  popup_chat_largeur?: number;
+  popup_chat_hauteur?: number;
 }) {
   return appelerApi("/api/profiles/me", {
     method: "PATCH",
