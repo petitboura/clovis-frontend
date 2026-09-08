@@ -1,17 +1,19 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { Search, ScrollText, Download, Check, Upload, Plus, Loader2 } from "lucide-react";
+import { Search, ScrollText, Download, Check, Upload, Plus, Loader2, Trash2 } from "lucide-react";
 import {
   rechercherComportementsPublics,
   activerComportementPublic,
   uploaderSkillPublic,
+  retirerSkillPublic,
   type ComportementPublic,
 } from "@/lib/api";
 import { messageErreur, ErreurApi } from "@/lib/erreurs";
 import { CTACompteRequis } from "@/components/CTACompteRequis";
 import { telechargerTexte, nomFichierDepuis } from "@/lib/telechargerTexte";
 import { Skeleton } from "./Skeleton";
+import { VoirSkillRecuModal } from "@/components/VoirSkillRecuModal";
 
 // Catalogue public des comportements (21/08/2026, demande Bourama : "les
 // comportements aussi, je veux un onglet public, c'est à dire quelqu'un
@@ -35,6 +37,10 @@ export function ComportementsPublics({ onActive }: { onActive: () => void }) {
   const [erreurUpload, setErreurUpload] = useState<string | null>(null);
   const [erreursUploadLot, setErreursUploadLot] = useState<{ nom: string; erreur: string }[]>([]);
   const inputFichierRef = useRef<HTMLInputElement>(null);
+  // 07/09/2026, demande Bourama : aperçu du skill au clic sur la ligne, et
+  // retrait possible pour son propre auteur (aucun des deux n'existait).
+  const [apercu, setApercu] = useState<ComportementPublic | null>(null);
+  const [retraitEnCours, setRetraitEnCours] = useState<string | null>(null);
 
   function charger(q?: string) {
     rechercherComportementsPublics(q)
@@ -76,6 +82,25 @@ export function ComportementsPublics({ onActive }: { onActive: () => void }) {
   // liste chargée), pas besoin d'appel réseau -- juste un Blob local.
   function telechargerSkill(c: ComportementPublic) {
     telechargerTexte(nomFichierDepuis(c.nom, "md"), c.skill_md);
+  }
+
+  // 07/09/2026, demande Bourama : retrait par l'auteur, n'existait pas.
+  // Retrait doux côté backend, mais ici on retire simplement la ligne de
+  // la liste affichée puisqu'un skill retiré ne doit plus apparaître
+  // dans le catalogue public, y compris pour son propre auteur.
+  async function retirer(c: ComportementPublic) {
+    if (retraitEnCours) return;
+    setRetraitEnCours(c.id);
+    setErreur(null);
+    try {
+      await retirerSkillPublic(c.id);
+      setListe((prec) => (prec || []).filter((x) => x.id !== c.id));
+      if (apercu?.id === c.id) setApercu(null);
+    } catch (e) {
+      setErreur(messageErreur(e));
+    } finally {
+      setRetraitEnCours(null);
+    }
   }
 
   function choisirFichiersUpload(fichiers: FileList) {
@@ -318,22 +343,40 @@ export function ComportementsPublics({ onActive }: { onActive: () => void }) {
         <div className="flex flex-col gap-2">
           {liste.map((c) => {
             const dejaActive = actives.has(c.id);
+            const descriptionComplete = c.description || c.texte;
             return (
               <div
                 key={c.id}
-                className="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-dj-bordure bg-dj-surface px-4 py-3"
+                onClick={() => setApercu(c)}
+                className="flex cursor-pointer flex-wrap items-center justify-between gap-2 rounded-xl border border-dj-bordure bg-dj-surface px-4 py-3 transition-colors hover:border-dj-bordure-forte"
               >
                 <div className="flex min-w-0 flex-1 items-center gap-3">
-                  <ScrollText size={16} className="flex-shrink-0 text-dj-texte-muet" />
+                  <ScrollText size={16} className="mt-0.5 flex-shrink-0 self-start text-dj-texte-muet" />
                   <div className="min-w-0">
                     <p className="truncate text-sm text-dj-texte">{c.nom}</p>
-                    <p className="truncate text-xs text-dj-texte-muet">
-                      {c.description || c.texte} · {c.activations_count} activation(s)
+                    <p title={descriptionComplete} className="line-clamp-2 text-xs text-dj-texte-muet">
+                      {descriptionComplete} · {c.activations_count} activation(s)
                     </p>
                   </div>
                 </div>
+                {c.est_a_moi && (
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      retirer(c);
+                    }}
+                    disabled={retraitEnCours === c.id}
+                    title="Retirer du catalogue public"
+                    className="flex flex-shrink-0 items-center gap-1.5 rounded-cgpt-bouton border border-dj-bordure px-3 py-1.5 text-xs text-dj-texte-muet transition-colors hover:border-[var(--dj-erreur)] hover:text-[var(--dj-erreur)] disabled:opacity-60"
+                  >
+                    {retraitEnCours === c.id ? <Loader2 size={13} className="animate-spin" /> : <Trash2 size={13} />}
+                  </button>
+                )}
                 <button
-                  onClick={() => activer(c)}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    activer(c);
+                  }}
                   disabled={activationEnCours === c.id || dejaActive}
                   className="flex flex-shrink-0 items-center gap-1.5 rounded-cgpt-bouton border border-dj-bordure px-3 py-1.5 text-xs text-dj-texte transition-colors hover:border-dj-bordure-forte disabled:opacity-60"
                 >
@@ -348,7 +391,10 @@ export function ComportementsPublics({ onActive }: { onActive: () => void }) {
                   )}
                 </button>
                 <button
-                  onClick={() => telechargerSkill(c)}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    telechargerSkill(c);
+                  }}
                   title="Télécharger en .md"
                   className="flex flex-shrink-0 items-center gap-1.5 rounded-cgpt-bouton border border-dj-bordure px-3 py-1.5 text-xs text-dj-texte-muet transition-colors hover:border-dj-bordure-forte hover:text-dj-texte"
                 >
@@ -358,6 +404,15 @@ export function ComportementsPublics({ onActive }: { onActive: () => void }) {
             );
           })}
         </div>
+      )}
+
+      {apercu && (
+        <VoirSkillRecuModal
+          nom={apercu.nom}
+          skillMdInitial={apercu.skill_md}
+          sousTitre={`${apercu.activations_count} activation(s) · lecture seule`}
+          onFermer={() => setApercu(null)}
+        />
       )}
     </div>
   );

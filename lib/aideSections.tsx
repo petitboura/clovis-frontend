@@ -178,7 +178,7 @@ export const RUBRIQUES_AIDE: RubriqueAide[] = [
     texteCourt:
       "Des comportements publiés par d'autres étudiants. Active celui qui t'intéresse : une copie s'ajoute directement dans « Mes comportements », prête à l'emploi.",
     texteComplet:
-      "Des comportements publiés par d'autres étudiants. Active celui qui t'intéresse : une copie s'ajoute directement dans « Mes comportements », prête à l'emploi.",
+      "Des comportements publiés par d'autres étudiants. Clique sur l'un d'eux pour voir son contenu complet avant de l'activer. Active celui qui t'intéresse : une copie s'ajoute directement dans « Mes comportements », prête à l'emploi. Si c'est toi qui l'as publié, tu peux le retirer du catalogue à tout moment.",
   },
   {
     id: "connecter-claude",

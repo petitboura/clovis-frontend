@@ -8,10 +8,13 @@ import type { NotificationClovis } from "./api";
 // (lib/api.ts) qui ne permet pas au backend de poser une question au
 // frontend en cours de route.
 //
-// Ce fichier est charge UNIQUEMENT cote natif (Capacitor.isNativePlatform())
-// -- voir l'appel dans lib/supabase.ts, meme garde que le pont
-// PontNatif deja en place. Sur le web (Vercel), il n'y a pas de
-// telephone a explorer : rien de tout ceci ne s'execute.
+// Modifie le 02/09/2026 (Bourama, centre de notifications) : ce fichier
+// se charge desormais sur web ET natif, voir l'appel dans lib/supabase.ts
+// et le commentaire d'initialiserCanalTempsReel plus bas. Avant cette
+// date, uniquement natif (seule l'exploration de dossier en avait
+// besoin). Sur le web, pluginDossiers reste simplement null : rien de ce
+// qui est propre a l'exploration de dossier ne s'execute, seule la partie
+// notifications tourne des deux cotes.
 //
 // Lot 1 : aucun traitement reel, on repondait "oui" a n'importe quelle
 // question ("es-tu la ?") pour valider le tuyau de bout en bout.
