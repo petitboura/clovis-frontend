@@ -128,13 +128,28 @@ export function ChatFlottant({
 
   // 07/09/2026, demande Bourama : popup mini déplaçable/redimensionnable
   // (desktop uniquement) avec taille/position retrouvée par compte.
-  // `estDesktop` calculé une seule fois au montage (même convention que
-  // `natif` dans AppShell.tsx) -- un redimensionnement de fenêtre qui
-  // traverserait le point de rupture pendant que le popup est déjà
-  // ouvert reste un cas limite non couvert, comme pour `natif`.
-  const [estDesktop] = useState(
-    () => typeof window !== "undefined" && window.matchMedia("(min-width: 768px)").matches
-  );
+  //
+  // CORRECTIF (07/09/2026, bug signalé Bourama "rien ne marche, ni
+  // l'agrandir ni la bouger") : la première version lisait
+  // `window.matchMedia(...)` directement dans l'initialiseur de
+  // useState, exécuté aussi bien côté serveur (SSR) que côté navigateur.
+  // Côté serveur, `window` n'existe pas -- `estDesktop` valait donc
+  // toujours `false` dans le HTML généré par le serveur, quelle que
+  // soit la taille d'écran réelle du visiteur. Au moment de
+  // l'hydratation, React peut conserver ce `false` du HTML serveur au
+  // lieu de recalculer côté navigateur (pas d'erreur visible, juste un
+  // popup qui reste figé dans son état "mobile" -- sans poignées ni
+  // glissement -- même sur grand écran). `natif` (juste au-dessus, voir
+  // AppShell.tsx) évite exactement ce piège en démarrant à `false`
+  // partout puis en posant la vraie valeur dans un effet, qui ne
+  // s'exécute jamais côté serveur -- repris ici à l'identique.
+  const [estDesktop, setEstDesktop] = useState(false);
+  useEffect(() => {
+    setEstDesktop(window.matchMedia("(min-width: 768px)").matches);
+    // Un redimensionnement de fenêtre qui traverserait le point de
+    // rupture pendant que le popup est déjà ouvert reste un cas limite
+    // non couvert (une seule fois au montage), comme pour `natif`.
+  }, []);
   // Valeur par défaut tout de suite (calcul synchrone, pas d'attente
   // réseau) -- affichée immédiatement, puis éventuellement remplacée par
   // la vraie sauvegarde du compte une fois lireMonProfil() résolu
