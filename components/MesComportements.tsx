@@ -3,7 +3,7 @@
 import { useEffect, useState, useRef, type MouseEvent } from "react";
 import {
   Trash2, Plus, X, Check, ScrollText, FileCode2, Loader2, Link2, Unlink, Eye, Code2, Upload, ToggleLeft, ToggleRight,
-  Download, Sparkles, FileUp, FolderUp,
+  Download, Sparkles, FileUp, FolderUp, Info,
 } from "lucide-react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
@@ -124,25 +124,24 @@ function ChipComportement({
     >
       <div className="flex min-w-0 items-center gap-2">
         <ScrollText size={14} className="flex-shrink-0 text-dj-texte-muet" />
-        {/* Nom révélant la description au survol/clic (08/09/2026, retour
-            Bourama : "tu ne dois pas changer mon affichage sans ma
-            permission... les pilules c'est moi qui ai décidé" -- correctif
-            d'un premier essai qui affichait la description en clair et
-            agrandissait la pilule, refusé par Bourama). Même motif que la
-            liste "Publique" (ComportementsPublics.tsx, BulleSurvol) : la
-            pilule garde sa taille, la description sort dans une bulle au
-            survol (et au clic, indispensable sur tactile) au lieu de
-            prendre de la place en permanence. Enveloppe min-w-0/flex-1 sur
-            un div dédié (même motif que ComportementsPublics.tsx) --
-            BulleSurvol elle-même est en inline-block, jamais flex-1 par
-            défaut. revelerAuClic=false : le clic sur cette pilule ouvre
-            déjà l'édition du skill (onOuvrir sur le bouton parent), la
-            bulle ne doit pas lui voler ce clic. */}
-        <div className="min-w-0 flex-1">
-          <BulleSurvol texte={c.description || "(pas de description)"} className="truncate text-sm text-dj-texte" revelerAuClic={false}>
-            {c.nom || c.description}
+        {/* Nom en clair + petit bouton "i" pour la description (08/09/2026,
+            retour Bourama : "l'info dans la bulle i plutôt qu'à plat telle
+            qu'elle" -- remplace le premier essai qui mettait le NOM
+            lui-même comme déclencheur de la bulle). Même motif que
+            BoutonInfoSection.tsx (le "i" à côté des titres de section) :
+            un petit bouton dédié, séparé du nom, jamais le texte cliquable
+            lui-même qui porte l'info. Ici on réutilise BulleSurvol (déjà
+            au bon thème) plutôt que BoutonInfoSection (pensé pour un lien
+            "En savoir plus" vers l'Aide, hors sujet ici). */}
+        <span className="min-w-0 flex-1 truncate text-sm text-dj-texte">{c.nom || c.description}</span>
+        {c.description && (
+          <BulleSurvol
+            texte={c.description}
+            className="flex h-4 w-4 flex-shrink-0 items-center justify-center rounded-full text-dj-texte-muet hover:text-dj-texte"
+          >
+            <Info size={12} />
           </BulleSurvol>
-        </div>
+        )}
         <span
           role="button"
           tabIndex={0}
@@ -913,11 +912,25 @@ export function MesComportements({ agentId }: { agentId: string }) {
                   className="w-full flex-1 resize-none rounded-cgpt-carte border border-dj-bordure bg-dj-surface-haute px-4 py-3 font-mono text-sm text-dj-texte outline-none focus:border-dj-bordure-forte"
                 />
               ) : (
-                <div className="w-full flex-1 overflow-y-auto rounded-xl border border-dj-bordure bg-dj-surface-haute px-5 py-4">
-                  <div className="dj-markdown [&_ul]:list-disc [&_ul]:pl-5 [&_ol]:list-decimal [&_ol]:pl-5 [&_p]:mb-2 last:[&_p]:mb-0 [&_hr]:my-4 [&_hr]:border-dj-bordure [&_strong]:text-dj-texte [&_h1]:font-lecture [&_h1]:font-semibold [&_h1]:tracking-[-0.01em] [&_h1]:text-dj-texte [&_h1]:text-xl [&_h1]:mb-2 [&_h1]:mt-3 [&_h2]:font-lecture [&_h2]:font-semibold [&_h2]:tracking-[-0.01em] [&_h2]:text-dj-texte [&_h2]:text-lg [&_h2]:mb-2 [&_h2]:mt-3 [&_h3]:font-lecture [&_h3]:font-semibold [&_h3]:tracking-[-0.01em] [&_h3]:text-dj-texte [&_h3]:text-base [&_h3]:mb-1.5 [&_h3]:mt-2">
-                    <ReactMarkdown remarkPlugins={[remarkGfm]} rehypePlugins={[[rehypeSanitize, defaultSchema]]}>
-                      {extraireCorpsSkill(skillOuvert)}
-                    </ReactMarkdown>
+                <div className="flex w-full flex-1 flex-col gap-2 overflow-y-auto">
+                  {/* Description ajoutée ici (08/09/2026, retour Bourama :
+                      "il faut la description aussi dans skill généré") --
+                      avant, l'Aperçu affichait uniquement le corps
+                      (extraireCorpsSkill retire le frontmatter, donc la
+                      description n'apparaissait jamais dans cette vue,
+                      seulement planquée dans le frontmatter de l'onglet
+                      Texte). */}
+                  {panneau.type === "edition" && panneau.c.description && (
+                    <p className="flex-shrink-0 rounded-lg border border-dj-bordure bg-dj-surface-haute px-3 py-2 text-xs text-dj-texte-muet">
+                      <span className="font-medium text-dj-texte-muet">Description :</span> {panneau.c.description}
+                    </p>
+                  )}
+                  <div className="w-full flex-1 overflow-y-auto rounded-xl border border-dj-bordure bg-dj-surface-haute px-5 py-4">
+                    <div className="dj-markdown [&_ul]:list-disc [&_ul]:pl-5 [&_ol]:list-decimal [&_ol]:pl-5 [&_p]:mb-2 last:[&_p]:mb-0 [&_hr]:my-4 [&_hr]:border-dj-bordure [&_strong]:text-dj-texte [&_h1]:font-lecture [&_h1]:font-semibold [&_h1]:tracking-[-0.01em] [&_h1]:text-dj-texte [&_h1]:text-xl [&_h1]:mb-2 [&_h1]:mt-3 [&_h2]:font-lecture [&_h2]:font-semibold [&_h2]:tracking-[-0.01em] [&_h2]:text-dj-texte [&_h2]:text-lg [&_h2]:mb-2 [&_h2]:mt-3 [&_h3]:font-lecture [&_h3]:font-semibold [&_h3]:tracking-[-0.01em] [&_h3]:text-dj-texte [&_h3]:text-base [&_h3]:mb-1.5 [&_h3]:mt-2">
+                      <ReactMarkdown remarkPlugins={[remarkGfm]} rehypePlugins={[[rehypeSanitize, defaultSchema]]}>
+                        {extraireCorpsSkill(skillOuvert)}
+                      </ReactMarkdown>
+                    </div>
                   </div>
                 </div>
               )}
