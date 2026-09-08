@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import {
   Search, Plus, Trash2, Paperclip, FileText, Image as IconImage, Music as IconAudio, Video as IconVideo,
-  Flag, FolderPlus, Check, Link as IconLien, Upload, FolderX, FolderSync, X, Globe, Lock, Loader2, Download, ChevronLeft,
+  Flag, FolderPlus, Check, Link as IconLien, Upload, FolderX, X, Globe, Lock, Loader2, Download, ChevronLeft,
   SlidersHorizontal,
 } from "lucide-react";
 import {
@@ -1151,23 +1151,32 @@ export function BibliothequePublique() {
                       )}
                     </div>
                   </button>
-                  <button
-                    onClick={() => basculerAttache(d)}
-                    disabled={attacheEnCours === d.id}
-                    className={`flex-shrink-0 disabled:opacity-50 ${
-                      dossiersAttachesIds.has(d.id) ? "text-dj-accent-1-texte" : "text-dj-texte-muet hover:text-dj-texte"
-                    }`}
-                    title={dossiersAttachesIds.has(d.id) ? "Attaché à ma bibliothèque (cliquer pour détacher)" : "Attacher à ma bibliothèque (copie + mise à jour automatique)"}
-                  >
-                    {attacheEnCours === d.id ? <Loader2 size={14} className="animate-spin" /> : <FolderSync size={14} />}
-                  </button>
-                  <button
-                    onClick={() => supprimerDossier(d)}
-                    className="flex-shrink-0 text-dj-texte-muet hover:text-[var(--dj-erreur)]"
-                    title="Supprimer le dossier"
-                  >
-                    <FolderX size={14} />
-                  </button>
+                  {/* 08/09/2026 (correctif) : les deux boutons d'action
+                      groupés dans un même conteneur -- avant, ils étaient
+                      enfants directs de la carte en justify-between, qui
+                      les répartissait sur toute la largeur au lieu de les
+                      garder collés à droite. Icône Download (au lieu de
+                      FolderSync, jugée confuse) : "attacher" se lit
+                      simplement comme "récupérer ce dossier chez moi". */}
+                  <div className="flex flex-shrink-0 items-center gap-3">
+                    <button
+                      onClick={() => basculerAttache(d)}
+                      disabled={attacheEnCours === d.id}
+                      className={`flex-shrink-0 disabled:opacity-50 ${
+                        dossiersAttachesIds.has(d.id) ? "text-dj-accent-1-texte" : "text-dj-texte-muet hover:text-dj-texte"
+                      }`}
+                      title={dossiersAttachesIds.has(d.id) ? "Attaché à ma bibliothèque (cliquer pour détacher)" : "Attacher à ma bibliothèque (copie + mise à jour automatique)"}
+                    >
+                      {attacheEnCours === d.id ? <Loader2 size={14} className="animate-spin" /> : <Download size={14} />}
+                    </button>
+                    <button
+                      onClick={() => supprimerDossier(d)}
+                      className="flex-shrink-0 text-dj-texte-muet hover:text-[var(--dj-erreur)]"
+                      title="Supprimer le dossier"
+                    >
+                      <FolderX size={14} />
+                    </button>
+                  </div>
                 </div>
               ))}
             </div>
