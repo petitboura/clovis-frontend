@@ -22,11 +22,23 @@ import { QrTelechargerPc } from "@/components/QrTelechargerPc";
 // alors que BandeauTelechargerApp.tsx et BoutonFlottantTelecharger.tsx
 // pointent tous les deux ici sans jamais garantir qu'on arrive depuis un
 // téléphone. Détection via le header User-Agent (comme déjà fait dans
-// app/manifest.ts, même fichier qui gère la distinction Android/iOS) :
-// PC affiche un QR + lien + copie (voir QrTelechargerPc.tsx) vers cette
-// même page plutôt que le bouton de téléchargement direct. Même regex
-// que BandeauTelechargerApp.tsx pour rester cohérent sur toute la
-// fonctionnalité.
+// app/manifest.ts) : PC affiche un QR + lien + copie (voir
+// QrTelechargerPc.tsx) vers cette même page plutôt que le bouton de
+// téléchargement direct.
+//
+// Complété une seconde fois le même jour, repéré en construisant ce qui
+// précède : le bouton "Télécharger l'APK" était jusqu'ici montré tel
+// quel à un iPhone aussi, alors qu'il n'existe pas d'app native iOS
+// distribuée (voir app/manifest.ts : "PC et iOS mobile gardent le PWA
+// installable, pas encore d'appli native sur iOS") -- un fichier .apk ne
+// s'installe de toute façon pas sur iOS. iOS a donc sa propre branche,
+// qui ne dépend plus de la release GitHub : les instructions
+// "Partager > Sur l'écran d'accueil", copiées mot pour mot de
+// BoutonInstaller.tsx pour rester cohérent avec le seul autre endroit du
+// site qui explique déjà ce geste.
+//
+// Trois branches désormais, pas deux : Android (flux APK existant,
+// inchangé), iOS (PWA, nouveau), PC (QR, ajouté plus haut le même jour).
 //
 // Pas de mécanisme i18n branché ici, comme MiseAJourCarte.tsx : textes en
 // dur en français, cohérent avec le reste du projet à ce stade.
@@ -73,7 +85,8 @@ export default async function PageTelecharger() {
   const version = release?.tag_name.replace(/^v/, "") ?? null;
 
   const userAgent = headers().get("user-agent") || "";
-  const estMobile = /Android|iPhone|iPad|iPod/i.test(userAgent);
+  const estAndroid = /Android/i.test(userAgent);
+  const estIOS = /iPhone|iPad|iPod/i.test(userAgent);
   const urlPage = `${process.env.NEXT_PUBLIC_APP_URL}/telecharger`;
 
   return (
@@ -85,12 +98,19 @@ export default async function PageTelecharger() {
         </div>
 
         <div className="rounded-2xl border border-dj-bordure bg-dj-surface p-6 shadow-[0_2px_24px_rgba(0,0,0,0.35)]">
-          {estMobile ? (
+          {estAndroid ? (
             <>
               <h1 className="font-display text-xl font-bold text-dj-texte">Télécharger Clovis pour Android</h1>
               <p className="mt-2 text-sm text-dj-texte-muet">
                 Cette version est distribuée directement en dehors du Google Play Store, avec les
                 fonctionnalités avancées de contrôle de l&apos;appareil (accessibilité).
+              </p>
+            </>
+          ) : estIOS ? (
+            <>
+              <h1 className="font-display text-xl font-bold text-dj-texte">Installer Clovis sur iPhone / iPad</h1>
+              <p className="mt-2 text-sm text-dj-texte-muet">
+                Pas de fichier à télécharger sur iOS : Clovis s&apos;installe directement depuis Safari.
               </p>
             </>
           ) : (
@@ -105,8 +125,8 @@ export default async function PageTelecharger() {
           )}
 
           <div className="mt-5 rounded-xl border border-dj-bordure bg-dj-surface-haute p-4">
-            {apk && version ? (
-              estMobile ? (
+            {estAndroid ? (
+              apk && version ? (
                 <>
                   <div className="flex items-center justify-between gap-3">
                     <div>
@@ -131,21 +151,32 @@ export default async function PageTelecharger() {
                   )}
                 </>
               ) : (
-                <>
-                  <QrTelechargerPc url={urlPage} />
+                <p className="text-sm text-dj-texte-muet">
+                  Aucune version n&apos;est disponible au téléchargement pour le moment.
+                </p>
+              )
+            ) : estIOS ? (
+              <ol className="list-decimal space-y-2 pl-5 text-sm text-dj-texte-muet">
+                <li>
+                  Appuie sur <span className="text-dj-texte">Partager</span> en bas de Safari
+                </li>
+                <li>
+                  Choisis <span className="text-dj-texte">« Sur l&apos;écran d&apos;accueil »</span>
+                </li>
+              </ol>
+            ) : (
+              <>
+                <QrTelechargerPc url={urlPage} />
+                {apk && version && (
                   <p className="mt-4 text-center text-xs text-dj-texte-muet">
                     Version {version} &middot; {formatTaille(apk.size)}
                   </p>
-                </>
-              )
-            ) : (
-              <p className="text-sm text-dj-texte-muet">
-                Aucune version n&apos;est disponible au téléchargement pour le moment.
-              </p>
+                )}
+              </>
             )}
           </div>
 
-          {estMobile && (
+          {estAndroid && apk && version && (
             <div className="mt-5 flex items-start gap-2.5 text-xs text-dj-texte-muet">
               <ShieldCheck size={15} className="mt-0.5 flex-shrink-0" />
               <p>
