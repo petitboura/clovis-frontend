@@ -226,6 +226,10 @@ export function BibliothequePublique() {
 
   const [creationDossierOuverte, setCreationDossierOuverte] = useState(false);
   const [nouveauNomDossier, setNouveauNomDossier] = useState("");
+  // 08/09/2026, demande Bourama : les dossiers (et sous-dossiers) suivent
+  // la même logique que les fichiers -- description optionnelle en plus
+  // du nom.
+  const [nouvelleDescriptionDossier, setNouvelleDescriptionDossier] = useState("");
   const [nouveauStatutDossier, setNouveauStatutDossier] = useState<"contribution_libre" | "privee">("contribution_libre");
 
   // 03/09/2026, demande Bourama : 3 filtres cochables au moment de
@@ -301,7 +305,10 @@ export function BibliothequePublique() {
   // le filtre de statut et la liste des dossiers ne s'affichent que
   // dans l'onglet "Dossiers". Le parcours (entrer dans un dossier, en
   // créer) reste inchangé une fois dedans.
-  const [ongletBiblioPublique, setOngletBiblioPublique] = useState<"tous" | "dossiers">("tous");
+  // 08/09/2026, demande Bourama : onglets inversés -- les dossiers sont
+  // présentés en premier (bouton affiché avant "Tous" plus bas, et
+  // onglet actif par défaut à l'ouverture de la bibliothèque publique).
+  const [ongletBiblioPublique, setOngletBiblioPublique] = useState<"tous" | "dossiers">("dossiers");
   const [filtreStatutDossier, setFiltreStatutDossier] = useState<"tous" | "contribution_libre" | "privee">("tous");
 
   // 29/08/2026, demande Bourama : même mécanisme que EspaceBibliotheque.tsx
@@ -677,14 +684,21 @@ export function BibliothequePublique() {
     // depuis l'intérieur d'un autre dossier atterrissait toujours à la
     // racine -- aucune arborescence possible.
     try {
-      await creerDossierCataloguePublic(nouveauNomDossier.trim(), nouveauStatutDossier, dossierCourantId ?? undefined, {
-        pays: champPays,
-        niveau: champNiveau,
-        categorie: champCategorie,
-        classe: champClasse,
-        specialite: champSpecialite,
-      });
+      await creerDossierCataloguePublic(
+        nouveauNomDossier.trim(),
+        nouveauStatutDossier,
+        dossierCourantId ?? undefined,
+        {
+          pays: champPays,
+          niveau: champNiveau,
+          categorie: champCategorie,
+          classe: champClasse,
+          specialite: champSpecialite,
+        },
+        nouvelleDescriptionDossier.trim(),
+      );
       setNouveauNomDossier("");
+      setNouvelleDescriptionDossier("");
       reinitialiserChampsFiltragePublication();
       setCreationDossierOuverte(false);
       chargerDossiers();
@@ -784,7 +798,16 @@ export function BibliothequePublique() {
       </div>
 
       <div className="flex items-center justify-between gap-2 text-xs">
+        {/* 08/09/2026, demande Bourama : dossiers présentés en premier -- onglet avant "Tous". */}
         <div className="flex items-center gap-1">
+          <button
+            onClick={() => setOngletBiblioPublique("dossiers")}
+            className={`rounded-cgpt-bouton px-2 py-1 font-semibold transition-colors ${
+              ongletBiblioPublique === "dossiers" ? "bg-dj-surface-haute text-dj-texte" : "text-dj-texte-muet hover:text-dj-texte"
+            }`}
+          >
+            Dossiers
+          </button>
           <button
             onClick={() => {
               setOngletBiblioPublique("tous");
@@ -795,14 +818,6 @@ export function BibliothequePublique() {
             }`}
           >
             Tous
-          </button>
-          <button
-            onClick={() => setOngletBiblioPublique("dossiers")}
-            className={`rounded-cgpt-bouton px-2 py-1 font-semibold transition-colors ${
-              ongletBiblioPublique === "dossiers" ? "bg-dj-surface-haute text-dj-texte" : "text-dj-texte-muet hover:text-dj-texte"
-            }`}
-          >
-            Dossiers
           </button>
         </div>
         {/* 03/09/2026, demande Bourama : filtre par type + pays/niveau/
@@ -990,27 +1005,32 @@ export function BibliothequePublique() {
             </p>
           )}
 
-          {/* Skeleton précis (30/08, suite audit) : icône plate 16px
-              (Globe/Lock, sans rond coloré -- contrairement à la
-              bibliothèque privée qui a un conteneur tonal), une seule
-              ligne (le nom, pas de sous-titre ici), 1 bouton d'action
-              à droite (suppression). 4 lignes pour remplir l'espace
-              au lieu de 2 fixes. */}
+          {/* Skeleton précis (30/08, suite audit ; mis à jour 08/09/2026
+              suite à l'ajout de la description aux dossiers) : icône
+              plate 16px (Globe/Lock, sans rond coloré -- contrairement à
+              la bibliothèque privée qui a un conteneur tonal), titre +
+              sous-titre (comme les fichiers, maintenant que le dossier
+              peut avoir une description), 1 bouton d'action à droite
+              (suppression). 4 lignes pour remplir l'espace au lieu de 2
+              fixes. */}
           {dossiers === undefined && (
             <div className="flex flex-col gap-2" aria-hidden>
               {[
-                { largeur: "w-2/5", delai: "0ms" },
-                { largeur: "w-1/2", delai: "100ms" },
-                { largeur: "w-1/3", delai: "200ms" },
-                { largeur: "w-3/5", delai: "300ms" },
-              ].map(({ largeur, delai }, i) => (
+                { titre: "w-2/5", soustitre: "w-1/4", delai: "0ms" },
+                { titre: "w-1/2", soustitre: "w-1/3", delai: "100ms" },
+                { titre: "w-1/3", soustitre: "w-1/5", delai: "200ms" },
+                { titre: "w-3/5", soustitre: "w-2/5", delai: "300ms" },
+              ].map(({ titre, soustitre, delai }, i) => (
                 <div
                   key={i}
                   className="flex items-center justify-between gap-3 rounded-xl border border-dj-bordure bg-dj-surface px-4 py-3"
                 >
                   <div className="flex min-w-0 flex-1 items-center gap-2">
                     <Skeleton className="h-4 w-4 flex-shrink-0 rounded" style={{ animationDelay: delai }} />
-                    <Skeleton className={`h-3.5 rounded ${largeur}`} style={{ animationDelay: delai }} />
+                    <div className="flex min-w-0 flex-1 flex-col gap-1.5">
+                      <Skeleton className={`h-3.5 rounded ${titre}`} style={{ animationDelay: delai }} />
+                      <Skeleton className={`h-2.5 rounded ${soustitre}`} style={{ animationDelay: delai }} />
+                    </div>
                   </div>
                   <Skeleton className="h-3.5 w-3.5 flex-shrink-0 rounded" style={{ animationDelay: delai }} />
                 </div>
@@ -1035,7 +1055,13 @@ export function BibliothequePublique() {
                     ) : (
                       <Lock size={16} className="flex-shrink-0 text-dj-texte-muet" />
                     )}
-                    <span className="truncate font-medium">{d.nom}</span>
+                    <div className="min-w-0">
+                      <p className="truncate font-medium">{d.nom}</p>
+                      {/* 08/09/2026, demande Bourama : dossiers = même logique que les fichiers, description affichée en sous-titre. */}
+                      {d.description && (
+                        <p className="truncate text-xs text-dj-texte-muet">{d.description}</p>
+                      )}
+                    </div>
                   </button>
                   <button
                     onClick={() => supprimerDossier(d)}
@@ -1075,6 +1101,13 @@ export function BibliothequePublique() {
                   />
                 </div>
               </div>
+              <textarea
+                value={nouvelleDescriptionDossier}
+                onChange={(e) => setNouvelleDescriptionDossier(e.target.value)}
+                placeholder="Décris-le en quelques mots (optionnel)"
+                rows={2}
+                className="resize-none rounded-xl border border-dj-bordure bg-dj-fond px-3 py-2 text-sm text-dj-texte outline-none focus:border-dj-bordure-forte"
+              />
               <ChampsFiltragePublication
                 pays={champPays}
                 niveau={champNiveau}
@@ -1093,6 +1126,7 @@ export function BibliothequePublique() {
                   onClick={() => {
                     setCreationDossierOuverte(false);
                     setNouveauNomDossier("");
+                    setNouvelleDescriptionDossier("");
                     reinitialiserChampsFiltragePublication();
                   }}
                   className="rounded-cgpt-bouton border border-dj-bordure px-3 py-1.5 text-xs text-dj-texte-muet hover:text-dj-texte"

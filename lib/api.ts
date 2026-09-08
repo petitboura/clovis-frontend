@@ -543,6 +543,8 @@ export type DossierCataloguePublic = {
   id: string;
   cree_par: string | null;
   nom: string;
+  // 08/09/2026, demande Bourama : dossiers = même logique que les fichiers, description optionnelle.
+  description?: string | null;
   statut: "contribution_libre" | "privee";
   dossier_parent_id: string | null;
   created_at: string;
@@ -565,11 +567,14 @@ export async function creerDossierCataloguePublic(
   statut: "contribution_libre" | "privee" = "contribution_libre",
   dossierParentId?: string,
   filtres?: FiltresBibliothequePublique,
+  // 08/09/2026, demande Bourama : dossiers = même logique que les fichiers, description optionnelle.
+  description?: string,
 ) {
   return appelerApi("/api/bibliotheque-publique/dossiers", {
     method: "POST",
     body: JSON.stringify({
       nom,
+      description: description || "",
       statut,
       dossier_parent_id: dossierParentId || null,
       pays: filtres?.pays || "",
