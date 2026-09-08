@@ -924,7 +924,7 @@ async function envoyerFichiersDirect(fichiersChoisis: FileList | File[]) {
 
           {dossiersRecus.length > 0 && (
             <div className="flex flex-col gap-2">
-              <p className="text-xs font-semibold uppercase tracking-wide text-dj-texte-muet">Reçus via un code</p>
+              <p className="text-xs font-semibold uppercase tracking-wide text-dj-texte-muet">Depuis un code</p>
               {dossiersRecus.map((d) => (
                 <CarteDossier
                   key={d.id}
