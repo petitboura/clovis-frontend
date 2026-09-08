@@ -672,13 +672,16 @@ export function ChatFlottant({
 
       {/* Poignées de redimensionnement (07/09/2026, desktop uniquement,
           même principe que FenetresSections.tsx -- voir
-          lib/useFenetreDeplacable.ts). */}
+          lib/useFenetreDeplacable.ts). z-10 (comme dans
+          FenetresSections.tsx) : sans ça, rien ne garantit qu'elles
+          passent devant le contenu du chat (ChatIA) selon comment son
+          propre contenu se positionne à l'intérieur. */}
       {estDesktop &&
         POIGNEES_REDIMENSIONNEMENT.map((p) => (
           <div
             key={p.direction}
             onPointerDown={(e) => demarrerRedimensionnementPopup(e, p.direction)}
-            className={`absolute ${p.classe}`}
+            className={`absolute z-10 ${p.classe}`}
             style={{ touchAction: "none" }}
           />
         ))}
