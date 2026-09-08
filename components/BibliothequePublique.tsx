@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import {
   Search, Plus, Trash2, Paperclip, FileText, Image as IconImage, Music as IconAudio, Video as IconVideo,
-  Flag, FolderPlus, Check, Link as IconLien, Upload, FolderX, X, Globe, Lock, Loader2, Download, ChevronLeft,
+  Flag, FolderPlus, Check, Link as IconLien, Upload, FolderX, FolderSync, X, Globe, Lock, Loader2, Download, ChevronLeft,
   SlidersHorizontal,
 } from "lucide-react";
 import {
@@ -19,6 +19,9 @@ import {
   creerDossierCataloguePublic,
   supprimerDossierCataloguePublic,
   listerListesFiltresBibliothequePublique,
+  listerDossiersPublicsAttaches,
+  attacherDossierPublic,
+  detacherDossierPublic,
   type EntreeBibliothequePublique,
   type DossierCataloguePublic,
   type ListesFiltresBibliothequePublique,
@@ -194,6 +197,11 @@ function typeDe(entree: EntreeBibliothequePublique): TypeBiblioPublique {
 export function BibliothequePublique() {
   const [liste, setListe] = useState<EntreeBibliothequePublique[] | undefined>(undefined);
   const [dossiers, setDossiers] = useState<DossierCataloguePublic[] | undefined>(undefined);
+  // 08/09/2026 : id des dossiers publics déjà attachés à la bibliothèque
+  // perso (copie + synchronisation continue), pour afficher le bouton
+  // "Attacher"/"Détacher" avec le bon état -- voir chargerDossiersAttaches.
+  const [dossiersAttachesIds, setDossiersAttachesIds] = useState<Set<string>>(new Set());
+  const [attacheEnCours, setAttacheEnCours] = useState<string | null>(null);
   // Navigation par dossier avec fil d'ariane (corrigé 01/09/2026, bug
   // signalé par Bourama : "dans ses dossier on ne peut ajouter des
   // dossier donc pas d'arborescence") -- avant ce correctif un seul
@@ -393,9 +401,19 @@ export function BibliothequePublique() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [lotVectorisation?.enAttente.size]);
 
+  // Garde-fou contre les réponses qui arrivent dans le désordre (bug
+  // remonté par Bourama, 08/09/2026 : changer vite de dossier public
+  // pouvait faire réapparaître le contenu d'un dossier précédent si sa
+  // requête, partie avant, répondait après celle du dossier ouvert
+  // ensuite -- aucune des fonctions ci-dessous n'ignorait une réponse
+  // devenue obsolète). Un seul compteur pour les trois: charger,
+  // chargerPlus et rafraichirStatuts se disputent le même `liste`.
+  const requeteListeRef = useRef(0);
+
   // Recharge depuis le début (recherche/filtre/dossier changé, ou ajout/
   // suppression d'une entrée) -- réinitialise la pagination.
   function charger(q?: string) {
+    const idAppel = ++requeteListeRef.current;
     setListe(undefined);
     setDecalage(0);
     setPlusDeResultats(true);
@@ -410,11 +428,13 @@ export function BibliothequePublique() {
       limite: TAILLE_PAGE_BIBLIO_PUBLIQUE,
     })
       .then((resultat) => {
+        if (requeteListeRef.current !== idAppel) return;
         setListe(resultat);
         setDecalage(resultat.length);
         setPlusDeResultats(resultat.length === TAILLE_PAGE_BIBLIO_PUBLIQUE);
       })
       .catch(() => {
+        if (requeteListeRef.current !== idAppel) return;
         setListe([]);
         setPlusDeResultats(false);
       });
@@ -424,6 +444,7 @@ export function BibliothequePublique() {
   // visible -- ajoute à la liste déjà affichée, ne réinitialise rien.
   function chargerPlus() {
     if (chargementPage || !plusDeResultats) return;
+    const idAppel = requeteListeRef.current;
     setChargementPage(true);
     listerBibliothequePublique(recherche, {
       pays: filtrePays,
@@ -436,11 +457,14 @@ export function BibliothequePublique() {
       limite: TAILLE_PAGE_BIBLIO_PUBLIQUE,
     })
       .then((resultat) => {
+        if (requeteListeRef.current !== idAppel) return;
         setListe((precedent) => (precedent ?? []).concat(resultat));
         setDecalage((d) => d + resultat.length);
         setPlusDeResultats(resultat.length === TAILLE_PAGE_BIBLIO_PUBLIQUE);
       })
-      .catch(() => setPlusDeResultats(false))
+      .catch(() => {
+        if (requeteListeRef.current === idAppel) setPlusDeResultats(false);
+      })
       .finally(() => setChargementPage(false));
   }
 
@@ -450,6 +474,7 @@ export function BibliothequePublique() {
   // pagination depuis le début.
   function rafraichirStatuts() {
     if (!liste || liste.length === 0) return;
+    const idAppel = requeteListeRef.current;
     listerBibliothequePublique(recherche, {
       pays: filtrePays,
       niveau: filtreNiveau,
@@ -460,7 +485,9 @@ export function BibliothequePublique() {
       decalage: 0,
       limite: liste.length,
     })
-      .then(setListe)
+      .then((resultat) => {
+        if (requeteListeRef.current === idAppel) setListe(resultat);
+      })
       .catch(() => {});
   }
 
@@ -470,9 +497,24 @@ export function BibliothequePublique() {
       .catch(() => setDossiers([]));
   }
 
+  function chargerDossiersAttaches() {
+    listerDossiersPublicsAttaches()
+      .then((liste) => setDossiersAttachesIds(new Set(liste.map((d) => d.id))))
+      .catch(() => {});
+  }
+
+  // 08/09/2026, correctif (Bourama : "on sent le chargement et le
+  // réarrangement des fichiers, au lieu que ce dossier contienne déjà
+  // ce fichier") : cet effet de montage appelait charger() en plus de
+  // l'effet debounce juste en dessous, qui se déclenche AUSSI au
+  // montage (dossierCourantId etc. changent de "rien" à leur valeur
+  // initiale) -- deux requêtes de liste partaient donc à chaque
+  // ouverture de l'écran, la seconde effaçant puis remplaçant le
+  // résultat déjà affiché par la première 250ms plus tard. Cet effet ne
+  // s'occupe plus que des dossiers/filtres, qui n'ont pas ce doublon.
   useEffect(() => {
-    charger();
     chargerDossiers();
+    chargerDossiersAttaches();
     chargerListesFiltres();
   }, []);
 
@@ -703,6 +745,34 @@ export function BibliothequePublique() {
       chargerListesFiltres();
     } catch (e) {
       window.alert(messageErreur(e));
+    }
+  }
+
+  // 08/09/2026, demande Bourama (bouton manquant pour une fonctionnalité
+  // déjà construite côté serveur le 02/09) : attacher = copie réelle du
+  // dossier dans la bibliothèque perso, synchronisée en continu (tout
+  // nouveau fichier rangé plus tard dans ce dossier public apparaît
+  // automatiquement chez toi) -- voir core/dossiers_publics_attaches.py.
+  // Détacher n'arrête que la synchronisation future, la copie déjà faite
+  // reste dans ta bibliothèque perso.
+  async function basculerAttache(d: DossierCataloguePublic) {
+    setAttacheEnCours(d.id);
+    try {
+      if (dossiersAttachesIds.has(d.id)) {
+        await detacherDossierPublic(d.id);
+        setDossiersAttachesIds((s) => {
+          const suivant = new Set(s);
+          suivant.delete(d.id);
+          return suivant;
+        });
+      } else {
+        await attacherDossierPublic(d.id);
+        setDossiersAttachesIds((s) => new Set(s).add(d.id));
+      }
+    } catch (e) {
+      window.alert(messageErreur(e));
+    } finally {
+      setAttacheEnCours(null);
     }
   }
 
@@ -1080,6 +1150,16 @@ export function BibliothequePublique() {
                         <p className="truncate text-xs text-dj-texte-muet">{d.description}</p>
                       )}
                     </div>
+                  </button>
+                  <button
+                    onClick={() => basculerAttache(d)}
+                    disabled={attacheEnCours === d.id}
+                    className={`flex-shrink-0 disabled:opacity-50 ${
+                      dossiersAttachesIds.has(d.id) ? "text-dj-accent-1-texte" : "text-dj-texte-muet hover:text-dj-texte"
+                    }`}
+                    title={dossiersAttachesIds.has(d.id) ? "Attaché à ma bibliothèque (cliquer pour détacher)" : "Attacher à ma bibliothèque (copie + mise à jour automatique)"}
+                  >
+                    {attacheEnCours === d.id ? <Loader2 size={14} className="animate-spin" /> : <FolderSync size={14} />}
                   </button>
                   <button
                     onClick={() => supprimerDossier(d)}

@@ -597,6 +597,27 @@ export async function supprimerDossierCataloguePublic(dossierId: string) {
   return appelerApi(`/api/bibliotheque-publique/dossiers/${dossierId}`, { method: "DELETE" });
 }
 
+// Attachement d'un dossier du catalogue public à la bibliothèque perso
+// (02/09/2026, demande Bourama -- backend déjà en place depuis cette
+// date, core/dossiers_publics_attaches.py, mais jamais relié à aucun
+// bouton côté écran jusqu'ici -- oubli identifié le 08/09/2026).
+// Copie réelle + synchronisation continue : tout nouveau fichier rangé
+// dans le dossier public d'origine par n'importe qui apparaît
+// automatiquement dans le dossier miroir de la bibliothèque perso.
+export type DossierPublicAttache = DossierCataloguePublic & { dossier_bibliotheque_id: string | null };
+
+export async function listerDossiersPublicsAttaches() {
+  return appelerApi("/api/bibliotheque-publique/dossiers/attaches") as Promise<DossierPublicAttache[]>;
+}
+
+export async function attacherDossierPublic(dossierId: string) {
+  return appelerApi(`/api/bibliotheque-publique/dossiers/${dossierId}/attacher`, { method: "POST" }) as Promise<DossierPublicAttache>;
+}
+
+export async function detacherDossierPublic(dossierId: string) {
+  return appelerApi(`/api/bibliotheque-publique/dossiers/${dossierId}/attacher`, { method: "DELETE" });
+}
+
 export async function rangerFichierDossierCataloguePublic(dossierId: string, fichierId: string) {
   return appelerApi(`/api/bibliotheque-publique/dossiers/${dossierId}/fichiers`, {
     method: "POST",
