@@ -33,6 +33,7 @@ import { Skeleton } from "./Skeleton";
 import { OngletsSegment } from "./OngletsSegment";
 import { useInfoSection } from "./SectionPage";
 import { CaseACocher } from "./CaseACocher";
+import { BulleSurvol } from "./BulleSurvol";
 
 // Section "Mes comportements" (06/08/2026, demande Bourama : "on peut en
 // mettre plusieurs hein, pas juste un") : PLUSIEURS instructions perso
@@ -123,7 +124,25 @@ function ChipComportement({
     >
       <div className="flex min-w-0 items-center gap-2">
         <ScrollText size={14} className="flex-shrink-0 text-dj-texte-muet" />
-        <span className="min-w-0 flex-1 truncate text-sm text-dj-texte">{c.nom || c.description}</span>
+        {/* Nom révélant la description au survol/clic (08/09/2026, retour
+            Bourama : "tu ne dois pas changer mon affichage sans ma
+            permission... les pilules c'est moi qui ai décidé" -- correctif
+            d'un premier essai qui affichait la description en clair et
+            agrandissait la pilule, refusé par Bourama). Même motif que la
+            liste "Publique" (ComportementsPublics.tsx, BulleSurvol) : la
+            pilule garde sa taille, la description sort dans une bulle au
+            survol (et au clic, indispensable sur tactile) au lieu de
+            prendre de la place en permanence. Enveloppe min-w-0/flex-1 sur
+            un div dédié (même motif que ComportementsPublics.tsx) --
+            BulleSurvol elle-même est en inline-block, jamais flex-1 par
+            défaut. revelerAuClic=false : le clic sur cette pilule ouvre
+            déjà l'édition du skill (onOuvrir sur le bouton parent), la
+            bulle ne doit pas lui voler ce clic. */}
+        <div className="min-w-0 flex-1">
+          <BulleSurvol texte={c.description || "(pas de description)"} className="truncate text-sm text-dj-texte" revelerAuClic={false}>
+            {c.nom || c.description}
+          </BulleSurvol>
+        </div>
         <span
           role="button"
           tabIndex={0}
@@ -134,16 +153,6 @@ function ChipComportement({
           {c.actif ? <ToggleRight size={18} /> : <ToggleLeft size={18} />}
         </span>
       </div>
-      {/* Description courte sous le nom (08/09/2026, retour Bourama : "les
-          descriptions n'apparaissent nulle part") -- avant, elle n'était
-          visible que dans le panneau d'édition d'un skill déjà existant.
-          Même convention que le badge lien_libelle juste en dessous : sa
-          propre ligne, sa propre troncature, jamais dans la ligne du nom. */}
-      {c.description && (
-        <span className="ml-[22px] block max-w-full truncate text-xs text-dj-texte-muet">
-          {c.description}
-        </span>
-      )}
       {/* Badge de rattachement (lien_libelle) sur sa propre ligne, sous le
           nom -- CORRECTIF 22/08/2026 (Bourama : "le texte des sources
           déborde, on ne voit plus les noms") : avant, ce badge partageait
@@ -742,9 +751,13 @@ export function MesComportements({ agentId }: { agentId: string }) {
                 </label>
               </div>
 
+              {/* Libellé simplifié (08/09/2026, retour Bourama : "l'user il
+                  se fiche du routeur") -- le mécanisme interne (petit
+                  routeur qui filtre les candidats pertinents) n'a aucun
+                  intérêt pour l'étudiant, juste "Description". */}
               {panneau.type === "edition" && (
                 <p className="pb-3 text-xs text-dj-texte-muet">
-                  <span className="font-medium text-dj-texte-muet">Description envoyée au routeur :</span>{" "}
+                  <span className="font-medium text-dj-texte-muet">Description :</span>{" "}
                   {panneau.c.description || "—"}
                 </p>
               )}
