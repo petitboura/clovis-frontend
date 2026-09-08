@@ -1,7 +1,9 @@
 import Link from "next/link";
+import { headers } from "next/headers";
 import { Download, ShieldCheck, ExternalLink } from "lucide-react";
 import { Logo } from "@/components/Logo";
 import { Bouton } from "@/components/Bouton";
+import { QrTelechargerPc } from "@/components/QrTelechargerPc";
 
 // Page publique de téléchargement de l'APK "externe" (hors Play Store).
 // Créée le 29/08/2026, mission Bourama : combiner une page web dédiée +
@@ -14,6 +16,17 @@ import { Bouton } from "@/components/Bouton";
 // l'export statique Capacitor (CAPACITOR_BUILD), elle vit uniquement sur
 // le déploiement web normal (Vercel), donc rien n'empêche un fetch côté
 // serveur -- voir next.config.mjs pour la logique conditionnelle.
+//
+// Complété le 08/09/2026, demande Bourama : un bouton "Télécharger
+// l'APK" ne résout rien depuis un PC (le fichier ne s'y installe pas),
+// alors que BandeauTelechargerApp.tsx et BoutonFlottantTelecharger.tsx
+// pointent tous les deux ici sans jamais garantir qu'on arrive depuis un
+// téléphone. Détection via le header User-Agent (comme déjà fait dans
+// app/manifest.ts, même fichier qui gère la distinction Android/iOS) :
+// PC affiche un QR + lien + copie (voir QrTelechargerPc.tsx) vers cette
+// même page plutôt que le bouton de téléchargement direct. Même regex
+// que BandeauTelechargerApp.tsx pour rester cohérent sur toute la
+// fonctionnalité.
 //
 // Pas de mécanisme i18n branché ici, comme MiseAJourCarte.tsx : textes en
 // dur en français, cohérent avec le reste du projet à ce stade.
@@ -59,6 +72,10 @@ export default async function PageTelecharger() {
   const apk = release?.assets.find((a) => a.name.endsWith(".apk")) ?? null;
   const version = release?.tag_name.replace(/^v/, "") ?? null;
 
+  const userAgent = headers().get("user-agent") || "";
+  const estMobile = /Android|iPhone|iPad|iPod/i.test(userAgent);
+  const urlPage = `${process.env.NEXT_PUBLIC_APP_URL}/telecharger`;
+
   return (
     <main className="flex min-h-screen flex-col items-center px-4 py-16">
       <div className="w-full max-w-lg animate-dj-fade-up">
@@ -68,37 +85,59 @@ export default async function PageTelecharger() {
         </div>
 
         <div className="rounded-2xl border border-dj-bordure bg-dj-surface p-6 shadow-[0_2px_24px_rgba(0,0,0,0.35)]">
-          <h1 className="font-display text-xl font-bold text-dj-texte">Télécharger Clovis pour Android</h1>
-          <p className="mt-2 text-sm text-dj-texte-muet">
-            Cette version est distribuée directement en dehors du Google Play Store, avec les
-            fonctionnalités avancées de contrôle de l&apos;appareil (accessibilité).
-          </p>
+          {estMobile ? (
+            <>
+              <h1 className="font-display text-xl font-bold text-dj-texte">Télécharger Clovis pour Android</h1>
+              <p className="mt-2 text-sm text-dj-texte-muet">
+                Cette version est distribuée directement en dehors du Google Play Store, avec les
+                fonctionnalités avancées de contrôle de l&apos;appareil (accessibilité).
+              </p>
+            </>
+          ) : (
+            <>
+              <h1 className="font-display text-xl font-bold text-dj-texte">
+                Clovis n&apos;est pas installable depuis un PC
+              </h1>
+              <p className="mt-2 text-sm text-dj-texte-muet">
+                Scanne ce code avec ton téléphone pour accéder au téléchargement.
+              </p>
+            </>
+          )}
 
           <div className="mt-5 rounded-xl border border-dj-bordure bg-dj-surface-haute p-4">
             {apk && version ? (
-              <>
-                <div className="flex items-center justify-between gap-3">
-                  <div>
-                    <span className="text-sm font-medium text-dj-texte">Version {version}</span>
-                    <span className="block text-xs text-dj-texte-muet">{formatTaille(apk.size)}</span>
+              estMobile ? (
+                <>
+                  <div className="flex items-center justify-between gap-3">
+                    <div>
+                      <span className="text-sm font-medium text-dj-texte">Version {version}</span>
+                      <span className="block text-xs text-dj-texte-muet">{formatTaille(apk.size)}</span>
+                    </div>
                   </div>
-                </div>
-                <a href={apk.browser_download_url} className="mt-4 block">
-                  <Bouton className="flex w-full items-center justify-center gap-2">
-                    <Download size={16} />
-                    Télécharger l&apos;APK
-                  </Bouton>
-                </a>
-                {release?.html_url && (
-                  <Link
-                    href={release.html_url}
-                    className="mt-3 flex items-center justify-center gap-1.5 text-xs text-dj-texte-muet hover:text-dj-texte hover:underline"
-                  >
-                    Voir les notes de version
-                    <ExternalLink size={12} />
-                  </Link>
-                )}
-              </>
+                  <a href={apk.browser_download_url} className="mt-4 block">
+                    <Bouton className="flex w-full items-center justify-center gap-2">
+                      <Download size={16} />
+                      Télécharger l&apos;APK
+                    </Bouton>
+                  </a>
+                  {release?.html_url && (
+                    <Link
+                      href={release.html_url}
+                      className="mt-3 flex items-center justify-center gap-1.5 text-xs text-dj-texte-muet hover:text-dj-texte hover:underline"
+                    >
+                      Voir les notes de version
+                      <ExternalLink size={12} />
+                    </Link>
+                  )}
+                </>
+              ) : (
+                <>
+                  <QrTelechargerPc url={urlPage} />
+                  <p className="mt-4 text-center text-xs text-dj-texte-muet">
+                    Version {version} &middot; {formatTaille(apk.size)}
+                  </p>
+                </>
+              )
             ) : (
               <p className="text-sm text-dj-texte-muet">
                 Aucune version n&apos;est disponible au téléchargement pour le moment.
@@ -106,15 +145,17 @@ export default async function PageTelecharger() {
             )}
           </div>
 
-          <div className="mt-5 flex items-start gap-2.5 text-xs text-dj-texte-muet">
-            <ShieldCheck size={15} className="mt-0.5 flex-shrink-0" />
-            <p>
-              Android bloque par défaut l&apos;installation d&apos;applications venant d&apos;ailleurs que le
-              Play Store. Après le téléchargement, ouvre le fichier et autorise l&apos;installation
-              depuis cette source si le téléphone te le demande. L&apos;application vérifie
-              elle-même si une mise à jour est disponible une fois installée.
-            </p>
-          </div>
+          {estMobile && (
+            <div className="mt-5 flex items-start gap-2.5 text-xs text-dj-texte-muet">
+              <ShieldCheck size={15} className="mt-0.5 flex-shrink-0" />
+              <p>
+                Android bloque par défaut l&apos;installation d&apos;applications venant d&apos;ailleurs que le
+                Play Store. Après le téléchargement, ouvre le fichier et autorise l&apos;installation
+                depuis cette source si le téléphone te le demande. L&apos;application vérifie
+                elle-même si une mise à jour est disponible une fois installée.
+              </p>
+            </div>
+          )}
         </div>
       </div>
     </main>
