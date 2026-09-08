@@ -13,6 +13,7 @@ import {
   Check,
   Minus,
   X,
+  Pencil,
 } from "lucide-react";
 import {
   listerMesCodes,
@@ -20,6 +21,8 @@ import {
   creerNotion,
   renommerNotion,
   changerStatutNotion,
+  definirRegleNotion,
+  definirConsigneNotion,
   reordonnerNotions,
   fusionnerNotions,
   supprimerNotion,
@@ -27,6 +30,7 @@ import {
   type CodePartage,
   type Notion,
   type StatutNotion,
+  type RegleComportementNotion,
   type NotionProposee,
 } from "@/lib/api";
 import { messageErreur, ErreurApi } from "@/lib/erreurs";
@@ -34,6 +38,7 @@ import { Skeleton } from "./Skeleton";
 import { CTACompteRequis } from "./CTACompteRequis";
 import { BoutonInfoSection } from "./BoutonInfoSection";
 import { SelectPersonnalise, type OptionMenu } from "./SelectPersonnalise";
+import { PanneauFlottant } from "./PanneauFlottant";
 
 /**
  * "Programme" (06/09/2026, Partie 2 du chantier "confiance pédagogique"
@@ -42,17 +47,24 @@ import { SelectPersonnalise, type OptionMenu } from "./SelectPersonnalise";
  * enseigner pour un code de partage donné, avec un statut d'avancement
  * par notion (à venir / en cours / acquis).
  *
- * Nouveau composant séparé de MesCodes.tsx (un code peut porter un
- * programme de notions EN PLUS de ses comportements/dossiers/texte
- * libre existants -- objet de données distinct côté backend, voir
- * djiguigne-backend/core/programme_notions.py). Affiché dans la section
- * Bureau à côté de MesCodes et EspaceEntrerCode.
+ * 08/09/2026, refonte visuelle complète demandée par Bourama : la liste
+ * plate à cliquer-pour-déplier ("on ne comprend rien") devient un
+ * regroupement à 2 niveaux -- Matière (bandeau coloré) puis Chapitre
+ * (sous-groupe), chacun dépliable/repliable, avec tout le reste
+ * (Partie/Notion/plus profond si besoin, l'arborescence reste libre --
+ * voir docstring backend core/programme_notions.py) affiché À PLAT en
+ * dessous, sans autre clic pour dérouler : chaque ligne montre le fil
+ * d'ancêtres intermédiaires en petit au-dessus de son nom, et une
+ * pastille de statut colorée cliquable. Cliquer une ligne (hors
+ * pastille) ouvre un panneau d'édition unique (nom, statut, règle
+ * bloquer/contourner/signaler, consigne texte libre pour l'IA,
+ * réordonner/fusionner/supprimer/ajouter) -- toutes les actions
+ * autrefois éparpillées en icônes sur chaque ligne sont regroupées là,
+ * pour que la liste elle-même reste lisible d'un coup d'oeil.
  *
  * Rattaché à UN code à la fois : un sélecteur en tête de carte laisse
  * choisir lequel (un prof ayant plusieurs codes peut avoir un programme
- * différent par code). Pas de glisser-déposer (voir le document de
- * vision, Point 1 : "statut simple, affiché comme une case à cocher,
- * pas de drag and drop") -- réordonnancement via deux flèches.
+ * différent par code).
  */
 
 const DUREE_SORTIE_MS = 180; // même durée que lib/useFermetureAnimee.ts (DUREE_FERMETURE_MS)
@@ -69,29 +81,51 @@ function statutSuivant(s: StatutNotion): StatutNotion {
   return CYCLE_STATUT[(CYCLE_STATUT.indexOf(s) + 1) % CYCLE_STATUT.length];
 }
 
+const LIBELLES_REGLE: Record<RegleComportementNotion, string> = {
+  bloquer: "Bloquer",
+  contourner: "Contourner",
+  signaler: "Signaler",
+};
+
+const OPTIONS_REGLE: OptionMenu[] = [
+  { id: "", label: "Aucune règle" },
+  { id: "bloquer", label: "Bloquer" },
+  { id: "contourner", label: "Contourner" },
+  { id: "signaler", label: "Signaler" },
+];
+
+/** 5 teintes cyclées par index de matière -- voir app/globals.css pour
+ * la justification de cette dérogation scopée à "usage mesuré des
+ * couleurs" (la couleur EST l'information ici, pas de la décoration). */
+const COULEURS_MATIERE = [1, 2, 3, 4, 5].map((n) => ({
+  conteneur: `var(--dj-mat-${n}-conteneur)`,
+  texte: `var(--dj-mat-${n})`,
+}));
+
 /**
- * Case à cocher à 3 états pour le statut d'une notion -- même langage
- * visuel que CaseACocher.tsx (case 4x4, bordure/fond dj-accent-1 une
- * fois pleine), adapté pour l'état intermédiaire "en cours". Un clic
- * fait avancer le cycle à_venir -> en_cours -> acquis -> à_venir.
+ * Pastille de statut colorée -- remplace l'ancienne case à cocher 4x4
+ * (trop discrète pour porter, à elle seule, la lisibilité visuelle
+ * demandée). Mêmes 3 états, même cycle au clic, mais en pilule colorée
+ * pour se voir au premier coup d'oeil dans une liste dense.
  */
-function CaseStatutNotion({ statut, onChange }: { statut: StatutNotion; onChange: (s: StatutNotion) => void }) {
+function PastilleStatut({ statut, onChange }: { statut: StatutNotion; onChange: (s: StatutNotion) => void }) {
+  const styleParStatut: Record<StatutNotion, string> = {
+    a_venir: "border border-dj-bordure bg-dj-surface-haute text-dj-texte-muet",
+    en_cours: "border border-transparent bg-[var(--dj-accent-1-conteneur)] text-dj-accent-1-texte",
+    acquis: "border border-transparent bg-[var(--dj-succes-conteneur)] text-dj-succes",
+  };
   return (
     <button
       type="button"
-      onClick={() => onChange(statutSuivant(statut))}
+      onClick={(e) => {
+        e.stopPropagation();
+        onChange(statutSuivant(statut));
+      }}
       aria-label={`Statut : ${LIBELLES_STATUT[statut]}. Toucher pour changer.`}
       title={LIBELLES_STATUT[statut]}
-      className={`flex h-4 w-4 flex-shrink-0 items-center justify-center rounded border transition-colors ${
-        statut === "acquis"
-          ? "border-dj-accent-1 bg-dj-accent-1"
-          : statut === "en_cours"
-            ? "border-dj-accent-1 bg-dj-surface"
-            : "border-dj-bordure bg-dj-surface hover:border-dj-bordure-forte"
-      }`}
+      className={`flex-shrink-0 rounded-full px-2.5 py-1 text-[11px] font-semibold transition-colors ${styleParStatut[statut]}`}
     >
-      {statut === "acquis" && <Check size={11} strokeWidth={3} className="text-[#1A0D02]" />}
-      {statut === "en_cours" && <Minus size={11} strokeWidth={3} className="text-dj-accent-1-texte" />}
+      {LIBELLES_STATUT[statut]}
     </button>
   );
 }
@@ -115,9 +149,9 @@ function construireArbre(notions: Notion[]): NoeudNotion[] {
   return racines;
 }
 
-/** Aplati l'arbre en options pour le sélecteur de cible de fusion,
- * avec indentation visuelle selon la profondeur -- exclut idExclu (et
- * tous ses descendants, une fusion ne doit jamais créer de cycle, déjà
+/** Aplati l'arbre en options pour le sélecteur de cible de fusion, avec
+ * indentation visuelle selon la profondeur -- exclut idExclu (et tous
+ * ses descendants, une fusion ne doit jamais créer de cycle, déjà
  * vérifié côté backend mais évite ici de proposer un choix qui
  * échouerait de toute façon). */
 function optionsPourFusion(racines: NoeudNotion[], idExclu: string): OptionMenu[] {
@@ -147,6 +181,22 @@ function optionsPourFusion(racines: NoeudNotion[], idExclu: string): OptionMenu[
   return resultat;
 }
 
+/** Aplatit tout ce qu'il y a sous un chapitre (Partie, Notion, et plus
+ * profond si le prof a réorganisé librement -- l'arborescence reste
+ * libre côté backend) en une simple liste ordonnée, avec le fil des
+ * noms d'ancêtres intermédiaires (entre le chapitre et le noeud, les
+ * deux exclus) pour affichage en petit au-dessus du nom. */
+type LigneAplatie = { noeud: NoeudNotion; chemin: string[] };
+
+function aplatirSousChapitre(noeud: NoeudNotion, chemin: string[] = []): LigneAplatie[] {
+  const resultat: LigneAplatie[] = [];
+  for (const enfant of noeud.enfants) {
+    resultat.push({ noeud: enfant, chemin });
+    resultat.push(...aplatirSousChapitre(enfant, [...chemin, enfant.nom]));
+  }
+  return resultat;
+}
+
 export function ProgrammeNotions() {
   const [codes, setCodes] = useState<CodePartage[] | undefined>(undefined);
   const [codeId, setCodeId] = useState<string | null>(null);
@@ -159,16 +209,21 @@ export function ProgrammeNotions() {
   // l'animation, puis réellement retirées de l'état.
   const [idsEnSortie, setIdsEnSortie] = useState<Set<string>>(new Set());
 
-  const [ajoutParentId, setAjoutParentId] = useState<string | null>(null); // null = pas d'ajout en cours, "" = ajout à la racine
+  const [ajoutParentId, setAjoutParentId] = useState<string | null>(null); // null = pas d'ajout en cours, "" = ajout à la racine (nouvelle matière)
   const [valeurAjout, setValeurAjout] = useState("");
 
-  const [editionId, setEditionId] = useState<string | null>(null);
-  const [valeurEdition, setValeurEdition] = useState("");
+  const [ouverts, setOuverts] = useState<Set<string>>(new Set()); // matières/chapitres dépliés
 
-  const [fusionPourId, setFusionPourId] = useState<string | null>(null);
+  // Panneau d'édition unique (nom, statut, règle, consigne, actions) --
+  // remplace l'ancien état d'édition inline dispersé sur chaque ligne.
+  const [notionEnEditionId, setNotionEnEditionId] = useState<string | null>(null);
+  const [formNom, setFormNom] = useState("");
+  const [formRegle, setFormRegle] = useState("");
+  const [formConsigne, setFormConsigne] = useState("");
+  const [enregistrementEnCours, setEnregistrementEnCours] = useState(false);
+  const [erreurEdition, setErreurEdition] = useState<string | null>(null);
+  const [fusionOuverte, setFusionOuverte] = useState(false);
   const [cibleFusion, setCibleFusion] = useState("");
-
-  const [ouverts, setOuverts] = useState<Set<string>>(new Set()); // notions dépliées
 
   const [genererOuvert, setGenererOuvert] = useState(false);
   const [genererEnCours, setGenererEnCours] = useState(false);
@@ -206,6 +261,7 @@ export function ProgrammeNotions() {
   }
 
   const arbre = notions ? construireArbre(notions) : [];
+  const notionEnEdition = notionEnEditionId ? (notions || []).find((n) => n.id === notionEnEditionId) : undefined;
 
   function basculerOuvert(id: string) {
     setOuverts((prec) => {
@@ -230,22 +286,10 @@ export function ProgrammeNotions() {
     }
   }
 
-  async function renommer(notionId: string) {
-    const nom = valeurEdition.trim();
-    if (!nom || !codeId) return;
-    try {
-      const maj = await renommerNotion(codeId, notionId, nom);
-      setNotions((prec) => (prec || []).map((n) => (n.id === notionId ? maj : n)));
-      setEditionId(null);
-    } catch (e) {
-      setErreur(messageErreur(e));
-    }
-  }
-
   async function changerStatut(notion: Notion, statut: StatutNotion) {
     if (!codeId) return;
     // Optimiste : le statut est l'action la plus fréquente de cette
-    // carte, une case qui met plusieurs centaines de ms à réagir se
+    // carte, une pastille qui met plusieurs centaines de ms à réagir se
     // ressent immédiatement au clic.
     setNotions((prec) => (prec || []).map((n) => (n.id === notion.id ? { ...n, statut } : n)));
     try {
@@ -278,11 +322,12 @@ export function ProgrammeNotions() {
     if (!codeId || !cibleFusion) return;
     try {
       await fusionnerNotions(codeId, notionSourceId, cibleFusion);
-      setFusionPourId(null);
+      setFusionOuverte(false);
       setCibleFusion("");
+      setNotionEnEditionId(null);
       charger();
     } catch (e) {
-      setErreur(messageErreur(e));
+      setErreurEdition(messageErreur(e));
     }
   }
 
@@ -304,6 +349,7 @@ export function ProgrammeNotions() {
       });
     }
     setIdsEnSortie((prec) => new Set([...prec, ...idsDescendants]));
+    setNotionEnEditionId(null);
     setTimeout(() => {
       setNotions((prec) => (prec || []).filter((n) => !idsDescendants.has(n.id)));
       setIdsEnSortie((prec) => {
@@ -358,7 +404,45 @@ export function ProgrammeNotions() {
     }
   }
 
-  function LigneAjout({ parentId }: { parentId: string | null }) {
+  function ouvrirEdition(noeud: Notion) {
+    setNotionEnEditionId(noeud.id);
+    setFormNom(noeud.nom);
+    setFormRegle(noeud.regle_comportement || "");
+    setFormConsigne(noeud.consigne_llm || "");
+    setErreurEdition(null);
+    setFusionOuverte(false);
+    setCibleFusion("");
+  }
+
+  async function enregistrerEdition() {
+    if (!codeId || !notionEnEdition) return;
+    setEnregistrementEnCours(true);
+    setErreurEdition(null);
+    try {
+      const nomTrim = formNom.trim();
+      if (nomTrim && nomTrim !== notionEnEdition.nom) {
+        const maj = await renommerNotion(codeId, notionEnEdition.id, nomTrim);
+        setNotions((prec) => (prec || []).map((n) => (n.id === maj.id ? maj : n)));
+      }
+      const regleVoulue = (formRegle || null) as RegleComportementNotion | null;
+      if (regleVoulue !== (notionEnEdition.regle_comportement || null)) {
+        const maj = await definirRegleNotion(codeId, notionEnEdition.id, regleVoulue);
+        setNotions((prec) => (prec || []).map((n) => (n.id === maj.id ? maj : n)));
+      }
+      const consigneVoulue = formConsigne.trim() || null;
+      if (consigneVoulue !== (notionEnEdition.consigne_llm || null)) {
+        const maj = await definirConsigneNotion(codeId, notionEnEdition.id, consigneVoulue);
+        setNotions((prec) => (prec || []).map((n) => (n.id === maj.id ? maj : n)));
+      }
+      setNotionEnEditionId(null);
+    } catch (e) {
+      setErreurEdition(messageErreur(e));
+    } finally {
+      setEnregistrementEnCours(false);
+    }
+  }
+
+  function LigneAjout({ parentId, placeholder }: { parentId: string | null; placeholder: string }) {
     return (
       <form
         onSubmit={(e) => {
@@ -371,7 +455,7 @@ export function ProgrammeNotions() {
           autoFocus
           value={valeurAjout}
           onChange={(e) => setValeurAjout(e.target.value)}
-          placeholder={parentId ? "Nom de la sous-notion" : "Nom de la notion"}
+          placeholder={placeholder}
           className="min-w-0 flex-1 bg-transparent text-sm text-dj-texte outline-none placeholder:text-dj-texte-muet"
         />
         <button type="submit" className="flex-shrink-0 rounded-md bg-dj-accent-1 px-2 py-1 text-xs font-bold text-[#1A0D02]">
@@ -392,158 +476,156 @@ export function ProgrammeNotions() {
     );
   }
 
-  function Ligne({ noeud, profondeur }: { noeud: NoeudNotion; profondeur: number }) {
+  /** Ligne à plat (Partie / Notion / plus profond) : fil d'ancêtres en
+   * petit au-dessus du nom, pastille de statut cliquable, tout le reste
+   * de l'édition se fait via le panneau (clic n'importe où sur la
+   * ligne, hors pastille). */
+  function LigneAplatie({ item }: { item: LigneAplatie }) {
+    const { noeud, chemin } = item;
     const enSortie = idsEnSortie.has(noeud.id);
-    const ouvert = ouverts.has(noeud.id);
-    const enEdition = editionId === noeud.id;
-    const enFusion = fusionPourId === noeud.id;
-
     return (
       <div
         className={`transition-all duration-150 ${enSortie ? "pointer-events-none scale-[0.98] opacity-0" : "animate-dj-fade-in-rapide opacity-100"}`}
       >
-        <div
-          style={{ paddingLeft: Math.min(profondeur, 5) * 16 }}
-          className="flex items-center gap-2 rounded-lg px-1.5 py-1.5 hover:bg-dj-surface-haute"
+        <button
+          type="button"
+          onClick={() => ouvrirEdition(noeud)}
+          className="flex w-full items-center justify-between gap-2 rounded-lg px-2.5 py-2 text-left hover:bg-dj-surface-haute"
         >
-          <button
-            type="button"
-            onClick={() => basculerOuvert(noeud.id)}
-            className={`flex h-4 w-4 flex-shrink-0 items-center justify-center text-dj-texte-muet ${noeud.enfants.length === 0 ? "invisible" : ""}`}
-            aria-label={ouvert ? "Replier" : "Déplier"}
-          >
-            {ouvert ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
-          </button>
-
-          <CaseStatutNotion statut={noeud.statut} onChange={(s) => changerStatut(noeud, s)} />
-
-          {enEdition ? (
-            <form
-              onSubmit={(e) => {
-                e.preventDefault();
-                renommer(noeud.id);
-              }}
-              className="flex min-w-0 flex-1 items-center gap-1.5"
-            >
-              <input
-                autoFocus
-                value={valeurEdition}
-                onChange={(e) => setValeurEdition(e.target.value)}
-                className="min-w-0 flex-1 rounded-md border border-dj-bordure bg-dj-surface px-1.5 py-0.5 text-sm text-dj-texte outline-none"
-              />
-              <button type="submit" className="flex-shrink-0 text-dj-accent-1-texte" aria-label="Valider">
-                <Check size={15} />
-              </button>
-              <button type="button" onClick={() => setEditionId(null)} className="flex-shrink-0 text-dj-texte-muet" aria-label="Annuler">
-                <X size={15} />
-              </button>
-            </form>
-          ) : (
-            <button
-              type="button"
-              onClick={() => {
-                setEditionId(noeud.id);
-                setValeurEdition(noeud.nom);
-              }}
-              className="min-w-0 flex-1 truncate text-left text-sm text-dj-texte"
-              title="Renommer"
-            >
-              {noeud.nom}
-            </button>
-          )}
-
-          {!enEdition && (
-            <div className="flex flex-shrink-0 items-center gap-0.5">
-              <button
-                type="button"
-                onClick={() => deplacer(noeud, -1)}
-                className="rounded p-1 text-dj-texte-muet hover:bg-dj-surface hover:text-dj-texte"
-                aria-label="Monter"
-              >
-                <ArrowUp size={13} />
-              </button>
-              <button
-                type="button"
-                onClick={() => deplacer(noeud, 1)}
-                className="rounded p-1 text-dj-texte-muet hover:bg-dj-surface hover:text-dj-texte"
-                aria-label="Descendre"
-              >
-                <ArrowDown size={13} />
-              </button>
-              <button
-                type="button"
-                onClick={() => {
-                  setAjoutParentId(noeud.id);
-                  setOuverts((prec) => new Set(prec).add(noeud.id));
-                }}
-                className="rounded p-1 text-dj-texte-muet hover:bg-dj-surface hover:text-dj-texte"
-                aria-label="Ajouter une sous-notion"
-              >
-                <Plus size={13} />
-              </button>
-              <button
-                type="button"
-                onClick={() => setFusionPourId(enFusion ? null : noeud.id)}
-                className="rounded p-1 text-dj-texte-muet hover:bg-dj-surface hover:text-dj-texte"
-                aria-label="Fusionner avec une autre notion"
-              >
-                <GitMerge size={13} />
-              </button>
-              <button
-                type="button"
-                onClick={() => supprimer(noeud.id)}
-                className="rounded p-1 text-dj-texte-muet hover:bg-[var(--dj-erreur)]/10 hover:text-[var(--dj-erreur)]"
-                aria-label="Supprimer"
-              >
-                <Trash2 size={13} />
-              </button>
-            </div>
-          )}
-        </div>
-
-        {enFusion && (
-          <div
-            style={{ paddingLeft: Math.min(profondeur, 5) * 16 + 20 }}
-            className="mb-1.5 flex animate-dj-fade-in-rapide items-center gap-2"
-          >
-            <div className="min-w-0 flex-1">
-              <SelectPersonnalise
-                options={optionsPourFusion(arbre, noeud.id)}
-                valeur={cibleFusion}
-                onChange={setCibleFusion}
-                placeholder="Fusionner dans…"
-              />
-            </div>
-            <button
-              type="button"
-              disabled={!cibleFusion}
-              onClick={() => fusionner(noeud.id)}
-              className="flex-shrink-0 rounded-md bg-dj-accent-1 px-2 py-1 text-xs font-bold text-[#1A0D02] disabled:opacity-50"
-            >
-              Fusionner
-            </button>
-            <button
-              type="button"
-              onClick={() => {
-                setFusionPourId(null);
-                setCibleFusion("");
-              }}
-              className="flex-shrink-0 text-dj-texte-muet"
-              aria-label="Annuler"
-            >
-              <X size={15} />
-            </button>
+          <div className="min-w-0 flex-1">
+            {chemin.length > 0 && (
+              <div className="truncate text-[11px] text-dj-texte-muet">{chemin.join(" › ")}</div>
+            )}
+            <div className="truncate text-sm text-dj-texte">{noeud.nom}</div>
+          </div>
+          <PastilleStatut statut={noeud.statut} onChange={(s) => changerStatut(noeud, s)} />
+        </button>
+        {ajoutParentId === noeud.id && (
+          <div className="pl-4">
+            <LigneAjout parentId={noeud.id} placeholder="Nom de la sous-partie" />
           </div>
         )}
+      </div>
+    );
+  }
 
+  /** En-tête de groupe partagé par Matière et Chapitre -- seule la
+   * couleur (bandeau plein pour Matière, simple liseré pour Chapitre)
+   * change, voir GroupeMatiere/GroupeChapitre plus bas. */
+  function EnteteGroupe({
+    noeud,
+    ouvert,
+    onToggle,
+    onAjouter,
+    style,
+    libelleAjout,
+  }: {
+    noeud: NoeudNotion;
+    ouvert: boolean;
+    onToggle: () => void;
+    onAjouter: () => void;
+    style: React.CSSProperties;
+    libelleAjout: string;
+  }) {
+    const enSortie = idsEnSortie.has(noeud.id);
+    return (
+      <div
+        style={style}
+        className={`flex items-center gap-2 rounded-lg px-3 py-2 transition-all duration-150 ${
+          enSortie ? "pointer-events-none scale-[0.98] opacity-0" : "animate-dj-fade-in-rapide opacity-100"
+        }`}
+      >
+        <button type="button" onClick={onToggle} className="flex min-w-0 flex-1 items-center gap-1.5 text-left">
+          <span className="flex-shrink-0" aria-hidden>
+            {noeud.enfants.length > 0 ? (
+              ouvert ? (
+                <ChevronDown size={14} />
+              ) : (
+                <ChevronRight size={14} />
+              )
+            ) : (
+              <span className="inline-block w-3.5" />
+            )}
+          </span>
+          <span className="truncate font-medium">{noeud.nom}</span>
+        </button>
+        <button
+          type="button"
+          onClick={onAjouter}
+          className="flex-shrink-0 rounded p-1 opacity-80 hover:opacity-100"
+          aria-label={libelleAjout}
+          title={libelleAjout}
+        >
+          <Plus size={14} />
+        </button>
+        <button
+          type="button"
+          onClick={() => ouvrirEdition(noeud)}
+          className="flex-shrink-0 rounded p-1 opacity-80 hover:opacity-100"
+          aria-label="Modifier"
+          title="Modifier"
+        >
+          <Pencil size={13} />
+        </button>
+      </div>
+    );
+  }
+
+  function GroupeChapitre({ noeud }: { noeud: NoeudNotion }) {
+    const ouvert = ouverts.has(noeud.id);
+    const lignes = aplatirSousChapitre(noeud);
+    return (
+      <div className="ml-1">
+        <EnteteGroupe
+          noeud={noeud}
+          ouvert={ouvert}
+          onToggle={() => basculerOuvert(noeud.id)}
+          onAjouter={() => {
+            setAjoutParentId(noeud.id);
+            setOuverts((prec) => new Set(prec).add(noeud.id));
+          }}
+          libelleAjout="Ajouter un élément"
+          style={{ color: "var(--dj-texte)", borderLeft: "2px solid var(--dj-bordure)" }}
+        />
         {ouvert && (
-          <div>
+          <div className="ml-3 flex flex-col gap-0.5 border-l border-dj-bordure pl-2">
+            {lignes.length === 0 && ajoutParentId !== noeud.id && (
+              <p className="px-2.5 py-1.5 text-xs text-dj-texte-muet">Aucun élément pour l&apos;instant.</p>
+            )}
+            {lignes.map((item) => (
+              <LigneAplatie key={item.noeud.id} item={item} />
+            ))}
+            {ajoutParentId === noeud.id && <LigneAjout parentId={noeud.id} placeholder="Nom de la partie/notion" />}
+          </div>
+        )}
+      </div>
+    );
+  }
+
+  function GroupeMatiere({ noeud, index }: { noeud: NoeudNotion; index: number }) {
+    const ouvert = ouverts.has(noeud.id);
+    const couleur = COULEURS_MATIERE[index % COULEURS_MATIERE.length];
+    return (
+      <div>
+        <EnteteGroupe
+          noeud={noeud}
+          ouvert={ouvert}
+          onToggle={() => basculerOuvert(noeud.id)}
+          onAjouter={() => {
+            setAjoutParentId(noeud.id);
+            setOuverts((prec) => new Set(prec).add(noeud.id));
+          }}
+          libelleAjout="Ajouter un chapitre"
+          style={{ background: couleur.conteneur, color: couleur.texte }}
+        />
+        {ouvert && (
+          <div className="mt-1 flex flex-col gap-2">
             {noeud.enfants.map((enfant) => (
-              <Ligne key={enfant.id} noeud={enfant} profondeur={profondeur + 1} />
+              <GroupeChapitre key={enfant.id} noeud={enfant} />
             ))}
             {ajoutParentId === noeud.id && (
-              <div style={{ paddingLeft: Math.min(profondeur + 1, 5) * 16 }}>
-                <LigneAjout parentId={noeud.id} />
+              <div className="ml-1">
+                <LigneAjout parentId={noeud.id} placeholder="Nom du chapitre" />
               </div>
             )}
           </div>
@@ -559,7 +641,7 @@ export function ProgrammeNotions() {
           <h2 className="font-display text-base font-semibold text-dj-texte">Programme</h2>
           <BoutonInfoSection
             rubriqueId="programme-notions"
-            texteCourt="Organise les notions à enseigner pour ce code et coche leur avancement."
+            texteCourt="Organise le programme (matière > chapitre > partie > notion) et coche l'avancement."
           />
         </div>
         {codes && codes.length > 0 && (
@@ -664,30 +746,30 @@ export function ProgrammeNotions() {
             {notions === undefined ? (
               <div className="flex flex-col gap-2" aria-hidden>
                 {[0, 1, 2].map((i) => (
-                  <Skeleton key={i} className="h-8 w-full rounded-lg" style={{ animationDelay: `${i * 80}ms` }} />
+                  <Skeleton key={i} className="h-9 w-full rounded-lg" style={{ animationDelay: `${i * 80}ms` }} />
                 ))}
               </div>
             ) : (
               <>
                 {arbre.length === 0 && ajoutParentId !== "" && (
                   <p className="rounded-xl border border-dashed border-dj-bordure px-3 py-4 text-center text-xs text-dj-texte-muet">
-                    Aucune notion pour l&apos;instant.
+                    Aucune matière pour l&apos;instant.
                   </p>
                 )}
-                <div className="flex flex-col gap-0.5">
-                  {arbre.map((noeud) => (
-                    <Ligne key={noeud.id} noeud={noeud} profondeur={0} />
+                <div className="flex flex-col gap-2">
+                  {arbre.map((noeud, index) => (
+                    <GroupeMatiere key={noeud.id} noeud={noeud} index={index} />
                   ))}
                 </div>
                 <div className="mt-2">
                   {ajoutParentId === "" ? (
-                    <LigneAjout parentId={null} />
+                    <LigneAjout parentId={null} placeholder="Nom de la matière" />
                   ) : (
                     <button
                       onClick={() => setAjoutParentId("")}
                       className="flex items-center gap-1.5 rounded-lg px-2 py-1.5 text-xs font-medium text-dj-accent-1-texte hover:bg-dj-surface-haute"
                     >
-                      <Plus size={14} /> Nouvelle notion
+                      <Plus size={14} /> Nouvelle matière
                     </button>
                   )}
                 </div>
@@ -695,6 +777,134 @@ export function ProgrammeNotions() {
             )}
           </div>
         </>
+      )}
+
+      {notionEnEdition && (
+        <PanneauFlottant
+          onFerme={() => setNotionEnEditionId(null)}
+          entete={
+            <div className="flex items-center justify-between gap-2">
+              <h3 className="font-display text-sm font-semibold text-dj-texte">Modifier</h3>
+              <PastilleStatut statut={notionEnEdition.statut} onChange={(s) => changerStatut(notionEnEdition, s)} />
+            </div>
+          }
+        >
+          <div className="flex flex-col gap-4">
+            <div>
+              <label className="mb-1 block text-xs font-medium text-dj-texte-muet">Nom</label>
+              <input
+                value={formNom}
+                onChange={(e) => setFormNom(e.target.value)}
+                className="w-full rounded-lg border border-dj-bordure bg-dj-surface px-3 py-2 text-sm text-dj-texte outline-none focus:border-dj-bordure-forte"
+              />
+            </div>
+
+            <div>
+              <label className="mb-1 block text-xs font-medium text-dj-texte-muet">
+                Règle de comportement (élève, notion pas encore vue)
+              </label>
+              <SelectPersonnalise options={OPTIONS_REGLE} valeur={formRegle} onChange={setFormRegle} />
+              <p className="mt-1 text-[11px] text-dj-texte-muet">
+                Bloquer : l&apos;IA n&apos;aide pas tant que ce n&apos;est pas vu en classe. Contourner : elle aide sans utiliser
+                cette notion. Signaler : elle aide normalement en le précisant.
+              </p>
+            </div>
+
+            <div>
+              <label className="mb-1 block text-xs font-medium text-dj-texte-muet">
+                Consigne pour l&apos;IA (texte libre, s&apos;applique aussi aux sous-notions sans consigne propre)
+              </label>
+              <textarea
+                value={formConsigne}
+                onChange={(e) => setFormConsigne(e.target.value)}
+                placeholder="Ex. : toujours donner des exemples avec des fractions de pizza pour cette notion."
+                rows={3}
+                className="w-full resize-none rounded-lg border border-dj-bordure bg-dj-surface px-3 py-2 text-sm text-dj-texte outline-none focus:border-dj-bordure-forte"
+              />
+            </div>
+
+            {erreurEdition && <p className="text-xs text-[var(--dj-erreur)]">{erreurEdition}</p>}
+
+            <div className="flex items-center gap-2">
+              <button
+                onClick={enregistrerEdition}
+                disabled={enregistrementEnCours}
+                className="rounded-md bg-dj-accent-1 px-3 py-1.5 text-xs font-bold text-[#1A0D02] disabled:opacity-50"
+              >
+                {enregistrementEnCours ? "Enregistrement…" : "Enregistrer"}
+              </button>
+              <button
+                onClick={() => setNotionEnEditionId(null)}
+                className="rounded-md border border-dj-bordure px-3 py-1.5 text-xs font-medium text-dj-texte"
+              >
+                Annuler
+              </button>
+            </div>
+
+            <div className="flex flex-wrap items-center gap-1 border-t border-dj-bordure pt-3">
+              <button
+                type="button"
+                onClick={() => deplacer(notionEnEdition, -1)}
+                className="flex items-center gap-1 rounded p-1.5 text-xs text-dj-texte-muet hover:bg-dj-surface-haute hover:text-dj-texte"
+              >
+                <ArrowUp size={13} /> Monter
+              </button>
+              <button
+                type="button"
+                onClick={() => deplacer(notionEnEdition, 1)}
+                className="flex items-center gap-1 rounded p-1.5 text-xs text-dj-texte-muet hover:bg-dj-surface-haute hover:text-dj-texte"
+              >
+                <ArrowDown size={13} /> Descendre
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setAjoutParentId(notionEnEdition.id);
+                  setOuverts((prec) => new Set(prec).add(notionEnEdition.id));
+                  setNotionEnEditionId(null);
+                }}
+                className="flex items-center gap-1 rounded p-1.5 text-xs text-dj-texte-muet hover:bg-dj-surface-haute hover:text-dj-texte"
+              >
+                <Plus size={13} /> Sous-élément
+              </button>
+              <button
+                type="button"
+                onClick={() => setFusionOuverte((v) => !v)}
+                className="flex items-center gap-1 rounded p-1.5 text-xs text-dj-texte-muet hover:bg-dj-surface-haute hover:text-dj-texte"
+              >
+                <GitMerge size={13} /> Fusionner
+              </button>
+              <button
+                type="button"
+                onClick={() => supprimer(notionEnEdition.id)}
+                className="flex items-center gap-1 rounded p-1.5 text-xs text-dj-texte-muet hover:bg-[var(--dj-erreur)]/10 hover:text-[var(--dj-erreur)]"
+              >
+                <Trash2 size={13} /> Supprimer
+              </button>
+            </div>
+
+            {fusionOuverte && (
+              <div className="flex animate-dj-fade-in-rapide items-center gap-2">
+                <div className="min-w-0 flex-1">
+                  <SelectPersonnalise
+                    options={optionsPourFusion(arbre, notionEnEdition.id)}
+                    valeur={cibleFusion}
+                    onChange={setCibleFusion}
+                    placeholder="Fusionner dans…"
+                  />
+                </div>
+                <button
+                  type="button"
+                  disabled={!cibleFusion}
+                  onClick={() => fusionner(notionEnEdition.id)}
+                  className="flex-shrink-0 rounded-md bg-dj-accent-1 px-2 py-1 text-xs font-bold text-[#1A0D02] disabled:opacity-50"
+                >
+                  Fusionner
+                </button>
+              </div>
+            )}
+          </div>
+        </PanneauFlottant>
       )}
     </section>
   );

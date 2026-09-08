@@ -1312,6 +1312,7 @@ export async function definirModeActif(conversationId: string, rattachementId: s
 // l'ancienne fonctionnalité "Programme" (supprimée le 28/08/2026).
 
 export type StatutNotion = "a_venir" | "en_cours" | "acquis";
+export type RegleComportementNotion = "bloquer" | "contourner" | "signaler";
 
 export type Notion = {
   id: string;
@@ -1322,6 +1323,8 @@ export type Notion = {
   ordre: number;
   created_at: string;
   updated_at: string;
+  regle_comportement: RegleComportementNotion | null;
+  consigne_llm: string | null;
 };
 
 export async function listerNotions(codeId: string) {
@@ -1346,6 +1349,28 @@ export async function changerStatutNotion(codeId: string, notionId: string, stat
   return appelerApi(`/api/notions/${codeId}/${notionId}/statut`, {
     method: "PATCH",
     body: JSON.stringify({ statut }),
+  }) as Promise<Notion>;
+}
+
+// 08/09/2026, demande Bourama : réglable directement depuis l'onglet
+// Programme (avant, `regle_comportement` n'était réglable que par l'IA
+// elle-même en conversation -- voir djiguigne-backend/core/
+// outils_avancement_notions.py, action "definir_regle_comportement").
+export async function definirRegleNotion(codeId: string, notionId: string, regle: RegleComportementNotion | null) {
+  return appelerApi(`/api/notions/${codeId}/${notionId}/regle`, {
+    method: "PATCH",
+    body: JSON.stringify({ regle }),
+  }) as Promise<Notion>;
+}
+
+// Même demande (08/09/2026) : consigne texte libre à destination de
+// l'IA, à côté de regle_comportement -- voir docstring de
+// definir_consigne_llm côté backend pour l'héritage le long de
+// l'arborescence.
+export async function definirConsigneNotion(codeId: string, notionId: string, consigne: string | null) {
+  return appelerApi(`/api/notions/${codeId}/${notionId}/consigne`, {
+    method: "PATCH",
+    body: JSON.stringify({ consigne }),
   }) as Promise<Notion>;
 }
 
