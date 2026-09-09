@@ -179,12 +179,24 @@ export default async function PageTelecharger() {
           {estAndroid && apk && version && (
             <div className="mt-5 flex items-start gap-2.5 text-xs text-dj-texte-muet">
               <ShieldCheck size={15} className="mt-0.5 flex-shrink-0" />
-              <p>
-                Android bloque par défaut l&apos;installation d&apos;applications venant d&apos;ailleurs que le
-                Play Store. Après le téléchargement, ouvre le fichier et autorise l&apos;installation
-                depuis cette source si le téléphone te le demande. L&apos;application vérifie
-                elle-même si une mise à jour est disponible une fois installée.
-              </p>
+              <div>
+                <p>
+                  Android bloque par défaut l&apos;installation d&apos;applications venant d&apos;ailleurs que le
+                  Play Store. Après le téléchargement, ouvre le fichier et autorise l&apos;installation
+                  depuis cette source si le téléphone te le demande.
+                </p>
+                <p className="mt-2">
+                  Un message <span className="text-dj-texte">« Application non reconnue »</span> peut
+                  ensuite s&apos;afficher : c&apos;est normal (l&apos;app n&apos;est pas encore installée
+                  assez de fois pour que Google la reconnaisse), appuie sur{" "}
+                  <span className="text-dj-texte">« Détails »</span> puis{" "}
+                  <span className="text-dj-texte">« Installer quand même »</span> pour continuer.
+                </p>
+                <p className="mt-2">
+                  L&apos;application vérifie elle-même si une mise à jour est disponible une fois
+                  installée.
+                </p>
+              </div>
             </div>
           )}
         </div>
