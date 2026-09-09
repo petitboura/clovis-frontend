@@ -54,9 +54,17 @@ android {
     // Ajoute le 25/08/2026, Lot 6-7 portes : deux flavors comme
     // clovis-mobile/android-legacy-natif (voir 00-commun.md, "isolation au
     // niveau du build, pas d'un simple interrupteur en code"). "play" =
-    // publiable Play Store (lots 1-5 seulement, aucun code accessibilite
-    // compile dedans). "externe" = ajoute l'accessibilite + mise a jour
-    // hors-store (lots 6-8), jamais soumis au Play Store.
+    // a l'origine pensee pour le Play Store (lots 1-5 seulement, aucun code
+    // accessibilite compile dedans). "externe" = ajoute l'accessibilite +
+    // mise a jour hors-store (lots 6-8), jamais soumis au Play Store.
+    //
+    // Mise a jour du 09/09/2026, Bourama : la publication sur le vrai Play
+    // Store est abandonnee (frais non payes) -- "play" est donc lui aussi
+    // distribue hors Play Store desormais, et a recu sa propre copie du
+    // systeme de verification/telechargement de mise a jour (voir
+    // src/play/.../miseajour/, dupliquee depuis src/externe/.../miseajour/
+    // sans toucher a ce dernier). Seule la mise a jour a ete traitee ; le
+    // reste de "play" (pas d'accessibilite notamment) est inchange.
     // Signature du flavor externe : lit android/keystore.properties (local,
     // jamais committe, gitignore) -- voir android/README-SIGNATURE.md pour
     // generer la cle dans CE projet. Sans ce fichier, "externe" compile quand
