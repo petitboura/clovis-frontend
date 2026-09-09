@@ -1,11 +1,30 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!--
     Lot 3C (Phase 3, fusion Capacitor) : flavor "play" (publiable Play
-    Store). Volontairement vide, comme deja acte cote natif (voir
-    clovis-mobile/android-legacy-natif/app/src/play/AndroidManifest.xml) :
-    aucune permission ni service propre a ce flavor. Fusionne automatiquement
-    avec src/main lors du build (Gradle merge les manifestes par nom de
-    flavor). Ce fichier existe des maintenant pour garantir l'etancheite
-    structurelle avec "externe" des le depart.
+    Store). Aucune permission ni service propre a ce flavor. Fusionne
+    automatiquement avec src/main lors du build (Gradle merge les
+    manifestes par nom de flavor). Ce fichier existe des maintenant pour
+    garantir l'etancheite structurelle avec "externe" des le depart.
+
+    09/09/2026, Bourama (bug signale : noms d'apps techniques bruts dans
+    Temps d'ecran) : bloc <queries> ajoute, meme contenu que le flavor
+    "externe". Sans lui, ResolveurApps.resoudre() (appele par
+    TempsEcranPlugin.usageAujourdhui() pour TOUTES les apps mesurees, sur
+    les DEUX flavors, pas seulement "externe") ne peut pas voir les autres
+    apps installees a cause de la restriction de visibilite des paquets
+    (Android 11+, targetSdk=36 ici) : PackageManager.getApplicationInfo()
+    echoue pour la plupart des apps tierces et ResolveurApps retombe sur
+    le nom de paquet brut, meme quand l'app est bien installee. Le flavor
+    "externe" avait deja ce bloc mais seulement pour
+    listerAppsInstallees() (selecteur d'apps d'Accessibilite) : personne
+    n'avait remarque que TempsEcranPlugin en avait besoin aussi, sur les
+    deux flavors.
 -->
-<manifest xmlns:android="http://schemas.android.com/apk/res/android" />
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+    <queries>
+        <intent>
+            <action android:name="android.intent.action.MAIN" />
+            <category android:name="android.intent.category.LAUNCHER" />
+        </intent>
+    </queries>
+</manifest>

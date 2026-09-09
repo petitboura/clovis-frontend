@@ -8,9 +8,10 @@
     logique (voir ServiceAccessibiliteClovis.kt).
     31/08/2026 : ajout du bloc <queries> (visibilite des paquets, Android
     11+) pour que ResolveurApps.listerAppsInstallees() (nouveau selecteur
-    d'apps du plugin Accessibilite) voie les autres apps lancables. Portee
-    au flavor "externe" uniquement, car c'est le seul a exposer cette
-    methode (le stub "play" la rejette sans jamais l'appeler reellement).
+    d'apps du plugin Accessibilite) voie les autres apps lancables.
+    09/09/2026 : le flavor "play" a maintenant le meme bloc (voir son
+    manifest), car ResolveurApps.resoudre() (Temps d'ecran) en a besoin
+    sur les deux flavors, pas seulement "externe".
 -->
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
     <queries>
