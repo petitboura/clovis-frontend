@@ -545,7 +545,7 @@ export function BibliothequePublique() {
     observateur.observe(cible);
     return () => observateur.disconnect();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [liste, dossierCourantId, recherche, filtrePays, filtreNiveau, filtreCategorie, filtreClasse, filtreSpecialite, plusDeResultats]);
+  }, [liste, dossierCourantId, recherche, filtrePays, filtreNiveau, filtreCategorie, filtreClasse, filtreSpecialite, plusDeResultats, ongletBiblioPublique]);
 
   function choisirFichiers(fichiersChoisis: FileList | File[]) {
     const liste = Array.from(fichiersChoisis);
