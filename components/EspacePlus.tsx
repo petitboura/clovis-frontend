@@ -6,6 +6,7 @@ import { Home, Plug, Settings, Bell, Share2, Star, Compass, ChevronRight, type L
 import { NoteAgent } from "@/components/NoteAgent";
 import { CommentairesAgent } from "@/components/CommentairesAgent";
 import { useOuvrirCatalogue } from "@/lib/contexteCatalogue";
+import { useMiseAJourDisponible } from "@/lib/useMiseAJourDisponible";
 
 // Créé le 26/08/2026, Bourama : refonte navigation mobile native. Contenu
 // du menu "Plus", partagé entre l'appli native et le web mobile.
@@ -65,11 +66,17 @@ function LigneSection({
   sousTitre,
   onClick,
   plat = false,
+  pointRouge = false,
 }: {
   icone: LucideIcon;
   titre: string;
   sousTitre?: string;
   onClick: () => void;
+  // 09/09/2026, demande Bourama : petit point rouge sur "Paramètres" tant
+  // qu'une mise à jour n'a pas été installée (voir BlocsMenuPlus, qui
+  // décide QUAND le passer à true -- ce composant se contente de
+  // l'afficher, sans connaître la raison).
+  pointRouge?: boolean;
   // 30/08/2026, audit "bouton Plus mal aligné" (tiroir mobile du chat
   // plein écran, AppSidebar.tsx) : ce tiroir a déjà son propre style de
   // ligne (LienOnglet, même composant) -- le style carte pensé pour le
@@ -87,8 +94,11 @@ function LigneSection({
         onClick={onClick}
         className="group mt-2 flex w-full items-center gap-2 rounded-xl px-2 py-2 text-left text-dj-texte-muet transition-colors hover:bg-dj-surface-haute hover:text-dj-texte"
       >
-        <span className="flex h-10 w-10 flex-shrink-0 items-center justify-center">
+        <span className="relative flex h-10 w-10 flex-shrink-0 items-center justify-center">
           <Icone size={18} />
+          {pointRouge && (
+            <span className="absolute right-1.5 top-1.5 h-2 w-2 rounded-full bg-[var(--dj-erreur)]" />
+          )}
         </span>
         <span className="text-sm">{titre}</span>
       </button>
@@ -105,8 +115,11 @@ function LigneSection({
           --dj-accent-1-conteneur, globals.css) pour signaler visuellement
           que chaque ligne est une action, sans changer la structure de la
           liste ni son comportement. */}
-      <span className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-full bg-dj-accent-1-conteneur">
+      <span className="relative flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-full bg-dj-accent-1-conteneur">
         <Icone size={17} className="text-dj-accent-1-texte" />
+        {pointRouge && (
+          <span className="absolute right-0.5 top-0.5 h-2 w-2 rounded-full bg-[var(--dj-erreur)]" />
+        )}
       </span>
       <div className="flex-1 overflow-hidden">
         <div className="truncate text-sm text-dj-texte">{titre}</div>
@@ -151,6 +164,9 @@ export function BlocsMenuPlus({
   const [avisDeplie, setAvisDeplie] = useState(false);
   const ouvrirCatalogue = useOuvrirCatalogue();
   const naviguer = onNaviguer ?? ((href: string) => router.push(href));
+  // 09/09/2026, demande Bourama : point rouge sur "Paramètres" tant
+  // qu'une mise à jour n'a pas été installée.
+  const { misAJourDisponible } = useMiseAJourDisponible();
 
   // Repris à l'identique de la fonction `partager` d'AppSidebar.tsx.
   // Corrigé le 31/08/2026 (même raison qu'AppSidebar.tsx) : partage
@@ -177,7 +193,15 @@ export function BlocsMenuPlus({
   }
 
   const lignesNavigation = sectionsNavigation.map((s) => (
-    <LigneSection key={s.href} icone={s.icone} titre={s.titre} sousTitre={s.sousTitre} onClick={() => naviguer(s.href)} plat={plat} />
+    <LigneSection
+      key={s.href}
+      icone={s.icone}
+      titre={s.titre}
+      sousTitre={s.sousTitre}
+      onClick={() => naviguer(s.href)}
+      plat={plat}
+      pointRouge={s.href === "/parametres" && misAJourDisponible}
+    />
   ));
 
   const lignesActions = (

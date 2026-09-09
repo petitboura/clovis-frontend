@@ -87,6 +87,14 @@ export function BoutonNotifications({ connecte }: { connecte: boolean }) {
         // chargement, jamais bloquant pour la navigation.
       });
     }
+    // 09/09/2026, demande Bourama : "nouvelle_version_disponible" porte un
+    // lien de TÉLÉCHARGEMENT direct (l'APK sur GitHub), pas une route
+    // interne de l'app -- router.push casserait dessus (voir le bouton
+    // dédié plus bas dans le rendu, même logique d'ouverture).
+    if (n.type === "nouvelle_version_disponible") {
+      if (n.lien) window.open(n.lien, "_blank");
+      return;
+    }
     if (n.lien) router.push(n.lien);
   }
 
@@ -136,24 +144,48 @@ export function BoutonNotifications({ connecte }: { connecte: boolean }) {
             {notifications.length === 0 ? (
               <p className="px-3 py-6 text-center text-sm text-dj-texte-muet">Rien de nouveau pour l'instant.</p>
             ) : (
-              notifications.map((n) => (
-                <button
-                  key={n.id}
-                  onClick={() => onClicNotification(n)}
-                  className={`block w-full rounded-xl px-3 py-2 text-left transition-colors hover:bg-dj-surface-haute ${
-                    n.lu ? "" : "bg-dj-surface-haute/60"
-                  }`}
-                >
-                  <div className="flex items-start gap-2">
-                    {!n.lu && <span className="mt-1.5 h-1.5 w-1.5 flex-shrink-0 rounded-full bg-dj-accent-1" />}
-                    <div className={n.lu ? "ml-3.5" : ""}>
-                      <p className="text-sm text-dj-texte">{n.titre}</p>
-                      {n.contenu && <p className="mt-0.5 text-xs text-dj-texte-muet">{n.contenu}</p>}
-                      <p className="mt-1 text-[11px] text-dj-texte-muet">{dateRelative(n.created_at)}</p>
+              notifications.map((n) =>
+                n.type === "nouvelle_version_disponible" ? (
+                  // 09/09/2026, demande Bourama : "un CTA au lieu d'une
+                  // simple info" -- vrai bouton "Télécharger" au lieu du
+                  // texte cliquable des autres types.
+                  <div
+                    key={n.id}
+                    className={`rounded-xl px-3 py-2 ${n.lu ? "" : "bg-dj-surface-haute/60"}`}
+                  >
+                    <div className="flex items-start gap-2">
+                      {!n.lu && <span className="mt-1.5 h-1.5 w-1.5 flex-shrink-0 rounded-full bg-dj-accent-1" />}
+                      <div className={n.lu ? "ml-3.5 flex-1" : "flex-1"}>
+                        <p className="text-sm text-dj-texte">{n.titre}</p>
+                        {n.contenu && <p className="mt-0.5 text-xs text-dj-texte-muet">{n.contenu}</p>}
+                        <button
+                          onClick={() => onClicNotification(n)}
+                          className="mt-2 rounded-lg bg-dj-accent-1 px-3 py-1.5 text-xs font-bold text-[#1A0D02] transition-colors hover:bg-dj-accent-2"
+                        >
+                          Télécharger
+                        </button>
+                      </div>
                     </div>
                   </div>
-                </button>
-              ))
+                ) : (
+                  <button
+                    key={n.id}
+                    onClick={() => onClicNotification(n)}
+                    className={`block w-full rounded-xl px-3 py-2 text-left transition-colors hover:bg-dj-surface-haute ${
+                      n.lu ? "" : "bg-dj-surface-haute/60"
+                    }`}
+                  >
+                    <div className="flex items-start gap-2">
+                      {!n.lu && <span className="mt-1.5 h-1.5 w-1.5 flex-shrink-0 rounded-full bg-dj-accent-1" />}
+                      <div className={n.lu ? "ml-3.5" : ""}>
+                        <p className="text-sm text-dj-texte">{n.titre}</p>
+                        {n.contenu && <p className="mt-0.5 text-xs text-dj-texte-muet">{n.contenu}</p>}
+                        <p className="mt-1 text-[11px] text-dj-texte-muet">{dateRelative(n.created_at)}</p>
+                      </div>
+                    </div>
+                  </button>
+                )
+              )
             )}
           </div>
         </div>

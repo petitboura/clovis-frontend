@@ -1681,14 +1681,16 @@ export type NotificationClovis = {
   id: number;
   // "audit_hebdomadaire_corrections" ajouté Partie 8, "correction_traitee"
   // ajouté Partie 5 (tous deux 06/09/2026, chantier "confiance
-  // pédagogique") : voir core/notifications.py.
+  // pédagogique") : voir core/notifications.py. "nouvelle_version_disponible"
+  // ajouté 09/09/2026 (voir core/notifications_push.py::notifier_nouvelle_version_disponible).
   type:
     | "rappel_echu"
     | "action_ia_terminee"
     | "document_recu_code"
     | "message_systeme"
     | "audit_hebdomadaire_corrections"
-    | "correction_traitee";
+    | "correction_traitee"
+    | "nouvelle_version_disponible";
   titre: string;
   contenu: string | null;
   lien: string | null;

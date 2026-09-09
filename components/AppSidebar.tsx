@@ -33,6 +33,7 @@ import { BoutonInstaller } from "@/components/BoutonInstaller";
 import { MenuPlusChatFlottant } from "@/components/mobile/MenuPlusChatFlottant";
 import { useFermetureAnimee } from "@/lib/useFermetureAnimee";
 import { useFermetureAuRetour } from "@/lib/contexteRetour";
+import { useMiseAJourDisponible } from "@/lib/useMiseAJourDisponible";
 
 // Nav principale de l'app (refonte "Mon espace = l'app", 15/08/2026,
 // demande Bourama : "faut changer l'affichage même de mon espace, son
@@ -159,6 +160,7 @@ function MenuProfil({
   onNaviguerVersParametres,
   onNaviguerVersProfil,
   onSeDeconnecter,
+  pointRouge = false,
 }: {
   avatarUrl: string | null;
   nomAffiche: string | null;
@@ -189,6 +191,12 @@ function MenuProfil({
   // "/parametres?vue=profil" (voir EspaceParametres.tsx).
   onNaviguerVersProfil: () => void;
   onSeDeconnecter: () => void;
+  // 09/09/2026, demande Bourama : petit point rouge sur l'avatar tant
+  // qu'une mise à jour n'a pas été installée -- couvre en un seul endroit
+  // le rail desktop ET le tiroir mobile du chat plein écran, puisque
+  // MenuProfil est le même composant pour les deux (voir les deux appels
+  // plus bas dans ce fichier).
+  pointRouge?: boolean;
 }) {
   const ref = useRef<HTMLDivElement>(null);
   const libelle = nomAffiche || "Mon compte";
@@ -206,7 +214,7 @@ function MenuProfil({
   }, [menuOuvert, onFermerMenu]);
 
   const Avatar = (
-    <span className="h-6 w-6 flex-shrink-0 overflow-hidden rounded-full border border-dj-bordure bg-dj-surface-haute">
+    <span className="relative h-6 w-6 flex-shrink-0 overflow-hidden rounded-full border border-dj-bordure bg-dj-surface-haute">
       {avatarUrl ? (
         // eslint-disable-next-line @next/next/no-img-element -- avatar_url vient de Supabase Storage, hôte dynamique
         <img src={avatarUrl} alt="" className="h-full w-full object-cover" />
@@ -214,6 +222,9 @@ function MenuProfil({
         <span className="flex h-full w-full items-center justify-center text-[10px] font-bold text-dj-texte-muet">
           {libelle.trim().charAt(0).toUpperCase()}
         </span>
+      )}
+      {pointRouge && (
+        <span className="absolute -right-0.5 -top-0.5 h-2 w-2 rounded-full border border-dj-surface bg-[var(--dj-erreur)]" />
       )}
     </span>
   );
@@ -523,6 +534,9 @@ export function AppSidebar({
   // (juste en dessous) doit aussi déclencher l'animation de sortie, pas
   // juste le clic normal.
   const { enSortie: profilEnSortie, demarrerFermeture: fermerProfilMenu } = useFermetureAnimee();
+  // 09/09/2026, demande Bourama : point rouge sur l'avatar (MenuProfil)
+  // tant qu'une mise à jour n'a pas été installée.
+  const { misAJourDisponible } = useMiseAJourDisponible();
   const asideRef = useRef<HTMLDivElement>(null);
   const actionsRef = useRef<HTMLDivElement>(null);
 
@@ -1048,6 +1062,7 @@ export function AppSidebar({
             onBasculerMenu={() => setProfilDeplie((v) => !v)}
             onFermerMenu={() => fermerProfilMenu(() => setProfilDeplie(false))}
             enSortieMenu={profilEnSortie}
+            pointRouge={misAJourDisponible}
             onNaviguerVersParametres={() => {
               // Même calque profilDeplie que la version mobile (voir
               // MenuProfil mobile plus bas). Plus de naviguerVersSection
@@ -1251,6 +1266,7 @@ export function AppSidebar({
                 onBasculerMenu={() => setProfilDeplie((v) => !v)}
                 onFermerMenu={() => fermerProfilMenu(() => setProfilDeplie(false))}
                 enSortieMenu={profilEnSortie}
+                pointRouge={misAJourDisponible}
                 onNaviguerVersParametres={() => {
                   // Le menu profil (profilDeplie) est un calque à part,
                   // sa fermeture juste en dessous consomme sinon sa

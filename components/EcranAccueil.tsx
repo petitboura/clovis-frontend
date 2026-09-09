@@ -13,6 +13,7 @@ import { Logo } from "@/components/Logo";
 import { Skeleton } from "@/components/Skeleton";
 import { Carte } from "@/components/Carte";
 import { ONGLETS } from "@/components/AppSidebar";
+import { BandeauMiseAJour } from "@/components/BandeauMiseAJour";
 
 // Écran d'accueil réel de l'app (16/08/2026, demande Bourama : "faut une
 // vraie écran d'accueil pour l'app, pas un lieu dans l'app" -- avant
@@ -173,6 +174,10 @@ export function EcranAccueil() {
     // et la même explication dans components/SectionPage.tsx
     // (TransitionPage.tsx anime désormais l'entrée/sortie de toute page).
     <div className="mx-auto w-full max-w-3xl space-y-10 px-4 pb-24 pt-8 md:pt-12">
+      {/* Bandeau mise à jour (09/09/2026, demande Bourama) : CTA clair à
+          l'ouverture de l'app si une nouvelle version est disponible. */}
+      <BandeauMiseAJour />
+
       {/* Bienvenue : vrai moment d'entrée (refonte 22/08/2026, demande
           Bourama : "faut une vraie hiérarchie, pas 8 cartes à plat").
           Avant : logo/titre/bouton empilés au même niveau visuel que le
