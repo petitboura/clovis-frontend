@@ -15,17 +15,16 @@ import {
   supprimerDeBibliothequePublique,
   reessayerVectorisationBibliothequePublique,
   copierVersBibliothequePersonnelle,
-  listerDossiersCataloguePublic,
   creerDossierCataloguePublic,
   supprimerDossierCataloguePublic,
   listerListesFiltresBibliothequePublique,
-  listerDossiersPublicsAttaches,
   attacherDossierPublic,
   detacherDossierPublic,
   type EntreeBibliothequePublique,
   type DossierCataloguePublic,
   type ListesFiltresBibliothequePublique,
 } from "@/lib/api";
+import { useDossiersCataloguePublic } from "@/lib/contexteDossiersCataloguePublic";
 import { messageErreur, ErreurApi } from "@/lib/erreurs";
 import { CTACompteRequis } from "@/components/CTACompteRequis";
 import { CompteRequisModal } from "@/components/CompteRequisModal";
@@ -196,11 +195,14 @@ function typeDe(entree: EntreeBibliothequePublique): TypeBiblioPublique {
 // dans lib/api.ts, boucle séquentielle).
 export function BibliothequePublique() {
   const [liste, setListe] = useState<EntreeBibliothequePublique[] | undefined>(undefined);
-  const [dossiers, setDossiers] = useState<DossierCataloguePublic[] | undefined>(undefined);
-  // 08/09/2026 : id des dossiers publics déjà attachés à la bibliothèque
-  // perso (copie + synchronisation continue), pour afficher le bouton
-  // "Attacher"/"Détacher" avec le bon état -- voir chargerDossiersAttaches.
-  const [dossiersAttachesIds, setDossiersAttachesIds] = useState<Set<string>>(new Set());
+  // 09/09/2026 : dossiers + dossiers attachés viennent désormais d'un
+  // contexte partagé, préchargé dès l'ouverture de l'app par AppShell.tsx
+  // (voir lib/contexteDossiersCataloguePublic.tsx) -- ce composant n'en
+  // est plus seul propriétaire, il ne fait plus que les lire et déclencher
+  // un rafraîchissement (silencieux, jamais de nouveau skeleton) à son
+  // propre montage et après ses propres actions.
+  const { dossiers, dossiersAttachesIds, setDossiersAttachesIds, rafraichirDossiers, rafraichirDossiersAttaches } =
+    useDossiersCataloguePublic();
   const [attacheEnCours, setAttacheEnCours] = useState<string | null>(null);
   // Navigation par dossier avec fil d'ariane (corrigé 01/09/2026, bug
   // signalé par Bourama : "dans ses dossier on ne peut ajouter des
@@ -491,17 +493,14 @@ export function BibliothequePublique() {
       .catch(() => {});
   }
 
-  function chargerDossiers() {
-    listerDossiersCataloguePublic()
-      .then(setDossiers)
-      .catch(() => setDossiers([]));
-  }
-
-  function chargerDossiersAttaches() {
-    listerDossiersPublicsAttaches()
-      .then((liste) => setDossiersAttachesIds(new Set(liste.map((d) => d.id))))
-      .catch(() => {});
-  }
+  // 09/09/2026 : ces deux fonctions ne font plus leur propre fetch --
+  // elles délèguent au contexte partagé (lib/contexteDossiersCatalogue
+  // Public.tsx), déjà préchargé par AppShell.tsx dès l'ouverture de
+  // l'app. Gardées sous ces noms pour ne rien changer aux appels
+  // existants (après création/suppression/attachement d'un dossier)
+  // plus bas dans ce fichier.
+  const chargerDossiers = rafraichirDossiers;
+  const chargerDossiersAttaches = rafraichirDossiersAttaches;
 
   // 08/09/2026, correctif (Bourama : "on sent le chargement et le
   // réarrangement des fichiers, au lieu que ce dossier contienne déjà
@@ -512,6 +511,12 @@ export function BibliothequePublique() {
   // ouverture de l'écran, la seconde effaçant puis remplaçant le
   // résultat déjà affiché par la première 250ms plus tard. Cet effet ne
   // s'occupe plus que des dossiers/filtres, qui n'ont pas ce doublon.
+  // 09/09/2026 : chargerDossiers()/chargerDossiersAttaches() ici ne
+  // sont donc plus le PREMIER chargement (déjà fait par AppShell à
+  // l'ouverture de l'app) mais un rafraîchissement silencieux à
+  // l'ouverture de cette section -- demande confirmée par Bourama : le
+  // préchargement s'affiche instantanément, la version à jour le
+  // remplace en douceur si elle diffère.
   useEffect(() => {
     chargerDossiers();
     chargerDossiersAttaches();

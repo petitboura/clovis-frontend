@@ -12,6 +12,7 @@ import { ContexteChat, useFournirContexteChat } from "@/lib/contexteChat";
 import { ContexteCatalogue } from "@/lib/contexteCatalogue";
 import { ContexteFenetres, useFournirFenetres } from "@/lib/contexteFenetres";
 import { ContexteRetour, useFournirContexteRetour } from "@/lib/contexteRetour";
+import { ContexteDossiersCataloguePublic, useFournirDossiersCataloguePublic } from "@/lib/contexteDossiersCataloguePublic";
 import { BarreOngletsNative } from "@/components/mobile/BarreOngletsNative";
 import { BarreOngletsWeb } from "@/components/mobile/BarreOngletsWeb";
 import { MenuHamburgerNatif } from "@/components/mobile/MenuHamburgerNatif";
@@ -60,6 +61,13 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   // doit fermer ce qui est ouvert par-dessus l'appli au lieu de fermer
   // l'appli elle-même -- voir lib/contexteRetour.tsx pour le mécanisme.
   const contexteRetourValeur = useFournirContexteRetour();
+  // 09/09/2026, demande Bourama : les dossiers de la bibliothèque
+  // publique (+ ceux déjà attachés) doivent être chargés dès l'ouverture
+  // de l'app, en arrière-plan, pour que BibliothequePublique.tsx les
+  // affiche instantanément à l'ouverture de la section -- voir
+  // lib/contexteDossiersCataloguePublic.tsx. Déclenché juste en dessous,
+  // dès que la session est confirmée.
+  const dossiersCataloguePublicValeur = useFournirDossiersCataloguePublic();
   // Le catalogue "Pourquoi Clovis ?" est une modale globale : calque au
   // même titre que les autres, voir la pile dans lib/contexteRetour.tsx.
   // Appel direct sur contexteRetourValeur (pas useFermetureAuRetour, qui
@@ -83,6 +91,17 @@ export function AppShell({ children }: { children: React.ReactNode }) {
     };
   }, []);
 
+  // 09/09/2026 : préchargement en arrière-plan dès que la session est
+  // confirmée (route protégée côté serveur, voir api/dossiers_catalogue_
+  // public.py) -- pas la peine d'attendre l'ouverture de la section
+  // Bibliothèque publique pour lancer ces deux appels.
+  useEffect(() => {
+    if (!connecte) return;
+    dossiersCataloguePublicValeur.rafraichirDossiers();
+    dossiersCataloguePublicValeur.rafraichirDossiersAttaches();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [connecte]);
+
   useEffect(() => {
     let annule = false;
     import("@capacitor/core").then(({ Capacitor }) => {
@@ -105,6 +124,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
     <ContexteRetour.Provider value={contexteRetourValeur}>
     <ContexteChat.Provider value={contexteChatValeur}>
     <ContexteCatalogue.Provider value={{ ouvrir: () => setCatalogueOuvert(true) }}>
+    <ContexteDossiersCataloguePublic.Provider value={dossiersCataloguePublicValeur}>
       <ContexteFenetres.Provider value={fenetres}>
         <div className="flex h-dvh">
           {natif && <BarreOngletsNative />}
@@ -244,6 +264,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           {catalogueOuvert && <CatalogueClovis onFerme={() => setCatalogueOuvert(false)} />}
         </div>
       </ContexteFenetres.Provider>
+    </ContexteDossiersCataloguePublic.Provider>
     </ContexteCatalogue.Provider>
     </ContexteChat.Provider>
     </ContexteRetour.Provider>
