@@ -148,6 +148,14 @@ export function ChatIA({
   const tickerIdRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [affichageEnCours, setAffichageEnCours] = useState(false);
   const [statuts, setStatuts] = useState<{ texte: string; etat: EtatStatut }[]>([]);
+  // Correctif 09/09/2026 (Bourama : l'exécution d'un outil coupait une
+  // phrase en cours d'affichage) : les événements outils (statut/
+  // statut_termine/outil_resultat/sources/images) qui arrivent PENDANT
+  // que du texte est encore en train de s'afficher (tickerActifRef vrai)
+  // sont mis en attente ici au lieu d'être appliqués tout de suite --
+  // voir viderFileOutilsEnAttente(), appelée dès que le buffer de texte
+  // se vide (tickAffichage).
+  const fileOutilsEnAttenteRef = useRef<Array<{ type: string; evenement: any }>>([]);
   // Raisonnement interne du modèle (24/07, voir RaisonnementBulle.tsx) --
   // enCours est un flag transitoire (vrai seulement pendant que LE
   // dernier message est en train de réfléchir) ; le texte lui-même est
@@ -272,6 +280,7 @@ export function ChatIA({
     if (buffer.length === 0) {
       tickerActifRef.current = false;
       setAffichageEnCours(false);
+      viderFileOutilsEnAttente();
       return;
     }
     // Rattrapage : si le buffer s'accumule (le réseau va plus vite que
@@ -317,6 +326,7 @@ export function ChatIA({
     tickerActifRef.current = false;
     bufferAffichageRef.current = "";
     setAffichageEnCours(false);
+    fileOutilsEnAttenteRef.current = [];
   }
 
   // Ajouté 04/09/2026 (bug de cascade signalé par Bourama) : quand le
@@ -355,6 +365,125 @@ export function ChatIA({
       if (tickerIdRef.current) clearTimeout(tickerIdRef.current);
     };
   }, []);
+
+  // Applique réellement un événement outil (statut / statut_termine /
+  // outil_resultat / sources / images) -- code IDENTIQUE à ce qui existait
+  // avant le correctif du 09/09/2026, juste extrait ici pour pouvoir être
+  // appelé soit tout de suite (texte pas en cours d'affichage), soit plus
+  // tard via viderFileOutilsEnAttente() (texte encore en cours).
+  function appliquerEvenementOutil(item: { type: string; evenement: any }) {
+    const evenement = item.evenement;
+    if (item.type === "statut") {
+      setStatuts((prec) => [...prec, { texte: evenement.texte, etat: "en_cours" as EtatStatut }]);
+    } else if (item.type === "statut_termine") {
+      setStatuts((prec) => {
+        const copie = [...prec];
+        const iDernierEnCours = [...copie].reverse().findIndex((s) => s.etat === "en_cours");
+        if (iDernierEnCours === -1) {
+          copie.push({ texte: evenement.texte, etat: "termine" });
+        } else {
+          const i = copie.length - 1 - iDernierEnCours;
+          copie[i] = { texte: evenement.texte, etat: evenement.texte.includes("annulée") ? "annule" : "termine" };
+        }
+        return copie;
+      });
+    } else if (item.type === "sources") {
+      majMessages((prec) => {
+        const copie = [...prec];
+        const dernier = copie[copie.length - 1];
+        const outils = dernier.outilsResultats || [];
+        if (!outils.length) return prec;
+        const iDernierOutil = outils.length - 1;
+        const existantes = outils[iDernierOutil].sources || [];
+        const cle = (s: { url: string; url_extrait?: string }) => s.url_extrait || s.url;
+        const clesExistantes = new Set(existantes.map(cle));
+        const nouvelles = (evenement.sources || []).filter(
+          (s: { url: string; url_extrait?: string }) => !clesExistantes.has(cle(s)),
+        );
+        if (!nouvelles.length) return prec;
+        const outilsCopie = [...outils];
+        outilsCopie[iDernierOutil] = { ...outilsCopie[iDernierOutil], sources: [...existantes, ...nouvelles] };
+        const segments = dernier.segments ? [...dernier.segments] : [];
+        const iDernierSegmentOutil = [...segments].reverse().findIndex((s) => s.type === "outil");
+        if (iDernierSegmentOutil !== -1) {
+          const i = segments.length - 1 - iDernierSegmentOutil;
+          const segmentOutil = segments[i] as Extract<SegmentMessage, { type: "outil" }>;
+          segments[i] = { ...segmentOutil, sources: [...(segmentOutil.sources || []), ...nouvelles] };
+        }
+        copie[copie.length - 1] = { ...dernier, outilsResultats: outilsCopie, segments };
+        return copie;
+      });
+    } else if (item.type === "images") {
+      majMessages((prec) => {
+        const copie = [...prec];
+        const dernier = copie[copie.length - 1];
+        const outils = dernier.outilsResultats || [];
+        if (!outils.length) return prec;
+        if (!evenement.images || !evenement.images.length) return prec;
+        const iDernierOutil = outils.length - 1;
+        const outilsCopie = [...outils];
+        outilsCopie[iDernierOutil] = { ...outilsCopie[iDernierOutil], images: evenement.images };
+        const segments = dernier.segments ? [...dernier.segments] : [];
+        const iDernierSegmentOutil = [...segments].reverse().findIndex((s) => s.type === "outil");
+        if (iDernierSegmentOutil !== -1) {
+          const i = segments.length - 1 - iDernierSegmentOutil;
+          const segmentOutil = segments[i] as Extract<SegmentMessage, { type: "outil" }>;
+          segments[i] = { ...segmentOutil, images: evenement.images };
+        }
+        copie[copie.length - 1] = { ...dernier, outilsResultats: outilsCopie, segments };
+        return copie;
+      });
+    } else if (item.type === "outil_resultat") {
+      emettreDonneesModifieesPourOutil(evenement.nom_outil);
+      majMessages((prec) => {
+        const copie = [...prec];
+        const dernier = copie[copie.length - 1];
+        const existants = dernier.outilsResultats || [];
+        const nouvelEntree = { nomOutil: evenement.nom_outil, nomLisible: evenement.nom_lisible, resultat: evenement.resultat };
+        copie[copie.length - 1] = {
+          ...dernier,
+          outilsResultats: [...existants, nouvelEntree],
+          segments: [...(dernier.segments || []), { type: "outil" as const, ...nouvelEntree }],
+        };
+        return copie;
+      });
+    }
+  }
+
+  // Vide la file d'attente d'événements outils constituée pendant que du
+  // texte était encore en cours d'affichage (voir fileOutilsEnAttenteRef).
+  // Règle demandée par Bourama : un "statut" (bulle "en cours") ne doit
+  // JAMAIS s'afficher si l'outil qu'il annonce a déjà fini d'être exécuté
+  // au moment où le texte rattrape son retard -- dans ce cas on saute
+  // direct au badge final (outil_resultat), sans montrer le spinner ni la
+  // coche verte. S'il reste des outils encore en cours à ce moment-là
+  // (aucun outil_resultat ne les a résolus dans cette file), leur statut
+  // s'affiche alors normalement, comme aujourd'hui.
+  //
+  // Les événements SSE ne portant pas d'identifiant d'appel, on associe
+  // les N premiers "statut"/"statut_termine" (dans l'ordre d'arrivée) aux
+  // N "outil_resultat" présents dans cette même file -- la meilleure
+  // approximation possible avec les informations disponibles.
+  function viderFileOutilsEnAttente() {
+    const file = fileOutilsEnAttenteRef.current;
+    if (file.length === 0) return;
+    fileOutilsEnAttenteRef.current = [];
+    const nbResultats = file.filter((e) => e.type === "outil_resultat").length;
+    let indexStatut = 0;
+    let indexStatutTermine = 0;
+    for (const item of file) {
+      if (item.type === "statut") {
+        const ignorer = indexStatut < nbResultats;
+        indexStatut++;
+        if (ignorer) continue;
+      } else if (item.type === "statut_termine") {
+        const ignorer = indexStatutTermine < nbResultats;
+        indexStatutTermine++;
+        if (ignorer) continue;
+      }
+      appliquerEvenementOutil(item);
+    }
+  }
 
   // Partagé entre l'envoi normal (envoyerMessage) et la reprise après
   // confirmation (repriseApresConfirmation) -- même flux d'événements SSE
@@ -428,123 +557,25 @@ export function ChatIA({
         if (iUser >= 0) copie[iUser] = { ...copie[iUser], id: evenement.message_id_user };
         return copie;
       });
-    } else if (evenement.type === "statut") {
-      setStatuts((prec) => [...prec, { texte: evenement.texte, etat: "en_cours" as EtatStatut }]);
-    } else if (evenement.type === "statut_termine") {
-      // Met à jour le dernier statut "en_cours" plutôt que d'en empiler un
-      // nouveau -- voir StatutOutil.tsx, transition douce entre les deux
-      // états (jamais un remplacement sec).
-      setStatuts((prec) => {
-        const copie = [...prec];
-        const iDernierEnCours = [...copie].reverse().findIndex((s) => s.etat === "en_cours");
-        if (iDernierEnCours === -1) {
-          copie.push({ texte: evenement.texte, etat: "termine" });
-        } else {
-          const i = copie.length - 1 - iDernierEnCours;
-          copie[i] = { texte: evenement.texte, etat: evenement.texte.includes("annulée") ? "annule" : "termine" };
-        }
-        return copie;
-      });
-    } else if (evenement.type === "sources") {
-      // Rattachées à l'entrée outilsResultats CONCERNÉE, pas à un champ
-      // séparé du message (26/07, retour Bourama : les sources doivent
-      // apparaître juste après le résultat de LEUR outil, pas dans un
-      // bloc "Sources" à part en bas -- voir OutilResultatBulle.tsx).
-      // Fiable : le backend émet toujours outil_resultat puis sources
-      // pour un même appel, l'un juste après l'autre (voir
-      // core/main.py:_traiter_appels), donc le dernier élément de
-      // outilsResultats à ce moment précis est forcément le bon.
-      majMessages((prec) => {
-        const copie = [...prec];
-        const dernier = copie[copie.length - 1];
-        const outils = dernier.outilsResultats || [];
-        if (!outils.length) return prec; // sources sans outil_resultat correspondant -- ne devrait pas arriver
-        const iDernierOutil = outils.length - 1;
-        const existantes = outils[iDernierOutil].sources || [];
-        // CORRECTIF 27/08 (Bourama : "les citations n'apparaissent pas
-        // toujours dans le texte, c'est le frontend qui ne sait pas
-        // l'afficher") -- dédoublonner par `s.url` cassait les sources
-        // bibliothèque : plusieurs extraits d'un MÊME fichier (page 4 ET
-        // page 7 d'un même PDF, par ex.) partagent la même `url` de base
-        // et ne se distinguent que par `url_extrait` -- avec `s.url`
-        // comme clé, seul le premier extrait de ce fichier survivait,
-        // les suivants étaient silencieusement supprimés. Résultat : le
-        // texte contenait bien `[nom, page 7](citation:2)` (le modèle
-        // suivait l'instruction), mais `sourcesAplaties[1]` n'existait
-        // plus côté frontend une fois ces "doublons" retirés -> le lien
-        // ne résolvait plus rien, et `a()` (BulleMessage.tsx) rend alors
-        // `null`, sans trace visible ni erreur. D'où l'impression que la
-        // citation n'était "jamais" affichée dans le texte, alors que le
-        // modèle l'écrivait bien -- ce n'était donc pas lui le problème.
-        // Clé de dédoublonnage : `url_extrait` quand il existe (distinct
-        // par page/timestamp), sinon `url` (image/note/lien : un seul
-        // extrait par fichier, dédoublonnage par url reste correct).
-        const cle = (s: { url: string; url_extrait?: string }) => s.url_extrait || s.url;
-        const clesExistantes = new Set(existantes.map(cle));
-        const nouvelles = (evenement.sources || []).filter(
-          (s: { url: string; url_extrait?: string }) => !clesExistantes.has(cle(s)),
-        );
-        if (!nouvelles.length) return prec;
-        const outilsCopie = [...outils];
-        outilsCopie[iDernierOutil] = { ...outilsCopie[iDernierOutil], sources: [...existantes, ...nouvelles] };
-        const segments = dernier.segments ? [...dernier.segments] : [];
-        const iDernierSegmentOutil = [...segments].reverse().findIndex((s) => s.type === "outil");
-        if (iDernierSegmentOutil !== -1) {
-          const i = segments.length - 1 - iDernierSegmentOutil;
-          const segmentOutil = segments[i] as Extract<SegmentMessage, { type: "outil" }>;
-          segments[i] = { ...segmentOutil, sources: [...(segmentOutil.sources || []), ...nouvelles] };
-        }
-        copie[copie.length - 1] = { ...dernier, outilsResultats: outilsCopie, segments };
-        return copie;
-      });
-    } else if (evenement.type === "images") {
-      // Même principe que "sources" juste au-dessus (rattaché au DERNIER
-      // outilsResultats ET au dernier segment "outil", voir SegmentMessage
-      // dans BulleMessage.tsx), mais pas de déduplication par clé complexe :
-      // un appel rechercher_image = une seule galerie, jamais plusieurs
-      // évènements "images" à fusionner pour le même appel.
-      majMessages((prec) => {
-        const copie = [...prec];
-        const dernier = copie[copie.length - 1];
-        const outils = dernier.outilsResultats || [];
-        if (!outils.length) return prec; // images sans outil_resultat correspondant -- ne devrait pas arriver
-        if (!evenement.images || !evenement.images.length) return prec;
-        const iDernierOutil = outils.length - 1;
-        const outilsCopie = [...outils];
-        outilsCopie[iDernierOutil] = { ...outilsCopie[iDernierOutil], images: evenement.images };
-        const segments = dernier.segments ? [...dernier.segments] : [];
-        const iDernierSegmentOutil = [...segments].reverse().findIndex((s) => s.type === "outil");
-        if (iDernierSegmentOutil !== -1) {
-          const i = segments.length - 1 - iDernierSegmentOutil;
-          const segmentOutil = segments[i] as Extract<SegmentMessage, { type: "outil" }>;
-          segments[i] = { ...segmentOutil, images: evenement.images };
-        }
-        copie[copie.length - 1] = { ...dernier, outilsResultats: outilsCopie, segments };
-        return copie;
-      });
-    } else if (evenement.type === "outil_resultat") {
-      // Généralisation (26/07, demande Bourama) : un élément par appel
-      // d'outil, PAS de dédoublonnage (contrairement à "sources") -- deux
-      // appels au même outil dans le même tour (ex: deux recherches
-      // distinctes) doivent chacun garder leur propre résultat affiché.
-      //
-      // 15/08 (demande Bourama : "quand l'IA crée un comportement on ne
-      // le voit pas") : en plus de l'affichage dans le fil, on signale
-      // à la section comportements de se recharger si elle est déjà
-      // montée -- voir lib/evenementsDonnees.ts.
-      emettreDonneesModifieesPourOutil(evenement.nom_outil);
-      majMessages((prec) => {
-        const copie = [...prec];
-        const dernier = copie[copie.length - 1];
-        const existants = dernier.outilsResultats || [];
-        const nouvelEntree = { nomOutil: evenement.nom_outil, nomLisible: evenement.nom_lisible, resultat: evenement.resultat };
-        copie[copie.length - 1] = {
-          ...dernier,
-          outilsResultats: [...existants, nouvelEntree],
-          segments: [...(dernier.segments || []), { type: "outil" as const, ...nouvelEntree }],
-        };
-        return copie;
-      });
+    } else if (
+      evenement.type === "statut" ||
+      evenement.type === "statut_termine" ||
+      evenement.type === "sources" ||
+      evenement.type === "images" ||
+      evenement.type === "outil_resultat"
+    ) {
+      // Correctif 09/09/2026 (Bourama : un outil qui finit pendant que le
+      // texte est encore en train de s'afficher coupait la phrase en
+      // cours) : tant que le buffer de texte n'est pas complètement
+      // révélé à l'écran (tickerActifRef), ces événements sont mis en
+      // attente -- voir viderFileOutilsEnAttente(), appelée dès que
+      // l'affichage du texte rattrape son retard. Sinon (aucun texte en
+      // cours de révélation), comportement inchangé : application immédiate.
+      if (tickerActifRef.current) {
+        fileOutilsEnAttenteRef.current.push({ type: evenement.type, evenement });
+      } else {
+        appliquerEvenementOutil({ type: evenement.type, evenement });
+      }
     } else if (evenement.type === "fichiers_generes") {
       // Bloc "Fichier(s) généré(s)" retiré (04/09/2026, demande Bourama) :
       // évènement toujours émis côté backend mais volontairement ignoré
