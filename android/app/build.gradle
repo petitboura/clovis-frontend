@@ -84,6 +84,16 @@ android {
     productFlavors {
         play {
             dimension "distribution"
+            // Ajoute le 09/09/2026, Bourama : plus de publication sur le
+            // vrai Play Store (frais non payes) -- ce flavor est desormais
+            // distribue hors Play Store comme "externe", il a donc besoin
+            // de la meme signature manuelle (meme cle keystore, voir juste
+            // en dessous) pour produire un fichier installable. Sans ca,
+            // Google se serait charge de signer lui-meme (Play App
+            // Signing) ; ici, personne d'autre ne le fait.
+            if (fichierKeystore.exists()) {
+                signingConfig signingConfigs.externe
+            }
         }
         externe {
             dimension "distribution"
