@@ -436,6 +436,17 @@ export async function listerBibliothequePublique(q?: string, filtres?: FiltresBi
   return resultat as EntreeBibliothequePublique[];
 }
 
+// 10/09/2026, chantier "Clovis ouvert" (demande Bourama : chaque PDF de
+// la bibliothèque publique retrouvable par son nom et téléchargeable via
+// un lien propre) -- détail d'une seule entrée, pour /bibliotheque/[id]
+// (page publique, y compris generateMetadata côté serveur). Lance une
+// ErreurApi(404) si l'entrée n'existe pas ou n'est plus publiée, voir
+// GET /api/bibliotheque-publique/{entree_id} côté backend.
+export async function obtenirEntreeBibliothequePublique(entreeId: string) {
+  const resultat = await appelerApi(`/api/bibliotheque-publique/${entreeId}`);
+  return resultat as EntreeBibliothequePublique;
+}
+
 // 03/09/2026, demande Bourama : valeurs déjà connues de pays/niveau/
 // catégorie, pour peupler les suggestions du formulaire de publication
 // ET les menus des filtres de recherche -- voir GET
