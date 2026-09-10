@@ -1732,6 +1732,10 @@ export type NotificationClovis = {
   // ajouté Partie 5 (tous deux 06/09/2026, chantier "confiance
   // pédagogique") : voir core/notifications.py. "nouvelle_version_disponible"
   // ajouté 09/09/2026 (voir core/notifications_push.py::notifier_nouvelle_version_disponible).
+  // "demande_confirmation_dossier_public" / "demande_dossier_public_traitee"
+  // ajoutés 09/09/2026 (voir core/dossiers_catalogue_public.py) -- omis par
+  // erreur à l'écriture, ajoutés en vérifiant tout avant de dire "c'est
+  // fait" à Bourama.
   type:
     | "rappel_echu"
     | "action_ia_terminee"
@@ -1739,7 +1743,9 @@ export type NotificationClovis = {
     | "message_systeme"
     | "audit_hebdomadaire_corrections"
     | "correction_traitee"
-    | "nouvelle_version_disponible";
+    | "nouvelle_version_disponible"
+    | "demande_confirmation_dossier_public"
+    | "demande_dossier_public_traitee";
   titre: string;
   contenu: string | null;
   lien: string | null;
