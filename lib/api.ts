@@ -573,6 +573,15 @@ export async function listerDossiersCataloguePublic() {
   return appelerApi("/api/bibliotheque-publique/dossiers") as Promise<DossierCataloguePublic[]>;
 }
 
+// 10/09/2026, chantier "Clovis ouvert" -- détail public d'un seul dossier
+// (aucune auth requise, contrairement à listerDossiersCataloguePublic
+// ci-dessus), pour /dossiers/[id] (page publique, generateMetadata côté
+// serveur). Lance une ErreurApi(404) si le dossier n'existe pas, voir
+// GET /api/bibliotheque-publique/dossiers/{id} côté backend.
+export async function obtenirDossierCataloguePublic(dossierId: string) {
+  return appelerApi(`/api/bibliotheque-publique/dossiers/${dossierId}`) as Promise<DossierCataloguePublic>;
+}
+
 export async function creerDossierCataloguePublic(
   nom: string,
   statut: "contribution_libre" | "privee" = "contribution_libre",
