@@ -593,8 +593,48 @@ export async function renommerDossierCataloguePublic(dossierId: string, nom: str
   });
 }
 
+// 09/09/2026, demande Bourama ("confirmation contributeurs") : pour un
+// sous-dossier à contribution libre (dossier_parent_id non nul) qu'on
+// n'a pas créé, supprimer/déplacer ne s'exécute plus tout de suite --
+// le backend renvoie la demande créée (202, bloquée) au lieu de null
+// (204, exécuté). Le dossier racine, lui, reste immédiat pour son
+// créateur (comportement inchangé).
+export type DemandeDossierCataloguePublic = {
+  id: string;
+  action: "deplacer_fichier" | "supprimer_fichier" | "deplacer_dossier" | "supprimer_dossier";
+  fichier_id: string | null;
+  dossier_id: string;
+  dossier_destination_id: string | null;
+  demandeur_id: string;
+  createur_id: string;
+  statut: "en_attente" | "confirmee" | "refusee";
+  created_at: string;
+  traite_at: string | null;
+};
+
 export async function supprimerDossierCataloguePublic(dossierId: string) {
-  return appelerApi(`/api/bibliotheque-publique/dossiers/${dossierId}`, { method: "DELETE" });
+  return appelerApi(`/api/bibliotheque-publique/dossiers/${dossierId}`, { method: "DELETE" }) as Promise<
+    DemandeDossierCataloguePublic | null
+  >;
+}
+
+export async function deplacerDossierCataloguePublic(dossierId: string, dossierDestinationId: string | null) {
+  return appelerApi(`/api/bibliotheque-publique/dossiers/${dossierId}/deplacer`, {
+    method: "POST",
+    body: JSON.stringify({ dossier_destination_id: dossierDestinationId }),
+  }) as Promise<DemandeDossierCataloguePublic | { id: string; dossier_parent_id: string | null }>;
+}
+
+export async function listerDemandesEnAttenteCataloguePublic() {
+  return appelerApi("/api/bibliotheque-publique/dossiers/demandes") as Promise<DemandeDossierCataloguePublic[]>;
+}
+
+export async function confirmerDemandeCataloguePublic(demandeId: string) {
+  return appelerApi(`/api/bibliotheque-publique/dossiers/demandes/${demandeId}/confirmer`, { method: "POST" });
+}
+
+export async function refuserDemandeCataloguePublic(demandeId: string) {
+  return appelerApi(`/api/bibliotheque-publique/dossiers/demandes/${demandeId}/refuser`, { method: "POST" });
 }
 
 // Attachement d'un dossier du catalogue public à la bibliothèque perso
@@ -626,7 +666,16 @@ export async function rangerFichierDossierCataloguePublic(dossierId: string, fic
 }
 
 export async function retirerFichierDossierCataloguePublic(dossierId: string, fichierId: string) {
-  return appelerApi(`/api/bibliotheque-publique/dossiers/${dossierId}/fichiers/${fichierId}`, { method: "DELETE" });
+  return appelerApi(`/api/bibliotheque-publique/dossiers/${dossierId}/fichiers/${fichierId}`, {
+    method: "DELETE",
+  }) as Promise<DemandeDossierCataloguePublic | null>;
+}
+
+export async function deplacerFichierDossierCataloguePublic(dossierId: string, fichierId: string, dossierDestinationId: string) {
+  return appelerApi(`/api/bibliotheque-publique/dossiers/${dossierId}/fichiers/${fichierId}/deplacer`, {
+    method: "POST",
+    body: JSON.stringify({ dossier_destination_id: dossierDestinationId }),
+  }) as Promise<DemandeDossierCataloguePublic | { fichier_id: string; dossier_id: string }>;
 }
 
 export async function supprimerDeBibliothequePublique(entreeId: string) {

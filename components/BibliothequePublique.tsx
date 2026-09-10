@@ -1,10 +1,11 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { useSearchParams } from "next/navigation";
 import {
   Search, Plus, Trash2, Paperclip, FileText, Image as IconImage, Music as IconAudio, Video as IconVideo,
   Flag, FolderPlus, Check, Link as IconLien, Upload, FolderX, X, Globe, Lock, Loader2, Download, ChevronLeft,
-  SlidersHorizontal,
+  SlidersHorizontal, Move, FolderMinus, Bell, XCircle,
 } from "lucide-react";
 import {
   listerBibliothequePublique,
@@ -17,11 +18,18 @@ import {
   copierVersBibliothequePersonnelle,
   creerDossierCataloguePublic,
   supprimerDossierCataloguePublic,
+  deplacerDossierCataloguePublic,
+  retirerFichierDossierCataloguePublic,
+  deplacerFichierDossierCataloguePublic,
+  listerDemandesEnAttenteCataloguePublic,
+  confirmerDemandeCataloguePublic,
+  refuserDemandeCataloguePublic,
   listerListesFiltresBibliothequePublique,
   attacherDossierPublic,
   detacherDossierPublic,
   type EntreeBibliothequePublique,
   type DossierCataloguePublic,
+  type DemandeDossierCataloguePublic,
   type ListesFiltresBibliothequePublique,
 } from "@/lib/api";
 import { useDossiersCataloguePublic } from "@/lib/contexteDossiersCataloguePublic";
@@ -29,9 +37,31 @@ import { messageErreur, ErreurApi } from "@/lib/erreurs";
 import { CTACompteRequis } from "@/components/CTACompteRequis";
 import { CompteRequisModal } from "@/components/CompteRequisModal";
 import { SignalerContenuModal } from "@/components/SignalerContenuModal";
+import { DeplacerVersModal } from "@/components/DeplacerVersModal";
 import { VisionneuseBibliotheque } from "@/components/VisionneuseBibliotheque";
 import { SelectPersonnalise } from "@/components/SelectPersonnalise";
 import { Skeleton } from "./Skeleton";
+
+// 09/09/2026, demande Bourama ("confirmation contributeurs") : décrit
+// CE qu'on est en train de déplacer, le temps que la modale de choix de
+// destination soit ouverte -- soit un fichier (dans le dossier
+// actuellement ouvert), soit un sous-dossier (dans son propre parent).
+type CibleDeplacement =
+  | { type: "fichier"; entree: EntreeBibliothequePublique; dossierSourceId: string }
+  | { type: "dossier"; dossier: DossierCataloguePublic };
+
+function libelleActionDemande(action: DemandeDossierCataloguePublic["action"]): string {
+  switch (action) {
+    case "deplacer_fichier":
+      return "Déplacer un fichier";
+    case "supprimer_fichier":
+      return "Retirer un fichier";
+    case "deplacer_dossier":
+      return "Déplacer un sous-dossier";
+    case "supprimer_dossier":
+      return "Supprimer un sous-dossier";
+  }
+}
 
 function iconePourType(typeMime: string | null) {
   if (!typeMime) return Paperclip;
@@ -194,6 +224,7 @@ function typeDe(entree: EntreeBibliothequePublique): TypeBiblioPublique {
 // EspaceBibliotheque.tsx pour le cas multi (ajouterFichiersABibliothequePublique
 // dans lib/api.ts, boucle séquentielle).
 export function BibliothequePublique() {
+  const searchParams = useSearchParams();
   const [liste, setListe] = useState<EntreeBibliothequePublique[] | undefined>(undefined);
   // 09/09/2026 : dossiers + dossiers attachés viennent désormais d'un
   // contexte partagé, préchargé dès l'ouverture de l'app par AppShell.tsx
@@ -224,6 +255,16 @@ export function BibliothequePublique() {
   const [copieEnCours, setCopieEnCours] = useState<string | null>(null);
   const [copieReussie, setCopieReussie] = useState<string | null>(null);
   const [compteRequisPourCopie, setCompteRequisPourCopie] = useState(false);
+
+  // 09/09/2026, demande Bourama ("confirmation contributeurs") : modale
+  // de choix de destination (fichier ou sous-dossier) + panneau des
+  // demandes que JE dois confirmer/refuser (dossiers dont je suis le
+  // créateur concerné).
+  const [cibleDeplacement, setCibleDeplacement] = useState<CibleDeplacement | null>(null);
+  const [demandesEnAttente, setDemandesEnAttente] = useState<DemandeDossierCataloguePublic[]>([]);
+  const [panneauDemandesOuvert, setPanneauDemandesOuvert] = useState(false);
+  const [demandeEnCoursId, setDemandeEnCoursId] = useState<string | null>(null);
+  const [messageDemandeEnvoyee, setMessageDemandeEnvoyee] = useState<string | null>(null);
 
   // Sélecteur flottant "+" (même principe que EspaceBibliotheque.tsx).
   const [menuAjoutOuvert, setMenuAjoutOuvert] = useState(false);
@@ -377,6 +418,92 @@ export function BibliothequePublique() {
       setReessaiEnCoursId(null);
     }
   }
+
+  // 09/09/2026, demande Bourama ("confirmation contributeurs") : mes
+  // demandes en attente (dossiers/fichiers dont je suis le créateur
+  // concerné) -- chargées au montage, et ouvertes directement si on
+  // arrive depuis la notification (lien "?demandes=1").
+  async function rafraichirDemandes() {
+    try {
+      setDemandesEnAttente(await listerDemandesEnAttenteCataloguePublic());
+    } catch {
+      // Silencieux : ce panneau est secondaire, pas de skeleton ni
+      // d'alerte bloquante pour un simple compteur.
+    }
+  }
+
+  useEffect(() => {
+    rafraichirDemandes();
+    if (searchParams.get("demandes") === "1") setPanneauDemandesOuvert(true);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  async function confirmerDemande(demandeId: string) {
+    setDemandeEnCoursId(demandeId);
+    try {
+      await confirmerDemandeCataloguePublic(demandeId);
+      setDemandesEnAttente((liste) => liste.filter((d) => d.id !== demandeId));
+      charger(recherche);
+      rafraichirDossiers();
+    } catch (e) {
+      window.alert(messageErreur(e));
+    } finally {
+      setDemandeEnCoursId(null);
+    }
+  }
+
+  async function refuserDemande(demandeId: string) {
+    setDemandeEnCoursId(demandeId);
+    try {
+      await refuserDemandeCataloguePublic(demandeId);
+      setDemandesEnAttente((liste) => liste.filter((d) => d.id !== demandeId));
+    } catch (e) {
+      window.alert(messageErreur(e));
+    } finally {
+      setDemandeEnCoursId(null);
+    }
+  }
+
+  // Retirer un fichier du dossier actuellement ouvert -- immédiat si
+  // j'en suis le créateur, sinon transformé en demande bloquée côté
+  // serveur (réponse non nulle = en attente, voir lib/api.ts).
+  async function retirerDuDossier(entree: EntreeBibliothequePublique) {
+    if (!dossierCourantId) return;
+    try {
+      const resultat = await retirerFichierDossierCataloguePublic(dossierCourantId, entree.id);
+      if (resultat) {
+        setMessageDemandeEnvoyee("Demande envoyée : en attente de confirmation du créateur du dossier.");
+      } else {
+        charger(recherche);
+      }
+    } catch (e) {
+      window.alert(messageErreur(e));
+    }
+  }
+
+  async function deplacerFichierVers(entree: EntreeBibliothequePublique, dossierSourceId: string, dossierDestinationId: string) {
+    const resultat = await deplacerFichierDossierCataloguePublic(dossierSourceId, entree.id, dossierDestinationId);
+    if ("id" in resultat) {
+      setMessageDemandeEnvoyee("Demande envoyée : en attente de confirmation du créateur du dossier.");
+    } else {
+      charger(recherche);
+    }
+  }
+
+  async function deplacerDossierVers(dossier: DossierCataloguePublic, dossierDestinationId: string) {
+    const resultat = await deplacerDossierCataloguePublic(dossier.id, dossierDestinationId);
+    if ("statut" in resultat) {
+      setMessageDemandeEnvoyee("Demande envoyée : en attente de confirmation du créateur du sous-dossier.");
+    } else {
+      rafraichirDossiers();
+    }
+  }
+
+  useEffect(() => {
+    if (!messageDemandeEnvoyee) return;
+    const t = setTimeout(() => setMessageDemandeEnvoyee(null), 4000);
+    return () => clearTimeout(t);
+  }, [messageDemandeEnvoyee]);
 
   useEffect(() => {
     if (!liste || !lotVectorisation || lotVectorisation.enAttente.size === 0) return;
@@ -784,7 +911,14 @@ export function BibliothequePublique() {
   async function supprimerDossier(d: DossierCataloguePublic) {
     if (!window.confirm(`Supprimer le dossier « ${d.nom} » ? (les documents qu'il contient restent dans le catalogue)`)) return;
     try {
-      await supprimerDossierCataloguePublic(d.id);
+      const resultat = await supprimerDossierCataloguePublic(d.id);
+      if (resultat) {
+        // 09/09/2026 : réponse non nulle = demande créée, bloquée tant
+        // que le créateur du sous-dossier n'a pas confirmé -- rien n'a
+        // réellement été supprimé, on ne touche pas au fil d'ariane.
+        setMessageDemandeEnvoyee("Demande envoyée : en attente de confirmation du créateur du sous-dossier.");
+        return;
+      }
       // Si le dossier supprimé est sur le fil d'ariane actuel (on est
       // dedans, ou dans un de ses sous-dossiers), on remonte jusqu'à
       // son parent -- même logique que EspaceBibliotheque.tsx.
@@ -889,6 +1023,18 @@ export function BibliothequePublique() {
           className="w-full rounded-cgpt-bouton border border-dj-bordure bg-dj-surface py-2 pl-9 pr-3 text-sm text-dj-texte outline-none focus:border-dj-bordure-forte"
         />
       </div>
+
+      {demandesEnAttente.length > 0 && (
+        <button
+          onClick={() => setPanneauDemandesOuvert(true)}
+          className="flex items-center gap-2 rounded-cgpt-bouton border border-dj-accent-1 bg-dj-accent-1-conteneur px-3 py-2 text-left text-xs font-semibold text-dj-accent-1-texte"
+        >
+          <Bell size={14} className="flex-shrink-0" />
+          {demandesEnAttente.length === 1
+            ? "1 demande attend ta confirmation"
+            : `${demandesEnAttente.length} demandes attendent ta confirmation`}
+        </button>
+      )}
 
       <div className="flex items-center justify-between gap-2 text-xs">
         {/* 08/09/2026, demande Bourama : dossiers présentés en premier -- onglet avant "Tous". */}
@@ -1175,6 +1321,13 @@ export function BibliothequePublique() {
                       {attacheEnCours === d.id ? <Loader2 size={14} className="animate-spin" /> : <Download size={14} />}
                     </button>
                     <button
+                      onClick={() => setCibleDeplacement({ type: "dossier", dossier: d })}
+                      className="flex-shrink-0 text-dj-texte-muet hover:text-dj-texte"
+                      title="Déplacer vers un autre dossier"
+                    >
+                      <Move size={14} />
+                    </button>
+                    <button
                       onClick={() => supprimerDossier(d)}
                       className="flex-shrink-0 text-dj-texte-muet hover:text-[var(--dj-erreur)]"
                       title="Supprimer le dossier"
@@ -1406,6 +1559,26 @@ export function BibliothequePublique() {
                   >
                     <Flag size={14} />
                   </button>
+                  {dossierCourantId && (
+                    <>
+                      <button
+                        onClick={() =>
+                          setCibleDeplacement({ type: "fichier", entree, dossierSourceId: dossierCourantId })
+                        }
+                        title="Déplacer vers un autre dossier"
+                        className="text-dj-texte-muet transition-colors hover:text-dj-texte"
+                      >
+                        <Move size={14} />
+                      </button>
+                      <button
+                        onClick={() => retirerDuDossier(entree)}
+                        title="Retirer de ce dossier"
+                        className="text-dj-texte-muet transition-colors hover:text-dj-texte"
+                      >
+                        <FolderMinus size={14} />
+                      </button>
+                    </>
+                  )}
                   <button
                     onClick={() => supprimer(entree.id, entree.nom)}
                     title="Retirer (uniquement si c'est toi qui l'as ajouté)"
@@ -1465,6 +1638,89 @@ export function BibliothequePublique() {
           }}
           onFermer={() => setEntreeSignalee(null)}
         />
+      )}
+
+      {cibleDeplacement && (
+        <DeplacerVersModal
+          titre={cibleDeplacement.type === "fichier" ? "Déplacer ce fichier vers…" : "Déplacer ce sous-dossier vers…"}
+          dossiers={dossiers ?? []}
+          destinationActuelleId={
+            cibleDeplacement.type === "fichier" ? cibleDeplacement.dossierSourceId : cibleDeplacement.dossier.id
+          }
+          onChoisir={async (dossierDestinationId) => {
+            if (cibleDeplacement.type === "fichier") {
+              await deplacerFichierVers(cibleDeplacement.entree, cibleDeplacement.dossierSourceId, dossierDestinationId);
+            } else {
+              await deplacerDossierVers(cibleDeplacement.dossier, dossierDestinationId);
+            }
+          }}
+          onFermer={() => setCibleDeplacement(null)}
+        />
+      )}
+
+      {messageDemandeEnvoyee && (
+        <div className="fixed bottom-20 left-1/2 z-50 -translate-x-1/2 rounded-cgpt-bouton border border-dj-bordure bg-dj-surface px-4 py-2 text-sm text-dj-texte shadow-xl animate-dj-fade-in-rapide sm:bottom-6">
+          {messageDemandeEnvoyee}
+        </div>
+      )}
+
+      {panneauDemandesOuvert && (
+        <div
+          className="fixed inset-0 z-50 flex items-start justify-center bg-black/60 p-0 backdrop-blur-sm sm:items-center sm:p-6"
+          onClick={() => setPanneauDemandesOuvert(false)}
+        >
+          <div
+            className="flex max-h-[85vh] w-full flex-col gap-3 overflow-y-auto rounded-t-2xl border border-dj-bordure bg-dj-surface p-5 shadow-[0_8px_40px_rgba(0,0,0,0.45)] sm:max-w-md sm:rounded-cgpt-carte"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-center justify-between">
+              <h4 className="flex items-center gap-2 text-sm font-semibold text-dj-texte">
+                <Bell size={15} /> Demandes en attente
+              </h4>
+              <button onClick={() => setPanneauDemandesOuvert(false)} className="text-dj-texte-muet hover:text-dj-texte">
+                <X size={16} />
+              </button>
+            </div>
+
+            {demandesEnAttente.length === 0 ? (
+              <p className="text-sm text-dj-texte-muet">Rien à confirmer pour le moment.</p>
+            ) : (
+              <div className="flex flex-col gap-2">
+                {demandesEnAttente.map((demande) => {
+                  const dossier = (dossiers ?? []).find((d) => d.id === demande.dossier_id);
+                  const destination = demande.dossier_destination_id
+                    ? (dossiers ?? []).find((d) => d.id === demande.dossier_destination_id)
+                    : null;
+                  return (
+                    <div key={demande.id} className="rounded-xl border border-dj-bordure bg-dj-surface-haute p-3 text-sm text-dj-texte">
+                      <p className="font-medium">{libelleActionDemande(demande.action)}</p>
+                      <p className="text-xs text-dj-texte-muet">
+                        Dans « {dossier?.nom ?? "un dossier"} »
+                        {destination && <> → vers « {destination.nom} »</>}
+                      </p>
+                      <div className="mt-2 flex items-center gap-2">
+                        <button
+                          onClick={() => confirmerDemande(demande.id)}
+                          disabled={demandeEnCoursId === demande.id}
+                          className="flex flex-1 items-center justify-center gap-1 rounded-cgpt-bouton bg-dj-accent-1-conteneur px-2 py-1.5 text-xs font-semibold text-dj-accent-1-texte hover:opacity-90 disabled:opacity-50"
+                        >
+                          <Check size={13} /> Confirmer
+                        </button>
+                        <button
+                          onClick={() => refuserDemande(demande.id)}
+                          disabled={demandeEnCoursId === demande.id}
+                          className="flex flex-1 items-center justify-center gap-1 rounded-cgpt-bouton border border-dj-bordure px-2 py-1.5 text-xs font-semibold text-dj-texte-muet hover:text-[var(--dj-erreur)] disabled:opacity-50"
+                        >
+                          <XCircle size={13} /> Refuser
+                        </button>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+        </div>
       )}
 
       <VisionneuseBibliotheque
