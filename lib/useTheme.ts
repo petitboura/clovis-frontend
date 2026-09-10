@@ -73,7 +73,30 @@ export function useTheme() {
       }
     };
     media.addEventListener("change", surChangementSysteme);
-    return () => media.removeEventListener("change", surChangementSysteme);
+
+    // Correctif (09/09/2026, Bourama : "la barre d'onglets ne change pas
+    // en fonction du theme") : useTheme() n'est pas un contexte partage,
+    // chaque composant qui l'appelle a son propre state resolu/choix.
+    // Quand ThemeToggle.tsx (ou EspaceParametres.tsx/PaletteCommandes.tsx)
+    // appelle changerTheme(), ca ne met a jour QUE le state de CETTE
+    // instance-la du hook -- les autres instances (ex. BarreOngletsNative,
+    // qui lit resolu pour recolorer la barre native) ne l'apprenaient
+    // jamais, sauf changement du theme systeme (ecoute deja ci-dessus).
+    // appliquerAttribut dispatchait deja "clovis-theme-change" (utilise
+    // par Mermaid.tsx), mais aucune instance de useTheme() ne l'ecoutait
+    // elle-meme. Cette ecoute referme la boucle : toute instance se
+    // resynchronise des qu'une autre change le theme, peu importe laquelle
+    // a declenche le changement.
+    const surChangementManuel = () => {
+      setChoix(lireChoixStocke());
+      setResolu(lireThemeResolu());
+    };
+    window.addEventListener("clovis-theme-change", surChangementManuel);
+
+    return () => {
+      media.removeEventListener("change", surChangementSysteme);
+      window.removeEventListener("clovis-theme-change", surChangementManuel);
+    };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
