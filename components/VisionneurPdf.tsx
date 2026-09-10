@@ -130,31 +130,38 @@ function VisionneurPdfCharge({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  // CORRECTIF 2026-09-10 (plantage "Cannot read properties of null
+  // (reading 'subscribe')" -- voir GardeApercu.tsx) : ZoomOut/CurrentZoom/
+  // ZoomIn lisent l'état du lecteur via le contexte que <Root> fournit à
+  // SES enfants -- ils doivent donc être DEDANS <Root>, pas juste dans le
+  // même <div> que lui. Rendus en dehors comme avant, leur contexte vaut
+  // null et ils plantent au tout premier rendu (donc pour absolument tout
+  // PDF, Bibliothèque comme chat). <Root> devient ici le conteneur flex
+  // englobant (au lieu de n'entourer que la zone de pages), la barre de
+  // zoom passe dans ses children, en dessous de <Pages>.
   return (
-    <div className="flex h-full flex-col">
-      <Root
-        source={url}
-        className="flex-1 overflow-hidden"
-        loader={
-          <div className="flex h-full justify-center p-4" aria-hidden>
-            <Skeleton className="rounded-lg" style={{ width: "min(100%, 640px)", aspectRatio: "1 / 1.414" }} />
-          </div>
-        }
-        isZoomFitWidth
-        zoomOptions={{ minZoom: 0.5, maxZoom: 4 }}
-        onDocumentLoad={() => {
-          // le chargement a réussi -- on annule le garde-fou timeout.
-          if (delaiRef.current) clearTimeout(delaiRef.current);
-        }}
-      >
-        <SautInitial page={page} />
-        <Pages className="h-full overflow-auto p-3">
-          <Page>
-            <CanvasLayer />
-            <TextLayer />
-          </Page>
-        </Pages>
-      </Root>
+    <Root
+      source={url}
+      className="flex h-full flex-col overflow-hidden"
+      loader={
+        <div className="flex h-full justify-center p-4" aria-hidden>
+          <Skeleton className="rounded-lg" style={{ width: "min(100%, 640px)", aspectRatio: "1 / 1.414" }} />
+        </div>
+      }
+      isZoomFitWidth
+      zoomOptions={{ minZoom: 0.5, maxZoom: 4 }}
+      onDocumentLoad={() => {
+        // le chargement a réussi -- on annule le garde-fou timeout.
+        if (delaiRef.current) clearTimeout(delaiRef.current);
+      }}
+    >
+      <SautInitial page={page} />
+      <Pages className="flex-1 overflow-auto p-3">
+        <Page>
+          <CanvasLayer />
+          <TextLayer />
+        </Page>
+      </Pages>
 
       <div className="flex items-center justify-center gap-2 border-t border-dj-bordure px-3 py-2 text-xs text-dj-texte-muet">
         <ZoomOut
@@ -174,6 +181,6 @@ function VisionneurPdfCharge({
           <IconZoomIn size={14} />
         </ZoomIn>
       </div>
-    </div>
+    </Root>
   );
 }
