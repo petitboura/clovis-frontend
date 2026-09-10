@@ -1,53 +1,58 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { MessageSquareText, Pencil, Copy, Trash2, Check, X } from "lucide-react";
+import { MessageSquareText, Copy, Trash2, Tag } from "lucide-react";
 import {
-  listerCorrectionsACorrger,
-  activerCorrectionPedagogique,
-  editerCorrectionPedagogique,
-  dupliquerCorrectionPedagogique,
-  supprimerCorrectionPedagogique,
-  type CorrectionPedagogique,
+  listerSignalementsRecus,
+  demanderVisibiliteSignalement,
+  rattacherSignalementPedagogique,
+  dupliquerSignalementPedagogique,
+  supprimerSignalementPedagogique,
+  listerMesCodes,
+  listerNotions,
+  type SignalementPedagogique,
+  type CodePartage,
+  type Notion,
 } from "@/lib/api";
 import { messageErreur, ErreurApi } from "@/lib/erreurs";
 import { Skeleton } from "./Skeleton";
 import { CTACompteRequis } from "./CTACompteRequis";
 import { BoutonInfoSection } from "./BoutonInfoSection";
-import { CaseACocher } from "./CaseACocher";
 import { useOuvrirChatAvecTexte } from "@/lib/contexteChat";
 
+const CHAMPS: { id: "question" | "reponse" | "conversation"; label: string }[] = [
+  { id: "question", label: "la question" },
+  { id: "reponse", label: "la réponse" },
+  { id: "conversation", label: "le fil de conversation" },
+];
+
 /**
- * "Corrections" (Bureau) -- Point 2, Parties 4/5 du chantier "confiance
- * pédagogique" (06/09/2026). Uniquement les signalements de type A
- * (correctif de fond) : le type B (comportement mal configuré) n'a
- * volontairement aucune vue prof, il est dédié dès l'origine à la
- * cascade de supervision de la Partie 10, pas encore construite (voir
- * api/corrections_pedagogiques.py::a_corriger, filtré type="A" côté
- * serveur -- ce composant ne fait que refléter ce choix, il n'invente
- * rien côté frontend).
+ * "Signalements" (Bureau) -- refonte du 10/09/2026, demande Bourama :
+ * plus de type A/B, plus de génération automatique de comportement/skill,
+ * plus de bouton "actif". Le traitement se fait en discutant librement
+ * avec Clovis dans une conversation dédiée (voir core/outils_signalements.py) --
+ * ce composant ne fait qu'ouvrir cette conversation avec l'id du
+ * signalement en clair dans le message, le modèle le reprend ensuite tel
+ * quel comme paramètre de ses outils (voir docstring de consulter_signalement).
  *
- * Pas de tri "par classe" : corrections_pedagogiques n'a aucun lien vers
- * un code (Bureau/Partie 1), et le produit n'expose nulle part ailleurs
- * le nom d'un élève à partir de son id (choix de conception délibéré,
- * confirmé en explorant le dépôt avant d'écrire ce composant) -- afficher
- * un vrai "par élève" demanderait d'exposer une donnée d'identité qui
- * n'existe pas encore ailleurs dans l'app, jamais deviné ici. La liste
- * est donc triée par date, la plus récente en premier.
+ * Pas de tri "par classe/élève" : même contrainte que l'ancien composant,
+ * le produit n'expose nulle part le nom d'un élève à partir de son id.
+ * Liste triée par date, la plus récente en premier.
  */
 export function ListeCorrectionsProf() {
-  const [ongletActif, setOngletActif] = useState<"nouveau" | "traite">("nouveau");
-  const [corrections, setCorrections] = useState<CorrectionPedagogique[] | undefined>(undefined);
+  const [ongletActif, setOngletActif] = useState<"nouveau" | "discute">("nouveau");
+  const [signalements, setSignalements] = useState<SignalementPedagogique[] | undefined>(undefined);
   const [erreur, setErreur] = useState<string | null>(null);
   const [sansCompte, setSansCompte] = useState(false);
-  const [enEdition, setEnEdition] = useState<string | null>(null);
-  const [texteEdition, setTexteEdition] = useState("");
+  const [rattachementOuvertPour, setRattachementOuvertPour] = useState<string | null>(null);
+  const [codes, setCodes] = useState<CodePartage[] | undefined>(undefined);
+  const [notionsParCode, setNotionsParCode] = useState<Record<string, Notion[]>>({});
   const ouvrirChatAvecTexte = useOuvrirChatAvecTexte();
 
-  function charger(statut: "nouveau" | "traite") {
-    setCorrections(undefined);
-    listerCorrectionsACorrger(statut)
-      .then(setCorrections)
+  function charger(statut: "nouveau" | "discute") {
+    setSignalements(undefined);
+    listerSignalementsRecus(statut)
+      .then(setSignalements)
       .catch((e) => {
         if (e instanceof ErreurApi && e.statusCode === 401) {
           setSansCompte(true);
@@ -61,61 +66,77 @@ export function ListeCorrectionsProf() {
     charger(ongletActif);
   }, [ongletActif]);
 
-  function corriger(c: CorrectionPedagogique) {
-    // Contexte structuré + emplacement laissé à compléter par le prof,
-    // voir lib/contexteChat.tsx::useOuvrirChatAvecTexte -- déposé dans
-    // le champ de saisie d'une conversation neuve, jamais envoyé seul :
-    // c'est bien le prof qui déclenche, Clovis n'agit jamais de son
-    // propre chef sur une correction pédagogique.
+  function discuter(s: SignalementPedagogique) {
+    // L'id est repris tel quel par le modèle comme paramètre de
+    // consulter_signalement/enregistrer_note_signalement (voir
+    // core/outils_signalements.py) -- c'est bien le prof qui déclenche,
+    // Clovis n'agit jamais de son propre chef sur un signalement.
     ouvrirChatAvecTexte(
-      `Voici un signalement à corriger (id ${c.id}) :\n` +
-        `Question de l'élève : ${c.question_texte}\n` +
-        `Ma réponse mise en cause : ${c.reponse_texte}\n\n` +
-        `Voici ma correction : `
+      `Je veux discuter du signalement pédagogique id ${s.id}. ` +
+        `Utilise l'outil consulter_signalement avec cet id pour voir de quoi il s'agit, ` +
+        `puis discutons-en ensemble.`
     );
   }
 
-  async function toggleActif(c: CorrectionPedagogique) {
+  async function demanderCeQuiManque(s: SignalementPedagogique) {
+    const manquants = CHAMPS.filter((c) => !(s as any)[`visible_${c.id}`]).map((c) => c.id);
+    if (manquants.length === 0) return;
     setErreur(null);
     try {
-      const maj = await activerCorrectionPedagogique(c.id, !c.comportement_actif);
-      setCorrections((prec) => (prec || []).map((x) => (x.id === c.id ? maj : x)));
+      const maj = await demanderVisibiliteSignalement(s.id, manquants);
+      setSignalements((prec) => (prec || []).map((x) => (x.id === s.id ? maj : x)));
     } catch (e) {
       setErreur(messageErreur(e));
     }
   }
 
-  function commencerEdition(c: CorrectionPedagogique) {
-    setEnEdition(c.id);
-    setTexteEdition(c.correction_texte ?? "");
+  async function ouvrirRattachement(s: SignalementPedagogique) {
+    setRattachementOuvertPour(s.id);
+    if (codes === undefined) {
+      try {
+        setCodes(await listerMesCodes());
+      } catch (e) {
+        setErreur(messageErreur(e));
+      }
+    }
   }
 
-  async function sauvegarderEdition(correctionId: string) {
-    setErreur(null);
+  async function chargerNotions(codeId: string) {
+    if (notionsParCode[codeId]) return;
     try {
-      const maj = await editerCorrectionPedagogique(correctionId, texteEdition);
-      setCorrections((prec) => (prec || []).map((x) => (x.id === correctionId ? maj : x)));
-      setEnEdition(null);
+      const n = await listerNotions(codeId);
+      setNotionsParCode((prec) => ({ ...prec, [codeId]: n }));
     } catch (e) {
       setErreur(messageErreur(e));
     }
   }
 
-  async function dupliquer(correctionId: string) {
+  async function rattacher(signalementId: string, codeId: string | null, notionId: string | null) {
     setErreur(null);
     try {
-      const copie = await dupliquerCorrectionPedagogique(correctionId);
-      setCorrections((prec) => [copie, ...(prec || [])]);
+      const maj = await rattacherSignalementPedagogique(signalementId, codeId, notionId);
+      setSignalements((prec) => (prec || []).map((x) => (x.id === signalementId ? maj : x)));
+      setRattachementOuvertPour(null);
     } catch (e) {
       setErreur(messageErreur(e));
     }
   }
 
-  async function supprimer(correctionId: string) {
+  async function dupliquer(signalementId: string) {
     setErreur(null);
     try {
-      await supprimerCorrectionPedagogique(correctionId);
-      setCorrections((prec) => (prec || []).filter((x) => x.id !== correctionId));
+      const copie = await dupliquerSignalementPedagogique(signalementId);
+      setSignalements((prec) => [copie, ...(prec || [])]);
+    } catch (e) {
+      setErreur(messageErreur(e));
+    }
+  }
+
+  async function supprimer(signalementId: string) {
+    setErreur(null);
+    try {
+      await supprimerSignalementPedagogique(signalementId);
+      setSignalements((prec) => (prec || []).filter((x) => x.id !== signalementId));
     } catch (e) {
       setErreur(messageErreur(e));
     }
@@ -129,18 +150,18 @@ export function ListeCorrectionsProf() {
     <section className="rounded-cgpt-carte border border-dj-bordure bg-dj-surface p-5">
       <div className="flex items-center justify-between gap-3">
         <div className="flex items-center gap-1.5">
-          <h2 className="text-base font-medium text-dj-texte">Corrections</h2>
+          <h2 className="text-base font-medium text-dj-texte">Signalements</h2>
           <BoutonInfoSection
-            rubriqueId="corrections-prof"
-            texteCourt="Un élève a signalé une réponse de Clovis comme une notion ou une méthode incorrecte. Clique sur « Corriger » pour ouvrir une conversation déjà préparée avec le contexte, où tu n'as plus qu'à taper ou dicter ta correction. Une fois traitée, ton élève reçoit une notification et Clovis en tient compte pour lui."
+            rubriqueId="signalements-prof"
+            texteCourt="Un élève a signalé un problème sur une réponse de Clovis. Clique sur « Discuter » pour ouvrir une conversation avec Clovis et échanger sur ce cas, à ton rythme -- rien n'est automatique, rien n'est traité sans toi."
           />
         </div>
       </div>
 
       <div className="mt-3 flex gap-1 rounded-cgpt-bouton bg-dj-surface-haute p-1">
         {[
-          { id: "nouveau" as const, label: "À corriger" },
-          { id: "traite" as const, label: "Traitées" },
+          { id: "nouveau" as const, label: "Nouveaux" },
+          { id: "discute" as const, label: "En discussion" },
         ].map((o) => (
           <button
             key={o.id}
@@ -157,7 +178,7 @@ export function ListeCorrectionsProf() {
       {erreur && <p className="mt-3 text-sm text-[var(--dj-erreur)]">{erreur}</p>}
 
       <div className="mt-3 flex flex-col gap-2">
-        {corrections === undefined &&
+        {signalements === undefined &&
           [0, 80, 160].map((delai) => (
             <div key={delai} className="rounded-xl border border-dj-bordure bg-dj-surface-haute p-3">
               <Skeleton className="h-3.5 w-3/4 rounded" style={{ animationDelay: `${delai}ms` }} />
@@ -165,85 +186,110 @@ export function ListeCorrectionsProf() {
             </div>
           ))}
 
-        {corrections !== undefined && corrections.length === 0 && (
+        {signalements !== undefined && signalements.length === 0 && (
           <p className="animate-dj-fade-in-rapide py-4 text-center text-sm text-dj-texte-muet">
-            {ongletActif === "nouveau" ? "Aucun signalement en attente." : "Aucune correction traitée pour l'instant."}
+            {ongletActif === "nouveau" ? "Aucun signalement en attente." : "Aucune discussion en cours."}
           </p>
         )}
 
-        {corrections?.map((c, i) => (
-          <div
-            key={c.id}
-            className="animate-dj-fade-in-rapide rounded-xl border border-dj-bordure bg-dj-surface-haute p-3"
-            style={{ animationDelay: `${Math.min(i, 6) * 40}ms` }}
-          >
-            <p className="text-sm text-dj-texte-muet">
-              <span className="font-medium text-dj-texte">Question : </span>
-              {c.question_texte || "—"}
-            </p>
-            <p className="mt-1 text-sm text-dj-texte-muet">
-              <span className="font-medium text-dj-texte">Réponse mise en cause : </span>
-              {c.reponse_texte || "—"}
-            </p>
-
-            {ongletActif === "nouveau" ? (
-              <button
-                onClick={() => corriger(c)}
-                className="mt-2.5 flex items-center gap-1.5 rounded-cgpt-bouton bg-dj-accent-1 px-3 py-1.5 text-sm font-medium text-[#1A0D02] transition-transform hover:scale-[1.02]"
-              >
-                <MessageSquareText size={14} />
-                Corriger
-              </button>
-            ) : enEdition === c.id ? (
-              <div className="mt-2.5 flex flex-col gap-2">
-                <textarea
-                  value={texteEdition}
-                  onChange={(e) => setTexteEdition(e.target.value)}
-                  rows={3}
-                  className="w-full resize-none rounded-lg border border-dj-bordure bg-dj-surface p-2 text-sm text-dj-texte outline-none focus:border-dj-accent-1"
-                />
-                <div className="flex gap-2">
-                  <button
-                    onClick={() => sauvegarderEdition(c.id)}
-                    className="flex items-center gap-1 rounded-cgpt-bouton bg-dj-accent-1 px-2.5 py-1 text-xs font-medium text-[#1A0D02]"
-                  >
-                    <Check size={12} />
-                    Enregistrer
-                  </button>
-                  <button
-                    onClick={() => setEnEdition(null)}
-                    className="flex items-center gap-1 rounded-cgpt-bouton border border-dj-bordure px-2.5 py-1 text-xs font-medium text-dj-texte-muet"
-                  >
-                    <X size={12} />
-                    Annuler
-                  </button>
-                </div>
-              </div>
-            ) : (
-              <>
-                <p className="mt-1.5 text-sm text-dj-texte">
-                  <span className="font-medium">Correction : </span>
-                  {c.correction_texte || "—"}
+        {signalements?.map((s, i) => {
+          const manquants = CHAMPS.filter((c) => !(s as any)[`visible_${c.id}`]);
+          const demandeEnCours = manquants.some((c) => (s as any)[`demande_prof_${c.id}`]);
+          return (
+            <div
+              key={s.id}
+              className="animate-dj-fade-in-rapide rounded-xl border border-dj-bordure bg-dj-surface-haute p-3"
+              style={{ animationDelay: `${Math.min(i, 6) * 40}ms` }}
+            >
+              <p className="text-sm text-dj-texte-muet">
+                <span className="font-medium text-dj-texte">Question : </span>
+                {s.visible_question ? s.question_texte || "—" : "non partagée par l'élève"}
+              </p>
+              <p className="mt-1 text-sm text-dj-texte-muet">
+                <span className="font-medium text-dj-texte">Réponse mise en cause : </span>
+                {s.visible_reponse ? s.reponse_texte || "—" : "non partagée par l'élève"}
+              </p>
+              {s.probleme_observe && (
+                <p className="mt-1 text-sm text-dj-texte-muet">
+                  <span className="font-medium text-dj-texte">Problème observé : </span>
+                  {s.probleme_observe}
                 </p>
-                <div className="mt-2.5 flex items-center gap-3">
-                  <label className="flex items-center gap-1.5 text-xs text-dj-texte-muet">
-                    <CaseACocher checked={!!c.comportement_actif} onChange={() => toggleActif(c)} />
-                    Active
-                  </label>
-                  <button onClick={() => commencerEdition(c)} aria-label="Éditer la correction" className="rounded-md p-1 text-dj-texte-muet hover:text-dj-texte">
-                    <Pencil size={14} />
-                  </button>
-                  <button onClick={() => dupliquer(c.id)} aria-label="Dupliquer la correction" className="rounded-md p-1 text-dj-texte-muet hover:text-dj-texte">
-                    <Copy size={14} />
-                  </button>
-                  <button onClick={() => supprimer(c.id)} aria-label="Supprimer la correction" className="rounded-md p-1 text-dj-texte-muet hover:text-[var(--dj-erreur)]">
-                    <Trash2 size={14} />
-                  </button>
+              )}
+              {s.correction_texte && (
+                <p className="mt-1.5 text-sm text-dj-texte">
+                  <span className="font-medium">Note actuelle : </span>
+                  {s.correction_texte}
+                </p>
+              )}
+
+              {manquants.length > 0 && (
+                <button
+                  onClick={() => demanderCeQuiManque(s)}
+                  disabled={demandeEnCours}
+                  className="mt-2 text-xs font-medium text-dj-accent-1-texte hover:underline disabled:opacity-50"
+                >
+                  {demandeEnCours
+                    ? "Demande envoyée, en attente de l'élève…"
+                    : `Demander à voir ${manquants.map((c) => c.label).join(", ")}`}
+                </button>
+              )}
+
+              <div className="mt-2.5 flex flex-wrap items-center gap-3">
+                <button
+                  onClick={() => discuter(s)}
+                  className="flex items-center gap-1.5 rounded-cgpt-bouton bg-dj-accent-1 px-3 py-1.5 text-sm font-medium text-[#1A0D02] transition-transform hover:scale-[1.02]"
+                >
+                  <MessageSquareText size={14} />
+                  Discuter
+                </button>
+                <button onClick={() => ouvrirRattachement(s)} aria-label="Rattacher à une matière ou une notion" className="rounded-md p-1 text-dj-texte-muet hover:text-dj-texte">
+                  <Tag size={14} />
+                </button>
+                <button onClick={() => dupliquer(s.id)} aria-label="Dupliquer le signalement" className="rounded-md p-1 text-dj-texte-muet hover:text-dj-texte">
+                  <Copy size={14} />
+                </button>
+                <button onClick={() => supprimer(s.id)} aria-label="Supprimer le signalement" className="rounded-md p-1 text-dj-texte-muet hover:text-[var(--dj-erreur)]">
+                  <Trash2 size={14} />
+                </button>
+              </div>
+
+              {rattachementOuvertPour === s.id && (
+                <div className="mt-2.5 flex flex-col gap-2 rounded-lg border border-dj-bordure bg-dj-surface p-2">
+                  <select
+                    defaultValue={s.code_id ?? ""}
+                    onChange={(e) => {
+                      const codeId = e.target.value || null;
+                      if (codeId) chargerNotions(codeId);
+                      rattacher(s.id, codeId, null);
+                    }}
+                    className="rounded-lg border border-dj-bordure bg-dj-surface-haute p-1.5 text-xs text-dj-texte"
+                  >
+                    <option value="">Aucune matière</option>
+                    {codes?.map((c) => (
+                      <option key={c.id} value={c.id}>
+                        {c.nom || c.code}
+                      </option>
+                    ))}
+                  </select>
+                  {s.code_id && (
+                    <select
+                      defaultValue={s.notion_id ?? ""}
+                      onChange={(e) => rattacher(s.id, s.code_id, e.target.value || null)}
+                      className="rounded-lg border border-dj-bordure bg-dj-surface-haute p-1.5 text-xs text-dj-texte"
+                    >
+                      <option value="">Aucune notion précise</option>
+                      {notionsParCode[s.code_id]?.map((n) => (
+                        <option key={n.id} value={n.id}>
+                          {n.nom}
+                        </option>
+                      ))}
+                    </select>
+                  )}
                 </div>
-              </>
-            )}
-          </div>
-        ))}
+              )}
+            </div>
+          );
+        })}
       </div>
     </section>
   );

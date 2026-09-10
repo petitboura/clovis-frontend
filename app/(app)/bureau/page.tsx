@@ -8,7 +8,6 @@ import { AuditCorrections } from "@/components/AuditCorrections";
 import { EspaceEtablissements } from "@/components/EspaceEtablissements";
 import { ProgrammeNotions } from "@/components/ProgrammeNotions";
 import { ListeCorrectionsProf } from "@/components/ListeCorrectionsProf";
-import { IndicateurCascadeSupervision } from "@/components/IndicateurCascadeSupervision";
 import { OngletsSegment } from "@/components/OngletsSegment";
 
 // 08/09/2026, demande Bourama : les 6 cartes de Bureau (hors bandeau
@@ -16,10 +15,6 @@ import { OngletsSegment } from "@/components/OngletsSegment";
 // avec OngletsSegment (composant déjà partagé, voir sa propre note du
 // 31/08) pour rester cohérent avec le reste de l'app plutôt que
 // réinventer un style d'onglets propre à cette page.
-// Le bandeau IndicateurCascadeSupervision reste explicitement au-dessus,
-// hors onglets (confirmé par Bourama) : c'est le seul élément de cette
-// page qui signale une action à faire sous 2 jours, il doit continuer à
-// sauter aux yeux immédiatement, pas être caché derrière un choix d'onglet.
 type OngletBureau = "audit" | "codes" | "programme" | "entrer_code" | "etablissements" | "corrections";
 
 const ONGLETS_BUREAU: { valeur: OngletBureau; libelle: string }[] = [
@@ -28,7 +23,7 @@ const ONGLETS_BUREAU: { valeur: OngletBureau; libelle: string }[] = [
   { valeur: "programme", libelle: "Programme" },
   { valeur: "entrer_code", libelle: "Entrer un code" },
   { valeur: "etablissements", libelle: "Établissements" },
-  { valeur: "corrections", libelle: "Corrections" },
+  { valeur: "corrections", libelle: "Signalements" },
 ];
 
 export default function PageBureau() {
@@ -37,12 +32,6 @@ export default function PageBureau() {
   return (
     <SectionPage title="Bureau">
       <div className="flex flex-col gap-4">
-        {/* Partie 10 (07/09/2026) : au-dessus du reste, seule carte de
-            cette page qui n'affiche rien tant qu'il n'y a rien d'actif --
-            volontairement en tête, hors onglets, c'est le seul cas de
-            cette page qui appelle une action à faire sous 2 jours. */}
-        <IndicateurCascadeSupervision />
-
         <OngletsSegment
           onglets={ONGLETS_BUREAU}
           valeur={onglet}

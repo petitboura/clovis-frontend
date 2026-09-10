@@ -1795,24 +1795,22 @@ export async function marquerToutesNotificationsLues() {
   await appelerApi("/api/notifications/tout-lu", { method: "POST" });
 }
 
-// Audit synthétique hebdomadaire des corrections pédagogiques (Point 4,
-// Partie 8, 06/09/2026) : voir api/audit_hebdomadaire_corrections.py.
+// Audit synthétique hebdomadaire des signalements pédagogiques
+// (refonte du 10/09/2026) : voir api/audit_hebdomadaire_corrections.py.
 export type SignalementNonTraite = {
   id: string;
-  type: "A" | "B";
   question_texte: string;
   reponse_texte: string;
+  probleme_observe: string | null;
   created_at: string | null;
 };
 
 export type TendanceNotion = { notion_id: string; nombre: number };
-export type TendanceParType = { type: "A" | "B"; nombre: number };
 
 export type AuditCorrections = {
   total: number;
   nouveaux_non_traites: SignalementNonTraite[];
   tendances_notions: TendanceNotion[];
-  tendances_par_type: TendanceParType[];
 };
 
 export async function obtenirAuditCorrections() {
@@ -1897,135 +1895,103 @@ export async function listerPublicationsEtablissement(etablissementId: string) {
 
 // Corrections pédagogiques élève -> prof (Partie 4/5, chantier
 // "confiance pédagogique", 06/09/2026). Voir
-// api/corrections_pedagogiques.py côté backend pour le contrat complet
-// -- type "A" (correctif de fond, traité par le prof) et "B"
-// (comportement mal configuré, capté seulement, destiné à la cascade de
-// la Partie 10, pas de flux de correction ici).
-export type TypeCorrectionPedagogique = "A" | "B";
-export type StatutCorrectionPedagogique = "nouveau" | "traite";
+// api/signalements_pedagogiques.py côté backend pour le contrat complet
+// -- refonte du 10/09/2026 : plus de type A/B, plus de comportement
+// généré, visibilité choisie par l'élève, rattachement matière/notion.
+export type StatutSignalement = "nouveau" | "discute";
 
-export type CorrectionPedagogique = {
+export type SignalementPedagogique = {
   id: string;
   agent_id: string;
   etudiant_id: string;
   prof_id: string | null;
-  type: TypeCorrectionPedagogique;
   conversation_id: string | null;
   question_texte: string;
   reponse_texte: string;
   contexte_conversation: { role: string; content: string }[];
-  statut: StatutCorrectionPedagogique;
-  correction_texte: string | null;
-  comportement_id: string | null;
-  // null tant qu'aucun comportement n'a encore été généré pour cette
-  // correction (nouveau signalement type A pas encore traité, ou type
-  // B qui n'en a jamais). Voir core/corrections_pedagogiques.py::_enrichir_comportement_actif.
-  comportement_actif: boolean | null;
+  probleme_observe: string | null;
+  visible_question: boolean;
+  visible_reponse: boolean;
+  visible_conversation: boolean;
+  demande_prof_question: boolean;
+  demande_prof_reponse: boolean;
+  demande_prof_conversation: boolean;
+  code_id: string | null;
   notion_id: string | null;
-  statut_cascade: string;
+  statut: StatutSignalement;
+  correction_texte: string | null;
+  conversation_discussion_id: string | null;
   created_at: string;
   updated_at: string;
 };
 
-export async function signalerCorrectionPedagogique(payload: {
+export async function signalerPedagogique(payload: {
   agent_id: string;
-  type: TypeCorrectionPedagogique;
   conversation_id?: string | null;
   question_message_id?: number | null;
   reponse_message_id?: number | null;
   question_texte: string;
   reponse_texte: string;
+  probleme_observe?: string | null;
+  visible_question?: boolean;
+  visible_reponse?: boolean;
+  visible_conversation?: boolean;
 }) {
-  return appelerApi("/api/corrections-pedagogiques", {
+  return appelerApi("/api/signalements-pedagogiques", {
     method: "POST",
     body: JSON.stringify(payload),
-  }) as Promise<CorrectionPedagogique>;
+  }) as Promise<SignalementPedagogique>;
 }
 
-export async function listerCorrectionsACorrger(statut: StatutCorrectionPedagogique | "" = "nouveau") {
+export async function listerMesSignalementsPedagogiques() {
+  const resultat = await appelerApi("/api/signalements-pedagogiques/mes-signalements");
+  return (resultat as { signalements: SignalementPedagogique[] }).signalements;
+}
+
+export async function listerSignalementsRecus(statut?: StatutSignalement) {
   const suffixe = statut ? `?statut=${statut}` : "";
-  const resultat = await appelerApi(`/api/corrections-pedagogiques/a-corriger${suffixe}`);
-  return (resultat as { corrections: CorrectionPedagogique[] }).corrections;
+  const resultat = await appelerApi(`/api/signalements-pedagogiques/recus${suffixe}`);
+  return (resultat as { signalements: SignalementPedagogique[] }).signalements;
 }
 
-export async function obtenirCorrectionPedagogique(correctionId: string) {
-  return appelerApi(`/api/corrections-pedagogiques/${correctionId}`) as Promise<CorrectionPedagogique>;
+export async function obtenirSignalementPedagogique(signalementId: string) {
+  return appelerApi(`/api/signalements-pedagogiques/${signalementId}`) as Promise<SignalementPedagogique>;
 }
 
-export async function activerCorrectionPedagogique(correctionId: string, actif: boolean) {
-  return appelerApi(`/api/corrections-pedagogiques/${correctionId}/actif`, {
-    method: "PATCH",
-    body: JSON.stringify({ actif }),
-  }) as Promise<CorrectionPedagogique>;
-}
-
-export async function editerCorrectionPedagogique(correctionId: string, correctionTexte: string) {
-  return appelerApi(`/api/corrections-pedagogiques/${correctionId}`, {
-    method: "PATCH",
-    body: JSON.stringify({ correction_texte: correctionTexte }),
-  }) as Promise<CorrectionPedagogique>;
-}
-
-export async function dupliquerCorrectionPedagogique(correctionId: string) {
-  return appelerApi(`/api/corrections-pedagogiques/${correctionId}/dupliquer`, {
+export async function demanderVisibiliteSignalement(signalementId: string, champs: ("question" | "reponse" | "conversation")[]) {
+  return appelerApi(`/api/signalements-pedagogiques/${signalementId}/demander-visibilite`, {
     method: "POST",
-  }) as Promise<CorrectionPedagogique>;
+    body: JSON.stringify({ champs }),
+  }) as Promise<SignalementPedagogique>;
 }
 
-export async function supprimerCorrectionPedagogique(correctionId: string) {
-  await appelerApi(`/api/corrections-pedagogiques/${correctionId}`, { method: "DELETE" });
-}
-
-export async function deplacerCorrectionPedagogique(
-  correctionId: string,
-  lienType: string | null,
-  lienId: string | null
-) {
-  return appelerApi(`/api/corrections-pedagogiques/${correctionId}/deplacer`, {
-    method: "PATCH",
-    body: JSON.stringify({ lien_type: lienType, lien_id: lienId }),
-  }) as Promise<CorrectionPedagogique>;
-}
-
-// Cascade de supervision (Point 6, Partie 10, 07/09/2026) : voir
-// api/cascade_supervision.py côté backend. Ne concerne que les
-// signalements de type B (comportement général mal configuré, pas les
-// corrections type A qui restent dans le flux de la Partie 4/5).
-export type CascadeSupervision = {
-  id: string;
-  prof_id: string;
-  agent_id: string;
-  statut: "j2_prof" | "j5_etablissement" | "equipe_clovis" | "resolu";
-  compteur_signalements: number;
-  declenchee_le: string;
-  j2_le: string;
-  j5_le: string;
-  etablissement_id: string | null;
-  comportement_neutralise_id: string | null;
-  neutralisee_le: string | null;
-  resolue_le: string | null;
-  note_resolution: string | null;
-  signalements: { question_texte: string; reponse_texte: string; created_at: string | null }[];
-};
-
-export async function obtenirMesCascadesSupervision() {
-  const resultat = await appelerApi("/api/cascades-supervision/mon-etat");
-  return (resultat as { cascades: CascadeSupervision[] }).cascades;
-}
-
-export async function obtenirCascadesSupervisionEtablissement() {
-  const resultat = await appelerApi("/api/cascades-supervision/etablissement");
-  return (resultat as { cascades: CascadeSupervision[] }).cascades;
-}
-
-export async function obtenirCascadesSupervisionEquipeClovis() {
-  const resultat = await appelerApi("/api/cascades-supervision/equipe-clovis");
-  return (resultat as { cascades: CascadeSupervision[] }).cascades;
-}
-
-export async function resoudreCascadeSupervision(cascadeId: string, note?: string) {
-  return appelerApi(`/api/cascades-supervision/${cascadeId}/resoudre`, {
+export async function confirmerVisibiliteSignalement(signalementId: string, reponses: Record<string, boolean>) {
+  return appelerApi(`/api/signalements-pedagogiques/${signalementId}/confirmer-visibilite`, {
     method: "POST",
-    body: JSON.stringify({ note: note || null }),
-  }) as Promise<CascadeSupervision>;
+    body: JSON.stringify({ reponses }),
+  }) as Promise<SignalementPedagogique>;
+}
+
+export async function ouvrirDiscussionSignalement(signalementId: string, conversationDiscussionId: string) {
+  return appelerApi(`/api/signalements-pedagogiques/${signalementId}/ouvrir-discussion`, {
+    method: "POST",
+    body: JSON.stringify({ conversation_discussion_id: conversationDiscussionId }),
+  }) as Promise<SignalementPedagogique>;
+}
+
+export async function rattacherSignalementPedagogique(signalementId: string, codeId: string | null, notionId: string | null) {
+  return appelerApi(`/api/signalements-pedagogiques/${signalementId}/rattacher`, {
+    method: "PATCH",
+    body: JSON.stringify({ code_id: codeId, notion_id: notionId }),
+  }) as Promise<SignalementPedagogique>;
+}
+
+export async function dupliquerSignalementPedagogique(signalementId: string) {
+  return appelerApi(`/api/signalements-pedagogiques/${signalementId}/dupliquer`, {
+    method: "POST",
+  }) as Promise<SignalementPedagogique>;
+}
+
+export async function supprimerSignalementPedagogique(signalementId: string) {
+  await appelerApi(`/api/signalements-pedagogiques/${signalementId}`, { method: "DELETE" });
 }

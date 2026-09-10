@@ -10,17 +10,10 @@ import { BoutonInfoSection } from "./BoutonInfoSection";
 import { dateRelative } from "@/lib/dateRelative";
 
 /**
- * Audit synthétique hebdomadaire des corrections pédagogiques (Point 4,
- * Partie 8, 06/09/2026). Regroupe par tendance plutôt que par ordre
- * chronologique (voir core/audit_hebdomadaire_corrections.py) : les
- * notions les plus en difficulté si la structure de notions (Partie 1)
- * existe, sinon un repli par type A/B. Les signalements de type A non
- * traités sont mis en avant, séparément du reste.
- *
- * Le lien direct vers l'interface de correction (Partie 5) n'existe pas
- * encore côté frontend : les éléments non traités sont donc affichés à
- * titre informatif, sans navigation, plutôt que via un lien qui ne
- * mènerait nulle part.
+ * Audit synthétique hebdomadaire des signalements pédagogiques (refonte
+ * du 10/09/2026). Regroupe par notion en difficulté quand un
+ * rattachement existe (voir core/audit_hebdomadaire_corrections.py).
+ * Les signalements encore "nouveau" sont mis en avant, séparément.
  */
 export function AuditCorrections() {
   const [audit, setAudit] = useState<AuditCorrections | undefined>(undefined);
@@ -87,7 +80,7 @@ export function AuditCorrections() {
             </div>
           )}
 
-          {audit.tendances_notions.length > 0 ? (
+          {audit.tendances_notions.length > 0 && (
             <div className="flex flex-col gap-1.5">
               <p className="text-xs font-medium text-dj-texte-muet">Notions les plus en difficulté</p>
               {audit.tendances_notions.map((t) => (
@@ -96,19 +89,6 @@ export function AuditCorrections() {
                   className="flex items-center justify-between rounded-lg px-3 py-1.5 text-sm text-dj-texte hover:bg-dj-surface-haute"
                 >
                   <span>{t.notion_id}</span>
-                  <span className="text-dj-texte-muet">{t.nombre}</span>
-                </div>
-              ))}
-            </div>
-          ) : (
-            <div className="flex flex-col gap-1.5">
-              <p className="text-xs font-medium text-dj-texte-muet">Répartition par type</p>
-              {audit.tendances_par_type.map((t) => (
-                <div
-                  key={t.type}
-                  className="flex items-center justify-between rounded-lg px-3 py-1.5 text-sm text-dj-texte hover:bg-dj-surface-haute"
-                >
-                  <span>{t.type === "A" ? "Correctifs de fond" : "Comportements mal configurés"}</span>
                   <span className="text-dj-texte-muet">{t.nombre}</span>
                 </div>
               ))}

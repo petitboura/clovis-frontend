@@ -14,7 +14,7 @@ import dynamic from "next/dynamic";
 import { BlocCode } from "./BlocCode";
 import { Mermaid } from "./Mermaid";
 import { CarteMessage } from "./CarteMessage";
-import { MenuSignalementCorrection } from "./MenuSignalementCorrection";
+import { MenuSignalementCorrection, type ChoixSignalement } from "./MenuSignalementCorrection";
 import { IndicateurReflexion } from "@/components/IndicateurReflexion";
 import { SchemaGeometrique } from "./SchemaGeometrique";
 import { WidgetSandbox } from "./WidgetSandbox";
@@ -440,10 +440,11 @@ function BulleMessageInterne({
   onEditer?: (nouveauTexte: string) => void;
   onLike?: () => void;
   onDislike?: () => void;
-  // Partie 4/5 (06/09/2026) : undefined tant que le message n'a pas
-  // d'id persisté (même garde que onLike/onDislike côté ChatIA.tsx),
-  // le type ("A"/"B") vient du choix fait DANS MenuSignalementCorrection.
-  onSignalerCorrection?: (type: "A" | "B") => Promise<void>;
+  // Refonte du 10/09/2026 : undefined tant que le message n'a pas d'id
+  // persisté (même garde que onLike/onDislike côté ChatIA.tsx), le
+  // détail de ce qui est partagé vient DU CHOIX fait dans
+  // MenuSignalementCorrection.
+  onSignalerCorrection?: (choix: ChoixSignalement) => Promise<void>;
   onExpliquerSelection?: (texteSelectionne: string) => void;
   // Ajouté 24/07 (retour Bourama : la bulle "réfléchit"/le raisonnement
   // apparaissaient trop loin du message, comme un bloc séparé en bas de

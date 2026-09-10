@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import Image from "next/image";
-import { appelerApiStream, uploaderImageChat, uploaderDocumentChat, uploaderVideoChat, transcrireAudioChat, signalerCorrectionPedagogique } from "@/lib/api";
+import { appelerApiStream, uploaderImageChat, uploaderDocumentChat, uploaderVideoChat, transcrireAudioChat, signalerPedagogique } from "@/lib/api";
 import { useNotificationsPush, proposerNotificationsPushUneFois } from "@/lib/useNotificationsPush";
 import { BulleMessage, MessageAffiche, SegmentMessage } from "./BulleMessage";
 import { BarreDeSaisie, LongueurReponse, LocalisationJointe } from "./BarreDeSaisie";
@@ -1109,15 +1109,18 @@ export function ChatIA({
               }
               onSignalerCorrection={
                 message.role === "assistant" && message.id
-                  ? (type) =>
-                      signalerCorrectionPedagogique({
+                  ? (choix) =>
+                      signalerPedagogique({
                         agent_id: agentId,
-                        type,
                         conversation_id: conversationId,
                         question_message_id: messages[index - 1]?.id ?? null,
                         reponse_message_id: message.id,
                         question_texte: messages[index - 1]?.content ?? "",
                         reponse_texte: message.content,
+                        probleme_observe: choix.probleme_observe,
+                        visible_question: choix.visible_question,
+                        visible_reponse: choix.visible_reponse,
+                        visible_conversation: choix.visible_conversation,
                       }).then(() => {})
                   : undefined
               }
