@@ -436,6 +436,17 @@ export async function listerBibliothequePublique(q?: string, filtres?: FiltresBi
   return resultat as EntreeBibliothequePublique[];
 }
 
+// 10/09/2026, chantier "Clovis ouvert" (demande Bourama : chaque PDF de
+// la bibliothèque publique retrouvable par son nom et téléchargeable via
+// un lien propre) -- détail d'une seule entrée, pour /bibliotheque/[id]
+// (page publique, y compris generateMetadata côté serveur). Lance une
+// ErreurApi(404) si l'entrée n'existe pas ou n'est plus publiée, voir
+// GET /api/bibliotheque-publique/{entree_id} côté backend.
+export async function obtenirEntreeBibliothequePublique(entreeId: string) {
+  const resultat = await appelerApi(`/api/bibliotheque-publique/${entreeId}`);
+  return resultat as EntreeBibliothequePublique;
+}
+
 // 03/09/2026, demande Bourama : valeurs déjà connues de pays/niveau/
 // catégorie, pour peupler les suggestions du formulaire de publication
 // ET les menus des filtres de recherche -- voir GET
@@ -560,6 +571,15 @@ export type DossierCataloguePublic = {
 
 export async function listerDossiersCataloguePublic() {
   return appelerApi("/api/bibliotheque-publique/dossiers") as Promise<DossierCataloguePublic[]>;
+}
+
+// 10/09/2026, chantier "Clovis ouvert" -- détail public d'un seul dossier
+// (aucune auth requise, contrairement à listerDossiersCataloguePublic
+// ci-dessus), pour /dossiers/[id] (page publique, generateMetadata côté
+// serveur). Lance une ErreurApi(404) si le dossier n'existe pas, voir
+// GET /api/bibliotheque-publique/dossiers/{id} côté backend.
+export async function obtenirDossierCataloguePublic(dossierId: string) {
+  return appelerApi(`/api/bibliotheque-publique/dossiers/${dossierId}`) as Promise<DossierCataloguePublic>;
 }
 
 export async function creerDossierCataloguePublic(
@@ -1026,6 +1046,15 @@ export async function rechercherComportementsPublics(q?: string) {
   const suffixe = q?.trim() ? `?q=${encodeURIComponent(q.trim())}` : "";
   const resultat = await appelerApi(`/api/comportements-publics${suffixe}`);
   return resultat as ComportementPublic[];
+}
+
+// 10/09/2026, chantier "Clovis ouvert" -- détail d'un seul skill public,
+// pour /skills/[id] (page publique, generateMetadata côté serveur).
+// Lance une ErreurApi(404) si le skill n'existe pas ou a été retiré par
+// son auteur, voir GET /api/comportements-publics/{id} côté backend.
+export async function obtenirComportementPublic(comportementPublicId: string) {
+  const resultat = await appelerApi(`/api/comportements-publics/${comportementPublicId}`);
+  return resultat as ComportementPublic;
 }
 
 export async function activerComportementPublic(comportementPublicId: string) {
