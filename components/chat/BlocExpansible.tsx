@@ -4,6 +4,7 @@ import { useState, ReactNode } from "react";
 import { ChevronDown, ChevronUp, Copy, Check, Download, Maximize2, Minimize2, X, Loader2, LucideIcon } from "lucide-react";
 import { PanneauFlottant } from "@/components/PanneauFlottant";
 import { useFermetureAnimee } from "@/lib/useFermetureAnimee";
+import { GardeApercu } from "./GardeApercu";
 
 // Remplace le panneau latéral (retiré, 2026-07-20 -- Bourama a préféré
 // revenir au déroulement dans le fil, avec un vrai plein écran plutôt
@@ -136,7 +137,7 @@ export function BlocExpansible({
             <X size={14} />
           </button>
         </div>
-        {enfant}
+        <GardeApercu hrefTelechargement={hrefTelechargement}>{enfant}</GardeApercu>
       </div>
 
       <div className="pt-2">
@@ -168,7 +169,9 @@ export function BlocExpansible({
           </div>
         }
       >
-        <div className="min-h-0 flex-1 overflow-auto">{enfant}</div>
+        <div className="min-h-0 flex-1 overflow-auto">
+          <GardeApercu hrefTelechargement={hrefTelechargement}>{enfant}</GardeApercu>
+        </div>
       </PanneauFlottant>
     );
   }
