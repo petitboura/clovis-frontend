@@ -1,9 +1,56 @@
 "use client";
 
 import { useState } from "react";
-import { FileText, FileSpreadsheet, Presentation, FileArchive, FileJson, FileCode, Image as IconeImage, Box, File, Download, ImageOff } from "lucide-react";
+import dynamic from "next/dynamic";
+import { FileText, FileSpreadsheet, Presentation, FileArchive, FileJson, FileCode, Image as IconeImage, Box, File, Download, ImageOff, Loader2 } from "lucide-react";
 import { BlocExpansible } from "./BlocExpansible";
 import { VisionneuseImage } from "./VisionneuseImage";
+import { TYPES_MIME_OFFICE, estTypeTexteLisible, estFichierMarkdown, ContenuTexte, ContenuMarkdown, ContenuOffice } from "../VisionneuseBibliotheque";
+
+// CORRECTIF 2026-09-10 (demande Bourama : le nouveau lecteur -- PDF
+// mobile-friendly, Markdown, Office, texte -- n'existait QUE pour les
+// sources citées dans une réponse (VisionneurPositionGlobal.tsx), pas
+// pour les fichiers uploadés/redonnés/générés dans le chat, qui
+// retombaient tous sur une simple carte "télécharger" (aucun aperçu,
+// même pour un .md). On réutilise ici les mêmes composants de rendu déjà
+// écrits pour la bibliothèque (VisionneuseBibliotheque.tsx), TELS QUELS,
+// juste affichés dans le BlocExpansible existant de ce fichier au lieu
+// du modal de VisionneurPositionGlobal.tsx -- pas de nouveau pattern
+// d'UI, le PDF de ce fichier fonctionnait déjà ainsi (déroulé inline).
+//
+// react-pdf/pdfjs-dist touche des API navigateur dès son import -- ce
+// fichier est importé STATIQUEMENT (BulleMessage.tsx -> ChatIA.tsx),
+// donc VisionneurPdf doit rester chargé en dynamic({ssr:false}), même
+// raison que VisionneuseBibliotheque.tsx et VisionneurPositionGlobal.tsx.
+const VisionneurPdf = dynamic(() => import("../VisionneurPdf").then((m) => m.VisionneurPdf), {
+  ssr: false,
+  loading: () => (
+    <div className="flex h-[70vh] items-center justify-center">
+      <Loader2 size={20} className="animate-spin text-dj-texte-muet" />
+    </div>
+  ),
+});
+
+// Type MIME approximatif déduit de l'extension d'URL -- ce fichier n'a
+// jamais le vrai type_mime renvoyé par le backend (contrairement à
+// DetailOuverturePosition, alimenté par core/bibliotheque_rag.py), donc
+// on le reconstruit ici juste pour réutiliser les mêmes helpers
+// (estTypeTexteLisible, estFichierMarkdown, TYPES_MIME_OFFICE) que la
+// bibliothèque. PDF et images gérés à part plus bas, zip/glb absents
+// volontairement (aucun aperçu possible pour ces deux-là).
+const TYPE_MIME_PAR_EXTENSION: Record<string, string> = {
+  doc: "application/msword",
+  docx: "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+  xls: "application/vnd.ms-excel",
+  xlsx: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+  csv: "text/csv",
+  ppt: "application/vnd.ms-powerpoint",
+  pptx: "application/vnd.openxmlformats-officedocument.presentationml.presentation",
+  json: "application/json",
+  xml: "application/xml",
+  tex: "text/x-tex",
+  md: "text/markdown",
+};
 
 const EXTENSIONS_FICHIER: Record<string, { icone: typeof File; libelle: string }> = {
   pdf: { icone: FileText, libelle: "PDF" },
@@ -158,52 +205,54 @@ export function FichierChip({ href, nom }: { href: string; nom: string }) {
   const infos = extensionFichier(href);
   const { icone: Icone, libelle } = infos ? EXTENSIONS_FICHIER[infos] : { icone: File, libelle: "Fichier" };
 
-  // PDF : seul format ici qu'un navigateur sait rendre nativement en
-  // iframe sans lib supplémentaire -- se déroule dans le fil comme le
-  // code et les widgets (voir BlocExpansible.tsx). Plus de panneau
-  // latéral (retiré, 2026-07-20, demande de Bourama).
-  //
-  // L'aperçu intégré (iframe) n'est proposé que si l'URL vient de notre
-  // propre stockage Supabase (voir estOrigineDeConfiance ci-dessus) --
-  // n'importe quelle autre origine retombe sur la carte téléchargement
-  // générique plus bas, jamais d'iframe.
-  if (infos === "pdf" && estOrigineDeConfiance(href)) {
-    return (
-      <BlocExpansible
-        titre={nom}
-        icone={Icone}
-        sousTitre={libelle}
-        hrefTelechargement={href}
-        enfant={
-          <iframe
-            src={href}
-            // CORRECTIF 2026-07-31 : sandbox="" a ete retire -- testé en
-            // conditions réelles par Bourama, ça empêche le PDF de
-            // s'afficher du tout. Comportement documenté et connu des
-            // navigateurs (Chrome/WebKit) : le visionneur PDF intégré est
-            // traité comme un "plugin", et sandbox désactive tous les
-            // plugins, quel que soit le jeu de permissions accordées.
-            // La vraie protection est désormais la vérification d'origine
-            // ci-dessus, pas un attribut sur l'iframe elle-même.
-            className="h-[70vh] w-full rounded-lg border border-dj-bordure"
-            title={nom}
-          />
-        }
-      />
-    );
-  }
-
   // Image (png/jpg/jpeg/webp) : vignette + zoom, voir ImageGenereeChip
-  // ci-dessus.
+  // ci-dessus. Inchangé par le correctif du 09/10 -- déjà un bon aperçu.
   if (infos && EXTENSIONS_IMAGE.has(infos)) {
     return <ImageGenereeChip href={href} nom={nom} />;
   }
 
-  // Word/Excel/PowerPoint/zip/JSON/XML/3D : pas de viewer natif de
-  // navigateur -- carte téléchargement, mais le clic force un vrai
-  // téléchargement (blob) au lieu d'ouvrir un nouvel onglet (31/07,
-  // demande Bourama : "tous les liens de téléchargement restent dans
-  // l'appli").
+  // L'aperçu intégré (PDF, Office, Markdown, texte) n'est proposé que si
+  // l'URL vient de notre propre stockage Supabase (voir
+  // estOrigineDeConfiance ci-dessus, même garde-fou qu'avant le correctif
+  // du 09/10) -- n'importe quelle autre origine retombe sur la carte
+  // téléchargement générique plus bas.
+  const origineFiable = estOrigineDeConfiance(href);
+
+  // PDF : déroulé dans le fil comme le code et les widgets (voir
+  // BlocExpansible.tsx), inchangé depuis le 20/07 -- seul le contenu
+  // change : le nouveau lecteur (VisionneurPdf, @anaralabs/lector, voir
+  // clovis-skills-mobile-pdf) remplace l'ancienne iframe native du
+  // navigateur (illisible sur mobile, cause du correctif du 09/10).
+  if (infos === "pdf" && origineFiable) {
+    return (
+      <BlocExpansible titre={nom} icone={Icone} sousTitre={libelle} hrefTelechargement={href} enfant={<VisionneurPdf url={href} page={1} />} />
+    );
+  }
+
+  // Word/Excel/PowerPoint/CSV/JSON/XML/LaTeX/Markdown : mêmes rendus que
+  // pour une source citée (ContenuOffice/ContenuTexte/ContenuMarkdown,
+  // voir VisionneuseBibliotheque.tsx), affichés dans le même
+  // BlocExpansible que le PDF ci-dessus -- avant le 09/10, ces types
+  // tombaient tous sur la carte téléchargement générique plus bas, sans
+  // aucun aperçu (signalé par Bourama, ex. les .md).
+  if (origineFiable && infos && infos in TYPE_MIME_PAR_EXTENSION) {
+    const typeMime = TYPE_MIME_PAR_EXTENSION[infos];
+    if (estFichierMarkdown(nom, typeMime)) {
+      return <BlocExpansible titre={nom} icone={Icone} sousTitre={libelle} hrefTelechargement={href} enfant={<ContenuMarkdown href={href} />} />;
+    }
+    if (TYPES_MIME_OFFICE.has(typeMime)) {
+      return <BlocExpansible titre={nom} icone={Icone} sousTitre={libelle} hrefTelechargement={href} enfant={<ContenuOffice href={href} titre={nom} />} />;
+    }
+    if (estTypeTexteLisible(typeMime)) {
+      return <BlocExpansible titre={nom} icone={Icone} sousTitre={libelle} hrefTelechargement={href} enfant={<ContenuTexte href={href} />} />;
+    }
+  }
+
+  // Repli : archive ZIP, modèle 3D (aucun aperçu possible dans un
+  // navigateur), origine non fiable, ou extension inconnue -- carte
+  // téléchargement, le clic force un vrai téléchargement (blob) au lieu
+  // d'ouvrir un nouvel onglet (31/07, demande Bourama : "tous les liens
+  // de téléchargement restent dans l'appli").
   return (
     <button
       onClick={() => telechargerFichier(href, nom)}
