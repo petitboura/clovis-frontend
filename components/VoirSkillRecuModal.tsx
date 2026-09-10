@@ -26,7 +26,7 @@ import { useFermetureAnimee } from "@/lib/useFermetureAnimee";
  * comportement inchangé (fetch via `comportementId`, sous-titre "Reçu
  * de..."). `sousTitre` permet d'adapter ce texte au contexte public.
  */
-function extraireCorpsSkill(skillMd: string): string {
+export function extraireCorpsSkill(skillMd: string): string {
   const correspondance = skillMd.match(/^---\r?\n[\s\S]*?\r?\n---\r?\n([\s\S]*)$/);
   return correspondance ? correspondance[1].trim() : skillMd;
 }

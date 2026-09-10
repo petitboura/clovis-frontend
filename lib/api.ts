@@ -990,6 +990,15 @@ export async function rechercherComportementsPublics(q?: string) {
   return resultat as ComportementPublic[];
 }
 
+// 10/09/2026, chantier "Clovis ouvert" -- détail d'un seul skill public,
+// pour /skills/[id] (page publique, generateMetadata côté serveur).
+// Lance une ErreurApi(404) si le skill n'existe pas ou a été retiré par
+// son auteur, voir GET /api/comportements-publics/{id} côté backend.
+export async function obtenirComportementPublic(comportementPublicId: string) {
+  const resultat = await appelerApi(`/api/comportements-publics/${comportementPublicId}`);
+  return resultat as ComportementPublic;
+}
+
 export async function activerComportementPublic(comportementPublicId: string) {
   const resultat = await appelerApi(`/api/comportements-publics/${comportementPublicId}/activer`, { method: "POST" });
   return resultat as Comportement;
