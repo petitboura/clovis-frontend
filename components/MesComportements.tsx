@@ -934,7 +934,19 @@ export function MesComportements({ agentId }: { agentId: string }) {
                   className="w-full flex-1 resize-none rounded-cgpt-carte border border-dj-bordure bg-dj-surface-haute px-4 py-3 font-mono text-sm text-dj-texte outline-none focus:border-dj-bordure-forte"
                 />
               ) : (
-                <div className="w-full flex-1 overflow-y-auto rounded-xl border border-dj-bordure bg-dj-surface-haute px-5 py-4">
+                // Correctif (09/09/2026, Bourama : "le skill est oblige dans
+                // un cadre, il peut continuer a s'afficher en glissant vers
+                // le bas au lieu du cadre dans le cadre") : avant, ce bloc
+                // avait flex-1 + overflow-y-auto, un DEUXIEME scroll imbrique
+                // dans celui du panneau (voir PanneauFlottant.tsx, deja
+                // overflow-y-auto). Sur mobile, une description longue (non
+                // tronquee depuis le correctif du meme jour juste au-dessus)
+                // reduisait ce flex-1 a une hauteur quasi nulle -- l'apercu
+                // du skill devenait invisible. Plus de flex-1/overflow ici :
+                // le bloc prend sa hauteur naturelle et c'est l'unique
+                // scroll du panneau qui porte tout le contenu, y compris une
+                // description tres longue suivie d'un skill tres long.
+                <div className="w-full rounded-xl border border-dj-bordure bg-dj-surface-haute px-5 py-4">
                   <div className="dj-markdown [&_ul]:list-disc [&_ul]:pl-5 [&_ol]:list-decimal [&_ol]:pl-5 [&_p]:mb-2 last:[&_p]:mb-0 [&_hr]:my-4 [&_hr]:border-dj-bordure [&_strong]:text-dj-texte [&_h1]:font-lecture [&_h1]:font-semibold [&_h1]:tracking-[-0.01em] [&_h1]:text-dj-texte [&_h1]:text-xl [&_h1]:mb-2 [&_h1]:mt-3 [&_h2]:font-lecture [&_h2]:font-semibold [&_h2]:tracking-[-0.01em] [&_h2]:text-dj-texte [&_h2]:text-lg [&_h2]:mb-2 [&_h2]:mt-3 [&_h3]:font-lecture [&_h3]:font-semibold [&_h3]:tracking-[-0.01em] [&_h3]:text-dj-texte [&_h3]:text-base [&_h3]:mb-1.5 [&_h3]:mt-2">
                     <ReactMarkdown remarkPlugins={[remarkGfm]} rehypePlugins={[[rehypeSanitize, defaultSchema]]}>
                       {extraireCorpsSkill(skillOuvert)}
