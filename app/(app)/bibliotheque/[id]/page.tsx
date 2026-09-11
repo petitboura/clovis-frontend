@@ -38,6 +38,12 @@ export async function generateStaticParams() {
 }
 
 async function chargerEntree(id: string): Promise<EntreeBibliothequePublique | null> {
+  // L'id "placeholder" (voir generateStaticParams ci-dessus) n'existe
+  // jamais réellement côté backend -- ne pas l'appeler du tout : le
+  // backend renvoie une 500 (pas une 404 propre) sur un id hors format
+  // UUID, ce qui ferait planter tout l'export statique. Constaté le
+  // 11/09/2026 sur ce dépôt.
+  if (id === "placeholder") return null;
   try {
     return await obtenirEntreeBibliothequePublique(id);
   } catch (e) {

@@ -84,7 +84,14 @@ export default async function PageTelecharger() {
   const apk = release?.assets.find((a) => a.name.endsWith(".apk")) ?? null;
   const version = release?.tag_name.replace(/^v/, "") ?? null;
 
-  const userAgent = headers().get("user-agent") || "";
+  // headers() est incompatible avec l'export statique (build:capacitor) :
+  // son seul appel fait planter tout l'export, constaté le 11/09/2026,
+  // malgré le commentaire plus haut qui supposait une exclusion via
+  // next.config.mjs -- cette exclusion n'existe pas réellement dans ce
+  // dépôt. Repli neutre (branche PC) le temps du build : cette page n'a
+  // de toute façon aucun sens depuis l'app native elle-même (c'est la
+  // page qui explique comment télécharger l'app).
+  const userAgent = process.env.CAPACITOR_BUILD === "true" ? "" : headers().get("user-agent") || "";
   const estAndroid = /Android/i.test(userAgent);
   const estIOS = /iPhone|iPad|iPod/i.test(userAgent);
   const urlPage = `${process.env.NEXT_PUBLIC_APP_URL}/telecharger`;

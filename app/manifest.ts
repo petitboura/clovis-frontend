@@ -54,8 +54,14 @@ import { headers } from "next/headers";
 // les téléphones -- les tablettes Android n'incluent pas le token
 // "Mobile" dans leur User-Agent et gardent donc le PWA, comme le PC.
 export default function manifest(): MetadataRoute.Manifest {
-  const userAgent = headers().get("user-agent") || "";
-  const estAndroidMobile = /Android.*Mobile/i.test(userAgent);
+  // headers() est incompatible avec l'export statique (build:capacitor) :
+  // son seul appel fait planter tout l'export ("couldn't be rendered
+  // statically because it used headers"), constaté le 11/09/2026. Sans
+  // objet de toute façon pour l'app native (ce fichier ne sert qu'au PWA
+  // web) -- on saute la détection User-Agent dans ce cas précis, "browser"
+  // par défaut n'a aucun effet réel côté app native.
+  const estAndroidMobile =
+    process.env.CAPACITOR_BUILD === "true" ? false : /Android.*Mobile/i.test(headers().get("user-agent") || "");
 
   return {
     id: "/",

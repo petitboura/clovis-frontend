@@ -19,6 +19,9 @@ export async function generateStaticParams() {
 }
 
 async function chargerDossier(id: string) {
+  // Voir chargerEntree dans app/(app)/bibliotheque/[id]/page.tsx : même
+  // raisonnement, l'id "placeholder" ne doit jamais taper le backend.
+  if (id === "placeholder") return null;
   try {
     return await obtenirDossierCataloguePublic(id);
   } catch (e) {
