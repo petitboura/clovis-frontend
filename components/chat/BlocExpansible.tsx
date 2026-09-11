@@ -212,8 +212,8 @@ export function BlocExpansible({
             contenu en dessous. pointer-events-none sur l'enveloppe
             laisse passer les clics vers le contenu (sélection de texte,
             liens...) partout sauf sur les boutons eux-mêmes. */}
-        <div className="pointer-events-none absolute inset-0 z-10">
-          <div className={`sticky top-2 float-right mr-1 ${classeRail}`} onClick={(e) => e.stopPropagation()}>
+        <div className="pointer-events-none absolute inset-0 z-10 flex justify-end">
+          <div className={`sticky top-2 mr-1 self-start ${classeRail}`} onClick={(e) => e.stopPropagation()}>
             <BoutonsActions avecTexte={false} surAgrandir={() => setPleinEcran((v) => !v)} />
             <button onClick={fermer} className="flex h-8 w-8 items-center justify-center rounded-lg border border-dj-bordure bg-dj-surface-haute text-dj-texte-muet hover:text-dj-texte" aria-label="Fermer">
               <X size={14} />
