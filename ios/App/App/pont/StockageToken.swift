@@ -16,9 +16,12 @@ enum StockageToken {
 
     private static let service = "ai.clovis.pont"
     private static let compte = "supabase_access_token"
+    // Ajoute le 12/09/2026 : voir StockageToken.kt (Android, meme date) pour
+    // le contexte complet du correctif.
+    private static let compteTokenPush = "dernier_token_push_apns"
 
-    static func enregistrer(_ token: String) {
-        let donnees = Data(token.utf8)
+    private static func enregistrer(_ valeur: String, compte: String) {
+        let donnees = Data(valeur.utf8)
         let requeteSuppression: [String: Any] = [
             kSecClass as String: kSecClassGenericPassword,
             kSecAttrService as String: service,
@@ -36,7 +39,7 @@ enum StockageToken {
         SecItemAdd(requeteAjout as CFDictionary, nil)
     }
 
-    static func lire() -> String? {
+    private static func lire(compte: String) -> String? {
         let requete: [String: Any] = [
             kSecClass as String: kSecClassGenericPassword,
             kSecAttrService as String: service,
@@ -50,12 +53,32 @@ enum StockageToken {
         return String(data: donnees, encoding: .utf8)
     }
 
-    static func effacer() {
+    private static func effacer(compte: String) {
         let requete: [String: Any] = [
             kSecClass as String: kSecClassGenericPassword,
             kSecAttrService as String: service,
             kSecAttrAccount as String: compte
         ]
         SecItemDelete(requete as CFDictionary)
+    }
+
+    static func enregistrer(_ token: String) {
+        enregistrer(token, compte: compte)
+    }
+
+    static func lire() -> String? {
+        lire(compte: compte)
+    }
+
+    static func effacer() {
+        effacer(compte: compte)
+    }
+
+    static func enregistrerTokenPush(_ tokenPush: String) {
+        enregistrer(tokenPush, compte: compteTokenPush)
+    }
+
+    static func lireTokenPush() -> String? {
+        lire(compte: compteTokenPush)
     }
 }

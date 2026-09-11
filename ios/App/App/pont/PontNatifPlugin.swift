@@ -26,6 +26,21 @@ public class PontNatifPlugin: CAPPlugin, CAPBridgedPlugin {
         }
         StockageToken.enregistrer(token)
         call.resolve()
+        // Ajoute le 12/09/2026 : si iOS avait deja donne un token push a
+        // l'app avant cette connexion (ou avant que cette session ne soit
+        // transmise), le tout premier envoi a pu echouer faute de session
+        // valide a ce moment-la (voir AppDelegate.swift). On le retente ici,
+        // a chaque connexion/rafraichissement, avec la session recue.
+        guard let tokenPush = StockageToken.lireTokenPush() else { return }
+        Task {
+            do {
+                try await ClovisApiClient.enregistrerPushToken(
+                    TokenPush(plateforme: "ios", token: tokenPush, appareil_id: IdentifiantAppareil.obtenirId())
+                )
+            } catch {
+                print("PontNatif: echec renvoi du token push a la connexion. \(error)")
+            }
+        }
     }
 
     @objc func deconnexion(_ call: CAPPluginCall) {

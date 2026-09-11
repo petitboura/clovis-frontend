@@ -8,8 +8,10 @@ import android.util.Log
 import com.clovis.app.pont.ActionsAppareilExecuteur
 import com.clovis.app.pont.ClovisApiClient
 import com.clovis.app.pont.IdentifiantAppareil
+import com.clovis.app.pont.StockageToken
 import com.google.firebase.messaging.FirebaseMessagingService
 import com.google.firebase.messaging.RemoteMessage
+import io.ktor.http.isSuccess
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -18,12 +20,21 @@ class ClovisFirebaseMessagingService : FirebaseMessagingService() {
 
     override fun onNewToken(token: String) {
         super.onNewToken(token)
+        // Garde le token localement quoi qu'il arrive : si l'envoi ci-dessous
+        // echoue (typiquement parce que le JS n'a pas encore eu le temps de
+        // transmettre la session Supabase a ce demarrage de l'app),
+        // PontNatifPlugin.enregistrerToken le renverra des qu'une session
+        // valide sera disponible (voir ce fichier, 12/09/2026).
+        StockageToken.enregistrerTokenPush(applicationContext, token)
         CoroutineScope(Dispatchers.IO).launch {
             try {
                 val appareilId = IdentifiantAppareil.obtenirId(applicationContext)
-                ClovisApiClient(applicationContext).enregistrerTokenPush("android", token, appareilId)
+                val reponse = ClovisApiClient(applicationContext).enregistrerTokenPush("android", token, appareilId)
+                if (!reponse.status.isSuccess()) {
+                    Log.w("ClovisFCM", "Envoi du nouveau token push refuse par le serveur (statut ${reponse.status}), sera retente a la prochaine connexion.")
+                }
             } catch (e: Exception) {
-                Log.w("ClovisFCM", "Echec enregistrement nouveau token push.", e)
+                Log.w("ClovisFCM", "Echec reseau lors de l'envoi du nouveau token push, sera retente a la prochaine connexion.", e)
             }
         }
     }

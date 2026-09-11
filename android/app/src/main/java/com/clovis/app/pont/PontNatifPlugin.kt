@@ -9,11 +9,13 @@
 // le service FCM puisse appeler clovis-backend meme WebView fermee.
 package com.clovis.app.pont
 
+import android.util.Log
 import com.getcapacitor.JSObject
 import com.getcapacitor.Plugin
 import com.getcapacitor.PluginCall
 import com.getcapacitor.PluginMethod
 import com.getcapacitor.annotation.CapacitorPlugin
+import io.ktor.http.isSuccess
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -30,6 +32,24 @@ class PontNatifPlugin : Plugin() {
         }
         StockageToken.enregistrer(context, token)
         call.resolve()
+        // Ajoute le 12/09/2026 : si Google avait deja donne un token push a
+        // l'app avant cette connexion (ou avant que cette session ne soit
+        // transmise), le tout premier envoi a pu echouer faute de session
+        // valide a ce moment-la (voir ClovisFirebaseMessagingService.kt).
+        // On le retente ici, a chaque connexion/rafraichissement, avec la
+        // session qu'on vient de recevoir.
+        val tokenPush = StockageToken.lireTokenPush(context) ?: return
+        CoroutineScope(Dispatchers.IO).launch {
+            try {
+                val appareilId = IdentifiantAppareil.obtenirId(context)
+                val reponse = ClovisApiClient(context).enregistrerTokenPush("android", tokenPush, appareilId)
+                if (!reponse.status.isSuccess()) {
+                    Log.w("PontNatif", "Renvoi du token push a la connexion refuse par le serveur (statut ${reponse.status}).")
+                }
+            } catch (e: Exception) {
+                Log.w("PontNatif", "Echec reseau lors du renvoi du token push a la connexion.", e)
+            }
+        }
     }
 
     @PluginMethod

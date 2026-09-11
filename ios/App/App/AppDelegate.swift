@@ -31,14 +31,22 @@ class AppDelegate: UIResponder, UIApplicationDelegate, UNUserNotificationCenterD
         didRegisterForRemoteNotificationsWithDeviceToken deviceToken: Data
     ) {
         let token = deviceToken.map { String(format: "%02.2hhx", $0) }.joined()
+        // Garde le token localement quoi qu'il arrive : ce callback peut se
+        // declencher avant que le JS ait transmis la session Supabase a ce
+        // demarrage de l'app (rendant l'envoi ci-dessous impossible ou
+        // refuse). PontNatifPlugin.enregistrerToken le renverra des qu'une
+        // session valide sera disponible (voir ce fichier, 12/09/2026).
+        StockageToken.enregistrerTokenPush(token)
         Task {
             do {
                 try await ClovisApiClient.enregistrerPushToken(
                     TokenPush(plateforme: "ios", token: token, appareil_id: IdentifiantAppareil.obtenirId())
                 )
             } catch {
-                // Pas grave : PontNatifPlugin.rattraperActionsEnAttente rattrape
-                // au prochain lancement de l'app, meme logique qu'Android.
+                // Pas grave sur le moment : sera retente a la prochaine
+                // connexion (PontNatifPlugin.enregistrerToken). Journalise
+                // quand meme pour ne plus jamais chercher a l'aveugle.
+                print("ClovisAPNs: echec envoi du nouveau token push, sera retente a la prochaine connexion. \(error)")
             }
         }
     }

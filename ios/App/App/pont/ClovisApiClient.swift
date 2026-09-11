@@ -154,6 +154,7 @@ enum ClovisApiClient {
 
     enum ErreurClient: Error {
         case pasDeSession
+        case echecServeur(statut: Int)
     }
 
     private static func requeteAuthentifiee(_ url: URL, methode: String) throws -> URLRequest {
@@ -215,7 +216,14 @@ enum ClovisApiClient {
         let url = URL(string: "\(baseURL)/api/appareils-mobiles/push-token")!
         var requete = try requeteAuthentifiee(url, methode: "POST")
         requete.httpBody = try JSONEncoder().encode(payload)
-        _ = try await URLSession.shared.data(for: requete)
+        let (_, reponse) = try await URLSession.shared.data(for: requete)
+        if let httpReponse = reponse as? HTTPURLResponse, !(200...299).contains(httpReponse.statusCode) {
+            // Ajoute le 12/09/2026 : avant, un refus du serveur (401 typiquement,
+            // session pas encore prete) passait pour un succes -- rien ne
+            // verifiait le statut. Desormais on le signale a l'appelant, qui
+            // sait deja retenter (voir AppDelegate.swift / PontNatifPlugin.swift).
+            throw ErreurClient.echecServeur(statut: httpReponse.statusCode)
+        }
     }
 
     // Ajoute le 26/08/2026 : miroir cote backend des dossiers designes,
