@@ -129,7 +129,7 @@ export function MenuSignalementCorrection({
 
       {(ouvert || enSortie) && (
         <div
-          className={`absolute right-0 z-40 w-80 max-w-[calc(100vw-2rem)] rounded-cgpt-carte border border-dj-bordure bg-dj-surface p-3 text-left shadow-xl ${
+          className={`absolute left-0 z-40 w-80 max-w-[calc(100vw-2rem)] rounded-cgpt-carte border border-dj-bordure bg-dj-surface p-3 text-left shadow-xl ${
             ouvrirVersHaut ? "bottom-full mb-2" : "top-full mt-2"
           } ${enSortie ? "animate-cgpt-sortie-modal" : "animate-cgpt-entree-modal"}`}
         >
