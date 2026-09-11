@@ -37,6 +37,16 @@ import {
  *   saisie) plutôt que l'erreur technique que renverrait sinon
  *   l'envoi d'un message (voir aussi api/chat.py, qui bloque aussi
  *   côté serveur).
+ *
+ * 11/09/2026 (demande Bourama, majeurs uniquement) : une vraie option
+ * "Aucun mode" est proposée dans la liste, en plus des rattachements --
+ * jusqu'ici impossible à choisir, le sélecteur ne listait que les codes
+ * reçus. Choisie, Clovis redevient pour cette conversation exactement
+ * comme si l'utilisateur n'avait aucun code (mêmes documents personnels
+ * reçus par dossier, tout le reste -- comportements, programme, notes du
+ * prof -- ignoré, voir core/mode_actif_conversation.py::MODE_DESACTIVE
+ * côté backend). Non proposée aux mineurs (Partie 7 : pas de version
+ * neutre sans code pour eux, hors périmètre).
  */
 export function SelecteurModeActif({
   conversationId,
@@ -47,6 +57,10 @@ export function SelecteurModeActif({
 }) {
   const [rattachements, setRattachements] = useState<RattachementCode[]>([]);
   const [modeActifId, setModeActifId] = useState<string | null>(null);
+  // true si un choix explicite existe déjà pour cette conversation (y
+  // compris "Aucun mode"), pour distinguer ça de "rien choisi encore" --
+  // les deux ont modeActifId === null (11/09/2026, voir docstring).
+  const [choisi, setChoisi] = useState(false);
   const [verrouille, setVerrouille] = useState(false);
   const [mineur, setMineur] = useState(false);
   const [chargement, setChargement] = useState(true);
@@ -69,6 +83,7 @@ export function SelecteurModeActif({
         // voir docstring ci-dessus.
         if (estMineur && rat.length === 1 && !mode.rattachement_id) {
           setModeActifId(rat[0].rattachement_id);
+          setChoisi(true);
           setVerrouille(true);
           try {
             await definirModeActif(conversationId, rat[0].rattachement_id);
@@ -78,6 +93,7 @@ export function SelecteurModeActif({
           }
         } else {
           setModeActifId(mode.rattachement_id);
+          setChoisi(mode.choisi);
         }
 
         onAccesBloqueChange?.(estMineur && rat.length === 0);
@@ -99,15 +115,22 @@ export function SelecteurModeActif({
   async function choisir(rattachementId: string | null) {
     if (verrouille) return;
     setOuvert(false);
-    if (rattachementId === modeActifId) return;
+    // "déjà cet état" doit aussi couvrir "Aucun mode" explicitement choisi
+    // (rattachementId===null ET modeActifId===null) séparément de "rien
+    // choisi encore" (même valeurs mais choisi===false) -- sinon cliquer
+    // sur "Aucun mode" avant tout choix ne ferait jamais rien.
+    if (rattachementId === modeActifId && (rattachementId !== null || choisi)) return;
     setEnCours(true);
     const precedent = modeActifId;
+    const precedentChoisi = choisi;
     setModeActifId(rattachementId); // optimiste, transition immédiate
+    setChoisi(true);
     try {
       await definirModeActif(conversationId, rattachementId);
       if (mineur) setVerrouille(true);
     } catch {
       setModeActifId(precedent); // échec silencieux -- reprend l'affichage précédent
+      setChoisi(precedentChoisi);
     } finally {
       setEnCours(false);
     }
@@ -137,7 +160,8 @@ export function SelecteurModeActif({
   }
 
   const actif = rattachements.find((r) => r.rattachement_id === modeActifId) ?? null;
-  const libelle = actif ? actif.nom_code || actif.code : "Choisir un mode";
+  const aucunModeChoisi = !actif && choisi;
+  const libelle = actif ? actif.nom_code || actif.code : aucunModeChoisi ? "Aucun mode" : "Choisir un mode";
 
   const pilule = (
     <div className="relative">
@@ -146,7 +170,7 @@ export function SelecteurModeActif({
         disabled={enCours || verrouille}
         title={verrouille ? "Mode verrouillé pour cette conversation" : undefined}
         className={`flex items-center gap-1.5 rounded-full border border-dj-bordure bg-dj-surface px-3 py-1.5 text-xs font-semibold shadow-sm transition-colors disabled:opacity-60 ${
-          actif ? "text-dj-texte" : "text-dj-texte-muet"
+          actif || aucunModeChoisi ? "text-dj-texte" : "text-dj-texte-muet"
         } ${verrouille ? "cursor-not-allowed" : "hover:bg-dj-surface-haute"}`}
       >
         <span key={libelle} className="max-w-[9rem] truncate animate-dj-fade-in-rapide">
@@ -161,6 +185,18 @@ export function SelecteurModeActif({
 
       {ouvert && !verrouille && (
         <div className="dj-scroll-isole absolute right-0 top-9 z-10 max-h-64 w-56 animate-dj-fade-in-rapide overflow-y-auto rounded-cgpt-carte border border-dj-bordure bg-dj-surface p-1 shadow-lg">
+          {!mineur && (
+            <button
+              onClick={() => choisir(null)}
+              className="flex w-full items-center justify-between gap-2 rounded-xl px-2.5 py-2 text-left text-sm text-dj-texte transition-colors hover:bg-dj-surface-haute"
+            >
+              <span className="min-w-0">
+                <span className="block truncate">Aucun mode</span>
+                <span className="block truncate text-xs text-dj-texte-muet">Clovis sans code pour cette conversation</span>
+              </span>
+              {aucunModeChoisi && <Check size={14} className="flex-shrink-0 text-dj-accent-1-texte" />}
+            </button>
+          )}
           {rattachements.map((r) => (
             <button
               key={r.rattachement_id}

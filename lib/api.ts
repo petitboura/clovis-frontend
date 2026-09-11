@@ -1399,6 +1399,10 @@ export async function obtenirModeActif(conversationId: string) {
   return appelerApi(`/api/conversations/${conversationId}/mode-actif`) as Promise<{
     rattachement_id: string | null;
     verrouille: boolean;
+    // true si un choix explicite existe déjà pour cette conversation
+    // (y compris "Aucun mode"), false si rien n'a jamais été choisi
+    // (11/09/2026, ajout d'un vrai "Aucun mode" -- voir SelecteurModeActif.tsx).
+    choisi: boolean;
   }>;
 }
 
