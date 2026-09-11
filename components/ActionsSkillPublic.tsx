@@ -6,6 +6,7 @@ import { activerComportementPublic, type ComportementPublic } from "@/lib/api";
 import { messageErreur, ErreurApi } from "@/lib/erreurs";
 import { telechargerTexte, nomFichierDepuis } from "@/lib/telechargerTexte";
 import { CTACompteRequis } from "@/components/CTACompteRequis";
+import { ButtonPartager, lienPartage } from "@/components/ButtonPartager";
 
 // Client Component isolé (10/09/2026, Lot B "Clovis ouvert") : la page
 // /skills/[id] elle-même est un Server Component (pour generateMetadata),
@@ -69,6 +70,7 @@ export function ActionsSkillPublic({ skill }: { skill: ComportementPublic }) {
           <Download size={15} />
           Télécharger (.md)
         </button>
+        <ButtonPartager lien={lienPartage("skill-public", skill.id)} titre={skill.nom} />
       </div>
       {erreur && <p className="text-sm text-[var(--dj-erreur)]">{erreur}</p>}
     </div>

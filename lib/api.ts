@@ -447,6 +447,23 @@ export async function obtenirEntreeBibliothequePublique(entreeId: string) {
   return resultat as EntreeBibliothequePublique;
 }
 
+// 11/09/2026, demande Bourama : lien de partage direct pour un fichier
+// perso -- lecture seule, pour /bibliotheque/perso/[id]. Voir GET
+// /api/bibliotheque/{fichier_id}/consultation côté backend.
+export type FichierBibliothequeConsultation = {
+  id: string;
+  nom_fichier: string;
+  description: string | null;
+  type_mime: string | null;
+  taille_octets: number | null;
+  url_publique: string | null;
+};
+
+export async function obtenirFichierBibliothequeConsultation(fichierId: string) {
+  const resultat = await appelerApi(`/api/bibliotheque/${fichierId}/consultation`);
+  return resultat as FichierBibliothequeConsultation;
+}
+
 // 03/09/2026, demande Bourama : valeurs déjà connues de pays/niveau/
 // catégorie, pour peupler les suggestions du formulaire de publication
 // ET les menus des filtres de recherche -- voir GET
@@ -580,6 +597,20 @@ export async function listerDossiersCataloguePublic() {
 // GET /api/bibliotheque-publique/dossiers/{id} côté backend.
 export async function obtenirDossierCataloguePublic(dossierId: string) {
   return appelerApi(`/api/bibliotheque-publique/dossiers/${dossierId}`) as Promise<DossierCataloguePublic>;
+}
+
+// 11/09/2026, demande Bourama : lien de partage direct pour un dossier
+// perso -- lecture seule, pour /dossiers/perso/[id]. Voir GET
+// /api/bibliotheque/dossiers/{dossier_id}/consultation côté backend.
+export type DossierBibliothequeConsultation = {
+  id: string;
+  nom: string;
+  dossier_parent_id: string | null;
+  fichiers: FichierBibliothequeConsultation[];
+};
+
+export async function obtenirDossierBibliothequeConsultation(dossierId: string) {
+  return appelerApi(`/api/bibliotheque/dossiers/${dossierId}/consultation`) as Promise<DossierBibliothequeConsultation>;
 }
 
 export async function creerDossierCataloguePublic(
@@ -1030,6 +1061,21 @@ export async function activerDesactiverComportement(agentId: string, comportemen
 // comportement (l'original ici n'est jamais modifié).
 export async function publierComportement(agentId: string, comportementId: string) {
   return appelerApi(`/api/agents/${agentId}/mes-comportements/${comportementId}/publier`, { method: "POST" });
+}
+
+// 11/09/2026, demande Bourama : lien de partage direct pour un skill
+// perso -- lecture seule, pour /skills/perso/[id]. Voir GET
+// /api/agents/{agent_id}/mes-comportements/{comportement_id}/consultation
+// côté backend.
+export type ComportementConsultation = {
+  nom: string;
+  description: string;
+  skill_md: string;
+};
+
+export async function obtenirComportementConsultation(agentId: string, comportementId: string) {
+  const resultat = await appelerApi(`/api/agents/${agentId}/mes-comportements/${comportementId}/consultation`);
+  return resultat as ComportementConsultation;
 }
 
 export type ComportementPublic = {
