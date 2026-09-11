@@ -41,6 +41,7 @@ import { DeplacerVersModal } from "@/components/DeplacerVersModal";
 import { VisionneuseBibliotheque } from "@/components/VisionneuseBibliotheque";
 import { SelectPersonnalise } from "@/components/SelectPersonnalise";
 import { Skeleton } from "./Skeleton";
+import { ButtonPartager, lienPartage } from "./ButtonPartager";
 
 // 09/09/2026, demande Bourama ("confirmation contributeurs") : décrit
 // CE qu'on est en train de déplacer, le temps que la modale de choix de
@@ -1312,6 +1313,7 @@ export function BibliothequePublique() {
                       FolderSync, jugée confuse) : "attacher" se lit
                       simplement comme "récupérer ce dossier chez moi". */}
                   <div className="flex flex-shrink-0 items-center gap-3">
+                    <ButtonPartager lien={lienPartage("dossier-public", d.id)} titre={d.nom} variante="icone" />
                     <button
                       onClick={() => basculerAttache(d)}
                       disabled={attacheEnCours === d.id}
@@ -1554,6 +1556,7 @@ export function BibliothequePublique() {
                       )}
                     </button>
                   )}
+                  <ButtonPartager lien={lienPartage("fichier-public", entree.id)} titre={entree.nom} variante="icone" />
                   <button
                     onClick={() => setEntreeSignalee(entree)}
                     title="Signaler ce contenu"

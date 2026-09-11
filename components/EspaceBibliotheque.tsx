@@ -43,6 +43,7 @@ import { BibliothequePublique } from "./BibliothequePublique";
 import { EspaceDossiers } from "./EspaceDossiers";
 import { OngletsSegment } from "./OngletsSegment";
 import { useInfoSection } from "./SectionPage";
+import { ButtonPartager, lienPartage } from "./ButtonPartager";
 
 // Onglet "Bibliothèque" de Mon espace, porté de
 // djiguigne-frontend/app/dashboard/espace/page.tsx (même logique,
@@ -1286,6 +1287,11 @@ async function envoyerFichiersDirect(fichiersChoisis: FileList | File[]) {
                       )}
                     </span>
                   )}
+                  <ButtonPartager
+                    lien={lienPartage("fichier-perso", f.id)}
+                    titre={f.description || f.nom_fichier}
+                    variante="icone"
+                  />
                   <button
                     onClick={() => setFichierARanger(f)}
                     className="hover:text-dj-texte"
@@ -1532,6 +1538,9 @@ function CarteDossier({
         </button>
       )}
       <div className="flex flex-shrink-0 items-center gap-3 text-xs text-dj-texte-muet">
+        {!d.recu_de && (
+          <ButtonPartager lien={lienPartage("dossier-perso", d.id)} titre={d.nom} variante="icone" />
+        )}
         <button onClick={() => setDossierEnRenommage(d.id)} className="hover:text-dj-texte" title="Renommer">
           <Pencil size={14} />
         </button>

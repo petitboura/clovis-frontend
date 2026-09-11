@@ -34,6 +34,7 @@ import { OngletsSegment } from "./OngletsSegment";
 import { useInfoSection } from "./SectionPage";
 import { CaseACocher } from "./CaseACocher";
 import { BulleSurvol } from "./BulleSurvol";
+import { ButtonPartager, lienPartage } from "./ButtonPartager";
 
 // Section "Mes comportements" (06/08/2026, demande Bourama : "on peut en
 // mettre plusieurs hein, pas juste un") : PLUSIEURS instructions perso
@@ -860,6 +861,7 @@ export function MesComportements({ agentId }: { agentId: string }) {
                 <div className="flex flex-wrap items-center gap-2">
                   {panneau.type === "edition" && (
                     <>
+                      <ButtonPartager lien={lienPartage("skill-perso", panneau.c.id)} titre={panneau.c.nom || undefined} />
                       <button
                         onClick={publier}
                         disabled={publicationEnCours || enregistrementEnCours || suppressionEnCours}
