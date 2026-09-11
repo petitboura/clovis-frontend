@@ -59,8 +59,10 @@ import { useInfoSection } from "./SectionPage";
 // api/dossiers_bibliotheque.py). Le même arbre de dossiers est
 // disponible dans chaque sous-onglet (Tous/Documents/Images/...) :
 // dans un sous-onglet filtré par type, un dossier qui ne contient
-// aucun fichier de ce type (lui ou ses sous-dossiers) est simplement
-// masqué, jamais montré vide.
+// aucun fichier de ce type (lui ou ses sous-dossiers) est masqué,
+// SAUF s'il est entièrement vide (aucun fichier du tout, à aucun
+// niveau) -- un dossier vide reste toujours affiché partout, quel
+// que soit l'onglet/filtre actif (demande Bourama, 11/09/2026).
 
 const URL_REGEX = /^https?:\/\/\S+$/i;
 
@@ -381,15 +383,13 @@ export function EspaceBibliotheque() {
   }, [dossiers]);
 
   // Un dossier contient un fichier du type/origine filtrés s'il en a un
-  // directement, OU si un de ses sous-dossiers (récursivement) en a un,
-  // sinon il est masqué dans cet onglet (confirmé par Bourama : jamais
-  // affiché vide). CORRECTIF 02/09/2026 : combine maintenant origine
-  // (onglet principal) ET type (bouton Filtre) -- c'est ce qui fait
-  // apparaître les dossiers publics attachés (mirroir, voir
-  // core/dossiers_publics_attaches.py) au bon endroit, dans l'onglet
-  // "Depuis public" et nulle part ailleurs, sans rien coder de spécifique
-  // aux dossiers publics : ils sont juste des dossiers normaux dont les
-  // fichiers ont origine="publique".
+  // directement, OU si un de ses sous-dossiers (récursivement) en a un.
+  // CORRECTIF 02/09/2026 : combine maintenant origine (onglet principal)
+  // ET type (bouton Filtre) -- c'est ce qui fait apparaître les dossiers
+  // publics attachés (mirroir, voir core/dossiers_publics_attaches.py) au
+  // bon endroit, dans l'onglet "Depuis public" et nulle part ailleurs,
+  // sans rien coder de spécifique aux dossiers publics : ils sont juste
+  // des dossiers normaux dont les fichiers ont origine="publique".
   function dossierContientType(dossierId: string, type: SousOngletBiblio, origine: OrigineOnglet): boolean {
     const dossier = (dossiers ?? []).find((d) => d.id === dossierId);
     if (!dossier) return false;
@@ -403,9 +403,21 @@ export function EspaceBibliotheque() {
     return enfants.some((e) => dossierContientType(e.id, type, origine));
   }
 
+  // Un dossier est entièrement vide s'il n'a aucun fichier, ni lui ni
+  // aucun de ses sous-dossiers à aucun niveau -- ce cas reste toujours
+  // affiché, même dans un onglet/filtre qui ne matcherait normalement
+  // rien (demande Bourama, 11/09/2026).
+  function dossierEstVide(dossierId: string): boolean {
+    const dossier = (dossiers ?? []).find((d) => d.id === dossierId);
+    if (!dossier) return true;
+    if (dossier.fichier_ids.length > 0) return false;
+    const enfants = enfantsDe.get(dossierId) ?? [];
+    return enfants.every((e) => dossierEstVide(e.id));
+  }
+
   const sousDossiersAffiches = useMemo(() => {
     const enfants = enfantsDe.get(dossierCourantId) ?? [];
-    return enfants.filter((d) => dossierContientType(d.id, sousOnglet, origineOnglet));
+    return enfants.filter((d) => dossierEstVide(d.id) || dossierContientType(d.id, sousOnglet, origineOnglet));
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [enfantsDe, dossierCourantId, sousOnglet, origineOnglet, fichiersParId]);
 
