@@ -249,9 +249,45 @@ export function ContenuMarkdown({ href }: { href: string }) {
                   {children}
                 </a>
               ),
-              code: ({ children }) => (
-                <code className="rounded bg-dj-surface-haute px-1 py-0.5 text-xs">{children}</code>
+              // 11/09/2026, correctif Bourama ("md mal formaté") : react-markdown
+              // 9 n'expose plus de prop `inline` sur `code` (retirée en v9) --
+              // sans ça, le code de bloc (```...```) recevait le même style
+              // "badge" en ligne (fond+padding+rounded) que le code en ligne,
+              // et aucun style de conteneur (défilement horizontal, fond)
+              // n'existait pour <pre> : un bloc de code multi-lignes
+              // s'affichait donc collé, sans distinction visuelle. Le
+              // conteneur passe maintenant sur `pre` (seul élément fiable
+              // pour repérer un bloc), `code` se contente de reset son
+              // propre style quand il est du code de bloc (détecté via la
+              // classe `language-xxx` posée par remark sur un fence avec
+              // langage précisé, ou via un contenu multi-lignes en repli
+              // pour un fence sans langage).
+              pre: ({ children }) => (
+                <pre className="overflow-x-auto rounded-lg bg-dj-surface-haute p-3 text-xs text-dj-texte">{children}</pre>
               ),
+              code: ({ className: classeCode, children }) => {
+                const estBloc = /language-/.test(classeCode || "") || String(children).includes("\n");
+                return estBloc ? (
+                  <code className="font-mono">{children}</code>
+                ) : (
+                  <code className="rounded bg-dj-surface-haute px-1 py-0.5 text-xs">{children}</code>
+                );
+              },
+              // Tableaux GFM (remarkGfm) -- aucun style avant ce correctif,
+              // donc aucune bordure/espacement, illisible dès plus de deux
+              // colonnes.
+              table: ({ children }) => (
+                <div className="overflow-x-auto">
+                  <table className="w-full border-collapse text-sm">{children}</table>
+                </div>
+              ),
+              thead: ({ children }) => <thead className="border-b border-dj-bordure">{children}</thead>,
+              th: ({ children }) => <th className="px-2 py-1 text-left font-semibold text-dj-texte">{children}</th>,
+              td: ({ children }) => <td className="border-t border-dj-bordure px-2 py-1 align-top">{children}</td>,
+              blockquote: ({ children }) => (
+                <blockquote className="border-l-2 border-dj-bordure pl-3 text-dj-texte-muet">{children}</blockquote>
+              ),
+              hr: () => <hr className="border-dj-bordure" />,
             }}
           >
             {texte}

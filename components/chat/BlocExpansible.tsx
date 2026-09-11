@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, ReactNode } from "react";
+import { useEffect, useRef, useState, ReactNode } from "react";
 import { ChevronDown, ChevronUp, Copy, Check, Download, Maximize2, Minimize2, X, Loader2, LucideIcon } from "lucide-react";
 import { PanneauFlottant } from "@/components/PanneauFlottant";
 import { useFermetureAnimee } from "@/lib/useFermetureAnimee";
@@ -18,9 +18,13 @@ import { GardeApercu } from "./GardeApercu";
 //     Agrandir), en bas : bouton Fermer AVEC texte -- lisibles à l'arrivée
 //     sur le bloc.
 //   - Rail d'icônes SANS texte, position sticky (colle en haut du bloc
-//     tant qu'on scrolle dedans, puis part avec le bloc une fois dépassé)
-//     -- reste visible même sur un fichier long, sans dépendre d'un
-//     scroll listener JS.
+//     tant qu'on scrolle dedans, puis part avec le bloc une fois dépassé).
+//     11/09/2026, demande Bourama : mutuellement exclusif avec la rangée
+//     du haut (n'apparaît que quand elle sort du champ, voir hautVisible
+//     plus bas) et invisible par défaut même dans ce cas -- ne devient
+//     visible qu'au survol (desktop) ou au tap (mobile, railActifTactile).
+//     Ne se démonte jamais (juste opacity), pas de scroll listener JS
+//     custom (IntersectionObserver + sticky natif).
 export function BlocExpansible({
   titre,
   icone: Icone,
@@ -44,6 +48,55 @@ export function BlocExpansible({
   const [pleinEcran, setPleinEcran] = useState(false);
   const [copie, setCopie] = useState(false);
   const [premiereOuvertureFaite, setPremiereOuvertureFaite] = useState(false);
+
+  // 11/09/2026, demande Bourama : le rail d'icônes sticky (sans texte) et
+  // la rangée de boutons du haut (avec texte) doivent être mutuellement
+  // exclusifs -- le rail n'a de sens que quand la rangée du haut est
+  // scrollée hors champ. `hautVisible` suit ça via IntersectionObserver
+  // sur `topRowRef` (rangée du haut, mode non-plein-écran uniquement --
+  // l'en-tête du mode plein écran est fixe dans PanneauFlottant, donc
+  // hors sujet ici).
+  const topRowRef = useRef<HTMLDivElement | null>(null);
+  const [hautVisible, setHautVisible] = useState(true);
+
+  useEffect(() => {
+    const cible = topRowRef.current;
+    if (!cible) return;
+    const observateur = new IntersectionObserver(([entree]) => setHautVisible(entree.isIntersecting), {
+      threshold: 0,
+    });
+    observateur.observe(cible);
+    return () => observateur.disconnect();
+    // ouvert/pleinEcran en dépendances : topRowRef ne se (re)monte que
+    // quand la rangée du haut existe réellement dans le DOM (repli fermé
+    // ou plein écran -> pas de rangée du haut à observer).
+  }, [ouvert, pleinEcran]);
+
+  // Sur mobile il n'y a pas de :hover -- "apparition au tap" (demande
+  // Bourama, 11/09) : un tap dans la zone du contenu bascule la
+  // visibilité du rail, qui se recache tout seul après un délai (même
+  // logique que les contrôles d'un lecteur vidéo). Sans effet quand
+  // hautVisible=true (rail non pertinent dans ce cas, voir plus bas).
+  const [railActifTactile, setRailActifTactile] = useState(false);
+  const delaiRailRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  function basculerRailTactile() {
+    if (hautVisible) return;
+    setRailActifTactile((v) => {
+      const prochain = !v;
+      if (delaiRailRef.current) clearTimeout(delaiRailRef.current);
+      if (prochain) {
+        delaiRailRef.current = setTimeout(() => setRailActifTactile(false), 3000);
+      }
+      return prochain;
+    });
+  }
+
+  useEffect(() => {
+    return () => {
+      if (delaiRailRef.current) clearTimeout(delaiRailRef.current);
+    };
+  }, []);
 
   // 18/08/2026, voir lib/useFermetureAnimee.ts : anime la fermeture du
   // panneau plein écran (PanneauFlottant) -- ne concerne QUE ce mode,
@@ -118,24 +171,54 @@ export function BlocExpansible({
     );
   }
 
+  // 11/09/2026 -- visible seulement quand la rangée du haut a disparu du
+  // champ (hautVisible=false), et dans ce cas seulement au survol
+  // (desktop) ou après un tap (mobile, voir railActifTactile). Jamais
+  // démonté ni display:none (juste opacity + pointer-events), pour une
+  // transition fluide et pas de saut de mise en page -- demande explicite
+  // de Bourama.
+  const railVisible = !hautVisible && railActifTactile;
+  // Chaque branche liste TOUTES ses classes opacity/pointer-events (rien
+  // de partagé en base) pour éviter un conflit d'ordre entre classes
+  // Tailwind contradictoires (pointer-events-auto/none) qui coexisteraient
+  // sinon dans la même chaîne.
+  const classeRail = `flex flex-col gap-1.5 transition-opacity duration-200 ${
+    hautVisible
+      ? "opacity-0 pointer-events-none"
+      : railVisible
+        ? "opacity-100 pointer-events-auto"
+        : "opacity-0 pointer-events-none group-hover:opacity-100 group-hover:pointer-events-auto"
+  }`;
+
   const contenuPrincipal = (
     <>
-      <div className="flex items-center justify-between gap-2 px-1 pb-2">
+      <div ref={topRowRef} className="flex items-center justify-between gap-2 px-1 pb-2">
         <span className="truncate text-sm font-medium text-dj-texte">{titre}</span>
         <div className="flex shrink-0 gap-1.5">
           <BoutonsActions avecTexte surAgrandir={() => setPleinEcran((v) => !v)} />
         </div>
       </div>
 
-      <div className="relative">
-        {/* Rail d'icônes sticky -- reste visible tant qu'on scrolle dans
-            CE bloc précis (sticky se recale par rapport à son propre
-            conteneur), pas besoin de JS pour ça. */}
-        <div className="sticky top-2 z-10 float-right mr-1 flex flex-col gap-1.5">
-          <BoutonsActions avecTexte={false} surAgrandir={() => setPleinEcran((v) => !v)} />
-          <button onClick={fermer} className="flex h-8 w-8 items-center justify-center rounded-lg border border-dj-bordure bg-dj-surface-haute text-dj-texte-muet hover:text-dj-texte" aria-label="Fermer">
-            <X size={14} />
-          </button>
+      <div className="group relative" onClick={basculerRailTactile}>
+        {/* Rail d'icônes sticky, en overlay HORS FLUX (absolute inset-0
+            plutôt que float-right) -- le float précédent réservait de la
+            largeur dans le flux normal et écrasait/compressait le
+            contenu qui suit (ex. les boutons Formaté/Brut de
+            ContenuMarkdown, qui se retrouvaient visuellement fusionnés
+            avec le rail juste au-dessus). L'overlay reprend exactement
+            les dimensions du contenu (inset-0) donc `sticky` s'y
+            comporte à l'identique (colle en haut tant qu'on scrolle dans
+            ce bloc), sans plus jamais toucher à la mise en page du
+            contenu en dessous. pointer-events-none sur l'enveloppe
+            laisse passer les clics vers le contenu (sélection de texte,
+            liens...) partout sauf sur les boutons eux-mêmes. */}
+        <div className="pointer-events-none absolute inset-0 z-10">
+          <div className={`sticky top-2 float-right mr-1 ${classeRail}`} onClick={(e) => e.stopPropagation()}>
+            <BoutonsActions avecTexte={false} surAgrandir={() => setPleinEcran((v) => !v)} />
+            <button onClick={fermer} className="flex h-8 w-8 items-center justify-center rounded-lg border border-dj-bordure bg-dj-surface-haute text-dj-texte-muet hover:text-dj-texte" aria-label="Fermer">
+              <X size={14} />
+            </button>
+          </div>
         </div>
         <GardeApercu hrefTelechargement={hrefTelechargement}>{enfant}</GardeApercu>
       </div>
