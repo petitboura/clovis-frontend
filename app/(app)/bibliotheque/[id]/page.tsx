@@ -15,16 +15,18 @@ import { ErreurApi } from "@/lib/erreurs";
 // aperçus de lien partagés) et un premier rendu HTML non vide pour les
 // robots d'indexation -- une page purement client ne leur montre rien.
 //
-// `generateStaticParams` retourne volontairement un tableau vide :
-// requis par Next.js dès qu'une route dynamique existe sous
-// `output: "export"` (voir next.config.mjs, build:capacitor). Un
-// tableau vide veut dire "aucune page pré-générée pour l'app mobile" --
-// sans effet pour elle puisque l'app native affiche déjà ces fichiers
-// via EspaceBibliotheque.tsx, jamais par cette URL. Le déploiement web
-// normal (Vercel, sans CAPACITOR_BUILD) reste, lui, dynamique par
-// requête comme n'importe quelle autre route Next : cette page continue
-// de fonctionner pour n'importe quel id, y compris ceux publiés après
-// le build.
+// `generateStaticParams` retourne un id factice ("placeholder"), jamais
+// un tableau vide : requis par Next.js dès qu'une route dynamique existe
+// sous `output: "export"` (voir next.config.mjs, build:capacitor), MAIS
+// un tableau vide déclenche un bug connu et toujours ouvert de Next.js
+// (Page "..." is missing "generateStaticParams()" alors qu'elle existe
+// bel et bien -- vercel/next.js#61213 et #71862, constaté le 11/09/2026
+// sur ce dépôt). Le paramètre factice n'est jamais réellement atteint :
+// l'app native affiche déjà ces fichiers via EspaceBibliotheque.tsx,
+// jamais par cette URL. Le déploiement web normal (Vercel, sans
+// CAPACITOR_BUILD) reste, lui, dynamique par requête comme n'importe
+// quelle autre route Next : cette page continue de fonctionner pour
+// n'importe quel id, y compris ceux publiés après le build.
 //
 // NOTE POUR BOURAMA : `app/(app)/etablissements/[id]/page.tsx` est déjà
 // une route dynamique existante mais n'a ni `generateStaticParams` ni
@@ -32,7 +34,7 @@ import { ErreurApi } from "@/lib/erreurs";
 // bien pour elle aujourd'hui (pas touché ici, hors périmètre du lot en
 // cours, je le signale seulement).
 export async function generateStaticParams() {
-  return [];
+  return [{ id: "placeholder" }];
 }
 
 async function chargerEntree(id: string): Promise<EntreeBibliothequePublique | null> {

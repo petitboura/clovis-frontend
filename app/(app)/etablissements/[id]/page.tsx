@@ -11,14 +11,18 @@ import { ErreurApi } from "@/lib/erreurs";
 // client component, son propre fetch, son propre skeleton -- seule cette
 // enveloppe devient un Server Component pour fournir les métadonnées.
 //
-// generateStaticParams vide : requis par Next.js pour toute route
-// dynamique sous `output: "export"` (build:capacitor) -- absent jusqu'ici,
-// ce qui pouvait déjà faire échouer `npm run build:capacitor` sur cette
-// page précise (signalé lors du Lot A, corrigé ici). Même raisonnement
-// que /bibliotheque/[id] et /skills/[id] : l'app mobile affiche déjà les
-// établissements via EspaceEtablissements.tsx, jamais par cette URL.
+// generateStaticParams renvoie un id factice ("placeholder"), jamais un
+// tableau vide : requis par Next.js pour toute route dynamique sous
+// `output: "export"` (build:capacitor) -- absent jusqu'ici, ce qui
+// pouvait déjà faire échouer `npm run build:capacitor` sur cette page
+// précise (signalé lors du Lot A, corrigé ici). Un tableau vide, lui,
+// fait aussi échouer le build à cause d'un bug Next.js toujours ouvert
+// (vercel/next.js#61213 et #71862, voir app/(app)/bibliotheque/[id]).
+// Même raisonnement que /bibliotheque/[id] et /skills/[id] : l'app
+// mobile affiche déjà les établissements via EspaceEtablissements.tsx,
+// jamais par cette URL.
 export async function generateStaticParams() {
-  return [];
+  return [{ id: "placeholder" }];
 }
 
 export async function generateMetadata({ params }: { params: { id: string } }): Promise<Metadata> {

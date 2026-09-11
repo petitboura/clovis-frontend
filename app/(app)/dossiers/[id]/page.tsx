@@ -9,11 +9,13 @@ import { ErreurApi } from "@/lib/erreurs";
 // lots précédents. Server Component pour generateMetadata + premier
 // rendu HTML non vide.
 //
-// generateStaticParams vide : même raisonnement que les autres routes
-// dynamiques de ce chantier (voir app/(app)/bibliotheque/[id]/page.tsx),
-// requis par Next.js sous `output: "export"` (build:capacitor).
+// generateStaticParams renvoie un id factice ("placeholder"), jamais un
+// tableau vide : même raisonnement que les autres routes dynamiques de
+// ce chantier (voir app/(app)/bibliotheque/[id]/page.tsx -- bug Next.js
+// vercel/next.js#61213 et #71862, un tableau vide fait échouer le
+// build:capacitor).
 export async function generateStaticParams() {
-  return [];
+  return [{ id: "placeholder" }];
 }
 
 async function chargerDossier(id: string) {

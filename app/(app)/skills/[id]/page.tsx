@@ -15,13 +15,14 @@ import { ErreurApi } from "@/lib/erreurs";
 // generateMetadata + premier rendu HTML non vide (les robots ne voient
 // rien d'une page purement "use client").
 //
-// generateStaticParams vide : requis par Next.js pour toute route
-// dynamique sous `output: "export"` (build:capacitor), voir le
-// commentaire détaillé dans app/(app)/bibliotheque/[id]/page.tsx --
-// même raisonnement ici, l'app mobile affiche déjà les skills via
+// generateStaticParams renvoie un id factice ("placeholder"), jamais un
+// tableau vide : voir le commentaire détaillé dans
+// app/(app)/bibliotheque/[id]/page.tsx (bug Next.js vercel/next.js#61213
+// et #71862, un tableau vide fait échouer le build:capacitor) -- même
+// raisonnement ici, l'app mobile affiche déjà les skills via
 // ComportementsPublics.tsx, jamais par cette URL.
 export async function generateStaticParams() {
-  return [];
+  return [{ id: "placeholder" }];
 }
 
 async function chargerSkill(id: string): Promise<ComportementPublic | null> {
