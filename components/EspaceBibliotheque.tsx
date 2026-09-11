@@ -390,9 +390,17 @@ export function EspaceBibliotheque() {
   // bon endroit, dans l'onglet "Depuis public" et nulle part ailleurs,
   // sans rien coder de spécifique aux dossiers publics : ils sont juste
   // des dossiers normaux dont les fichiers ont origine="publique".
+  // CORRECTIF 11/09/2026 : un dossier reçu via un code (d.recu_de, mirroir
+  // -- voir api/dossiers_bibliotheque.py::lister) appartient exclusivement
+  // à l'onglet "Depuis code", qu'il ait des fichiers ou non et quel que
+  // soit leur type -- il n'apparaît nulle part ailleurs. Remplace l'ancien
+  // regroupement "Depuis un code" affiché en double à l'intérieur de
+  // chaque onglet (ajouté le 07/09, faisait doublon avec ce système
+  // d'onglets par origine qui existait déjà depuis le 04/09).
   function dossierContientType(dossierId: string, type: SousOngletBiblio, origine: OrigineOnglet): boolean {
     const dossier = (dossiers ?? []).find((d) => d.id === dossierId);
     if (!dossier) return false;
+    if (dossier.recu_de) return origine === "code_partage";
     const aUnFichierCorrespondant = dossier.fichier_ids.some((fid) => {
       const f = fichiersParId.get(fid);
       if (!f || origineDe(f) !== origine) return false;
@@ -406,10 +414,14 @@ export function EspaceBibliotheque() {
   // Un dossier est entièrement vide s'il n'a aucun fichier, ni lui ni
   // aucun de ses sous-dossiers à aucun niveau -- ce cas reste toujours
   // affiché, même dans un onglet/filtre qui ne matcherait normalement
-  // rien (demande Bourama, 11/09/2026).
+  // rien (demande Bourama, 11/09/2026). Ne s'applique jamais à un dossier
+  // reçu via un code (d.recu_de) : celui-ci suit uniquement la règle
+  // d'origine ci-dessus, sinon il réapparaîtrait à tort dans tous les
+  // onglets dès qu'il est vide.
   function dossierEstVide(dossierId: string): boolean {
     const dossier = (dossiers ?? []).find((d) => d.id === dossierId);
     if (!dossier) return true;
+    if (dossier.recu_de) return false;
     if (dossier.fichier_ids.length > 0) return false;
     const enfants = enfantsDe.get(dossierId) ?? [];
     return enfants.every((e) => dossierEstVide(e.id));
@@ -420,13 +432,6 @@ export function EspaceBibliotheque() {
     return enfants.filter((d) => dossierEstVide(d.id) || dossierContientType(d.id, sousOnglet, origineOnglet));
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [enfantsDe, dossierCourantId, sousOnglet, origineOnglet, fichiersParId]);
-
-  // 07/09/2026, demande Bourama (bug remonté : un dossier reçu via un
-  // code était indiscernable d'un dossier perso, aucune section dédiée)
-  // -- backend expose désormais recu_de sur chaque dossier miroir (voir
-  // api/dossiers_bibliotheque.py::lister), on sépare juste l'affichage ici.
-  const dossiersPersos = useMemo(() => sousDossiersAffiches.filter((d) => !d.recu_de), [sousDossiersAffiches]);
-  const dossiersRecus = useMemo(() => sousDossiersAffiches.filter((d) => d.recu_de), [sousDossiersAffiches]);
 
   const fichiersAffiches = useMemo(() => {
     // CORRECTIF 2026-08-27 (bug remonté par Bourama : "d'abord liste
@@ -914,45 +919,26 @@ async function envoyerFichiersDirect(fichiersChoisis: FileList | File[]) {
       )}
 
       {sousDossiersAffiches.length > 0 && (
-        <div className="flex flex-col gap-4">
-          {dossiersPersos.length > 0 && (
-            <div className="flex flex-col gap-2">
-              {dossiersPersos.map((d) => (
-                <CarteDossier
-                  key={d.id}
-                  d={d}
-                  dossierSurvole={dossierSurvole}
-                  dossierEnRenommage={dossierEnRenommage}
-                  setPileDossiers={setPileDossiers}
-                  setDossierSurvole={setDossierSurvole}
-                  setDossierEnRenommage={setDossierEnRenommage}
-                  deposerFichierDansDossier={deposerFichierDansDossier}
-                  renommerDossier={renommerDossier}
-                  supprimerDossier={supprimerDossier}
-                />
-              ))}
-            </div>
-          )}
-
-          {dossiersRecus.length > 0 && (
-            <div className="flex flex-col gap-2">
-              <p className="text-xs font-semibold uppercase tracking-wide text-dj-texte-muet">Depuis un code</p>
-              {dossiersRecus.map((d) => (
-                <CarteDossier
-                  key={d.id}
-                  d={d}
-                  dossierSurvole={dossierSurvole}
-                  dossierEnRenommage={dossierEnRenommage}
-                  setPileDossiers={setPileDossiers}
-                  setDossierSurvole={setDossierSurvole}
-                  setDossierEnRenommage={setDossierEnRenommage}
-                  deposerFichierDansDossier={deposerFichierDansDossier}
-                  renommerDossier={renommerDossier}
-                  supprimerDossier={supprimerDossier}
-                />
-              ))}
-            </div>
-          )}
+        // Liste unique : l'origine (perso vs reçu via un code) est déjà
+        // gérée par le système d'onglets (dossierContientType), un dossier
+        // reçu n'apparaît que dans l'onglet "Depuis un code" -- inutile de
+        // le regrouper une deuxième fois ici. L'étiquette "Reçu de {x}"
+        // reste affichée sur sa carte (CarteDossier) pour l'identifier.
+        <div className="flex flex-col gap-2">
+          {sousDossiersAffiches.map((d) => (
+            <CarteDossier
+              key={d.id}
+              d={d}
+              dossierSurvole={dossierSurvole}
+              dossierEnRenommage={dossierEnRenommage}
+              setPileDossiers={setPileDossiers}
+              setDossierSurvole={setDossierSurvole}
+              setDossierEnRenommage={setDossierEnRenommage}
+              deposerFichierDansDossier={deposerFichierDansDossier}
+              renommerDossier={renommerDossier}
+              supprimerDossier={supprimerDossier}
+            />
+          ))}
         </div>
       )}
 
