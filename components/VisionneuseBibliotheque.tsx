@@ -204,7 +204,7 @@ export function ContenuMarkdown({ href }: { href: string }) {
 
   return (
     <div className="flex flex-col">
-      <div className="flex justify-between gap-1 border-b border-dj-bordure px-3 py-2">
+      <div className="sticky top-0 z-10 flex justify-between gap-1 border-b border-dj-bordure bg-dj-surface px-3 py-2">
         <div className="flex gap-1">
           <button
             onClick={() => setVueBrute(false)}

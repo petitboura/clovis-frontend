@@ -187,7 +187,7 @@ export function BlocExpansible({
       ? "opacity-0 pointer-events-none"
       : railVisible
         ? "opacity-100 pointer-events-auto"
-        : "opacity-0 pointer-events-none group-hover:opacity-100 group-hover:pointer-events-auto"
+        : "opacity-0 pointer-events-none group-hover/rail:opacity-100 group-hover/rail:pointer-events-auto"
   }`;
 
   const contenuPrincipal = (
@@ -199,7 +199,7 @@ export function BlocExpansible({
         </div>
       </div>
 
-      <div className="group relative" onClick={basculerRailTactile}>
+      <div className="group/rail relative" onClick={basculerRailTactile}>
         {/* Rail d'icônes sticky, en overlay HORS FLUX (absolute inset-0
             plutôt que float-right) -- le float précédent réservait de la
             largeur dans le flux normal et écrasait/compressait le
