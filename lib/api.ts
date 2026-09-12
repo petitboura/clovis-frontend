@@ -602,11 +602,17 @@ export async function obtenirDossierCataloguePublic(dossierId: string) {
 // 11/09/2026, demande Bourama : lien de partage direct pour un dossier
 // perso -- lecture seule, pour /dossiers/perso/[id]. Voir GET
 // /api/bibliotheque/dossiers/{dossier_id}/consultation côté backend.
+export type SousDossierBibliothequeConsultation = {
+  id: string;
+  nom: string;
+};
+
 export type DossierBibliothequeConsultation = {
   id: string;
   nom: string;
   dossier_parent_id: string | null;
   fichiers: FichierBibliothequeConsultation[];
+  sous_dossiers: SousDossierBibliothequeConsultation[];
 };
 
 export async function obtenirDossierBibliothequeConsultation(dossierId: string) {

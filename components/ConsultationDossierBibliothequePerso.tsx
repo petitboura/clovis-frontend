@@ -18,6 +18,10 @@ import { ErreurApi, messageErreur } from "@/lib/erreurs";
  * Extrait en composant client séparé de sa page, même raisonnement que
  * ConsultationFichierBibliothequePerso.tsx (contrainte generateStaticParams
  * / build:capacitor).
+ *
+ * 13/09/2026, demande Bourama : les sous-dossiers ne remontaient pas
+ * dans ce lien de partage (seulement les fichiers directs). Ajout de
+ * la section sous-dossiers, cliquable vers la même route récursivement.
  */
 export function ConsultationDossierBibliothequePerso({ id }: { id: string }) {
   const [dossier, setDossier] = useState<DossierBibliothequeConsultation | null | undefined>(undefined);
@@ -61,6 +65,7 @@ export function ConsultationDossierBibliothequePerso({ id }: { id: string }) {
   if (dossier === undefined) {
     return (
       <SectionPage title="Dossier partagé">
+        <Skeleton className="h-16 w-full rounded-cgpt-carte" />
         <Skeleton className="h-32 w-full rounded-cgpt-carte" />
       </SectionPage>
     );
@@ -85,30 +90,50 @@ export function ConsultationDossierBibliothequePerso({ id }: { id: string }) {
         </div>
       </section>
 
-      <section className="rounded-cgpt-carte border border-dj-bordure bg-dj-surface">
-        {dossier.fichiers.length === 0 ? (
-          <p className="px-5 py-4 text-center text-xs text-dj-texte-muet">Ce dossier est vide pour l'instant.</p>
-        ) : (
+      {dossier.sous_dossiers.length > 0 && (
+        <section className="rounded-cgpt-carte border border-dj-bordure bg-dj-surface">
           <ul className="divide-y divide-dj-bordure">
-            {dossier.fichiers.map((fichier) => (
-              <li key={fichier.id}>
+            {dossier.sous_dossiers.map((sousDossier) => (
+              <li key={sousDossier.id}>
                 <Link
-                  href={`/bibliotheque/perso/${fichier.id}`}
+                  href={`/dossiers/perso/${sousDossier.id}`}
                   className="flex items-center gap-2.5 px-5 py-3 transition-colors duration-200 ease-cgpt-doux hover:bg-dj-surface-haute"
                 >
-                  <FileText size={16} className="flex-shrink-0 text-dj-texte-muet" />
-                  <div className="min-w-0">
-                    <p className="truncate text-sm text-dj-texte">{fichier.nom_fichier}</p>
-                    {fichier.description && (
-                      <p className="truncate text-xs text-dj-texte-muet">{fichier.description}</p>
-                    )}
-                  </div>
+                  <Folder size={16} className="flex-shrink-0 text-dj-accent-1" />
+                  <p className="min-w-0 truncate text-sm text-dj-texte">{sousDossier.nom}</p>
                 </Link>
               </li>
             ))}
           </ul>
-        )}
-      </section>
+        </section>
+      )}
+
+      {(dossier.fichiers.length > 0 || dossier.sous_dossiers.length === 0) && (
+        <section className="rounded-cgpt-carte border border-dj-bordure bg-dj-surface">
+          {dossier.fichiers.length === 0 ? (
+            <p className="px-5 py-4 text-center text-xs text-dj-texte-muet">Ce dossier est vide pour l'instant.</p>
+          ) : (
+            <ul className="divide-y divide-dj-bordure">
+              {dossier.fichiers.map((fichier) => (
+                <li key={fichier.id}>
+                  <Link
+                    href={`/bibliotheque/perso/${fichier.id}`}
+                    className="flex items-center gap-2.5 px-5 py-3 transition-colors duration-200 ease-cgpt-doux hover:bg-dj-surface-haute"
+                  >
+                    <FileText size={16} className="flex-shrink-0 text-dj-texte-muet" />
+                    <div className="min-w-0">
+                      <p className="truncate text-sm text-dj-texte">{fichier.nom_fichier}</p>
+                      {fichier.description && (
+                        <p className="truncate text-xs text-dj-texte-muet">{fichier.description}</p>
+                      )}
+                    </div>
+                  </Link>
+                </li>
+              ))}
+            </ul>
+          )}
+        </section>
+      )}
     </SectionPage>
   );
 }
