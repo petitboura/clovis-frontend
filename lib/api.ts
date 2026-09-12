@@ -717,17 +717,24 @@ export async function reessayerVectorisationBibliothequePublique(entreeId: strin
  * cas précis, pas de description). Si un fichier échoue, les autres
  * continuent quand même ; l'appelant reçoit la liste des erreurs (vide
  * si tout est passé) pour les afficher.
+ *
+ * CORRECTIF 12/09/2026 (bug remonté par Bourama) : contrairement au cas
+ * fichier unique juste au-dessus, cette fonction ne recevait jamais
+ * dossierId -- un upload multiple depuis l'intérieur d'un dossier
+ * finissait donc toujours "libre" dans le catalogue général, jamais
+ * rangé dans le dossier ouvert. Voir aussi BibliothequePublique.tsx.
  */
 export async function ajouterFichiersABibliothequePublique(
   fichiers: File[],
   onProgres?: (envoyes: number, total: number) => void,
+  dossierId?: string,
 ) {
   const erreurs: { nom: string; erreur: string }[] = [];
   const idsAVectoriser: string[] = [];
   for (const [index, fichier] of fichiers.entries()) {
     const nomAuto = fichier.name.replace(/\.[^/.]+$/, "");
     try {
-      const ligne = await ajouterABibliothequePublique(fichier, nomAuto, "");
+      const ligne = await ajouterABibliothequePublique(fichier, nomAuto, "", dossierId);
       if (ligne?.statut_vectorisation === "en_attente" && ligne.id) idsAVectoriser.push(ligne.id);
     } catch (e) {
       erreurs.push({ nom: fichier.name, erreur: messageErreur(e) });

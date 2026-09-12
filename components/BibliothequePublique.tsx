@@ -779,8 +779,10 @@ export function BibliothequePublique() {
         });
         if (ligne?.statut_vectorisation === "en_attente" && ligne.id) suivreVectorisation([ligne.id]);
       } else {
-        const { erreurs, idsAVectoriser } = await ajouterFichiersABibliothequePublique(fichiers, (envoyes, total) =>
-          setProgressionEnvoi({ total, envoyes }),
+        const { erreurs, idsAVectoriser } = await ajouterFichiersABibliothequePublique(
+          fichiers,
+          (envoyes, total) => setProgressionEnvoi({ total, envoyes }),
+          dossierCourantId || undefined,
         );
         if (erreurs.length === fichiers.length) {
           setEnvoi(false);
