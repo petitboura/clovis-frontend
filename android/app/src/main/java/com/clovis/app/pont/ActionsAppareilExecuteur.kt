@@ -14,6 +14,7 @@ import android.content.Context
 import android.net.Uri
 import android.util.Log
 import com.clovis.app.accessibilite.AccessibiliteExecuteur
+import com.clovis.app.controlesession.ControleSessionRepository
 import com.clovis.app.dossiers.DossierDesigne
 import com.clovis.app.dossiers.DossiersDesignesRepository
 import kotlinx.serialization.json.JsonObject
