@@ -461,32 +461,29 @@ export function EspaceDossiers() {
                 return (
                   <div
                     key={d.uri}
-                    onClick={
-                      selectionDossiersDesignes.actif
-                        ? (e) => selectionDossiersDesignes.basculer(d.uri, { shiftKey: e.shiftKey })
-                        : undefined
-                    }
-                    className={`flex flex-col gap-1.5 px-4 py-3 ${selectionDossiersDesignes.actif ? "cursor-pointer" : ""} ${
-                      selectionne ? "bg-dj-accent-1-conteneur" : ""
-                    }`}
+                    className={`flex flex-col gap-1.5 px-4 py-3 ${selectionne ? "bg-dj-accent-1-conteneur" : ""}`}
                   >
                     <div className="flex items-center gap-2">
-                      {selectionDossiersDesignes.actif && <CaseACocher checked={selectionne} onChange={() => {}} />}
+                      <button
+                        onClick={(e) =>
+                          selectionDossiersDesignes.actif
+                            ? selectionDossiersDesignes.basculer(d.uri, { shiftKey: e.shiftKey })
+                            : setPile([{ uri: d.uri, nom: d.nom }])
+                        }
+                        className="flex flex-1 items-center gap-3 overflow-hidden text-left"
+                      >
+                        <IconDossier size={18} className="flex-shrink-0 text-dj-texte-muet" />
+                        <span className="truncate text-sm text-dj-texte">{d.nom}</span>
+                      </button>
                       {selectionDossiersDesignes.actif ? (
-                        <span className="flex flex-1 items-center gap-3 overflow-hidden">
-                          <IconDossier size={18} className="flex-shrink-0 text-dj-texte-muet" />
-                          <span className="truncate text-sm text-dj-texte">{d.nom}</span>
-                        </span>
-                      ) : (
                         <button
-                          onClick={() => setPile([{ uri: d.uri, nom: d.nom }])}
-                          className="flex flex-1 items-center gap-3 overflow-hidden text-left"
+                          onClick={(e) => selectionDossiersDesignes.basculer(d.uri, { shiftKey: e.shiftKey })}
+                          aria-label="Sélectionner"
+                          className="flex flex-shrink-0 items-center p-1"
                         >
-                          <IconDossier size={18} className="flex-shrink-0 text-dj-texte-muet" />
-                          <span className="truncate text-sm text-dj-texte">{d.nom}</span>
+                          <CaseACocher checked={selectionne} onChange={() => {}} />
                         </button>
-                      )}
-                      {!selectionDossiersDesignes.actif && (
+                      ) : (
                         <button
                           onClick={() => retirerDossier(d.uri)}
                           disabled={action}
@@ -531,29 +528,14 @@ export function EspaceDossiers() {
               return (
               <div
                 key={el.uri}
-                onClick={selectionElements.actif ? (e) => selectionElements.basculer(el.uri, { shiftKey: e.shiftKey }) : undefined}
-                className={`relative flex items-center gap-2 px-4 py-3 ${selectionElements.actif ? "cursor-pointer" : ""} ${
-                  selectionne ? "bg-dj-accent-1-conteneur" : ""
-                }`}
+                className={`relative flex items-center gap-2 px-4 py-3 ${selectionne ? "bg-dj-accent-1-conteneur" : ""}`}
               >
-                {selectionElements.actif && <CaseACocher checked={selectionne} onChange={() => {}} />}
-                {selectionElements.actif ? (
-                  <span className="flex flex-1 items-center gap-3 overflow-hidden text-left">
-                    {el.estDossier ? (
-                      <IconDossier size={18} className="flex-shrink-0 text-dj-texte-muet" />
-                    ) : (
-                      <IconFichier size={18} className="flex-shrink-0 text-dj-texte-muet" />
-                    )}
-                    <div className="flex min-w-0 flex-col">
-                      <span className="truncate text-sm text-dj-texte">{el.nom}</span>
-                      {!el.estDossier && (
-                        <span className="text-xs text-dj-texte-muet">{formaterTaille(el.tailleOctets)}</span>
-                      )}
-                    </div>
-                  </span>
-                ) : (
                 <button
-                  onClick={() => el.estDossier && setPile((p) => [...p, { uri: el.uri, nom: el.nom }])}
+                  onClick={(e) =>
+                    selectionElements.actif
+                      ? selectionElements.basculer(el.uri, { shiftKey: e.shiftKey })
+                      : el.estDossier && setPile((p) => [...p, { uri: el.uri, nom: el.nom }])
+                  }
                   className="flex flex-1 items-center gap-3 overflow-hidden text-left"
                 >
                   {el.estDossier ? (
@@ -568,8 +550,15 @@ export function EspaceDossiers() {
                     )}
                   </div>
                 </button>
-                )}
-                {!selectionElements.actif && (
+                {selectionElements.actif ? (
+                  <button
+                    onClick={(e) => selectionElements.basculer(el.uri, { shiftKey: e.shiftKey })}
+                    aria-label="Sélectionner"
+                    className="flex flex-shrink-0 items-center p-1"
+                  >
+                    <CaseACocher checked={selectionne} onChange={() => {}} />
+                  </button>
+                ) : (
                 <button
                   onClick={() => setMenuOuvert(menuOuvert === el.uri ? null : el.uri)}
                   aria-label="Options"

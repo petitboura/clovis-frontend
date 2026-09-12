@@ -25,6 +25,7 @@ import {
   CheckSquare,
   Trash2,
   Share2,
+  Download,
 } from "lucide-react";
 import {
   appelerApi,
@@ -44,7 +45,7 @@ import { messageErreur, ErreurApi } from "@/lib/erreurs";
 import { Skeleton } from "./Skeleton";
 import { CaseACocher } from "./CaseACocher";
 import { CTACompteRequis } from "./CTACompteRequis";
-import { VisionneuseBibliotheque } from "./VisionneuseBibliotheque";
+import { VisionneuseBibliotheque, telecharger } from "./VisionneuseBibliotheque";
 import { BibliothequePublique } from "./BibliothequePublique";
 import { EspaceDossiers } from "./EspaceDossiers";
 import { OngletsSegment } from "./OngletsSegment";
@@ -786,6 +787,12 @@ async function envoyerFichiersDirect(fichiersChoisis: FileList | File[]) {
     }
   }
 
+  async function telechargerSelection() {
+    for (const f of fichiersSelectionnes) {
+      telecharger(f.url_publique, f.nom_fichier);
+    }
+  }
+
   // "Ranger" en groupe (12/09/2026) : à la différence du rangement d'un
   // seul fichier (fichierARanger, cases à cocher par dossier), choisir un
   // dossier ici l'ajoute pour TOUS les fichiers cochés d'un coup -- pas de
@@ -1365,36 +1372,37 @@ async function envoyerFichiersDirect(fichiersChoisis: FileList | File[]) {
                 key={f.id}
                 draggable={!selectionMultiple.actif}
                 onDragStart={(e) => e.dataTransfer.setData("text/fichier-bibliotheque-id", f.id)}
-                onClick={selectionMultiple.actif ? (e) => selectionMultiple.basculer(f.id, { shiftKey: e.shiftKey }) : undefined}
                 className={`flex items-center justify-between gap-3 rounded-xl border px-4 py-3 transition-colors ${
-                  selectionMultiple.actif ? "cursor-pointer" : "cursor-grab active:cursor-grabbing"
+                  selectionMultiple.actif ? "" : "cursor-grab active:cursor-grabbing"
                 } ${
                   selectionne ? "border-dj-accent-1 bg-dj-accent-1-conteneur" : "border-dj-bordure bg-dj-surface"
                 }`}
               >
-                {selectionMultiple.actif && <CaseACocher checked={selectionne} onChange={() => {}} />}
-                {selectionMultiple.actif ? (
-                  <span className="flex min-w-0 items-center gap-2 text-sm text-dj-texte">
-                    <span className="flex h-7 w-7 flex-shrink-0 items-center justify-center rounded-full bg-dj-accent-1-conteneur">
-                      <Icone size={14} className="text-dj-accent-1-texte" />
-                    </span>
-                    <span className="truncate">{f.description || f.nom_fichier}</span>
+                <button
+                  onClick={(e) =>
+                    selectionMultiple.actif
+                      ? selectionMultiple.basculer(f.id, { shiftKey: e.shiftKey })
+                      : setFichierOuvert(f)
+                  }
+                  className="flex min-w-0 items-center gap-2 text-sm text-dj-texte hover:underline"
+                >
+                  {/* Conteneur tonal (30/08/2026, tâche 3, Material 3
+                      Expressive) : même traitement que les dossiers
+                      juste au dessus et que EspacePlus.tsx. */}
+                  <span className="flex h-7 w-7 flex-shrink-0 items-center justify-center rounded-full bg-dj-accent-1-conteneur">
+                    <Icone size={14} className="text-dj-accent-1-texte" />
                   </span>
-                ) : (
+                  <span className="truncate">{f.description || f.nom_fichier}</span>
+                </button>
+                {selectionMultiple.actif ? (
                   <button
-                    onClick={() => setFichierOuvert(f)}
-                    className="flex min-w-0 items-center gap-2 text-sm text-dj-texte hover:underline"
+                    onClick={(e) => selectionMultiple.basculer(f.id, { shiftKey: e.shiftKey })}
+                    aria-label="Sélectionner"
+                    className="flex flex-shrink-0 items-center p-1"
                   >
-                    {/* Conteneur tonal (30/08/2026, tâche 3, Material 3
-                        Expressive) : même traitement que les dossiers
-                        juste au dessus et que EspacePlus.tsx. */}
-                    <span className="flex h-7 w-7 flex-shrink-0 items-center justify-center rounded-full bg-dj-accent-1-conteneur">
-                      <Icone size={14} className="text-dj-accent-1-texte" />
-                    </span>
-                    <span className="truncate">{f.description || f.nom_fichier}</span>
+                    <CaseACocher checked={selectionne} onChange={() => {}} />
                   </button>
-                )}
-                {!selectionMultiple.actif && (
+                ) : (
                 <div className="flex flex-shrink-0 items-center gap-3 text-xs text-dj-texte-muet">
                   {(f.statut_vectorisation === "en_attente" || f.statut_vectorisation === "en_cours" || f.statut_vectorisation === "echec") && (
                     <span className="relative flex-shrink-0">
@@ -1669,17 +1677,31 @@ async function envoyerFichiersDirect(fichiersChoisis: FileList | File[]) {
           onToutDeselectionner={selectionMultiple.toutDeselectionner}
           onFermer={selectionMultiple.desactiver}
           actions={(() => {
+            // 12/09/2026, demande Bourama : classement explicite par
+            // composition de la sélection -- que des fichiers -> toutes
+            // les actions fichier ; que des dossiers -> toutes les
+            // actions dossier ; mélange -> seulement les actions
+            // communes aux deux (Partager, Supprimer). Renommer reste à
+            // part : jamais en groupe, seulement 1 seul dossier coché.
+            const queDesFichiers = fichiersSelectionnes.length > 0 && idsDossiersSelectionnes.length === 0;
+            const queDesDossiers = idsDossiersSelectionnes.length > 0 && fichiersSelectionnes.length === 0;
             const liste: ActionSelection[] = [];
             liste.push({ cle: "partager", label: "Partager", icone: <Share2 size={14} />, onClick: partagerSelection });
-            if (fichiersSelectionnes.length > 0) {
+            if (queDesFichiers) {
               liste.push({
                 cle: "ranger",
                 label: "Ranger dans un dossier",
                 icone: <IconDossierOuvert size={14} />,
                 onClick: () => setRangerEnGroupeOuvert(true),
               });
+              liste.push({
+                cle: "telecharger",
+                label: "Télécharger",
+                icone: <Download size={14} />,
+                onClick: telechargerSelection,
+              });
             }
-            if (idsDossiersSelectionnes.length === 1 && fichiersSelectionnes.length === 0) {
+            if (queDesDossiers && idsDossiersSelectionnes.length === 1) {
               const dossier = sousDossiersAffiches.find((d) => d.id === idsDossiersSelectionnes[0]);
               if (dossier) {
                 liste.push({
@@ -1751,10 +1773,7 @@ function CarteDossier({
         const fichierId = e.dataTransfer.getData("text/fichier-bibliotheque-id");
         if (fichierId) deposerFichierDansDossier(d.id, fichierId);
       }}
-      onClick={selectionActive ? onToggleSelection : undefined}
       className={`flex items-center justify-between gap-3 rounded-xl border px-4 py-3 transition-colors ${
-        selectionActive ? "cursor-pointer" : ""
-      } ${
         selectionne
           ? "border-dj-accent-1 bg-dj-accent-1-conteneur"
           : dossierSurvole === d.id
@@ -1762,7 +1781,6 @@ function CarteDossier({
           : "border-dj-bordure bg-dj-surface"
       }`}
     >
-      {selectionActive && <CaseACocher checked={selectionne} onChange={() => {}} />}
       {dossierEnRenommage === d.id ? (
         <input
           autoFocus
@@ -1772,19 +1790,9 @@ function CarteDossier({
           onBlur={(e) => renommerDossier(d.id, e.target.value)}
           className="flex-1 rounded-cgpt-bouton border border-dj-bordure bg-dj-fond px-2 py-1 text-sm text-dj-texte outline-none"
         />
-      ) : selectionActive ? (
-        <span className="flex min-w-0 items-center gap-2 text-sm text-dj-texte">
-          <span className="flex h-7 w-7 flex-shrink-0 items-center justify-center rounded-full bg-dj-accent-1-conteneur">
-            <IconDossier size={14} className="text-dj-accent-1-texte" />
-          </span>
-          <span className="flex min-w-0 flex-col items-start">
-            <span className="truncate font-medium">{d.nom}</span>
-            {d.recu_de && <span className="text-xs text-dj-texte-muet">Reçu de {d.recu_de}</span>}
-          </span>
-        </span>
       ) : (
         <button
-          onClick={() => setPileDossiers((p) => [...p, { id: d.id, nom: d.nom }])}
+          onClick={(e) => (selectionActive ? onToggleSelection(e) : setPileDossiers((p) => [...p, { id: d.id, nom: d.nom }]))}
           className="flex min-w-0 items-center gap-2 text-sm text-dj-texte hover:text-dj-texte"
         >
           <span className="flex h-7 w-7 flex-shrink-0 items-center justify-center rounded-full bg-dj-accent-1-conteneur">
@@ -1796,7 +1804,15 @@ function CarteDossier({
           </span>
         </button>
       )}
-      {!selectionActive && (
+      {selectionActive ? (
+        <button
+          onClick={onToggleSelection}
+          aria-label="Sélectionner"
+          className="flex flex-shrink-0 items-center p-1"
+        >
+          <CaseACocher checked={selectionne} onChange={() => {}} />
+        </button>
+      ) : (
         <div className="flex flex-shrink-0 items-center gap-3 text-xs text-dj-texte-muet">
           {!d.recu_de && (
             <ButtonPartager lien={lienPartage("dossier-perso", d.id)} titre={d.nom} variante="icone" />

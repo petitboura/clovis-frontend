@@ -38,7 +38,7 @@ import { CTACompteRequis } from "@/components/CTACompteRequis";
 import { CompteRequisModal } from "@/components/CompteRequisModal";
 import { SignalerContenuModal } from "@/components/SignalerContenuModal";
 import { DeplacerVersModal } from "@/components/DeplacerVersModal";
-import { VisionneuseBibliotheque } from "@/components/VisionneuseBibliotheque";
+import { VisionneuseBibliotheque, telecharger } from "@/components/VisionneuseBibliotheque";
 import { SelectPersonnalise } from "@/components/SelectPersonnalise";
 import { Skeleton } from "./Skeleton";
 import { ButtonPartager, lienPartage } from "./ButtonPartager";
@@ -1066,6 +1066,62 @@ export function BibliothequePublique() {
     }
   }
 
+  async function telechargerSelection() {
+    for (const e of entreesSelectionnees) {
+      if (e.type_mime !== "text/uri-list" && e.url_publique) {
+        telecharger(e.url_publique, e.nom);
+      }
+    }
+  }
+
+  async function retirerDuDossierSelection() {
+    if (!dossierCourantId || entreesSelectionnees.length === 0) return;
+    let demandes = 0;
+    try {
+      for (const e of entreesSelectionnees) {
+        const resultat = await retirerFichierDossierCataloguePublic(dossierCourantId, e.id);
+        if (resultat) demandes++;
+      }
+      selectionMultiple.desactiver();
+      charger(recherche);
+      if (demandes > 0) {
+        setMessageDemandeEnvoyee(
+          `${demandes} demande${demandes > 1 ? "s" : ""} envoyée${demandes > 1 ? "s" : ""} : en attente de confirmation du créateur concerné.`
+        );
+      }
+    } catch (e) {
+      window.alert(messageErreur(e));
+    }
+  }
+
+  // 12/09/2026, "Déplacer" en groupe : commun aux fichiers ET aux
+  // dossiers (une seule destination choisie, appliquée à tout ce qui est
+  // coché) -- le système de confirmation par créateur (09/09/2026)
+  // fonctionne item par item, donc s'agrège proprement en comptant les
+  // demandes envoyées, comme pour Supprimer.
+  const [cibleGroupeOuverte, setCibleGroupeOuverte] = useState(false);
+  async function deplacerSelectionVers(dossierDestinationId: string) {
+    let demandes = 0;
+    for (const dossierId of idsDossiersSelectionnes) {
+      const resultat = await deplacerDossierCataloguePublic(dossierId, dossierDestinationId);
+      if ("statut" in resultat) demandes++;
+    }
+    if (dossierCourantId) {
+      for (const e of entreesSelectionnees) {
+        const resultat = await deplacerFichierDossierCataloguePublic(dossierCourantId, e.id, dossierDestinationId);
+        if ("id" in resultat) demandes++;
+      }
+    }
+    selectionMultiple.desactiver();
+    charger(recherche);
+    chargerDossiers();
+    if (demandes > 0) {
+      setMessageDemandeEnvoyee(
+        `${demandes} demande${demandes > 1 ? "s" : ""} envoyée${demandes > 1 ? "s" : ""} : en attente de confirmation du créateur concerné.`
+      );
+    }
+  }
+
   if (sansCompte) {
     return <CTACompteRequis texte="Crée un compte pour ajouter un document à la bibliothèque publique." />;
   }
@@ -1400,27 +1456,16 @@ export function BibliothequePublique() {
                 return (
                 <div
                   key={d.id}
-                  onClick={selectionMultiple.actif ? (e) => selectionMultiple.basculer(d.id, { shiftKey: e.shiftKey }) : undefined}
                   className={`flex items-center justify-between gap-3 rounded-xl border px-4 py-3 transition-colors ${
-                    selectionMultiple.actif ? "cursor-pointer" : ""
-                  } ${selectionne ? "border-dj-accent-1 bg-dj-accent-1-conteneur" : "border-dj-bordure bg-dj-surface"}`}
+                    selectionne ? "border-dj-accent-1 bg-dj-accent-1-conteneur" : "border-dj-bordure bg-dj-surface"
+                  }`}
                 >
-                  {selectionMultiple.actif && <CaseACocher checked={selectionne} onChange={() => {}} />}
-                  {selectionMultiple.actif ? (
-                    <span className="flex min-w-0 items-center gap-2 text-sm text-dj-texte">
-                      {d.statut === "contribution_libre" ? (
-                        <Globe size={16} className="flex-shrink-0 text-dj-texte-muet" />
-                      ) : (
-                        <Lock size={16} className="flex-shrink-0 text-dj-texte-muet" />
-                      )}
-                      <div className="min-w-0">
-                        <p className="truncate font-medium">{d.nom}</p>
-                        {d.description && <p className="truncate text-xs text-dj-texte-muet">{d.description}</p>}
-                      </div>
-                    </span>
-                  ) : (
                   <button
-                    onClick={() => setPileDossiers((p) => [...p, { id: d.id, nom: d.nom }])}
+                    onClick={(e) =>
+                      selectionMultiple.actif
+                        ? selectionMultiple.basculer(d.id, { shiftKey: e.shiftKey })
+                        : setPileDossiers((p) => [...p, { id: d.id, nom: d.nom }])
+                    }
                     title={d.statut === "contribution_libre" ? "Contribution libre : tout le monde peut y ajouter" : "Privé : seul le créateur peut y ajouter"}
                     className="flex min-w-0 items-center gap-2 text-sm text-dj-texte hover:text-dj-texte"
                   >
@@ -1437,7 +1482,6 @@ export function BibliothequePublique() {
                       )}
                     </div>
                   </button>
-                  )}
                   {/* 08/09/2026 (correctif) : les deux boutons d'action
                       groupés dans un même conteneur -- avant, ils étaient
                       enfants directs de la carte en justify-between, qui
@@ -1445,7 +1489,15 @@ export function BibliothequePublique() {
                       garder collés à droite. Icône Download (au lieu de
                       FolderSync, jugée confuse) : "attacher" se lit
                       simplement comme "récupérer ce dossier chez moi". */}
-                  {!selectionMultiple.actif && (
+                  {selectionMultiple.actif ? (
+                    <button
+                      onClick={(e) => selectionMultiple.basculer(d.id, { shiftKey: e.shiftKey })}
+                      aria-label="Sélectionner"
+                      className="flex flex-shrink-0 items-center p-1"
+                    >
+                      <CaseACocher checked={selectionne} onChange={() => {}} />
+                    </button>
+                  ) : (
                   <div className="flex flex-shrink-0 items-center gap-3">
                     <ButtonPartager lien={lienPartage("dossier-public", d.id)} titre={d.nom} variante="icone" />
                     <button
@@ -1618,26 +1670,17 @@ export function BibliothequePublique() {
             return (
               <div
                 key={entree.id}
-                onClick={selectionMultiple.actif ? (e) => selectionMultiple.basculer(entree.id, { shiftKey: e.shiftKey }) : undefined}
                 className={`flex items-center justify-between gap-3 rounded-xl border px-4 py-3 transition-colors ${
-                  selectionMultiple.actif ? "cursor-pointer" : ""
-                } ${selectionne ? "border-dj-accent-1 bg-dj-accent-1-conteneur" : "border-dj-bordure bg-dj-surface"}`}
+                  selectionne ? "border-dj-accent-1 bg-dj-accent-1-conteneur" : "border-dj-bordure bg-dj-surface"
+                }`}
               >
-                {selectionMultiple.actif && <CaseACocher checked={selectionne} onChange={() => {}} />}
-                {selectionMultiple.actif ? (
-                  <span className="flex min-w-0 flex-1 items-center gap-3 text-left">
-                    <Icone size={16} className="flex-shrink-0 text-dj-texte-muet" />
-                    <div className="min-w-0">
-                      <p className="truncate text-sm text-dj-texte">{entree.nom}</p>
-                      {entree.description && (
-                        <p className="truncate text-xs text-dj-texte-muet">{entree.description}</p>
-                      )}
-                    </div>
-                  </span>
-                ) : (
                 <button
-                  onClick={() => entree.url_publique && setEntreeOuverte(entree)}
-                  disabled={!entree.url_publique}
+                  onClick={(e) =>
+                    selectionMultiple.actif
+                      ? selectionMultiple.basculer(entree.id, { shiftKey: e.shiftKey })
+                      : entree.url_publique && setEntreeOuverte(entree)
+                  }
+                  disabled={!selectionMultiple.actif && !entree.url_publique}
                   className="group flex min-w-0 flex-1 items-center gap-3 text-left disabled:cursor-default"
                 >
                   <Icone size={16} className="flex-shrink-0 text-dj-texte-muet" />
@@ -1648,8 +1691,15 @@ export function BibliothequePublique() {
                     )}
                   </div>
                 </button>
-                )}
-                {!selectionMultiple.actif && (
+                {selectionMultiple.actif ? (
+                  <button
+                    onClick={(e) => selectionMultiple.basculer(entree.id, { shiftKey: e.shiftKey })}
+                    aria-label="Sélectionner"
+                    className="flex flex-shrink-0 items-center p-1"
+                  >
+                    <CaseACocher checked={selectionne} onChange={() => {}} />
+                  </button>
+                ) : (
                 <div className="flex flex-shrink-0 items-center gap-3">
                   {(entree.statut_vectorisation === "en_attente" || entree.statut_vectorisation === "en_cours" || entree.statut_vectorisation === "echec") && (
                     <span className="relative flex-shrink-0">
@@ -2324,6 +2374,16 @@ export function BibliothequePublique() {
         </div>
       )}
 
+      {cibleGroupeOuverte && (
+        <DeplacerVersModal
+          titre="Déplacer vers…"
+          dossiers={(dossiers ?? []).filter((d) => !idsDossiersSelectionnes.includes(d.id))}
+          destinationActuelleId={null}
+          onChoisir={deplacerSelectionVers}
+          onFermer={() => setCibleGroupeOuverte(false)}
+        />
+      )}
+
       {selectionMultiple.actif && selectionMultiple.nombreSelectionne > 0 && (
         <BarreActionsSelection
           nombreSelectionne={selectionMultiple.nombreSelectionne}
@@ -2332,22 +2392,53 @@ export function BibliothequePublique() {
           onToutDeselectionner={selectionMultiple.toutDeselectionner}
           onFermer={selectionMultiple.desactiver}
           actions={(() => {
+            // 12/09/2026, demande Bourama : classement explicite par
+            // composition -- que des fichiers -> toutes les actions
+            // fichier ; que des dossiers -> toutes les actions dossier ;
+            // mélange -> seulement les actions communes aux deux
+            // (Partager, Déplacer si on est dans un dossier, Supprimer).
+            // "Signaler" (formulaire légal, un contenu précis à la fois)
+            // et "Ouvrir le site"/"Copier" (actions liées au contenu d'un
+            // seul fichier ouvert) restent volontairement hors du groupe.
+            const queDesFichiers = entreesSelectionnees.length > 0 && idsDossiersSelectionnes.length === 0;
+            const queDesDossiers = idsDossiersSelectionnes.length > 0 && entreesSelectionnees.length === 0;
             const liste: ActionSelection[] = [];
             liste.push({ cle: "partager", label: "Partager", icone: <Share2 size={14} />, onClick: partagerSelection });
-            if (entreesSelectionnees.length > 0 && idsDossiersSelectionnes.length === 0) {
+            if (queDesFichiers) {
               liste.push({
                 cle: "copier",
                 label: "Copier dans ma bibliothèque",
                 icone: <Download size={14} />,
                 onClick: copierSelectionVersBiblioPerso,
               });
+              liste.push({
+                cle: "telecharger",
+                label: "Télécharger",
+                icone: <Download size={14} />,
+                onClick: telechargerSelection,
+              });
             }
-            if (idsDossiersSelectionnes.length > 0 && entreesSelectionnees.length === 0) {
+            if (queDesDossiers) {
               liste.push({
                 cle: "attacher",
                 label: "Attacher à ma bibliothèque",
                 icone: <Download size={14} />,
                 onClick: attacherSelection,
+              });
+            }
+            // Déplacer : toujours possible pour des dossiers ; pour des
+            // fichiers (seuls ou mélangés à des dossiers), seulement
+            // depuis l'intérieur d'un dossier -- même contrainte que le
+            // bouton "Déplacer" à l'unité sur une carte fichier.
+            if (queDesDossiers || dossierCourantId) {
+              liste.push({ cle: "deplacer", label: "Déplacer", icone: <Move size={14} />, onClick: () => setCibleGroupeOuverte(true) });
+            }
+            if (queDesFichiers && dossierCourantId) {
+              liste.push({
+                cle: "retirer-dossier",
+                label: "Retirer de ce dossier",
+                icone: <FolderMinus size={14} />,
+                onClick: retirerDuDossierSelection,
               });
             }
             liste.push({
