@@ -704,6 +704,13 @@ export function MesComportements({ agentId }: { agentId: string }) {
                     <Info size={12} />
                   </BulleSurvol>
                 )}
+                {panneau.type === "edition" && (
+                  <ButtonPartager
+                    lien={lienPartage("skill-perso", panneau.c.id)}
+                    titre={panneau.c.nom || undefined}
+                    variante="icone"
+                  />
+                )}
               </span>
               <button
                 onClick={() => demarrerFermeture(fermer)}
@@ -861,7 +868,6 @@ export function MesComportements({ agentId }: { agentId: string }) {
                 <div className="flex flex-wrap items-center gap-2">
                   {panneau.type === "edition" && (
                     <>
-                      <ButtonPartager lien={lienPartage("skill-perso", panneau.c.id)} titre={panneau.c.nom || undefined} />
                       <button
                         onClick={publier}
                         disabled={publicationEnCours || enregistrementEnCours || suppressionEnCours}

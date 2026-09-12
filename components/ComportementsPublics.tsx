@@ -14,6 +14,7 @@ import { CTACompteRequis } from "@/components/CTACompteRequis";
 import { telechargerTexte, nomFichierDepuis } from "@/lib/telechargerTexte";
 import { Skeleton } from "./Skeleton";
 import { VoirSkillRecuModal } from "@/components/VoirSkillRecuModal";
+import { lienPartage } from "@/components/ButtonPartager";
 import { BulleSurvol } from "@/components/BulleSurvol";
 
 // Catalogue public des comportements (21/08/2026, demande Bourama : "les
@@ -412,6 +413,7 @@ export function ComportementsPublics({ onActive }: { onActive: () => void }) {
           nom={apercu.nom}
           skillMdInitial={apercu.skill_md}
           sousTitre={`${apercu.activations_count} activation(s) · lecture seule`}
+          lienPartage={lienPartage("skill-public", apercu.id)}
           onFermer={() => setApercu(null)}
         />
       )}

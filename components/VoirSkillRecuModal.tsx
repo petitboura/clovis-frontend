@@ -8,6 +8,7 @@ import rehypeSanitize, { defaultSchema } from "rehype-sanitize";
 import { voirSkillRecu } from "@/lib/api";
 import { messageErreur } from "@/lib/erreurs";
 import { useFermetureAnimee } from "@/lib/useFermetureAnimee";
+import { ButtonPartager } from "@/components/ButtonPartager";
 
 /**
  * 07/09/2026, demande Bourama (bug remonté : un skill reçu via un code
@@ -37,6 +38,7 @@ export function VoirSkillRecuModal({
   proprietaireNom,
   skillMdInitial,
   sousTitre,
+  lienPartage,
   onFermer,
 }: {
   comportementId?: string;
@@ -44,6 +46,11 @@ export function VoirSkillRecuModal({
   proprietaireNom?: string;
   skillMdInitial?: string;
   sousTitre?: string;
+  // 12/09/2026, demande Bourama : bouton Partager, uniquement pour
+  // l'aperçu d'un skill du catalogue PUBLIC (ComportementsPublics.tsx) --
+  // absent pour un skill reçu via un code (usage historique de ce
+  // modal), qui n'a pas de lien public à partager.
+  lienPartage?: string;
   onFermer: () => void;
 }) {
   const [skillMd, setSkillMd] = useState<string | null>(skillMdInitial ?? null);
@@ -80,9 +87,12 @@ export function VoirSkillRecuModal({
             <ScrollText size={15} className="flex-shrink-0" />
             <span className="truncate">{nom}</span>
           </h4>
-          <button onClick={fermer} className="flex-shrink-0 text-dj-texte-muet hover:text-dj-texte">
-            <X size={16} />
-          </button>
+          <div className="flex flex-shrink-0 items-center gap-2">
+            {lienPartage && <ButtonPartager lien={lienPartage} titre={nom} variante="icone" />}
+            <button onClick={fermer} className="text-dj-texte-muet hover:text-dj-texte">
+              <X size={16} />
+            </button>
+          </div>
         </div>
         <p className="text-xs text-dj-texte-muet">
           {sousTitre ?? `Reçu de ${proprietaireNom} · lecture seule`}
