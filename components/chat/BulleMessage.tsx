@@ -900,41 +900,79 @@ function BulleMessageInterne({
                       regroupé dans une seule bulle, à l'endroit où la
                       réflexion a réellement commencé. */}
                   {(() => {
-                    const premierIndexRaisonnement = message.segments!.findIndex(
+                    const segments = message.segments!;
+                    const premierIndexRaisonnement = segments.findIndex(
                       (s) => s.type === "raisonnement",
                     );
-                    const dernierSegment = message.segments![message.segments!.length - 1];
+                    const dernierSegment = segments[segments.length - 1];
                     const raisonnementFusionEnCours = !!raisonnementEnCours && dernierSegment.type === "raisonnement";
-                    const texteRaisonnementFusionne = message.segments!
+                    const texteRaisonnementFusionne = segments
                       .filter((s): s is { type: "raisonnement"; texte: string } => s.type === "raisonnement")
                       .map((s) => s.texte)
                       .join("\n\n");
 
-                    return message.segments!.map((segment, index) => {
-                      if (segment.type === "raisonnement") {
-                        if (index !== premierIndexRaisonnement) return null;
-                        return (
+                    // Regroupement des outils consécutifs (demande Bourama,
+                    // 12/09/2026) : un "run" est une suite ininterrompue de
+                    // segments "outil" et "raisonnement" -- seul un segment
+                    // "texte" le coupe, le raisonnement ne compte pas comme
+                    // une interruption (même s'il rend sa bulle au milieu du
+                    // run, voir fusion ci-dessus). Tous les outils d'un même
+                    // run s'affichent en UNE SEULE ligne repliable "X outils
+                    // utilisés" dès qu'il y en a 2 ou plus (voir OutilResultatBulle,
+                    // prop `groupe`) ; un run d'un seul outil garde
+                    // l'affichage simple actuel, inchangé.
+                    const elements: ReactNode[] = [];
+                    let i = 0;
+                    while (i < segments.length) {
+                      const segment = segments[i];
+
+                      if (segment.type === "texte") {
+                        elements.push(
+                          <div key={i}>
+                            {rendreMarkdown(
+                              normaliserCitations(normaliserLatex(segment.texte)),
+                              !!estEnCoursDeGeneration && i === segments.length - 1,
+                              i,
+                            )}
+                          </div>,
+                        );
+                        i += 1;
+                        continue;
+                      }
+
+                      // Début d'un run outil/raisonnement : on avance jusqu'au
+                      // prochain segment "texte" (ou la fin), en collectant
+                      // les outils rencontrés au passage.
+                      const debutRun = i;
+                      const outilsDuRun: Extract<SegmentMessage, { type: "outil" }>[] = [];
+                      while (i < segments.length && segments[i].type !== "texte") {
+                        if (segments[i].type === "outil") {
+                          outilsDuRun.push(segments[i] as Extract<SegmentMessage, { type: "outil" }>);
+                        }
+                        i += 1;
+                      }
+
+                      if (debutRun <= premierIndexRaisonnement && premierIndexRaisonnement < i) {
+                        elements.push(
                           <RaisonnementBulle
-                            key={index}
+                            key={`raisonnement-${premierIndexRaisonnement}`}
                             nomAgent={nomAgent ?? "Clovis"}
                             texte={texteRaisonnementFusionne}
                             enCours={raisonnementFusionEnCours}
-                          />
+                          />,
                         );
                       }
-                      if (segment.type === "outil") {
-                        return <OutilResultatBulle key={index} resultats={[segment]} />;
+
+                      if (outilsDuRun.length === 1) {
+                        elements.push(<OutilResultatBulle key={`outil-${debutRun}`} resultats={outilsDuRun} />);
+                      } else if (outilsDuRun.length > 1) {
+                        elements.push(
+                          <OutilResultatBulle key={`outils-${debutRun}`} resultats={outilsDuRun} groupe />,
+                        );
                       }
-                      return (
-                        <div key={index}>
-                          {rendreMarkdown(
-                            normaliserCitations(normaliserLatex(segment.texte)),
-                            !!estEnCoursDeGeneration && index === message.segments!.length - 1,
-                            index,
-                          )}
-                        </div>
-                      );
-                    });
+                    }
+
+                    return elements;
                   })()}
                 </div>
               ) : (

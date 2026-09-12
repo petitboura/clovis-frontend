@@ -1,7 +1,7 @@
 "use client";
 
-import { useState } from "react";
-import { ChevronDown, ChevronRight, Wrench, Link2 } from "lucide-react";
+import { useEffect, useState } from "react";
+import { ChevronDown, ChevronRight, Wrench, Link2, Layers } from "lucide-react";
 import { useOutilsRegistre } from "@/lib/outils";
 import { SourcesBulle } from "./SourcesBulle";
 import { GalerieImagesBulle } from "./GalerieImagesBulle";
@@ -49,73 +49,122 @@ function iconePourOutil(outils: ReturnType<typeof useOutilsRegistre>["outils"], 
 
 export function OutilResultatBulle({
   resultats,
+  groupe = false,
 }: {
   resultats?: { nomOutil: string; nomLisible: string; resultat: string; sources?: { numero: number; titre: string; url: string; extrait?: string; url_extrait?: string; reperage?: string; position_type?: "page" | "timestamp"; position_valeur?: number; type_mime?: string | null }[]; images?: { titre: string; url: string; miniature: string; credit?: string | null }[] }[];
+  // Ajouté (12/09/2026, demande Bourama) : quand plusieurs outils s'enchaînent
+  // sans texte de réponse entre eux dans la timeline en direct (voir le
+  // regroupement dans BulleMessage.tsx), ils se replient en une seule
+  // ligne "X outils utilisés" au lieu d'une ligne par outil. Sans effet
+  // si `resultats` ne contient qu'un seul élément (affichage simple
+  // inchangé) -- et jamais activé pour l'affichage groupé historique
+  // (message.segments absent, voir BulleMessage.tsx), qui n'a jamais
+  // passé cette prop et garde donc son rendu d'origine.
+  groupe?: boolean;
 }) {
   const { outils } = useOutilsRegistre();
   const [ouverts, setOuverts] = useState<Record<number, boolean>>({});
   const [sourcesOuvertes, setSourcesOuvertes] = useState<Record<number, boolean>>({});
 
+  // Ligne groupée : ouverte automatiquement quelques secondes puis se
+  // replie seule -- même principe que RaisonnementBulle (repli
+  // automatique, jamais brut), mais basé sur un délai plutôt que sur la
+  // fin d'un état "en cours" : les outils du groupe sont déjà terminés
+  // au moment où ce composant les reçoit. `groupeOuvertManuel` respecte
+  // ensuite le choix de la personne si elle a cliqué entre-temps.
+  const [groupeOuvertManuel, setGroupeOuvertManuel] = useState<boolean | null>(null);
+  const [groupeOuvertAuto, setGroupeOuvertAuto] = useState(true);
+
+  useEffect(() => {
+    if (!groupe) return;
+    setGroupeOuvertAuto(true);
+    const minuteur = setTimeout(() => setGroupeOuvertAuto(false), 3000);
+    return () => clearTimeout(minuteur);
+  }, [groupe]);
+
   if (!resultats || !resultats.length) return null;
 
-  return (
-    <div className="my-1.5 flex max-w-[85%] flex-col gap-1">
-      {resultats.map((r, index) => {
-        const Icone = iconePourOutil(outils, r.nomOutil);
-        const ouvert = !!ouverts[index];
-        const aDesSources = !!r.sources && r.sources.length > 0;
-        const sourcesOuvert = !!sourcesOuvertes[index];
-        return (
-          <div key={index} className="animate-dj-fade-in">
-            <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
-              <button
-                onClick={() => setOuverts((prec) => ({ ...prec, [index]: !ouvert }))}
-                className="flex items-center gap-1.5 text-[13px] text-dj-texte-muet transition-colors hover:text-dj-texte"
-              >
-                <Icone size={13} />
-                <span>{r.nomLisible}</span>
-                {ouvert ? <ChevronDown size={13} /> : <ChevronRight size={13} />}
-              </button>
-              {aDesSources && (
-                <button
-                  onClick={() => setSourcesOuvertes((prec) => ({ ...prec, [index]: !sourcesOuvert }))}
-                  className="flex items-center gap-1.5 text-[13px] text-dj-texte-muet transition-colors hover:text-dj-texte"
-                >
-                  <Link2 size={13} />
-                  <span>Sources ({r.sources!.length})</span>
-                  {sourcesOuvert ? <ChevronDown size={13} /> : <ChevronRight size={13} />}
-                </button>
-              )}
-            </div>
-            {/* Galerie d'images (01/09) -- TOUJOURS visible, contrairement
-                au résultat brut replié juste en dessous : voir
-                GalerieImagesBulle.tsx pour le raisonnement. */}
-            <GalerieImagesBulle images={r.images} />
-            <div
-              className={`grid transition-[grid-template-rows] duration-300 ease-out ${
-                ouvert ? "grid-rows-[1fr]" : "grid-rows-[0fr]"
-              }`}
+  const estGroupe = groupe && resultats.length >= 2;
+  const groupeOuvert = groupeOuvertManuel ?? groupeOuvertAuto;
+
+  const elementsResultats = resultats.map((r, index) => {
+    const Icone = iconePourOutil(outils, r.nomOutil);
+    const ouvert = !!ouverts[index];
+    const aDesSources = !!r.sources && r.sources.length > 0;
+    const sourcesOuvert = !!sourcesOuvertes[index];
+    return (
+      <div key={index} className="animate-dj-fade-in">
+        <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
+          <button
+            onClick={() => setOuverts((prec) => ({ ...prec, [index]: !ouvert }))}
+            className="flex items-center gap-1.5 text-[13px] text-dj-texte-muet transition-colors hover:text-dj-texte"
+          >
+            <Icone size={13} />
+            <span>{r.nomLisible}</span>
+            {ouvert ? <ChevronDown size={13} /> : <ChevronRight size={13} />}
+          </button>
+          {aDesSources && (
+            <button
+              onClick={() => setSourcesOuvertes((prec) => ({ ...prec, [index]: !sourcesOuvert }))}
+              className="flex items-center gap-1.5 text-[13px] text-dj-texte-muet transition-colors hover:text-dj-texte"
             >
-              <div className="overflow-hidden">
-                <pre className="mt-1.5 max-h-64 overflow-auto rounded-xl border border-dj-bordure bg-dj-surface p-2.5 text-[12px] leading-relaxed text-dj-texte-muet">
-                  {r.resultat}
-                </pre>
-              </div>
-            </div>
-            {aDesSources && (
-              <div
-                className={`grid transition-[grid-template-rows] duration-300 ease-out ${
-                  sourcesOuvert ? "grid-rows-[1fr]" : "grid-rows-[0fr]"
-                }`}
-              >
-                <div className="overflow-hidden">
-                  <SourcesBulle sources={r.sources} />
-                </div>
-              </div>
-            )}
+              <Link2 size={13} />
+              <span>Sources ({r.sources!.length})</span>
+              {sourcesOuvert ? <ChevronDown size={13} /> : <ChevronRight size={13} />}
+            </button>
+          )}
+        </div>
+        {/* Galerie d'images (01/09) -- TOUJOURS visible, contrairement
+            au résultat brut replié juste en dessous : voir
+            GalerieImagesBulle.tsx pour le raisonnement. */}
+        <GalerieImagesBulle images={r.images} />
+        <div
+          className={`grid transition-[grid-template-rows] duration-300 ease-out ${
+            ouvert ? "grid-rows-[1fr]" : "grid-rows-[0fr]"
+          }`}
+        >
+          <div className="overflow-hidden">
+            <pre className="mt-1.5 max-h-64 overflow-auto rounded-xl border border-dj-bordure bg-dj-surface p-2.5 text-[12px] leading-relaxed text-dj-texte-muet">
+              {r.resultat}
+            </pre>
           </div>
-        );
-      })}
+        </div>
+        {aDesSources && (
+          <div
+            className={`grid transition-[grid-template-rows] duration-300 ease-out ${
+              sourcesOuvert ? "grid-rows-[1fr]" : "grid-rows-[0fr]"
+            }`}
+          >
+            <div className="overflow-hidden">
+              <SourcesBulle sources={r.sources} />
+            </div>
+          </div>
+        )}
+      </div>
+    );
+  });
+
+  if (!estGroupe) {
+    return <div className="my-1.5 flex max-w-[85%] flex-col gap-1">{elementsResultats}</div>;
+  }
+
+  return (
+    <div className="my-1.5 flex max-w-[85%] flex-col gap-1 animate-dj-fade-in">
+      <button
+        onClick={() => setGroupeOuvertManuel(!groupeOuvert)}
+        className="flex items-center gap-1.5 text-[13px] text-dj-texte-muet transition-colors hover:text-dj-texte"
+      >
+        <Layers size={13} />
+        <span>{resultats.length} outils utilisés</span>
+        {groupeOuvert ? <ChevronDown size={13} /> : <ChevronRight size={13} />}
+      </button>
+      <div
+        className={`grid transition-[grid-template-rows] duration-300 ease-out ${
+          groupeOuvert ? "grid-rows-[1fr]" : "grid-rows-[0fr]"
+        }`}
+      >
+        <div className="overflow-hidden flex flex-col gap-1">{elementsResultats}</div>
+      </div>
     </div>
   );
 }
