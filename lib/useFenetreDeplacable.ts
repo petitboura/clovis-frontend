@@ -10,11 +10,21 @@
 // "que je puisse les agrandir en tirant par les côtés ou les angles").
 // direction encode quels bords bougent : n/s = haut/bas, e/w = droite/
 // gauche, combinés pour les 4 coins.
+// Correctif (12/09/2026, signalé Bourama : "tirer les côtés ne marche
+// plus du tout") : les côtés (n/s/e/w) n'avaient que 6px de zone
+// cliquable (w-1.5/h-1.5) contre 12px pour les angles (h-3/w-3), et se
+// chevauchaient en plus avec la zone des angles (insets à 8px = top-2/
+// bottom-2 alors que les angles occupent les 12 premiers pixels) -- dans
+// cette zone de chevauchement, l'angle passait toujours devant (rendu
+// après dans le tableau ci-dessous), le côté y devenait donc
+// impossible à attraper. Ici : côtés élargis à 10px (w-2.5/h-2.5) ET
+// insets alignés sur la taille réelle des angles (top-3/bottom-3 au
+// lieu de top-2/bottom-2) pour qu'il n'y ait plus aucun chevauchement.
 export const POIGNEES_REDIMENSIONNEMENT: { direction: string; classe: string }[] = [
-  { direction: "n", classe: "left-2 right-2 top-0 h-1.5 cursor-ns-resize" },
-  { direction: "s", classe: "left-2 right-2 bottom-0 h-1.5 cursor-ns-resize" },
-  { direction: "e", classe: "right-0 top-2 bottom-2 w-1.5 cursor-ew-resize" },
-  { direction: "w", classe: "left-0 top-2 bottom-2 w-1.5 cursor-ew-resize" },
+  { direction: "n", classe: "left-3 right-3 top-0 h-2.5 cursor-ns-resize" },
+  { direction: "s", classe: "left-3 right-3 bottom-0 h-2.5 cursor-ns-resize" },
+  { direction: "e", classe: "right-0 top-3 bottom-3 w-2.5 cursor-ew-resize" },
+  { direction: "w", classe: "left-0 top-3 bottom-3 w-2.5 cursor-ew-resize" },
   { direction: "ne", classe: "right-0 top-0 h-3 w-3 cursor-nesw-resize" },
   { direction: "nw", classe: "left-0 top-0 h-3 w-3 cursor-nwse-resize" },
   { direction: "se", classe: "right-0 bottom-0 h-3 w-3 cursor-nwse-resize" },
