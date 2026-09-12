@@ -447,6 +447,31 @@ export function ChatIA({
         };
         return copie;
       });
+    } else if (item.type === "raisonnement") {
+      // Correctif 12/09/2026 (Bourama : une ligne de raisonnement pouvait
+      // couper la réponse en plein centre) -- même cause que le correctif
+      // du 09/09 sur statut/outil_resultat/etc juste au-dessus : un
+      // raisonnement qui arrive (2e round d'outils, cascade de modèles...)
+      // pendant que le texte d'un round précédent est encore en train de
+      // s'afficher mot par mot. Cette application réelle est désormais
+      // appelée soit tout de suite, soit via viderFileOutilsEnAttente(),
+      // selon traiterEvenement() -- logique interne inchangée.
+      setRaisonnementEnCours(true);
+      const premierApresRepli = repliEnAttenteRef.current;
+      if (premierApresRepli) repliEnAttenteRef.current = false;
+      majMessages((prec) => {
+        const copie = [...prec];
+        const dernier = copie[copie.length - 1];
+        const segmentsBase = premierApresRepli ? [] : dernier.segments;
+        copie[copie.length - 1] = {
+          ...dernier,
+          content: premierApresRepli ? "" : dernier.content,
+          enRepli: premierApresRepli ? false : dernier.enRepli,
+          raisonnement: (premierApresRepli ? "" : dernier.raisonnement || "") + evenement.texte,
+          segments: segmentsAvecTexteFusionne(segmentsBase, "raisonnement", evenement.texte),
+        };
+        return copie;
+      });
     }
   }
 
@@ -512,27 +537,6 @@ export function ChatIA({
         });
       }
       pousserTexteAffichage(evenement.texte);
-    } else if (evenement.type === "raisonnement") {
-      setRaisonnementEnCours(true);
-      // Repart à zéro si ce raisonnement est le premier du modèle qui
-      // prend le relais après un "reponse_annulee" -- ne pas l'accumuler
-      // avec celui, obsolète, du modèle précédent, et refermer le repli
-      // visuel puisque du contenu neuf arrive.
-      const premierApresRepli = repliEnAttenteRef.current;
-      if (premierApresRepli) repliEnAttenteRef.current = false;
-      majMessages((prec) => {
-        const copie = [...prec];
-        const dernier = copie[copie.length - 1];
-        const segmentsBase = premierApresRepli ? [] : dernier.segments;
-        copie[copie.length - 1] = {
-          ...dernier,
-          content: premierApresRepli ? "" : dernier.content,
-          enRepli: premierApresRepli ? false : dernier.enRepli,
-          raisonnement: (premierApresRepli ? "" : dernier.raisonnement || "") + evenement.texte,
-          segments: segmentsAvecTexteFusionne(segmentsBase, "raisonnement", evenement.texte),
-        };
-        return copie;
-      });
     } else if (evenement.type === "reponse_annulee") {
       annulerReponseAffichee();
     } else if (evenement.type === "meta") {
@@ -562,7 +566,8 @@ export function ChatIA({
       evenement.type === "statut_termine" ||
       evenement.type === "sources" ||
       evenement.type === "images" ||
-      evenement.type === "outil_resultat"
+      evenement.type === "outil_resultat" ||
+      evenement.type === "raisonnement"
     ) {
       // Correctif 09/09/2026 (Bourama : un outil qui finit pendant que le
       // texte est encore en train de s'afficher coupait la phrase en
@@ -571,6 +576,9 @@ export function ChatIA({
       // attente -- voir viderFileOutilsEnAttente(), appelée dès que
       // l'affichage du texte rattrape son retard. Sinon (aucun texte en
       // cours de révélation), comportement inchangé : application immédiate.
+      // "raisonnement" ajouté le 12/09/2026 (même cause : un raisonnement
+      // qui arrive pendant qu'un texte précédent s'affiche encore coupait
+      // la réponse en plein centre) -- voir appliquerEvenementOutil.
       if (tickerActifRef.current) {
         fileOutilsEnAttenteRef.current.push({ type: evenement.type, evenement });
       } else {
@@ -679,6 +687,11 @@ export function ChatIA({
       });
     } finally {
       setGenEnCours(false);
+      // Même filet que dans les autres finally de fin de génération (voir
+      // envoyerMessage plus bas) : évite que la bulle de raisonnement
+      // reste bloquée si le tout dernier événement était un raisonnement
+      // mis en file.
+      setRaisonnementEnCours(false);
     }
   }
 
@@ -925,6 +938,13 @@ export function ChatIA({
       });
     } finally {
       setGenEnCours(false);
+      // Correctif 12/09/2026 (voir appliquerEvenementOutil, cas
+      // "raisonnement") : si le tout dernier événement de la génération
+      // était un raisonnement mis en file (texte précédent encore en
+      // cours d'affichage), rien d'autre ne remet ce flag à false --
+      // sans ce filet, la bulle resterait bloquée sur "en train de
+      // réfléchir" indéfiniment.
+      setRaisonnementEnCours(false);
     }
   }
 
@@ -978,6 +998,9 @@ export function ChatIA({
       setConfirmation(null);
       setConfirmationEnAttente(false);
       setGenEnCours(false);
+      // Même filet que dans les deux autres finally de fin de génération,
+      // voir le commentaire plus haut.
+      setRaisonnementEnCours(false);
     }
   }
 
