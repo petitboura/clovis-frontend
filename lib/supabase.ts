@@ -62,6 +62,7 @@ if (typeof window !== "undefined") {
 if (typeof window !== "undefined") {
   import("@capacitor/core").then(({ Capacitor, registerPlugin }) => {
     if (!Capacitor.isNativePlatform()) return;
+    console.log("PontNatif (JS): plateforme native detectee, initialisation du pont.");
 
     // Plugin Dossiers : uniquement utile côté natif (exploration de
     // dossier sur le téléphone), voir lib/canalTempsReel.ts.
@@ -84,17 +85,25 @@ if (typeof window !== "undefined") {
     let dejaRattrape = false;
 
     supabase.auth.onAuthStateChange((event, session) => {
+      console.log(`PontNatif (JS): onAuthStateChange event=${event}, session=${session ? "presente" : "absente"}`);
       if (session?.access_token) {
-        PontNatif.enregistrerToken({ token: session.access_token }).catch(() => {
-          // Pas grave : le pont retentera au prochain changement d'état
-          // (refresh de token automatique par supabase-js, ~1h).
-        });
+        PontNatif.enregistrerToken({ token: session.access_token })
+          .then(() => console.log("PontNatif (JS): enregistrerToken OK"))
+          .catch((e) => {
+            // Pas grave : le pont retentera au prochain changement d'état
+            // (refresh de token automatique par supabase-js, ~1h).
+            console.warn("PontNatif (JS): echec enregistrerToken", e);
+          });
         if (!dejaRattrape) {
           dejaRattrape = true;
-          PontNatif.rattraperActionsEnAttente().catch(() => {
-            // Pas grave : le prochain push (ou la prochaine ouverture)
-            // rattrapera l'action en attente.
-          });
+          console.log("PontNatif (JS): appel rattraperActionsEnAttente");
+          PontNatif.rattraperActionsEnAttente()
+            .then((r) => console.log(`PontNatif (JS): rattraperActionsEnAttente OK, ${r.traitees} action(s)`))
+            .catch((e) => {
+              // Pas grave : le prochain push (ou la prochaine ouverture)
+              // rattrapera l'action en attente.
+              console.warn("PontNatif (JS): echec rattraperActionsEnAttente", e);
+            });
         }
       } else if (event === "SIGNED_OUT") {
         PontNatif.deconnexion().catch(() => {});
