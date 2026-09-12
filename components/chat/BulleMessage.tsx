@@ -18,6 +18,7 @@ import { MenuSignalementCorrection, type ChoixSignalement } from "./MenuSignalem
 import { IndicateurReflexion } from "@/components/IndicateurReflexion";
 import { SchemaGeometrique } from "./SchemaGeometrique";
 import { QCMInteractif } from "./QCMInteractif";
+import { FicheRevision } from "./FicheRevision";
 import { WidgetSandbox } from "./WidgetSandbox";
 import { ImageMessage } from "./ImageMessage";
 import { VisionneuseImage } from "./VisionneuseImage";
@@ -686,6 +687,8 @@ function BulleMessageInterne({
                 return <SchemaGeometrique code={code} />;
               case "qcm":
                 return <QCMInteractif code={code} />;
+              case "fiche":
+                return <FicheRevision code={code} />;
               case "widget":
               case "html":
                 return <WidgetSandbox code={code} />;
