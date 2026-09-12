@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Plus, Check, Trash2, Copy, ChevronDown, ChevronUp, X } from "lucide-react";
+import { Plus, Trash2, Copy, ChevronDown, ChevronUp, X, ScrollText, Folder, StickyNote, Pencil } from "lucide-react";
 import {
   listerMesCodes,
   creerCode,
@@ -20,7 +20,6 @@ import { useFermetureAnimee } from "@/lib/useFermetureAnimee";
 import { Skeleton } from "./Skeleton";
 import { CTACompteRequis } from "./CTACompteRequis";
 import { BoutonInfoSection } from "./BoutonInfoSection";
-import { CaseACocher } from "./CaseACocher";
 import { PanneauFlottant } from "./PanneauFlottant";
 import { EditeurComportement } from "./EditeurComportement";
 import { EspaceBibliotheque } from "./EspaceBibliotheque";
@@ -256,71 +255,27 @@ export function MesCodes() {
           </p>
         )}
 
-        {codes.map((c) => {
-          const estOuvert = ouvert === c.id;
-          return (
-            <div key={c.id} className="rounded-xl border border-dj-bordure bg-dj-surface-haute">
-              <button
-                onClick={() => setOuvert(estOuvert ? null : c.id)}
-                className="flex w-full items-center justify-between gap-2 px-3 py-2.5 text-left"
-              >
-                <div className="flex min-w-0 items-center gap-2">
-                  <span className={"h-1.5 w-1.5 flex-shrink-0 rounded-full " + (c.actif ? "bg-dj-accent-1" : "bg-dj-texte-muet")} />
-                  <span className="truncate text-sm text-dj-texte">{c.nom || "Sans nom"}</span>
-                  <span className="flex-shrink-0 rounded-md bg-dj-fond px-1.5 py-0.5 font-mono text-[11px] tracking-wider text-dj-texte-muet">
-                    {c.code}
-                  </span>
-                </div>
-                {estOuvert ? <ChevronUp size={16} className="flex-shrink-0 text-dj-texte-muet" /> : <ChevronDown size={16} className="flex-shrink-0 text-dj-texte-muet" />}
-              </button>
-
-              {estOuvert && (
-                <div className="animate-dj-fade-in-rapide space-y-3 border-t border-dj-bordure px-3 py-3">
-                  <div className="flex items-center gap-2">
-                    <button
-                      onClick={() => copier(c.code)}
-                      className="flex items-center gap-1 rounded-lg border border-dj-bordure px-2 py-1 text-xs text-dj-texte-muet transition-colors hover:text-dj-texte"
-                    >
-                      <Copy size={12} /> {copieOk === c.code ? "Copié !" : "Copier le code"}
-                    </button>
-                    <button
-                      onClick={() => toggleActif(c)}
-                      className={
-                        "ml-auto rounded-lg px-2 py-1 text-xs font-semibold transition-colors " +
-                        (c.actif ? "text-dj-texte-muet hover:text-dj-texte" : "text-dj-accent-1-texte")
-                      }
-                    >
-                      {c.actif ? "Désactiver" : "Réactiver"}
-                    </button>
-                    <button
-                      onClick={() => supprimer(c.id)}
-                      title="Supprimer ce code"
-                      className="rounded-lg p-1.5 text-dj-texte-muet transition-colors hover:text-[var(--dj-erreur)]"
-                    >
-                      <Trash2 size={14} />
-                    </button>
-                  </div>
-
-                  <ChampNom c={c} onSauver={(nom) => sauvegarder(c.id, { nom })} />
-                  <ChampComportement
-                    c={c}
-                    mesComportements={mesComportements}
-                    onSauver={(comportement_ids) => sauvegarder(c.id, { comportement_ids })}
-                    onOuvrir={(id) => ouvrirEditeurComportement(c.id, id)}
-                  />
-                  <ChampDossiers
-                    c={c}
-                    mesDossiers={mesDossiers}
-                    onSauver={(dossier_ids) => sauvegarder(c.id, { dossier_ids })}
-                    onDossierCree={chargerDossiers}
-                    onOuvrir={setDossierOuvert}
-                  />
-                  <ChampTexteLibre c={c} onSauver={(texte_libre) => sauvegarder(c.id, { texte_libre })} />
-                </div>
-              )}
-            </div>
-          );
-        })}
+        {codes.map((c) => (
+          <CarteCode
+            key={c.id}
+            c={c}
+            estOuvert={ouvert === c.id}
+            onToggleOuvert={() => setOuvert(ouvert === c.id ? null : c.id)}
+            copieOk={copieOk === c.code}
+            onCopier={() => copier(c.code)}
+            onToggleActif={() => toggleActif(c)}
+            onSupprimer={() => supprimer(c.id)}
+            onSauverNom={(nom) => sauvegarder(c.id, { nom })}
+            onSauverTexte={(texte_libre) => sauvegarder(c.id, { texte_libre })}
+            onSauverComportements={(comportement_ids) => sauvegarder(c.id, { comportement_ids })}
+            onSauverDossiers={(dossier_ids) => sauvegarder(c.id, { dossier_ids })}
+            mesComportements={mesComportements}
+            mesDossiers={mesDossiers}
+            onDossierCree={chargerDossiers}
+            onOuvrirComportement={(id) => ouvrirEditeurComportement(c.id, id)}
+            onOuvrirDossier={setDossierOuvert}
+          />
+        ))}
       </div>
     </section>
   );
@@ -399,112 +354,253 @@ export function MesCodes() {
   );
 }
 
-function ChampNom({ c, onSauver }: { c: CodePartage; onSauver: (v: string) => void }) {
-  const [valeur, setValeur] = useState(c.nom || "");
-  return (
-    <div>
-      <label className="text-xs font-semibold text-dj-texte-muet">Nom (pour toi, pas pour les receveurs)</label>
-      <div className="mt-1 flex gap-1.5">
-        <input
-          value={valeur}
-          onChange={(e) => setValeur(e.target.value)}
-          placeholder="Ex : Mes CM2"
-          className="flex-1 rounded-lg border border-dj-bordure bg-dj-surface px-2.5 py-1.5 text-sm text-dj-texte outline-none focus:border-dj-bordure-forte"
-        />
-        {valeur !== (c.nom || "") && (
-          <button onClick={() => onSauver(valeur)} className="rounded-lg bg-dj-accent-1 px-2.5 text-[#1A0D02]">
-            <Check size={14} />
-          </button>
-        )}
-      </div>
-    </div>
-  );
-}
-
 /**
- * 18/08/2026, demande Bourama : "je veux pas [...] tu écris ton
- * comportement tout de suite dans le code, mais tu choisis les
- * comportements déjà créé[s]". Remplace l'ancien textarea libre --
- * sélection multiple parmi les comportements déjà créés dans "Mes
- * comportements" (référence vivante, voir core/codes_partage.py :
- * modifier un comportement après coup met à jour tous les codes qui le
- * référencent). Sauvegarde immédiate à chaque coche, comme
- * ChampBibliotheque -- pas besoin d'un bouton "Enregistrer" séparé pour
- * des cases à cocher.
+ * 12/09/2026, chantier "Mes codes = un vrai éditeur" -- Bourama : "elle
+ * ressemble toujours à un formulaire". Refonte : plus de sections
+ * labellisées empilées (Nom / Skills / Dossiers / Texte libre), tout ce
+ * qui est attaché à un code se lit comme un ensemble de puces cliquables
+ * (skill, dossier, note), pas des champs de formulaire à remplir. Le nom
+ * se modifie en place dans l'en-tête (clic sur le crayon), pas dans un
+ * champ séparé plus bas.
  */
-function ChampComportement({
+function CarteCode({
   c,
+  estOuvert,
+  onToggleOuvert,
+  copieOk,
+  onCopier,
+  onToggleActif,
+  onSupprimer,
+  onSauverNom,
+  onSauverTexte,
+  onSauverComportements,
+  onSauverDossiers,
   mesComportements,
-  onSauver,
-  onOuvrir,
+  mesDossiers,
+  onDossierCree,
+  onOuvrirComportement,
+  onOuvrirDossier,
 }: {
   c: CodePartage;
+  estOuvert: boolean;
+  onToggleOuvert: () => void;
+  copieOk: boolean;
+  onCopier: () => void;
+  onToggleActif: () => void;
+  onSupprimer: () => void;
+  onSauverNom: (v: string) => void;
+  onSauverTexte: (v: string) => void;
+  onSauverComportements: (ids: string[]) => void;
+  onSauverDossiers: (ids: string[]) => void;
   mesComportements: Comportement[];
-  onSauver: (v: string[]) => void;
-  /** 12/09/2026, chantier "Mes codes = un vrai éditeur" : ouvre le skill
-   * (id fourni) ou la création d'un nouveau (id null) dans l'éditeur --
-   * voir MesCodes(), ouvrirEditeurComportement. */
-  onOuvrir: (id: string | null) => void;
+  mesDossiers: DossierBibliotheque[];
+  onDossierCree: () => void;
+  onOuvrirComportement: (id: string | null) => void;
+  onOuvrirDossier: (id: string) => void;
 }) {
-  // Replié par défaut (04/09/2026, demande Bourama) : même principe que le
-  // dépliage de chaque code -- évite qu'une longue liste de comportements
-  // prenne toute la place dès l'ouverture d'un code.
-  const [ouvert, setOuvert] = useState(false);
-  const idsActuels = c.comportements.map((cm) => cm.id);
+  const [renommage, setRenommage] = useState(false);
+  const [nomEnCours, setNomEnCours] = useState(c.nom || "");
+  const [editionNote, setEditionNote] = useState(false);
+  const [noteEnCours, setNoteEnCours] = useState(c.texte_libre || "");
 
-  function basculer(id: string) {
-    const nouveaux = idsActuels.includes(id) ? idsActuels.filter((i) => i !== id) : [...idsActuels, id];
-    onSauver(nouveaux);
+  function validerNom() {
+    setRenommage(false);
+    const propre = nomEnCours.trim();
+    if (propre !== (c.nom || "")) onSauverNom(propre);
+  }
+
+  function validerNote() {
+    setEditionNote(false);
+    if (noteEnCours !== (c.texte_libre || "")) onSauverTexte(noteEnCours);
+  }
+
+  function attacherComportement(id: string) {
+    onSauverComportements([...c.comportements.map((x) => x.id), id]);
+  }
+  function detacherComportement(id: string) {
+    onSauverComportements(c.comportements.filter((x) => x.id !== id).map((x) => x.id));
+  }
+  function attacherDossier(id: string) {
+    onSauverDossiers([...c.dossiers.map((x) => x.id), id]);
+  }
+  function detacherDossier(id: string) {
+    onSauverDossiers(c.dossiers.filter((x) => x.id !== id).map((x) => x.id));
   }
 
   return (
-    <div>
-      <div className="flex items-center justify-between gap-2">
-        {mesComportements.length === 0 ? (
-          <label className="text-xs font-semibold text-dj-texte-muet">Skills</label>
-        ) : (
+    <div className="rounded-xl border border-dj-bordure bg-dj-surface-haute">
+      <div className="flex items-center gap-2 px-3 py-2.5">
+        <div
+          onClick={onToggleOuvert}
+          role="button"
+          tabIndex={0}
+          onKeyDown={(e) => (e.key === "Enter" || e.key === " ") && onToggleOuvert()}
+          className="flex min-w-0 flex-1 items-center gap-2 text-left"
+        >
+          <span className={"h-1.5 w-1.5 flex-shrink-0 rounded-full " + (c.actif ? "bg-dj-accent-1" : "bg-dj-texte-muet")} />
+          {renommage ? (
+            <input
+              autoFocus
+              value={nomEnCours}
+              onChange={(e) => setNomEnCours(e.target.value)}
+              onClick={(e) => e.stopPropagation()}
+              onKeyDown={(e) => {
+                e.stopPropagation();
+                if (e.key === "Enter") validerNom();
+              }}
+              onBlur={validerNom}
+              placeholder="Nom pour toi (pas pour les receveurs)"
+              className="min-w-0 flex-1 rounded-md border border-dj-bordure-forte bg-dj-surface px-1.5 py-0.5 text-sm text-dj-texte outline-none"
+            />
+          ) : (
+            <span className="truncate text-sm text-dj-texte">{c.nom || "Sans nom"}</span>
+          )}
+          <span className="flex-shrink-0 rounded-full border border-dj-bordure bg-dj-fond px-2.5 py-1 font-mono text-[11px] tracking-[0.15em] text-dj-texte-muet">
+            {c.code}
+          </span>
+        </div>
+
+        {!renommage && (
           <button
-            type="button"
-            onClick={() => setOuvert((prec) => !prec)}
-            className="flex min-w-0 flex-1 items-center justify-between gap-2 rounded-lg border border-dj-bordure bg-dj-surface px-2.5 py-1.5 text-left"
+            onClick={(e) => {
+              e.stopPropagation();
+              setNomEnCours(c.nom || "");
+              setRenommage(true);
+            }}
+            title="Renommer"
+            className="flex-shrink-0 rounded-lg p-1.5 text-dj-texte-muet transition-colors hover:text-dj-texte"
           >
-            <span className="text-xs font-semibold text-dj-texte-muet">
-              Skills <span className="text-dj-texte">· {idsActuels.length} sélectionné{idsActuels.length > 1 ? "s" : ""}</span>
-            </span>
-            {ouvert ? <ChevronUp size={14} className="flex-shrink-0 text-dj-texte-muet" /> : <ChevronDown size={14} className="flex-shrink-0 text-dj-texte-muet" />}
+            <Pencil size={13} />
           </button>
         )}
+        <button
+          onClick={onToggleOuvert}
+          className="flex-shrink-0 rounded-lg p-1.5 text-dj-texte-muet transition-colors hover:text-dj-texte"
+        >
+          {estOuvert ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
+        </button>
       </div>
 
-      {mesComportements.length === 0 && (
-        <p className="mt-1 text-xs text-dj-texte-muet">Aucun skill créé pour l&apos;instant.</p>
-      )}
+      {estOuvert && (
+        <div className="animate-dj-fade-in-rapide space-y-3 border-t border-dj-bordure px-3 py-3">
+          <div className="flex items-center gap-1 text-dj-texte-muet">
+            <button
+              onClick={onCopier}
+              className="flex items-center gap-1.5 rounded-lg px-2 py-1 text-xs transition-colors hover:bg-dj-surface hover:text-dj-texte"
+            >
+              <Copy size={12} /> {copieOk ? "Copié !" : "Copier le code"}
+            </button>
+            <button
+              onClick={onToggleActif}
+              className={
+                "ml-auto rounded-lg px-2 py-1 text-xs font-semibold transition-colors " +
+                (c.actif ? "hover:bg-dj-surface hover:text-dj-texte" : "text-dj-accent-1-texte")
+              }
+            >
+              {c.actif ? "Désactiver" : "Réactiver"}
+            </button>
+            <button
+              onClick={onSupprimer}
+              title="Supprimer ce code"
+              className="rounded-lg p-1.5 transition-colors hover:text-[var(--dj-erreur)]"
+            >
+              <Trash2 size={14} />
+            </button>
+          </div>
 
-      {ouvert && mesComportements.length > 0 && (
-        <div className="mt-1.5 flex animate-dj-fade-in-rapide flex-col gap-1.5 rounded-lg border border-dj-bordure bg-dj-surface px-2.5 py-2">
-          {mesComportements.map((cm) => (
-            <div key={cm.id} className="flex items-center gap-2 text-sm text-dj-texte">
-              <CaseACocher checked={idsActuels.includes(cm.id)} onChange={() => basculer(cm.id)} />
-              <button
-                type="button"
-                onClick={() => onOuvrir(cm.id)}
-                title="Ouvrir et modifier"
-                className="min-w-0 flex-1 truncate text-left transition-colors hover:text-dj-accent-1-texte"
+          <div className="flex flex-wrap items-center gap-1.5">
+            {c.comportements.map((cm) => (
+              <div
+                key={cm.id}
+                className="group/puce flex items-center gap-1.5 rounded-full border border-dj-bordure bg-dj-surface py-1.5 pl-3 pr-2 text-xs text-dj-texte transition-colors hover:border-dj-bordure-forte"
               >
-                {cm.nom || cm.description}
+                <ScrollText size={11} className="flex-shrink-0 text-dj-texte-muet" />
+                <button type="button" onClick={() => onOuvrirComportement(cm.id)} className="max-w-[9rem] truncate text-left">
+                  {cm.nom}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => detacherComportement(cm.id)}
+                  title="Détacher"
+                  className="flex-shrink-0 rounded-full p-0.5 text-dj-texte-muet opacity-0 transition-opacity hover:text-[var(--dj-erreur)] group-hover/puce:opacity-100"
+                >
+                  <X size={11} />
+                </button>
+              </div>
+            ))}
+
+            {c.dossiers.map((d) => (
+              <div
+                key={d.id}
+                className="group/puce flex items-center gap-1.5 rounded-full border border-dj-bordure bg-dj-surface py-1.5 pl-3 pr-2 text-xs text-dj-texte transition-colors hover:border-dj-bordure-forte"
+              >
+                <Folder size={11} className="flex-shrink-0 text-dj-texte-muet" />
+                <button type="button" onClick={() => onOuvrirDossier(d.id)} className="max-w-[9rem] truncate text-left">
+                  {d.nom}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => detacherDossier(d.id)}
+                  title="Détacher"
+                  className="flex-shrink-0 rounded-full p-0.5 text-dj-texte-muet opacity-0 transition-opacity hover:text-[var(--dj-erreur)] group-hover/puce:opacity-100"
+                >
+                  <X size={11} />
+                </button>
+              </div>
+            ))}
+
+            {!editionNote && !c.texte_libre && (
+              <button
+                onClick={() => setEditionNote(true)}
+                className="flex items-center gap-1.5 rounded-full border border-dashed border-dj-bordure px-3 py-1.5 text-xs text-dj-texte-muet transition-colors hover:border-dj-bordure-forte hover:text-dj-texte"
+              >
+                <StickyNote size={12} /> Note
               </button>
+            )}
+
+            <AjoutContenuPopover
+              mesComportements={mesComportements}
+              mesDossiers={mesDossiers}
+              idsComportementsActuels={c.comportements.map((x) => x.id)}
+              idsDossiersActuels={c.dossiers.map((x) => x.id)}
+              onAttacherComportement={attacherComportement}
+              onAttacherDossier={attacherDossier}
+              onOuvrirNouveauComportement={() => onOuvrirComportement(null)}
+              onDossierCree={onDossierCree}
+            />
+          </div>
+
+          {(editionNote || c.texte_libre) && (
+            <div>
+              {editionNote ? (
+                <textarea
+                  autoFocus
+                  value={noteEnCours}
+                  onChange={(e) => setNoteEnCours(e.target.value)}
+                  onBlur={validerNote}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter" && (e.metaKey || e.ctrlKey)) validerNote();
+                  }}
+                  placeholder="Ex : le contrôle est reporté à vendredi"
+                  rows={2}
+                  className="w-full resize-none rounded-lg border border-dj-bordure-forte bg-dj-surface px-2.5 py-1.5 text-sm text-dj-texte outline-none"
+                />
+              ) : (
+                <button
+                  onClick={() => {
+                    setNoteEnCours(c.texte_libre || "");
+                    setEditionNote(true);
+                  }}
+                  className="flex w-full items-start gap-2 rounded-lg border border-dj-bordure bg-dj-surface px-3 py-2 text-left text-sm text-dj-texte transition-colors hover:border-dj-bordure-forte"
+                >
+                  <StickyNote size={13} className="mt-0.5 flex-shrink-0 text-dj-texte-muet" />
+                  <span className="min-w-0 flex-1">{c.texte_libre}</span>
+                </button>
+              )}
             </div>
-          ))}
+          )}
         </div>
       )}
-
-      <button
-        type="button"
-        onClick={() => onOuvrir(null)}
-        className="mt-1.5 flex items-center gap-1.5 rounded-lg border border-dashed border-dj-bordure px-2.5 py-1.5 text-xs text-dj-texte-muet transition-colors hover:border-dj-bordure-forte hover:text-dj-texte"
-      >
-        <Plus size={13} /> Nouveau skill
-      </button>
     </div>
   );
 }
@@ -512,156 +608,166 @@ function ChampComportement({
 /** Aplati l'arborescence des dossiers en une liste ordonnée parent avant
  * enfants, avec la profondeur de chacun (pour l'indentation visuelle). */
 function ordonnerDossiers(dossiers: DossierBibliotheque[]): { dossier: DossierBibliotheque; profondeur: number }[] {
-  const enfants = new Map<string | null, DossierBibliotheque[]>();
+  const parId = new Map(dossiers.map((d) => [d.id, d]));
+  const parParent = new Map<string | null, DossierBibliotheque[]>();
   for (const d of dossiers) {
     const cle = d.dossier_parent_id;
-    if (!enfants.has(cle)) enfants.set(cle, []);
-    enfants.get(cle)!.push(d);
+    if (!parParent.has(cle)) parParent.set(cle, []);
+    parParent.get(cle)!.push(d);
   }
   const resultat: { dossier: DossierBibliotheque; profondeur: number }[] = [];
   function visiter(parentId: string | null, profondeur: number) {
-    for (const d of enfants.get(parentId) || []) {
+    const enfants = parParent.get(parentId) || [];
+    for (const d of enfants) {
       resultat.push({ dossier: d, profondeur });
       visiter(d.id, profondeur + 1);
     }
   }
   visiter(null, 0);
+  // Sécurité : un dossier dont le parent n'existe plus (jamais censé
+  // arriver, mais mieux vaut l'afficher quand même qu'un dossier perdu).
+  for (const d of dossiers) {
+    if (d.dossier_parent_id && !parId.has(d.dossier_parent_id) && !resultat.find((r) => r.dossier.id === d.id)) {
+      resultat.push({ dossier: d, profondeur: 0 });
+    }
+  }
   return resultat;
 }
 
 /**
- * 02/09/2026, demande Bourama : remplace la case "Partager ma
- * bibliothèque" (tout ou rien) -- sélection précise d'un ou plusieurs
- * dossiers déjà créés dans la bibliothèque perso. Partager un dossier
- * partage aussi automatiquement tous ses sous-dossiers (géré côté
- * backend, voir core/codes_partage.py). Un champ permet aussi de créer
- * un nouveau dossier directement ici et de l'attacher dans la foulée,
- * sans passer par la bibliothèque d'abord. Sauvegarde immédiate à
- * chaque coche, comme ChampComportement.
+ * 12/09/2026, chantier "Mes codes = un vrai éditeur" : un seul menu pour
+ * attacher un skill/dossier déjà existant (clic direct, pas de case à
+ * cocher séparée) ou en créer un nouveau. "Nouveau skill" ouvre l'éditeur
+ * complet (EditeurComportement, voir MesCodes()) ; un nouveau dossier se
+ * crée ici même (nom + Entrée) et s'attache aussitôt, comme avant.
  */
-function ChampDossiers({
-  c,
+function AjoutContenuPopover({
+  mesComportements,
   mesDossiers,
-  onSauver,
+  idsComportementsActuels,
+  idsDossiersActuels,
+  onAttacherComportement,
+  onAttacherDossier,
+  onOuvrirNouveauComportement,
   onDossierCree,
-  onOuvrir,
 }: {
-  c: CodePartage;
+  mesComportements: Comportement[];
   mesDossiers: DossierBibliotheque[];
-  onSauver: (v: string[]) => void;
+  idsComportementsActuels: string[];
+  idsDossiersActuels: string[];
+  onAttacherComportement: (id: string) => void;
+  onAttacherDossier: (id: string) => void;
+  onOuvrirNouveauComportement: () => void;
   onDossierCree: () => void;
-  /** 12/09/2026, chantier "Mes codes = un vrai éditeur" : ouvre ce
-   * dossier (attaché ou non à ce code) dans la vraie Bibliothèque -- voir
-   * MesCodes(), dossierOuvert. */
-  onOuvrir: (dossierId: string) => void;
 }) {
-  const [nouveauNom, setNouveauNom] = useState("");
-  const [creation, setCreation] = useState(false);
-  // Replié par défaut (04/09/2026, demande Bourama), même principe que
-  // ChampComportement -- la création d'un nouveau dossier reste toujours
-  // visible en dessous, elle n'est pas concernée par ce repli.
   const [ouvert, setOuvert] = useState(false);
-  const idsActuels = c.dossiers.map((d) => d.id);
-  const ordonnes = ordonnerDossiers(mesDossiers);
+  const [nouveauDossierNom, setNouveauDossierNom] = useState("");
+  const [creationEnCours, setCreationEnCours] = useState(false);
+  const [erreur, setErreur] = useState<string | null>(null);
 
-  function basculer(id: string) {
-    const nouveaux = idsActuels.includes(id) ? idsActuels.filter((i) => i !== id) : [...idsActuels, id];
-    onSauver(nouveaux);
-  }
+  const comportementsDisponibles = mesComportements.filter((cm) => !idsComportementsActuels.includes(cm.id));
+  const dossiersDisponibles = ordonnerDossiers(mesDossiers).filter(({ dossier }) => !idsDossiersActuels.includes(dossier.id));
 
-  async function creerEtAttacher() {
-    const nom = nouveauNom.trim();
-    if (!nom || creation) return;
-    setCreation(true);
+  async function creerDossierEtAttacher() {
+    const nom = nouveauDossierNom.trim();
+    if (!nom || creationEnCours) return;
+    setCreationEnCours(true);
+    setErreur(null);
     try {
-      const dossier = (await creerDossierBibliotheque(nom)) as DossierBibliotheque;
+      const dossier = await creerDossierBibliotheque(nom);
       onDossierCree();
-      onSauver([...idsActuels, dossier.id]);
-      setNouveauNom("");
+      onAttacherDossier(dossier.id);
+      setNouveauDossierNom("");
+    } catch (e) {
+      setErreur(messageErreur(e));
     } finally {
-      setCreation(false);
+      setCreationEnCours(false);
     }
   }
 
   return (
-    <div>
-      <label className="text-xs font-semibold text-dj-texte-muet">
-        Dossiers partagés (sous-dossiers inclus, mis à jour au fil des ajouts)
-      </label>
-      {ordonnes.length === 0 ? (
-        <p className="mt-1 text-xs text-dj-texte-muet">
-          Aucun dossier créé pour l&apos;instant, crées-en un juste en dessous.
-        </p>
-      ) : (
+    <div className="relative">
+      <button
+        type="button"
+        onClick={() => setOuvert((p) => !p)}
+        className="flex items-center gap-1 rounded-full border border-dashed border-dj-bordure px-3 py-1.5 text-xs text-dj-texte-muet transition-colors hover:border-dj-bordure-forte hover:text-dj-texte"
+      >
+        <Plus size={12} /> Ajouter
+      </button>
+
+      {ouvert && (
         <>
-          <button
-            type="button"
-            onClick={() => setOuvert((prec) => !prec)}
-            className="mt-1 flex w-full items-center justify-between gap-2 rounded-lg border border-dj-bordure bg-dj-surface px-2.5 py-1.5 text-left"
-          >
-            <span className="text-xs font-semibold text-dj-texte-muet">
-              Dossiers <span className="text-dj-texte">· {idsActuels.length} sélectionné{idsActuels.length > 1 ? "s" : ""}</span>
-            </span>
-            {ouvert ? <ChevronUp size={14} className="flex-shrink-0 text-dj-texte-muet" /> : <ChevronDown size={14} className="flex-shrink-0 text-dj-texte-muet" />}
-          </button>
-          {ouvert && (
-            <div className="mt-1.5 flex animate-dj-fade-in-rapide flex-col gap-1.5 rounded-lg border border-dj-bordure bg-dj-surface px-2.5 py-2">
-              {ordonnes.map(({ dossier, profondeur }) => (
-                <div key={dossier.id} className="flex items-center gap-2 text-sm text-dj-texte" style={{ paddingLeft: profondeur * 16 }}>
-                  <CaseACocher checked={idsActuels.includes(dossier.id)} onChange={() => basculer(dossier.id)} />
-                  <button
-                    type="button"
-                    onClick={() => onOuvrir(dossier.id)}
-                    title="Ouvrir et modifier"
-                    className="min-w-0 flex-1 truncate text-left transition-colors hover:text-dj-accent-1-texte"
-                  >
-                    {dossier.nom}
-                  </button>
+          <div className="fixed inset-0 z-40" onClick={() => setOuvert(false)} />
+          <div className="absolute left-0 top-full z-40 mt-1.5 flex w-64 flex-col gap-3 rounded-xl border border-dj-bordure bg-dj-surface p-3 shadow-lg">
+            <div>
+              <p className="mb-1.5 text-xs font-medium text-dj-texte-muet">Skills</p>
+              {comportementsDisponibles.length > 0 && (
+                <div className="mb-1 flex max-h-28 flex-col gap-0.5 overflow-y-auto">
+                  {comportementsDisponibles.map((cm) => (
+                    <button
+                      key={cm.id}
+                      onClick={() => {
+                        onAttacherComportement(cm.id);
+                        setOuvert(false);
+                      }}
+                      className="truncate rounded-md px-2 py-1 text-left text-sm text-dj-texte transition-colors hover:bg-dj-surface-haute"
+                    >
+                      {cm.nom || cm.description}
+                    </button>
+                  ))}
                 </div>
-              ))}
+              )}
+              <button
+                onClick={() => {
+                  setOuvert(false);
+                  onOuvrirNouveauComportement();
+                }}
+                className="flex items-center gap-1 text-xs text-dj-accent-1-texte hover:underline"
+              >
+                <Plus size={11} /> Nouveau skill
+              </button>
             </div>
-          )}
+
+            <div className="border-t border-dj-bordure pt-2.5">
+              <p className="mb-1.5 text-xs font-medium text-dj-texte-muet">Dossiers</p>
+              {dossiersDisponibles.length > 0 && (
+                <div className="mb-1.5 flex max-h-28 flex-col gap-0.5 overflow-y-auto">
+                  {dossiersDisponibles.map(({ dossier, profondeur }) => (
+                    <button
+                      key={dossier.id}
+                      onClick={() => {
+                        onAttacherDossier(dossier.id);
+                        setOuvert(false);
+                      }}
+                      style={{ paddingLeft: 8 + profondeur * 12 }}
+                      className="truncate rounded-md px-2 py-1 text-left text-sm text-dj-texte transition-colors hover:bg-dj-surface-haute"
+                    >
+                      {dossier.nom}
+                    </button>
+                  ))}
+                </div>
+              )}
+              <div className="flex gap-1.5">
+                <input
+                  value={nouveauDossierNom}
+                  onChange={(e) => setNouveauDossierNom(e.target.value)}
+                  onKeyDown={(e) => e.key === "Enter" && creerDossierEtAttacher()}
+                  placeholder="Nouveau dossier…"
+                  className="min-w-0 flex-1 rounded-md border border-dj-bordure bg-dj-surface-haute px-2 py-1 text-xs text-dj-texte outline-none focus:border-dj-bordure-forte"
+                />
+                <button
+                  onClick={creerDossierEtAttacher}
+                  disabled={creationEnCours || !nouveauDossierNom.trim()}
+                  className="flex-shrink-0 rounded-md bg-dj-accent-1 px-2 text-[#1A0D02] disabled:opacity-50"
+                >
+                  {creationEnCours ? "…" : <Plus size={12} />}
+                </button>
+              </div>
+              {erreur && <p className="mt-1 text-xs text-[var(--dj-erreur)]">{erreur}</p>}
+            </div>
+          </div>
         </>
       )}
-      <div className="mt-1.5 flex gap-1.5">
-        <input
-          value={nouveauNom}
-          onChange={(e) => setNouveauNom(e.target.value)}
-          onKeyDown={(e) => e.key === "Enter" && creerEtAttacher()}
-          placeholder="Créer un nouveau dossier à partager"
-          className="flex-1 rounded-lg border border-dj-bordure bg-dj-surface px-2.5 py-1.5 text-sm text-dj-texte outline-none focus:border-dj-bordure-forte"
-        />
-        <button
-          onClick={creerEtAttacher}
-          disabled={creation || !nouveauNom.trim()}
-          className="flex-shrink-0 rounded-lg bg-dj-accent-1 px-2.5 text-[#1A0D02] disabled:opacity-50"
-        >
-          <Plus size={14} />
-        </button>
-      </div>
-    </div>
-  );
-}
-
-function ChampTexteLibre({ c, onSauver }: { c: CodePartage; onSauver: (v: string) => void }) {
-  const [valeur, setValeur] = useState(c.texte_libre || "");
-  return (
-    <div>
-      <label className="text-xs font-semibold text-dj-texte-muet">Texte libre (une annonce)</label>
-      <div className="mt-1 flex gap-1.5">
-        <textarea
-          value={valeur}
-          onChange={(e) => setValeur(e.target.value)}
-          placeholder="Ex : le contrôle est reporté à vendredi"
-          rows={2}
-          className="flex-1 resize-none rounded-lg border border-dj-bordure bg-dj-surface px-2.5 py-1.5 text-sm text-dj-texte outline-none focus:border-dj-bordure-forte"
-        />
-        {valeur !== (c.texte_libre || "") && (
-          <button onClick={() => onSauver(valeur)} className="self-start rounded-lg bg-dj-accent-1 px-2.5 py-1.5 text-[#1A0D02]">
-            <Check size={14} />
-          </button>
-        )}
-      </div>
     </div>
   );
 }
