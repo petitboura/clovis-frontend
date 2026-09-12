@@ -99,9 +99,12 @@ vrais composants système (`@capgo/capacitor-native-navigation` +
 web mobile (navigateur, hors app installée) garde un hamburger + tiroir
 coulissant équivalent mais non natif.
 
-Six plugins Capacitor natifs existent côté Android (`MainActivity.java`) :
-Dossiers, ControleSession, Connecteurs, Accessibilité, MiseAJour et
-PontNatif, tous ont désormais un point d'entrée dans la nav web/TypeScript.
+Neuf plugins Capacitor natifs existent côté Android (`MainActivity.java`) :
+Dossiers, ControleSession, Connecteurs, Accessibilité, MiseAJour, PontNatif,
+TempsEcran, Notifications et Telechargement (vrai téléchargement système
+Android -- DownloadManager pour les fichiers déjà en ligne, MediaStore.Downloads
++ notification pour le contenu généré côté client -- voir `lib/telecharger.ts`),
+tous ont désormais un point d'entrée dans la nav web/TypeScript.
 
 ## Ce qui tourne en production
 

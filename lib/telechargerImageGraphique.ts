@@ -1,3 +1,5 @@
+import { telechargerContenuLocal } from "@/lib/telecharger";
+
 // Extrait de GraphiqueDonnees.tsx (voir historique de ce fichier pour le
 // contexte complet des correctifs) : export PNG générique à partir d'un
 // <svg> contenu dans un conteneur DOM. Ne dépend PAS de recharts --
@@ -140,12 +142,11 @@ export function telechargerImage(
     }
     canvas.toBlob((blob) => {
       if (!blob) return;
-      const lienUrl = URL.createObjectURL(blob);
-      const lien = document.createElement("a");
-      lien.href = lienUrl;
-      lien.download = nomFichier;
-      lien.click();
-      URL.revokeObjectURL(lienUrl);
+      // 12/09/2026, Bourama : vrai téléchargement système sur Android
+      // (MediaStore.Downloads + notification) au lieu du <a download>
+      // web ci-dessus, qui ne fait rien dans l'appli -- voir
+      // lib/telecharger.ts. Web/iOS : comportement inchangé.
+      telechargerContenuLocal(nomFichier, blob, "image/png");
       onSucces();
     }, "image/png");
   };

@@ -5,6 +5,7 @@ import { Copy, Check, Download, Maximize2, Minimize2, X } from "lucide-react";
 import hljs from "@/lib/coloration";
 import { PanneauFlottant } from "@/components/PanneauFlottant";
 import { useFermetureAnimee } from "@/lib/useFermetureAnimee";
+import { telechargerContenuLocal } from "@/lib/telecharger";
 
 // Rendu des blocs ```lang ... ``` "code réel" du markdown (les langages
 // spéciaux -- mermaid/chart/carte/html -- sont interceptés un niveau plus
@@ -24,9 +25,10 @@ import { useFermetureAnimee } from "@/lib/useFermetureAnimee";
 // même niveau de fonctionnalités qu'un fichier livré seul, voir
 // FichierCode.tsx/BlocExpansible.tsx -- mais PAS le même composant : un
 // bloc de code inline s'affiche directement dans le texte, jamais replié
-// derrière un clic comme un fichier joint). Téléchargement 100% côté
-// navigateur (Blob + lien temporaire) : contrairement à un fichier
-// généré, il n'y a pas d'URL Supabase ici, juste le texte brut du bloc.
+// derrière un clic comme un fichier joint). Contrairement à un fichier
+// généré, il n'y a pas d'URL Supabase ici, juste le texte brut du bloc --
+// voir lib/telecharger.ts::telechargerContenuLocal pour le chemin de
+// téléchargement (natif Android via MediaStore, replis web/iOS).
 const EXTENSION_PAR_LANGAGE: Record<string, string> = {
   python: "py", javascript: "js", typescript: "ts", xml: "html", css: "css",
   bash: "sh", sql: "sql", java: "java", c: "c", cpp: "cpp", go: "go",
@@ -59,15 +61,12 @@ export function BlocCode({ langage, code }: { langage: string; code: string }) {
     });
   }
 
+  // 12/09/2026, Bourama : vrai téléchargement système sur Android
+  // (MediaStore.Downloads + notification) au lieu du <a download> web
+  // ci-dessus, qui ne fait rien dans l'appli -- voir lib/telecharger.ts.
   function telecharger() {
     const extension = EXTENSION_PAR_LANGAGE[langage] || "txt";
-    const blob = new Blob([code], { type: "text/plain;charset=utf-8" });
-    const url = URL.createObjectURL(blob);
-    const lien = document.createElement("a");
-    lien.href = url;
-    lien.download = `code.${extension}`;
-    lien.click();
-    URL.revokeObjectURL(url);
+    telechargerContenuLocal(`code.${extension}`, code, "text/plain;charset=utf-8");
   }
 
   // Bouton Agrandir/Rétrécir partagé entre vue inline et plein écran

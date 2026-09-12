@@ -6,6 +6,7 @@ import { FileText, FileSpreadsheet, Presentation, FileArchive, FileJson, FileCod
 import { BlocExpansible } from "./BlocExpansible";
 import { VisionneuseImage } from "./VisionneuseImage";
 import { TYPES_MIME_OFFICE, estTypeTexteLisible, estFichierMarkdown, ContenuTexte, ContenuMarkdown, ContenuOffice } from "../VisionneuseBibliotheque";
+import { telecharger } from "@/lib/telecharger";
 
 // CORRECTIF 2026-09-10 (demande Bourama : le nouveau lecteur -- PDF
 // mobile-friendly, Markdown, Office, texte -- n'existait QUE pour les
@@ -132,26 +133,10 @@ export function extensionFichier(href: string): string | null {
   return ext && ext in EXTENSIONS_FICHIER ? ext : null;
 }
 
-// Téléchargement via fetch+blob plutôt qu'un simple <a download> : pour une
-// URL cross-origin (Supabase), le navigateur ignore souvent l'attribut
-// download et ouvre le fichier dans un nouvel onglet à la place -- le blob
-// local, lui, force le vrai téléchargement sans jamais quitter l'appli
-// (même technique que ImageMessage.tsx). Repli : si le fetch échoue (CORS,
-// réseau...), on ouvre quand même le lien plutôt que de bloquer l'utilisateur.
-async function telechargerFichier(href: string, nom: string) {
-  try {
-    const reponse = await fetch(href);
-    const blob = await reponse.blob();
-    const url = URL.createObjectURL(blob);
-    const lien = document.createElement("a");
-    lien.href = url;
-    lien.download = nom;
-    lien.click();
-    URL.revokeObjectURL(url);
-  } catch {
-    window.open(href, "_blank");
-  }
-}
+// 12/09/2026, Bourama : vrai téléchargement système sur Android (au lieu
+// du fetch+blob web ici depuis toujours) -- voir lib/telecharger.ts pour
+// le détail (DownloadManager natif + replis web/iOS inchangés).
+const telechargerFichier = telecharger;
 
 // Carte "image générée" : vignette + zoom plein écran, comme les images
 // envoyées par l'utilisateur (voir ImageMessage.tsx) -- au lieu de la

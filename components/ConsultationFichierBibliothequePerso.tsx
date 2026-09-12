@@ -1,7 +1,8 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Download, FileText } from "lucide-react";
+import { FileText } from "lucide-react";
+import { BoutonTelechargerFichier } from "@/components/BoutonTelechargerFichier";
 import { SectionPage } from "@/components/SectionPage";
 import { VisionneurPdf } from "@/components/VisionneurPdf";
 import { CTACompteRequis } from "@/components/CTACompteRequis";
@@ -91,14 +92,7 @@ export function ConsultationFichierBibliothequePerso({ id }: { id: string }) {
             <h2 className="font-display text-base font-semibold text-dj-texte">{fichier.nom_fichier}</h2>
           </div>
           {fichier.url_publique && (
-            <a
-              href={fichier.url_publique}
-              download={fichier.nom_fichier}
-              className="flex flex-shrink-0 items-center gap-1.5 rounded-cgpt-bouton bg-dj-accent-1 px-4 py-2 text-sm font-semibold text-[#1a0f06] transition-colors duration-200 ease-cgpt-doux hover:bg-dj-accent-2"
-            >
-              <Download size={15} />
-              Télécharger
-            </a>
+            <BoutonTelechargerFichier url={fichier.url_publique} nom={fichier.nom_fichier} />
           )}
         </div>
 

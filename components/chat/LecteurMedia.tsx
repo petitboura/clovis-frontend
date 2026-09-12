@@ -1,6 +1,7 @@
 "use client";
 
 import { Download } from "lucide-react";
+import { telecharger as telechargerFichier } from "@/lib/telecharger";
 
 const EXTENSIONS_AUDIO = ["mp3", "wav", "ogg", "m4a"];
 const EXTENSIONS_VIDEO = ["mp4", "webm", "mov"];
@@ -24,19 +25,11 @@ export function typeMedia(href: string): "audio" | "video" | null {
 // lecteur HTML5 pur (demanderait une conversion serveur) ; le bouton
 // télécharger ci-dessous reste la solution de repli fiable dans ce cas.
 export function LecteurMedia({ href, type }: { href: string; type: "audio" | "video" }) {
-  async function telecharger() {
-    try {
-      const reponse = await fetch(href);
-      const blob = await reponse.blob();
-      const url = URL.createObjectURL(blob);
-      const lien = document.createElement("a");
-      lien.href = url;
-      lien.download = href.split("/").pop()?.split("?")[0] || (type === "audio" ? "audio" : "video");
-      lien.click();
-      URL.revokeObjectURL(url);
-    } catch {
-      window.open(href, "_blank");
-    }
+  // 12/09/2026, Bourama : vrai téléchargement système sur Android (au
+  // lieu du fetch+blob web ici depuis toujours) -- voir lib/telecharger.ts.
+  function telecharger() {
+    const nom = href.split("/").pop()?.split("?")[0] || (type === "audio" ? "audio" : "video");
+    telechargerFichier(href, nom);
   }
 
   return (
