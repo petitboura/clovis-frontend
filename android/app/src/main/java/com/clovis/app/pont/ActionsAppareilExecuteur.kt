@@ -3,8 +3,11 @@
 // cerveau, voir clovis-backend/core/serveur_mcp_generation.py::
 // executer_action_mobile pour la liste exacte des type_action et la
 // forme de `parametres` attendue par l'agent. CE FICHIER DOIT RESTER EN
-// MIROIR EXACT de TYPES_ACTION_MOBILE_VALIDES cote backend : aucun
-// type_action ne doit exister d'un cote sans l'autre.
+// MIROIR EXACT de TYPES_ACTION_MOBILE_VALIDES (core/outils_mobile.py,
+// dossiers designes) ET des types_action geres par
+// core/outils_concentration.py (session de concentration, ajoute le
+// 09/09/2026) cote backend : aucun type_action ne doit exister d'un
+// cote sans l'autre.
 package com.clovis.app.pont
 
 import android.content.Context
@@ -195,6 +198,25 @@ object ActionsAppareilExecuteur {
                 }
                 AccessibiliteExecuteur.saisirTexteParCible(texteCible, valeur)
             }
+            // Ajoute le 09/09/2026 (Bourama, connexion Concentration a
+            // l'IA) : voir clovis-backend/core/outils_concentration.py.
+            // Delegue a ControleSessionRepository, meme logique
+            // (persistance d'etat + alarme d'auto-arret) que le bouton
+            // manuel cote JS (ControleSessionPlugin.kt).
+            "controle_session_demarrer" -> {
+                val dureeMinutes = parametres.entier("duree_minutes")
+                    ?: return ResultatAction(false, "Paramètre manquant ou invalide (duree_minutes).")
+                ControleSessionRepository(context).demarrer(dureeMinutes).fold(
+                    onSuccess = { ResultatAction(true, "Session de concentration démarrée pour $dureeMinutes minutes.") },
+                    onFailure = { ResultatAction(false, it.message ?: "Échec du démarrage de la session.") }
+                )
+            }
+            "controle_session_arreter" -> {
+                ControleSessionRepository(context).arreter().fold(
+                    onSuccess = { ResultatAction(true, "Session de concentration arrêtée.") },
+                    onFailure = { ResultatAction(false, it.message ?: "Échec de l'arrêt de la session.") }
+                )
+            }
             else -> ResultatAction(
                 succes = false,
                 resultat = "type_action \"$typeAction\" non reconnu par l'app."
@@ -206,6 +228,16 @@ object ActionsAppareilExecuteur {
         val element = this[cle] ?: return null
         return try {
             element.jsonPrimitive.content
+        } catch (e: Exception) {
+            null
+        }
+    }
+
+    // Ajoute le 09/09/2026 (controle_session_demarrer, "duree_minutes").
+    private fun JsonObject.entier(cle: String): Int? {
+        val element = this[cle] ?: return null
+        return try {
+            element.jsonPrimitive.content.toIntOrNull()
         } catch (e: Exception) {
             null
         }

@@ -16,11 +16,21 @@ import { BoutonInfoSection } from "./BoutonInfoSection";
  * la navigation (un autre chantier de Bourama s'en charge), juste le
  * composant fonctionnel.
  *
- * Le plugin n'expose PAS de méthode pour savoir si une session est déjà en
- * cours (seulement demarrerSession/arreterSession) : son propre commentaire
- * dit que l'état ne survit pas à un kill de process. Donc `sessionActive`
- * démarre toujours à `false` ici : ce n'est pas une supposition, c'est ce
- * que le plugin documente lui-même comme comportement voulu.
+ * 09/09/2026, Bourama : la session est maintenant basée sur une durée
+ * choisie par l'étudiant (fini l'arrêt manuel uniquement), pour que
+ * l'auto-arrêt fonctionne de façon fiable même si l'app est tuée entre
+ * temps (voir ControleSessionPlugin.kt/ControleSessionAlarmReceiver.kt) ET
+ * pour que ce soit pilotable par l'IA côté chat. Choix de durée en pilules
+ * prédéfinies + saisie libre (recherche de références faite avant de
+ * coder : motif "durées prédéfinies en boutons" repris de Forest/Temps
+ * d'écran iOS, style pilule déjà utilisé ailleurs dans l'app).
+ *
+ * `sessionActive` démarre toujours à `false` à l'ouverture de l'écran : le
+ * plugin n'expose toujours pas de méthode pour savoir si une session
+ * démarrée plus tôt (par ce composant ou par l'IA) est encore en cours au
+ * moment où l'étudiant rouvre cet écran, limite déjà documentée avant ce
+ * chantier, pas résolue ici (hors demande de Bourama pour cette session de
+ * travail).
  *
  * Pas de mécanisme i18n branché dans ce projet (même constat que
  * EspaceParametres.tsx/EspacePlugins.tsx) : textes en dur en français.
@@ -29,9 +39,11 @@ import { BoutonInfoSection } from "./BoutonInfoSection";
 type PluginControleSession = {
   permissionAccordee(): Promise<{ accordee: boolean }>;
   ouvrirReglagesPermission(): Promise<void>;
-  demarrerSession(): Promise<void>;
+  demarrerSession(options: { dureeMinutes: number }): Promise<void>;
   arreterSession(): Promise<void>;
 };
+
+const DUREES_PREDEFINIES_MIN = [15, 30, 45, 60, 90];
 
 export function EspaceControleSession() {
   const { natif, plugin } = usePluginNatif<PluginControleSession>("ControleSession");
@@ -41,6 +53,8 @@ export function EspaceControleSession() {
   const [sessionActive, setSessionActive] = useState(false);
   const [enCours, setEnCours] = useState(false);
   const [erreur, setErreur] = useState<string | null>(null);
+  const [dureeChoisieMin, setDureeChoisieMin] = useState<number | null>(30);
+  const [dureeLibre, setDureeLibre] = useState("");
 
   const verifierPermission = useCallback(() => {
     if (!plugin) return;
@@ -78,6 +92,17 @@ export function EspaceControleSession() {
     }
   }
 
+  function choisirDureePredefinie(minutes: number) {
+    setDureeChoisieMin(minutes);
+    setDureeLibre("");
+  }
+
+  function changerDureeLibre(valeur: string) {
+    setDureeLibre(valeur);
+    const nombre = parseInt(valeur, 10);
+    setDureeChoisieMin(Number.isFinite(nombre) && nombre > 0 ? nombre : null);
+  }
+
   async function basculerSession() {
     if (!plugin) return;
     setErreur(null);
@@ -87,7 +112,11 @@ export function EspaceControleSession() {
         await plugin.arreterSession();
         setSessionActive(false);
       } else {
-        await plugin.demarrerSession();
+        if (!dureeChoisieMin) {
+          setErreur("Choisis une durée avant de démarrer.");
+          return;
+        }
+        await plugin.demarrerSession({ dureeMinutes: dureeChoisieMin });
         setSessionActive(true);
       }
     } catch (e) {
@@ -130,7 +159,7 @@ export function EspaceControleSession() {
         <h2 className="font-display text-base font-bold text-dj-texte">Contrôle de session</h2>
         <BoutonInfoSection
           rubriqueId="controle-session"
-          texteCourt="Coupe les sonneries et notifications, et active Ne pas déranger le temps de ta session."
+          texteCourt="Coupe les sonneries et notifications, et active Ne pas déranger pendant la durée choisie."
         />
       </div>
 
@@ -170,9 +199,42 @@ export function EspaceControleSession() {
             aria-hidden
           />
           <span className="text-sm text-dj-texte">{sessionActive ? "Session en cours" : "Aucune session en cours"}</span>
+
+          {!sessionActive && (
+            <div className="flex w-full flex-col items-center gap-2">
+              <span className="text-xs text-dj-texte-muet">Durée</span>
+              <div className="flex flex-wrap justify-center gap-1.5">
+                {DUREES_PREDEFINIES_MIN.map((minutes) => (
+                  <button
+                    key={minutes}
+                    onClick={() => choisirDureePredefinie(minutes)}
+                    className={`rounded-lg px-3 py-1.5 text-xs font-bold transition-colors ${
+                      dureeChoisieMin === minutes && dureeLibre === ""
+                        ? "bg-dj-accent-1 text-[#1A0D02]"
+                        : "border border-dj-bordure bg-dj-surface text-dj-texte hover:bg-dj-surface-haute"
+                    }`}
+                  >
+                    {minutes} min
+                  </button>
+                ))}
+              </div>
+              <div className="flex items-center gap-2">
+                <input
+                  type="number"
+                  min={1}
+                  inputMode="numeric"
+                  placeholder="Autre (min)"
+                  value={dureeLibre}
+                  onChange={(e) => changerDureeLibre(e.target.value)}
+                  className="w-24 rounded-lg border border-dj-bordure bg-dj-surface px-2.5 py-1.5 text-center text-xs text-dj-texte outline-none focus:border-dj-accent-1"
+                />
+              </div>
+            </div>
+          )}
+
           <button
             onClick={basculerSession}
-            disabled={enCours}
+            disabled={enCours || (!sessionActive && !dureeChoisieMin)}
             className={`flex items-center gap-2 rounded-lg px-4 py-2 text-sm font-bold transition-colors disabled:opacity-50 ${
               sessionActive
                 ? "bg-dj-surface-haute text-dj-texte hover:bg-dj-bordure"
