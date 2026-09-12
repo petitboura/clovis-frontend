@@ -1,40 +1,20 @@
 "use client";
 
-import { useEffect, useState, useRef, type MouseEvent } from "react";
-import {
-  Trash2, Plus, X, Check, ScrollText, FileCode2, Loader2, Link2, Unlink, Eye, Code2, Upload, ToggleLeft, ToggleRight,
-  Download, Sparkles, FileUp, FolderUp, Info,
-} from "lucide-react";
-import ReactMarkdown from "react-markdown";
-import remarkGfm from "remark-gfm";
-import rehypeSanitize, { defaultSchema } from "rehype-sanitize";
-import {
-  lireMesComportements,
-  ajouterComportement,
-  importerComportementDepuisFichier,
-  modifierComportement,
-  attacherComportement,
-  supprimerComportement,
-  lireSkillComportement,
-  modifierSkillComportement,
-  activerDesactiverComportement,
-  publierComportement,
-  type Comportement,
-} from "@/lib/api";
+import { useEffect, useState, type MouseEvent } from "react";
+import { Plus, ScrollText, Link2, ToggleLeft, ToggleRight, Download, Sparkles } from "lucide-react";
+import { lireMesComportements, activerDesactiverComportement, type Comportement } from "@/lib/api";
 import { ecouterDonneesModifiees } from "@/lib/evenementsDonnees";
-import { messageErreur, ErreurApi } from "@/lib/erreurs";
+import { ErreurApi } from "@/lib/erreurs";
 import { useFermetureAnimee } from "@/lib/useFermetureAnimee";
-import { telechargerTexte, nomFichierDepuis } from "@/lib/telechargerTexte";
 import { CTACompteRequis } from "@/components/CTACompteRequis";
 import { ComportementsRecus } from "@/components/ComportementsRecus";
 import { ComportementsPublics } from "@/components/ComportementsPublics";
 import { PanneauFlottant } from "@/components/PanneauFlottant";
+import { EditeurComportement } from "@/components/EditeurComportement";
 import { Skeleton } from "./Skeleton";
 import { OngletsSegment } from "./OngletsSegment";
 import { useInfoSection } from "./SectionPage";
-import { CaseACocher } from "./CaseACocher";
 import { BulleSurvol } from "./BulleSurvol";
-import { ButtonPartager, lienPartage } from "./ButtonPartager";
 
 // Section "Mes comportements" (06/08/2026, demande Bourama : "on peut en
 // mettre plusieurs hein, pas juste un") : PLUSIEURS instructions perso
@@ -207,59 +187,22 @@ export function MesComportements({ agentId }: { agentId: string }) {
   // bloquer toute la liste.
   const [actifEnCours, setActifEnCours] = useState<string | null>(null);
 
-  // Publication vers le catalogue public (21/08) -- retour visuel bref
-  // sur le bouton du panneau, pas de redirection ni de fermeture auto.
-  const [publicationEnCours, setPublicationEnCours] = useState(false);
-  const [publie, setPublie] = useState(false);
-  const [erreurPublication, setErreurPublication] = useState<string | null>(null);
-
   // Panneau plein écran : soit édition d'un comportement existant, soit
   // création d'un nouveau (07/08/2026, demande Bourama : "le mode plein
   // écran ne doit pas être dispo que pour ceux qui existent -- en mode
   // édition [ajout] il faut aussi un truc à côté de la ligne de champ").
   // Depuis le 18/08 (voir plus haut), c'est le SEUL chemin de création,
-  // plus de raccourci en parallèle.
+  // plus de raccourci en parallèle. 12/09/2026 : le contenu du panneau
+  // (texte/skill/codes, tous les états qui vont avec) est désormais
+  // extrait dans EditeurComportement.tsx (chantier "Mes codes = un vrai
+  // éditeur") -- ce composant-ci ne garde que la décision d'ouvrir/fermer
+  // et le mode (création vs édition de quel comportement).
   const [panneau, setPanneau] = useState<{ type: "edition"; c: Comportement } | { type: "creation" } | null>(null);
-  const [texteOuvert, setTexteOuvert] = useState("");
-  // Nom d'affichage (18/08/2026, demande Bourama) : soit choisi par
-  // l'étudiant, soit "Auto" (généré côté serveur avec le skill, même
-  // appel LLM, aucun coût en plus). Seul endroit de création/édition
-  // depuis la suppression de la barre rapide -- voir plus haut.
-  const [nomOuvert, setNomOuvert] = useState("");
-  const [nomAuto, setNomAuto] = useState(true);
-  const [enregistrementEnCours, setEnregistrementEnCours] = useState(false);
-  const [suppressionEnCours, setSuppressionEnCours] = useState(false);
-  const [erreurOuvert, setErreurOuvert] = useState<string | null>(null);
   const [sansCompte, setSansCompte] = useState(false);
-
-  // Onglet du panneau -- "skill" seulement pertinent en édition (un
-  // comportement en création n'a pas encore de skill à afficher, voir
-  // le rendu conditionnel plus bas).
-  const [onglet, setOnglet] = useState<"texte" | "skill">("texte");
-  const [skillOuvert, setSkillOuvert] = useState("");
-  const [skillChargement, setSkillChargement] = useState(false);
-  const [skillEnregistrementEnCours, setSkillEnregistrementEnCours] = useState(false);
-  const [erreurSkill, setErreurSkill] = useState<string | null>(null);
-  const [skillVue, setSkillVue] = useState<"texte" | "apercu">("texte");
-
-  // Détachement (20/08, demande Bourama : "au moment de la création ou
-  // après tu peux l'attacher" -- l'inverse, détacher, doit être possible
-  // aussi, depuis ce même panneau).
-  const [detachementEnCours, setDetachementEnCours] = useState(false);
-
-  // 25/08/2026, demande Bourama ("on peut y téléverser comme ici dans la
-  // bibliothèque") : import direct d'un fichier .md dans "Mes
-  // comportements", gardé tel quel (pas de régénération IA, voir
-  // importerComportementDepuisFichier). Uniquement disponible à la
-  // CRÉATION (importer un skill déjà rédigé n'a pas de sens en édition,
-  // où il faudrait remplacer texte ET skill d'un coup -- l'édition
-  // directe du skill existant, onglet "Voir le skill généré", couvre
-  // déjà ce besoin).
-  const [importEnCours, setImportEnCours] = useState(false);
-  const [erreurImport, setErreurImport] = useState<string | null>(null);
-  const [erreursImportLot, setErreursImportLot] = useState<{ nom: string; erreur: string }[]>([]);
-  const inputImportRef = useRef<HTMLInputElement>(null);
-  const inputImportDossierRef = useRef<HTMLInputElement>(null);
+  // Reflète l'état interne d'EditeurComportement (enregistrement/
+  // suppression en cours) pour désactiver la fermeture par clic sur le
+  // fond/Echap pendant ce temps -- même garde-fou qu'avant l'extraction.
+  const [actionPanneauEnCours, setActionPanneauEnCours] = useState(false);
 
   // 18/08/2026, voir lib/useFermetureAnimee.ts : anime la fermeture du
   // panneau au lieu de le démonter d'un coup.
@@ -291,232 +234,14 @@ export function MesComportements({ agentId }: { agentId: string }) {
 
   function ouvrirEdition(c: Comportement) {
     setPanneau({ type: "edition", c });
-    setTexteOuvert(c.texte);
-    setNomOuvert(c.nom || "");
-    setNomAuto(false); // un comportement existant a déjà un nom -> édition manuelle par défaut
-    setErreurOuvert(null);
-    // 22/08/2026, demande Bourama ("quand tu clique sur un skill existant,
-    // tu vois le skill généré et l'aperçu, pas le texte ni le code en
-    // premier") : ouverture directe sur l'onglet "skill" + sous-vue
-    // "Aperçu" (rendu Markdown lisible), plutôt que sur le texte brut de
-    // l'étudiant ou le markdown source du skill. Le chargement se fait ici
-    // via chargerSkill(c) (même logique que ouvrirOngletSkill, dupliquée
-    // car cette fonction n'a pas encore accès à `panneau` mis à jour par
-    // le setPanneau ci-dessus -- setState est asynchrone).
-    setOnglet("skill");
-    setSkillOuvert("");
-    setErreurSkill(null);
-    setSkillVue("apercu");
-    setPublie(false);
-    setErreurPublication(null);
-    chargerSkill(c.id);
   }
 
   function ouvrirCreation() {
     setPanneau({ type: "creation" });
-    setTexteOuvert("");
-    setNomOuvert("");
-    setNomAuto(true);
-    setErreurOuvert(null);
-    setOnglet("texte");
-    setSkillOuvert("");
-    setErreurSkill(null);
-    setSkillVue("texte");
-    setErreurImport(null);
-    setErreursImportLot([]);
-  }
-
-  // 22/08/2026, demande Bourama : extrait de ouvrirOngletSkill pour être
-  // réutilisable depuis ouvrirEdition (ouverture directe sur ce même
-  // onglet au clic sur un skill existant, voir plus haut). Prend
-  // directement l'id plutôt que de lire `panneau` -- `setPanneau` juste
-  // au-dessus dans ouvrirEdition est asynchrone, `panneau` n'y est donc
-  // pas encore à jour au moment de l'appel.
-  async function chargerSkill(comportementId: string) {
-    setSkillChargement(true);
-    setErreurSkill(null);
-    try {
-      const md = await lireSkillComportement(agentId, comportementId);
-      setSkillOuvert(md);
-    } catch (e) {
-      setErreurSkill(messageErreur(e));
-    } finally {
-      setSkillChargement(false);
-    }
-  }
-
-  async function ouvrirOngletSkill() {
-    setOnglet("skill");
-    if (!panneau || panneau.type !== "edition" || skillOuvert || skillChargement) return;
-    chargerSkill(panneau.c.id);
-  }
-
-  async function enregistrerSkill() {
-    if (!panneau || panneau.type !== "edition") return;
-    const skillMd = skillOuvert.trim();
-    if (!skillMd) return;
-    setSkillEnregistrementEnCours(true);
-    setErreurSkill(null);
-    try {
-      const maj = await modifierSkillComportement(agentId, panneau.c.id, skillMd);
-      setListe((prec) => (prec || []).map((c) => (c.id === maj.id ? maj : c)));
-    } catch (e) {
-      setErreurSkill(messageErreur(e));
-    } finally {
-      setSkillEnregistrementEnCours(false);
-    }
   }
 
   function fermer() {
     setPanneau(null);
-  }
-
-  // 25/08/2026, demande Bourama : import direct d'un .md à la création,
-  // gardé tel quel côté backend (importer_comportement_depuis_skill_md,
-  // pas de passage par _generer_skill). Le nom pré-rempli suit la même
-  // logique que choisirFichier dans BibliothequePublique.tsx (nom du
-  // fichier sans extension, modifiable par le champ Nom existant si
-  // nomAuto est décoché).
-  async function importerFichier(f: File) {
-    if (!panneau || panneau.type !== "creation") return;
-    setImportEnCours(true);
-    setErreurImport(null);
-    const nomDepuisFichier = f.name.replace(/\.md$/i, "");
-    try {
-      const cree = await importerComportementDepuisFichier(agentId, f, nomAuto ? nomDepuisFichier : nomOuvert.trim() || nomDepuisFichier);
-      setListe((prec) => [...(prec || []), cree]);
-      demarrerFermeture(fermer);
-    } catch (e) {
-      if (e instanceof ErreurApi && e.statusCode === 401) {
-        setSansCompte(true);
-      } else {
-        setErreurImport(messageErreur(e));
-      }
-    } finally {
-      setImportEnCours(false);
-    }
-  }
-
-  // 29/08/2026, demande Bourama : plusieurs skills en une fois, y compris
-  // en uploadant un dossier entier (webkitdirectory) -- mais un dossier
-  // contient souvent bien plus que des .md (images, README, etc.), donc
-  // on filtre : seuls les fichiers se terminant par .md sont importés,
-  // le reste du dossier est ignoré silencieusement (pas une erreur, juste
-  // pas un skill). Chaque .md devient un comportement séparé, nom = nom
-  // de fichier (sans extension, sans le chemin du dossier -- même logique
-  // que ajouterFichier). Import séquentiel (comme envoyerDossierDirect
-  // dans EspaceBibliotheque.tsx) pour ne pas bombarder l'API en parallèle.
-  async function importerPlusieursFichiers(fichiersChoisis: FileList | File[]) {
-    if (!panneau || panneau.type !== "creation") return;
-    const tousLesFichiers = Array.from(fichiersChoisis);
-    const fichiersMd = tousLesFichiers.filter((f) => /\.md$/i.test(f.name));
-    if (fichiersMd.length === 0) return;
-
-    setImportEnCours(true);
-    setErreurImport(null);
-    setErreursImportLot([]);
-    const erreurs: { nom: string; erreur: string }[] = [];
-    const creees: Comportement[] = [];
-
-    for (const f of fichiersMd) {
-      const nomFichierSeul = f.name.split("/").pop() || f.name;
-      const nomDepuisFichier = nomFichierSeul.replace(/\.md$/i, "");
-      try {
-        const cree = await importerComportementDepuisFichier(agentId, f, nomDepuisFichier);
-        creees.push(cree);
-      } catch (e) {
-        if (e instanceof ErreurApi && e.statusCode === 401) {
-          setSansCompte(true);
-          break;
-        }
-        erreurs.push({ nom: nomFichierSeul, erreur: messageErreur(e) });
-      }
-    }
-
-    if (creees.length > 0) {
-      setListe((prec) => [...(prec || []), ...creees]);
-    }
-    setErreursImportLot(erreurs);
-    setImportEnCours(false);
-    if (erreurs.length === 0) {
-      demarrerFermeture(fermer);
-    }
-  }
-
-  // 25/08/2026, demande Bourama ("les skills soient téléchargeables en
-  // fichier MD") : contenu déjà en mémoire (skillOuvert, chargé via
-  // chargerSkill/ouvrirOngletSkill), aucun appel réseau nécessaire.
-  function telechargerSkillActuel() {
-    if (!panneau || panneau.type !== "edition" || !skillOuvert) return;
-    telechargerTexte(nomFichierDepuis(panneau.c.nom || "skill", "md"), skillOuvert);
-  }
-
-  async function detacher() {
-    if (!panneau || panneau.type !== "edition") return;
-    setDetachementEnCours(true);
-    setErreurOuvert(null);
-    try {
-      const maj = await attacherComportement(agentId, panneau.c.id, null, null);
-      setListe((prec) => (prec || []).map((c) => (c.id === maj.id ? maj : c)));
-      setPanneau({ type: "edition", c: maj });
-    } catch (e) {
-      setErreurOuvert(messageErreur(e));
-    } finally {
-      setDetachementEnCours(false);
-    }
-  }
-
-  async function enregistrer() {
-    if (!panneau) return;
-    const texte = texteOuvert.trim();
-    if (!texte) return;
-
-    const nom = nomAuto ? null : nomOuvert.trim() || null;
-
-    if (panneau.type === "creation") {
-      setEnregistrementEnCours(true);
-      setErreurOuvert(null);
-      try {
-        const cree = await ajouterComportement(agentId, texte, nom);
-        setListe((prec) => [...(prec || []), cree]);
-        demarrerFermeture(fermer);
-      } catch (e) {
-        setErreurOuvert(messageErreur(e));
-      } finally {
-        setEnregistrementEnCours(false);
-      }
-      return;
-    }
-
-    if (texte === panneau.c.texte && nom === (panneau.c.nom || null)) {
-      demarrerFermeture(fermer);
-      return;
-    }
-    setEnregistrementEnCours(true);
-    setErreurOuvert(null);
-    try {
-      const maj = await modifierComportement(agentId, panneau.c.id, texte, nom);
-      setListe((prec) => (prec || []).map((c) => (c.id === panneau.c.id ? maj : c)));
-      demarrerFermeture(fermer);
-    } catch (e) {
-      setErreurOuvert(messageErreur(e));
-    } finally {
-      setEnregistrementEnCours(false);
-    }
-  }
-
-  async function supprimer() {
-    if (!panneau || panneau.type !== "edition") return;
-    setSuppressionEnCours(true);
-    setErreurOuvert(null);
-    try {
-      await supprimerComportement(agentId, panneau.c.id);
-      setListe((prec) => (prec || []).filter((c) => c.id !== panneau.c.id));
-      demarrerFermeture(fermer);
-    } catch (e) {
-      setErreurOuvert(messageErreur(e));
-      setSuppressionEnCours(false);
-    }
   }
 
   async function toggleActif(c: Comportement, e: MouseEvent) {
@@ -531,20 +256,6 @@ export function MesComportements({ agentId }: { agentId: string }) {
       // ne doit pas casser la liste ; l'état reste simplement inchangé.
     } finally {
       setActifEnCours(null);
-    }
-  }
-
-  async function publier() {
-    if (!panneau || panneau.type !== "edition") return;
-    setPublicationEnCours(true);
-    setErreurPublication(null);
-    try {
-      await publierComportement(agentId, panneau.c.id);
-      setPublie(true);
-    } catch (e) {
-      setErreurPublication(messageErreur(e));
-    } finally {
-      setPublicationEnCours(false);
     }
   }
 
@@ -671,331 +382,22 @@ export function MesComportements({ agentId }: { agentId: string }) {
         </div>
       )}
 
+
       {panneau && (
         <PanneauFlottant
           large
           enSortie={enSortie}
-          onFerme={
-            enregistrementEnCours || suppressionEnCours || skillEnregistrementEnCours || detachementEnCours
-              ? undefined
-              : () => demarrerFermeture(fermer)
-          }
-          entete={
-            <div className="flex items-center justify-between">
-              {/* "i" placé exactement comme les autres boutons "i" de l'app
-                  (voir TitreSection dans SectionPage.tsx : titre puis "i"
-                  juste à côté, même ligne, petit espace) -- 09/09/2026,
-                  retour Bourama : "c'est quelque chose qui explique la
-                  section, regarde l'emplacement des autres i". Ici la
-                  "section" que ce texte explique est ce panneau
-                  d'édition/génération de skill dans son ensemble, donc à
-                  côté de SON titre, pas ailleurs. Uniquement pour un skill
-                  déjà existant (édition) -- rien à "lire" tant qu'aucun
-                  skill n'a encore été généré (création). */}
-              <span className="flex items-center gap-1.5">
-                <span className="text-sm font-medium text-dj-texte">
-                  {panneau.type === "creation" ? "Nouveau skill" : "Modifier ce skill"}
-                </span>
-                {panneau.type === "edition" && (
-                  <BulleSurvol
-                    texte="Ce que l'IA lit vraiment quand elle consulte ce comportement. Tu peux le corriger directement ici -- si tu réédites le texte brut plus tard, il sera régénéré et remplacera ce que tu écris ici."
-                    className="flex h-4 w-4 flex-shrink-0 items-center justify-center rounded-full text-dj-texte-muet hover:text-dj-texte"
-                  >
-                    <Info size={12} />
-                  </BulleSurvol>
-                )}
-                {panneau.type === "edition" && (
-                  <ButtonPartager
-                    lien={lienPartage("skill-perso", panneau.c.id)}
-                    titre={panneau.c.nom || undefined}
-                    variante="icone"
-                  />
-                )}
-              </span>
-              <button
-                onClick={() => demarrerFermeture(fermer)}
-                disabled={enregistrementEnCours || suppressionEnCours || skillEnregistrementEnCours || detachementEnCours}
-                className="flex items-center gap-1 rounded-lg px-2 py-1 text-xs text-dj-texte-muet transition-colors hover:bg-dj-surface-haute disabled:opacity-50"
-              >
-                <X size={14} /> Fermer
-              </button>
-            </div>
-          }
+          onFerme={actionPanneauEnCours ? undefined : () => demarrerFermeture(fermer)}
         >
-          {/* Onglets passés en composant partagé OngletsSegment le
-              31/08/2026, voir OngletsSegment.tsx (fini le pattern
-              soulignement web). onClick de "skill" gardé distinct
-              (ouvrirOngletSkill fait plus que juste changer l'onglet,
-              voir sa définition) plutôt que passé par onChange direct. */}
-          <div className="mb-3 flex-shrink-0">
-            <OngletsSegment
-              ariaLabel="Vue du skill"
-              valeur={onglet}
-              onChange={(v) => (v === "skill" ? ouvrirOngletSkill() : setOnglet(v as typeof onglet))}
-              onglets={
-                panneau.type === "edition"
-                  ? [
-                      { valeur: "texte", libelle: "Texte" },
-                      { valeur: "skill", libelle: "Voir le skill généré", icone: FileCode2 },
-                    ]
-                  : [{ valeur: "texte", libelle: "Texte" }]
-              }
-            />
-          </div>
-
-          {onglet === "texte" ? (
-            <>
-              {panneau.type === "edition" && panneau.c.lien_libelle && (
-                <div className="mb-3 flex items-center justify-between gap-2 rounded-lg border border-dj-bordure bg-dj-surface-haute px-3 py-2 text-xs text-dj-texte-muet">
-                  <span className="flex items-center gap-1.5">
-                    <Link2 size={12} /> Attaché à : <span className="text-dj-texte">{panneau.c.lien_libelle}</span>
-                  </span>
-                  <button
-                    onClick={detacher}
-                    disabled={detachementEnCours}
-                    className="flex flex-shrink-0 items-center gap-1 text-dj-texte-muet transition-colors hover:text-[var(--dj-erreur)] disabled:opacity-50"
-                  >
-                    <Unlink size={12} /> {detachementEnCours ? "…" : "Détacher"}
-                  </button>
-                </div>
-              )}
-              <div className="flex w-full flex-col gap-1.5 pb-3 sm:flex-row sm:items-center">
-                <input
-                  value={nomAuto ? "" : nomOuvert}
-                  onChange={(e) => setNomOuvert(e.target.value)}
-                  disabled={nomAuto}
-                  placeholder={nomAuto ? "Nom généré automatiquement" : "Ex : Réponses en langage simple"}
-                  className="flex-1 rounded-cgpt-carte border border-dj-bordure bg-dj-surface-haute px-3 py-1.5 text-sm text-dj-texte outline-none focus:border-dj-bordure-forte disabled:opacity-50"
-                />
-                <label className="flex flex-shrink-0 items-center gap-1.5 text-xs text-dj-texte-muet">
-                  <CaseACocher checked={nomAuto} onChange={setNomAuto} />
-                  Auto
-                </label>
-              </div>
-
-              {/* Libellé simplifié (08/09/2026, retour Bourama : "l'user il
-                  se fiche du routeur") -- le mécanisme interne (petit
-                  routeur qui filtre les candidats pertinents) n'a aucun
-                  intérêt pour l'étudiant, juste "Description". */}
-              {panneau.type === "edition" && (
-                <p className="pb-3 text-xs text-dj-texte-muet">
-                  <span className="font-medium text-dj-texte-muet">Description :</span>{" "}
-                  {panneau.c.description || "—"}
-                </p>
-              )}
-
-              {panneau.type === "creation" && (
-                <div className="mb-3 flex flex-col gap-2 rounded-lg border border-dashed border-dj-bordure px-3 py-2">
-                  <span className="text-xs text-dj-texte-muet">Déjà un ou plusieurs skills rédigés ? Importe-les tels quels.</span>
-                  <div className="flex flex-wrap items-center gap-2">
-                    <input
-                      ref={inputImportRef}
-                      type="file"
-                      accept=".md"
-                      multiple
-                      className="hidden"
-                      onChange={(e) => {
-                        const fichiers = e.target.files;
-                        if (!fichiers || fichiers.length === 0) return;
-                        if (fichiers.length === 1) {
-                          importerFichier(fichiers[0]);
-                        } else {
-                          importerPlusieursFichiers(fichiers);
-                        }
-                        e.target.value = "";
-                      }}
-                    />
-                    <button
-                      onClick={() => inputImportRef.current?.click()}
-                      disabled={importEnCours}
-                      className="flex flex-shrink-0 items-center gap-1.5 rounded-lg border border-dj-bordure px-2.5 py-1.5 text-xs text-dj-texte transition-colors hover:border-dj-bordure-forte disabled:opacity-50"
-                    >
-                      {importEnCours ? <Loader2 size={13} className="animate-spin" /> : <FileUp size={13} />}
-                      {importEnCours ? "Import…" : "Uploader des .md"}
-                    </button>
-
-                    <input
-                      ref={inputImportDossierRef}
-                      type="file"
-                      className="hidden"
-                      // @ts-expect-error -- webkitdirectory n'est pas dans le typage React standard, mais bien supporté par les navigateurs (PC + mobile web, pas l'app native)
-                      webkitdirectory=""
-                      onChange={(e) => {
-                        const fichiers = e.target.files;
-                        if (fichiers && fichiers.length > 0) importerPlusieursFichiers(fichiers);
-                        e.target.value = "";
-                      }}
-                    />
-                    <button
-                      onClick={() => inputImportDossierRef.current?.click()}
-                      disabled={importEnCours}
-                      className="flex flex-shrink-0 items-center gap-1.5 rounded-lg border border-dj-bordure px-2.5 py-1.5 text-xs text-dj-texte transition-colors hover:border-dj-bordure-forte disabled:opacity-50"
-                      title="Seuls les fichiers .md du dossier seront importés, le reste est ignoré"
-                    >
-                      {importEnCours ? <Loader2 size={13} className="animate-spin" /> : <FolderUp size={13} />}
-                      {importEnCours ? "Import…" : "Importer un dossier"}
-                    </button>
-                  </div>
-                </div>
-              )}
-              {erreurImport && <p className="pb-3 text-xs text-[var(--dj-erreur)]">{erreurImport}</p>}
-              {erreursImportLot.length > 0 && (
-                <div className="mb-3 flex flex-col gap-1 rounded-lg border border-[var(--dj-erreur)] px-3 py-2 text-xs text-[var(--dj-erreur)]">
-                  <p className="font-medium">
-                    {erreursImportLot.length} fichier{erreursImportLot.length > 1 ? "s n'ont" : " n'a"} pas pu être importé{erreursImportLot.length > 1 ? "s" : ""} :
-                  </p>
-                  {erreursImportLot.map((e, i) => (
-                    <p key={i}>« {e.nom} » : {e.erreur}</p>
-                  ))}
-                </div>
-              )}
-
-              <textarea
-                autoFocus
-                value={texteOuvert}
-                onChange={(e) => setTexteOuvert(e.target.value)}
-                placeholder="Ex : réponds-moi toujours en langage simple"
-                rows={16}
-                className="w-full flex-1 resize-none rounded-cgpt-carte border border-dj-bordure bg-dj-surface-haute px-4 py-3 text-base text-dj-texte outline-none focus:border-dj-bordure-forte"
-              />
-
-              <div className="flex w-full flex-col gap-2 pt-4 sm:flex-row sm:items-center sm:justify-between">
-                {erreurOuvert || erreurPublication ? (
-                  <p className="text-xs text-[var(--dj-erreur)]">{erreurOuvert || erreurPublication}</p>
-                ) : (
-                  <span className="hidden sm:block" />
-                )}
-                <div className="flex flex-wrap items-center gap-2">
-                  {panneau.type === "edition" && (
-                    <>
-                      <button
-                        onClick={publier}
-                        disabled={publicationEnCours || enregistrementEnCours || suppressionEnCours}
-                        title="Publier une copie dans le catalogue public -- n'importe qui pourra l'activer"
-                        className="flex items-center gap-1.5 rounded-lg border border-dj-bordure px-3 py-2 text-sm text-dj-texte transition-colors hover:border-dj-bordure-forte disabled:opacity-50"
-                      >
-                        <Upload size={14} /> {publicationEnCours ? "Publication…" : publie ? "Publié !" : "Publier"}
-                      </button>
-                      <button
-                        onClick={supprimer}
-                        disabled={enregistrementEnCours || suppressionEnCours}
-                        className="flex items-center gap-1.5 rounded-lg border border-dj-bordure px-3 py-2 text-sm text-[var(--dj-erreur)] transition-colors hover:bg-[var(--dj-erreur)]/10 disabled:opacity-50"
-                      >
-                        <Trash2 size={14} /> Supprimer
-                      </button>
-                    </>
-                  )}
-                  <button
-                    onClick={enregistrer}
-                    disabled={enregistrementEnCours || suppressionEnCours || !texteOuvert.trim()}
-                    className="flex items-center gap-1.5 rounded-lg bg-dj-accent-1 px-4 py-2 text-sm font-semibold text-[#1A0D02] transition-colors hover:bg-dj-accent-2 disabled:opacity-50"
-                  >
-                    <Check size={14} />{" "}
-                    {enregistrementEnCours ? "Enregistrement…" : panneau.type === "creation" ? "Créer" : "Enregistrer"}
-                  </button>
-                </div>
-              </div>
-            </>
-          ) : (
-            <>
-              {/* Inversion demandée par Bourama (09/09/2026) : "Ce que l'IA
-                  lit vraiment..." est un texte qui explique la SECTION,
-                  déplacé dans le bouton "i" à côté du titre du panneau
-                  (voir plus haut, entete). La description du skill (propre
-                  à CE skill précis) prend sa place ici, affichée à plat,
-                  en entier -- pas tronquée (retour Bourama : "on ne peut
-                  pas voir la description en entier"), elle peut donc
-                  passer sur plusieurs lignes. */}
-              <div className="flex items-start justify-between gap-2 pb-2">
-                <p className="min-w-0 flex-1 text-xs text-dj-texte-muet">
-                  {panneau.type === "edition" ? panneau.c.description || "Pas de description." : ""}
-                </p>
-                <div className="flex flex-shrink-0 gap-1 rounded-lg border border-dj-bordure p-0.5">
-                  <button
-                    onClick={() => setSkillVue("texte")}
-                    className={`flex items-center gap-1.5 rounded-md px-2.5 py-1 text-xs font-medium transition-colors ${
-                      skillVue === "texte" ? "bg-dj-surface-haute text-dj-texte" : "text-dj-texte-muet hover:text-dj-texte"
-                    }`}
-                  >
-                    <Code2 size={13} /> Texte
-                  </button>
-                  <button
-                    onClick={() => setSkillVue("apercu")}
-                    className={`flex items-center gap-1.5 rounded-md px-2.5 py-1 text-xs font-medium transition-colors ${
-                      skillVue === "apercu" ? "bg-dj-surface-haute text-dj-texte" : "text-dj-texte-muet hover:text-dj-texte"
-                    }`}
-                  >
-                    <Eye size={13} /> Aperçu
-                  </button>
-                </div>
-              </div>
-              {skillChargement ? (
-                <div className="flex flex-1 items-center justify-center text-dj-texte-muet">
-                  <Loader2 size={20} className="animate-spin" />
-                </div>
-              ) : skillVue === "texte" ? (
-                <textarea
-                  value={skillOuvert}
-                  onChange={(e) => setSkillOuvert(e.target.value)}
-                  rows={16}
-                  spellCheck={false}
-                  className="w-full flex-1 resize-none rounded-cgpt-carte border border-dj-bordure bg-dj-surface-haute px-4 py-3 font-mono text-sm text-dj-texte outline-none focus:border-dj-bordure-forte"
-                />
-              ) : (
-                // Correctif (09/09/2026, Bourama : "le skill est oblige dans
-                // un cadre, il peut continuer a s'afficher en glissant vers
-                // le bas au lieu du cadre dans le cadre") : avant, ce bloc
-                // avait flex-1 + overflow-y-auto, un DEUXIEME scroll imbrique
-                // dans celui du panneau (voir PanneauFlottant.tsx, deja
-                // overflow-y-auto). Sur mobile, une description longue (non
-                // tronquee depuis le correctif du meme jour juste au-dessus)
-                // reduisait ce flex-1 a une hauteur quasi nulle -- l'apercu
-                // du skill devenait invisible. Plus de flex-1/overflow ici :
-                // le bloc prend sa hauteur naturelle et c'est l'unique
-                // scroll du panneau qui porte tout le contenu, y compris une
-                // description tres longue suivie d'un skill tres long.
-                <div className="w-full rounded-xl border border-dj-bordure bg-dj-surface-haute px-5 py-4">
-                  <div className="dj-markdown [&_ul]:list-disc [&_ul]:pl-5 [&_ol]:list-decimal [&_ol]:pl-5 [&_p]:mb-2 last:[&_p]:mb-0 [&_hr]:my-4 [&_hr]:border-dj-bordure [&_strong]:text-dj-texte [&_h1]:font-lecture [&_h1]:font-semibold [&_h1]:tracking-[-0.01em] [&_h1]:text-dj-texte [&_h1]:text-xl [&_h1]:mb-2 [&_h1]:mt-3 [&_h2]:font-lecture [&_h2]:font-semibold [&_h2]:tracking-[-0.01em] [&_h2]:text-dj-texte [&_h2]:text-lg [&_h2]:mb-2 [&_h2]:mt-3 [&_h3]:font-lecture [&_h3]:font-semibold [&_h3]:tracking-[-0.01em] [&_h3]:text-dj-texte [&_h3]:text-base [&_h3]:mb-1.5 [&_h3]:mt-2">
-                    <ReactMarkdown remarkPlugins={[remarkGfm]} rehypePlugins={[[rehypeSanitize, defaultSchema]]}>
-                      {extraireCorpsSkill(skillOuvert)}
-                    </ReactMarkdown>
-                  </div>
-                </div>
-              )}
-              <div className="flex w-full flex-col gap-2 pt-4 sm:flex-row sm:items-center sm:justify-between">
-                {erreurSkill || erreurPublication ? (
-                  <p className="text-xs text-[var(--dj-erreur)]">{erreurSkill || erreurPublication}</p>
-                ) : (
-                  <span className="hidden sm:block" />
-                )}
-                <div className="flex flex-wrap items-center gap-2">
-                  <button
-                    onClick={telechargerSkillActuel}
-                    disabled={skillChargement || !skillOuvert.trim()}
-                    title="Télécharger ce skill en .md"
-                    className="flex items-center gap-1.5 rounded-lg border border-dj-bordure px-3 py-2 text-sm text-dj-texte-muet transition-colors hover:border-dj-bordure-forte hover:text-dj-texte disabled:opacity-50"
-                  >
-                    <Download size={14} /> Télécharger
-                  </button>
-                  <button
-                    onClick={publier}
-                    disabled={publicationEnCours || skillEnregistrementEnCours || skillChargement}
-                    title="Publier une copie dans le catalogue public -- n'importe qui pourra l'activer"
-                    className="flex items-center gap-1.5 rounded-lg border border-dj-bordure px-3 py-2 text-sm text-dj-texte transition-colors hover:border-dj-bordure-forte disabled:opacity-50"
-                  >
-                    <Upload size={14} /> {publicationEnCours ? "Publication…" : publie ? "Publié !" : "Publier"}
-                  </button>
-                  <button
-                    onClick={enregistrerSkill}
-                    disabled={skillEnregistrementEnCours || skillChargement || !skillOuvert.trim()}
-                    className="flex items-center gap-1.5 rounded-lg bg-dj-accent-1 px-4 py-2 text-sm font-semibold text-[#1A0D02] transition-colors hover:bg-dj-accent-2 disabled:opacity-50"
-                  >
-                    <Check size={14} /> {skillEnregistrementEnCours ? "Enregistrement…" : "Enregistrer le skill"}
-                  </button>
-                </div>
-              </div>
-            </>
-          )}
+          <EditeurComportement
+            agentId={agentId}
+            comportement={panneau.type === "edition" ? panneau.c : null}
+            onFermer={() => demarrerFermeture(fermer)}
+            onCree={(c) => setListe((prec) => [...(prec || []), c])}
+            onModifie={(c) => setListe((prec) => (prec || []).map((x) => (x.id === c.id ? c : x)))}
+            onSupprime={(id) => setListe((prec) => (prec || []).filter((x) => x.id !== id))}
+            onActionEnCoursChange={setActionPanneauEnCours}
+          />
         </PanneauFlottant>
       )}
     </div>

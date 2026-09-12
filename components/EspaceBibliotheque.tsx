@@ -1,8 +1,9 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import {
   Link as IconLien,
+  Link2,
   FileText,
   Search,
   Paperclip,
@@ -14,6 +15,8 @@ import {
   FolderPlus,
   FolderX,
   ChevronLeft,
+  ChevronUp,
+  ChevronDown,
   Pencil,
   Upload,
   Plus,
@@ -49,6 +52,7 @@ import { useInfoSection } from "./SectionPage";
 import { ButtonPartager, lienPartage } from "./ButtonPartager";
 import { BarreActionsSelection, type ActionSelection } from "./BarreActionsSelection";
 import { useSelectionMultiple } from "@/lib/useSelectionMultiple";
+import { SelecteurCodesPartage } from "./SelecteurCodesPartage";
 
 // Onglet "Bibliothèque" de Mon espace, porté de
 // djiguigne-frontend/app/dashboard/espace/page.tsx (même logique,
@@ -134,7 +138,7 @@ function origineDe(f: FichierBiblio): OrigineOnglet {
   return "privee";
 }
 
-export function EspaceBibliotheque() {
+export function EspaceBibliotheque({ dossierInitialId }: { dossierInitialId?: string } = {}) {
   // 21/08/2026, demande Bourama : "un bibliothèque publique dans la
   // section bibliothèque" -- bascule entre la bibliothèque perso
   // (comportement par défaut, inchangé ci-dessous) et le catalogue
@@ -198,6 +202,31 @@ export function EspaceBibliotheque() {
   // Navigation par dossier : pile du fil d'ariane, null = racine.
   const [pileDossiers, setPileDossiers] = useState<{ id: string; nom: string }[]>([]);
   const dossierCourantId = pileDossiers.length > 0 ? pileDossiers[pileDossiers.length - 1].id : null;
+
+  // 12/09/2026, chantier "Mes codes = un vrai éditeur" (demande Bourama) :
+  // `dossierInitialId`, fourni par un appelant qui monte cette vue depuis
+  // "Mes codes" (voir MesCodes.tsx), fait s'ouvrir directement sur ce
+  // dossier au lieu de la racine -- même vue Bibliothèque, pas une copie
+  // réduite. N'applique qu'une fois (ref, pas de re-navigation forcée si
+  // l'utilisateur remonte ensuite lui-même dans l'arborescence).
+  const dossierInitialApplique = useRef(false);
+  useEffect(() => {
+    if (!dossierInitialId || dossierInitialApplique.current || !dossiers) return;
+    dossierInitialApplique.current = true;
+    const chemin: { id: string; nom: string }[] = [];
+    let curseurId: string | null = dossierInitialId;
+    while (curseurId) {
+      const d: DossierBibliotheque | undefined = dossiers.find((x) => x.id === curseurId);
+      if (!d) break;
+      chemin.unshift({ id: d.id, nom: d.nom });
+      curseurId = d.dossier_parent_id;
+    }
+    if (chemin.length > 0) {
+      setVue("perso");
+      setPileDossiers(chemin);
+    }
+  }, [dossierInitialId, dossiers]);
+
   const [nouveauNomDossier, setNouveauNomDossier] = useState("");
   const [creationDossierOuverte, setCreationDossierOuverte] = useState(false);
   const [dossierEnRenommage, setDossierEnRenommage] = useState<string | null>(null);
@@ -929,14 +958,17 @@ async function envoyerFichiersDirect(fichiersChoisis: FileList | File[]) {
           ici") ont été fusionnées dans le "+" flottant existant plus bas
           (menuAjoutOuvert), pas de deuxième "+" séparé. */}
       {dossierCourantId !== null && (
-        <button
-          onClick={() => setPileDossiers((p) => p.slice(0, -1))}
-          aria-label="Revenir au dossier précédent"
-          className="flex w-fit min-w-0 items-center gap-1 rounded-cgpt-bouton px-2 py-1 text-xs font-medium text-dj-texte transition-colors hover:text-dj-texte-muet"
-        >
-          <ChevronLeft size={14} className="flex-shrink-0" />
-          <span className="truncate">{pileDossiers[pileDossiers.length - 1]?.nom}</span>
-        </button>
+        <div className="flex flex-wrap items-center gap-2">
+          <button
+            onClick={() => setPileDossiers((p) => p.slice(0, -1))}
+            aria-label="Revenir au dossier précédent"
+            className="flex w-fit min-w-0 items-center gap-1 rounded-cgpt-bouton px-2 py-1 text-xs font-medium text-dj-texte transition-colors hover:text-dj-texte-muet"
+          >
+            <ChevronLeft size={14} className="flex-shrink-0" />
+            <span className="truncate">{pileDossiers[pileDossiers.length - 1]?.nom}</span>
+          </button>
+          <CodesDossierCourant dossierId={dossierCourantId} />
+        </div>
       )}
 
       {creationDossierOuverte && (
@@ -1785,3 +1817,32 @@ function CarteDossier({
   );
 }
 
+/**
+ * 12/09/2026, chantier "Mes codes = un vrai éditeur" (demande Bourama) :
+ * attacher/détacher CE dossier à un ou plusieurs codes de partage,
+ * directement depuis la Bibliothèque -- même contrôle que côté "Mes
+ * codes" et que l'onglet "Codes" d'EditeurComportement.tsx, voir
+ * SelecteurCodesPartage.tsx. Replié par défaut, même principe que les
+ * autres listes repliables de l'app (ChampComportement dans
+ * MesCodes.tsx).
+ */
+function CodesDossierCourant({ dossierId }: { dossierId: string }) {
+  const [ouvert, setOuvert] = useState(false);
+  return (
+    <div className="relative">
+      <button
+        type="button"
+        onClick={() => setOuvert((p) => !p)}
+        className="flex w-fit items-center gap-1 rounded-cgpt-bouton px-2 py-1 text-xs font-medium text-dj-texte-muet transition-colors hover:text-dj-texte"
+      >
+        <Link2 size={12} /> Codes
+        {ouvert ? <ChevronUp size={12} /> : <ChevronDown size={12} />}
+      </button>
+      {ouvert && (
+        <div className="absolute left-0 top-full z-30 mt-1 w-56 animate-dj-fade-in-rapide rounded-lg border border-dj-bordure bg-dj-surface p-2.5 shadow-lg">
+          <SelecteurCodesPartage type="dossier" id={dossierId} />
+        </div>
+      )}
+    </div>
+  );
+}

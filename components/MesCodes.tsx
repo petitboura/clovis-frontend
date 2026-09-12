@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Plus, Check, Trash2, Copy, ChevronDown, ChevronUp } from "lucide-react";
+import { Plus, Check, Trash2, Copy, ChevronDown, ChevronUp, X } from "lucide-react";
 import {
   listerMesCodes,
   creerCode,
@@ -16,10 +16,14 @@ import {
   type DossierBibliotheque,
 } from "@/lib/api";
 import { messageErreur, ErreurApi } from "@/lib/erreurs";
+import { useFermetureAnimee } from "@/lib/useFermetureAnimee";
 import { Skeleton } from "./Skeleton";
 import { CTACompteRequis } from "./CTACompteRequis";
 import { BoutonInfoSection } from "./BoutonInfoSection";
 import { CaseACocher } from "./CaseACocher";
+import { PanneauFlottant } from "./PanneauFlottant";
+import { EditeurComportement } from "./EditeurComportement";
+import { EspaceBibliotheque } from "./EspaceBibliotheque";
 
 // Même agent générique que MesComportements.tsx (app/(app)/comportements/page.tsx)
 // -- "Mes comportements" n'a jamais eu de notion de rôle, un seul agentId
@@ -55,8 +59,38 @@ export function MesCodes() {
   // compte, même détection 401 que les autres.
   const [sansCompte, setSansCompte] = useState(false);
 
+  // 12/09/2026, chantier "Mes codes = un vrai éditeur" (demande Bourama) :
+  // ouvrir un skill (existant OU en création) directement depuis "Mes
+  // codes", sans repasser par "Mes comportements". `codeId` = le code
+  // depuis lequel l'éditeur a été ouvert (utilisé pour l'attache
+  // automatique à la création, voir onCree plus bas) -- reste utile même
+  // pour un skill ouvert en lecture/édition simple, non attaché à ce code.
+  const [editeurComportement, setEditeurComportement] = useState<{ id: string | null; codeId: string } | null>(null);
+  const { enSortie: editeurEnSortie, demarrerFermeture: fermerEditeurAnime } = useFermetureAnimee();
+
+  // Même principe pour les dossiers, mais la Bibliothèque elle-même gère
+  // sa création/son contenu -- pas de onCree/onModifie/onSupprime à
+  // câbler ici, juste l'ouvrir scopée sur le bon dossier (voir
+  // EspaceBibliotheque.tsx, prop dossierInitialId) et resynchroniser la
+  // liste des codes/dossiers à la fermeture (l'attache a pu changer
+  // depuis l'onglet "Codes" intégré à la Bibliothèque).
+  const [dossierOuvert, setDossierOuvert] = useState<string | null>(null);
+  const { enSortie: dossierEnSortie, demarrerFermeture: fermerDossierAnime } = useFermetureAnimee();
+
+  // Vue divisée sur desktop (code à gauche, éditeur à droite), panneau
+  // plein écran par-dessus sur mobile -- même convention que ChatFlottant.tsx
+  // (window.matchMedia au montage, pas au rendu serveur).
+  const [estDesktop, setEstDesktop] = useState(false);
+  useEffect(() => {
+    setEstDesktop(window.matchMedia("(min-width: 768px)").matches);
+  }, []);
+
   function chargerDossiers() {
     listerDossiersBibliotheque().then(setMesDossiers).catch(() => setMesDossiers([]));
+  }
+
+  function chargerComportements() {
+    lireMesComportements(AGENT_ID).then(setMesComportements).catch(() => setMesComportements([]));
   }
 
   function charger() {
@@ -73,9 +107,30 @@ export function MesCodes() {
 
   useEffect(() => {
     charger();
-    lireMesComportements(AGENT_ID).then(setMesComportements).catch(() => setMesComportements([]));
+    chargerComportements();
     chargerDossiers();
   }, []);
+
+  function ouvrirEditeurComportement(codeId: string, id: string | null) {
+    setEditeurComportement({ id, codeId });
+  }
+
+  // Fermeture animée + resynchronisation : le panneau permet d'attacher/
+  // détacher ce skill à n'importe quel code depuis son propre onglet
+  // "Codes" (pas seulement au code d'où il a été ouvert), donc on
+  // recharge la liste des codes à la fermeture plutôt que de patcher
+  // localement un seul code.
+  function fermerEditeurComportement() {
+    setEditeurComportement(null);
+    charger();
+    chargerComportements();
+  }
+
+  function fermerDossierOuvert() {
+    setDossierOuvert(null);
+    charger();
+    chargerDossiers();
+  }
 
   async function creerVide() {
     setErreur(null);
@@ -171,7 +226,7 @@ export function MesCodes() {
     );
   }
 
-  return (
+  const contenuPrincipal = (
     <section className="rounded-cgpt-carte border border-dj-bordure bg-dj-surface p-5">
       <div className="flex items-center justify-between">
         <div>
@@ -251,12 +306,14 @@ export function MesCodes() {
                     c={c}
                     mesComportements={mesComportements}
                     onSauver={(comportement_ids) => sauvegarder(c.id, { comportement_ids })}
+                    onOuvrir={(id) => ouvrirEditeurComportement(c.id, id)}
                   />
                   <ChampDossiers
                     c={c}
                     mesDossiers={mesDossiers}
                     onSauver={(dossier_ids) => sauvegarder(c.id, { dossier_ids })}
                     onDossierCree={chargerDossiers}
+                    onOuvrir={setDossierOuvert}
                   />
                   <ChampTexteLibre c={c} onSauver={(texte_libre) => sauvegarder(c.id, { texte_libre })} />
                 </div>
@@ -266,6 +323,79 @@ export function MesCodes() {
         })}
       </div>
     </section>
+  );
+
+  // Skill ouvert (id fourni) ou en création (id === null) depuis "Mes
+  // codes" -- même composant que "Mes comportements", voir
+  // EditeurComportement.tsx. L'onglet "Codes" à l'intérieur permet
+  // d'attacher/détacher ce skill à N'IMPORTE quel code, pas seulement
+  // celui d'où l'éditeur a été ouvert -- d'où le rechargement complet
+  // (charger + chargerComportements) à la fermeture plutôt qu'un patch
+  // local ciblé sur un seul code.
+  const editeurJsx = editeurComportement && (
+    <EditeurComportement
+      agentId={AGENT_ID}
+      comportement={editeurComportement.id ? mesComportements.find((cm) => cm.id === editeurComportement.id) || null : null}
+      onFermer={() => fermerEditeurAnime(fermerEditeurComportement)}
+      onCree={(nouveau) => {
+        setMesComportements((prev) => [...prev, nouveau]);
+        const codeCourant = codes?.find((x) => x.id === editeurComportement.codeId);
+        const idsActuels = codeCourant ? codeCourant.comportements.map((cm) => cm.id) : [];
+        sauvegarder(editeurComportement.codeId, { comportement_ids: [...idsActuels, nouveau.id] });
+      }}
+      onModifie={(maj) => setMesComportements((prev) => prev.map((x) => (x.id === maj.id ? maj : x)))}
+      onSupprime={(id) => setMesComportements((prev) => prev.filter((x) => x.id !== id))}
+    />
+  );
+
+  // Dossier ouvert depuis "Mes codes" -- monte la vraie Bibliothèque
+  // (EspaceBibliotheque.tsx), scopée sur ce dossier via dossierInitialId,
+  // habillée d'un petit en-tête "Fermer" (ce composant n'en a pas nativement,
+  // normalement toute une page/onglet, jamais embarqué ailleurs jusqu'ici).
+  const dossierJsx = dossierOuvert && (
+    <div className="flex h-full flex-col">
+      <div className="mb-3 flex flex-shrink-0 items-center justify-end">
+        <button
+          onClick={() => fermerDossierAnime(fermerDossierOuvert)}
+          className="flex items-center gap-1 rounded-lg px-2 py-1 text-xs text-dj-texte-muet transition-colors hover:bg-dj-surface-haute"
+        >
+          <X size={14} /> Fermer
+        </button>
+      </div>
+      <div className="min-h-0 flex-1 overflow-y-auto">
+        <EspaceBibliotheque dossierInitialId={dossierOuvert} />
+      </div>
+    </div>
+  );
+
+  const unEditeurOuvert = !!editeurComportement || !!dossierOuvert;
+
+  return (
+    <div className={unEditeurOuvert && estDesktop ? "flex items-start gap-4" : undefined}>
+      <div className={unEditeurOuvert && estDesktop ? "min-w-0 flex-1" : undefined}>{contenuPrincipal}</div>
+
+      {editeurComportement && estDesktop && (
+        <div className="sticky top-4 max-h-[85vh] w-full max-w-md flex-shrink-0 overflow-y-auto rounded-cgpt-carte border border-dj-bordure bg-dj-surface p-5">
+          {editeurJsx}
+        </div>
+      )}
+      {editeurComportement && !estDesktop && (
+        <PanneauFlottant large enSortie={editeurEnSortie} onFerme={() => fermerEditeurAnime(fermerEditeurComportement)}>
+          {editeurJsx}
+        </PanneauFlottant>
+      )}
+
+      {dossierOuvert && estDesktop && (
+        <div className="sticky top-4 max-h-[85vh] w-full max-w-xl flex-shrink-0 overflow-y-auto rounded-cgpt-carte border border-dj-bordure bg-dj-surface p-5">
+          {dossierJsx}
+        </div>
+      )}
+      {dossierOuvert && !estDesktop && (
+        <PanneauFlottant large enSortie={dossierEnSortie} onFerme={() => fermerDossierAnime(fermerDossierOuvert)}>
+          {dossierJsx}
+        </PanneauFlottant>
+      )}
+    </div>
   );
 }
 
@@ -306,10 +436,15 @@ function ChampComportement({
   c,
   mesComportements,
   onSauver,
+  onOuvrir,
 }: {
   c: CodePartage;
   mesComportements: Comportement[];
   onSauver: (v: string[]) => void;
+  /** 12/09/2026, chantier "Mes codes = un vrai éditeur" : ouvre le skill
+   * (id fourni) ou la création d'un nouveau (id null) dans l'éditeur --
+   * voir MesCodes(), ouvrirEditeurComportement. */
+  onOuvrir: (id: string | null) => void;
 }) {
   // Replié par défaut (04/09/2026, demande Bourama) : même principe que le
   // dépliage de chaque code -- évite qu'une longue liste de comportements
@@ -322,40 +457,54 @@ function ChampComportement({
     onSauver(nouveaux);
   }
 
-  if (mesComportements.length === 0) {
-    return (
-      <div>
-        <label className="text-xs font-semibold text-dj-texte-muet">Skills</label>
-        <p className="mt-1 text-xs text-dj-texte-muet">
-          Aucun comportement créé pour l&apos;instant. Crées-en un dans &quot;Mes comportements&quot; pour pouvoir
-          l&apos;attacher ici.
-        </p>
-      </div>
-    );
-  }
-
   return (
     <div>
-      <button
-        type="button"
-        onClick={() => setOuvert((prec) => !prec)}
-        className="flex w-full items-center justify-between gap-2 rounded-lg border border-dj-bordure bg-dj-surface px-2.5 py-1.5 text-left"
-      >
-        <span className="text-xs font-semibold text-dj-texte-muet">
-          Skills <span className="text-dj-texte">· {idsActuels.length} sélectionné{idsActuels.length > 1 ? "s" : ""}</span>
-        </span>
-        {ouvert ? <ChevronUp size={14} className="flex-shrink-0 text-dj-texte-muet" /> : <ChevronDown size={14} className="flex-shrink-0 text-dj-texte-muet" />}
-      </button>
-      {ouvert && (
+      <div className="flex items-center justify-between gap-2">
+        {mesComportements.length === 0 ? (
+          <label className="text-xs font-semibold text-dj-texte-muet">Skills</label>
+        ) : (
+          <button
+            type="button"
+            onClick={() => setOuvert((prec) => !prec)}
+            className="flex min-w-0 flex-1 items-center justify-between gap-2 rounded-lg border border-dj-bordure bg-dj-surface px-2.5 py-1.5 text-left"
+          >
+            <span className="text-xs font-semibold text-dj-texte-muet">
+              Skills <span className="text-dj-texte">· {idsActuels.length} sélectionné{idsActuels.length > 1 ? "s" : ""}</span>
+            </span>
+            {ouvert ? <ChevronUp size={14} className="flex-shrink-0 text-dj-texte-muet" /> : <ChevronDown size={14} className="flex-shrink-0 text-dj-texte-muet" />}
+          </button>
+        )}
+      </div>
+
+      {mesComportements.length === 0 && (
+        <p className="mt-1 text-xs text-dj-texte-muet">Aucun skill créé pour l&apos;instant.</p>
+      )}
+
+      {ouvert && mesComportements.length > 0 && (
         <div className="mt-1.5 flex animate-dj-fade-in-rapide flex-col gap-1.5 rounded-lg border border-dj-bordure bg-dj-surface px-2.5 py-2">
           {mesComportements.map((cm) => (
-            <label key={cm.id} className="flex items-center gap-2 text-sm text-dj-texte">
+            <div key={cm.id} className="flex items-center gap-2 text-sm text-dj-texte">
               <CaseACocher checked={idsActuels.includes(cm.id)} onChange={() => basculer(cm.id)} />
-              <span className="min-w-0 truncate">{cm.nom || cm.description}</span>
-            </label>
+              <button
+                type="button"
+                onClick={() => onOuvrir(cm.id)}
+                title="Ouvrir et modifier"
+                className="min-w-0 flex-1 truncate text-left transition-colors hover:text-dj-accent-1-texte"
+              >
+                {cm.nom || cm.description}
+              </button>
+            </div>
           ))}
         </div>
       )}
+
+      <button
+        type="button"
+        onClick={() => onOuvrir(null)}
+        className="mt-1.5 flex items-center gap-1.5 rounded-lg border border-dashed border-dj-bordure px-2.5 py-1.5 text-xs text-dj-texte-muet transition-colors hover:border-dj-bordure-forte hover:text-dj-texte"
+      >
+        <Plus size={13} /> Nouveau skill
+      </button>
     </div>
   );
 }
@@ -395,11 +544,16 @@ function ChampDossiers({
   mesDossiers,
   onSauver,
   onDossierCree,
+  onOuvrir,
 }: {
   c: CodePartage;
   mesDossiers: DossierBibliotheque[];
   onSauver: (v: string[]) => void;
   onDossierCree: () => void;
+  /** 12/09/2026, chantier "Mes codes = un vrai éditeur" : ouvre ce
+   * dossier (attaché ou non à ce code) dans la vraie Bibliothèque -- voir
+   * MesCodes(), dossierOuvert. */
+  onOuvrir: (dossierId: string) => void;
 }) {
   const [nouveauNom, setNouveauNom] = useState("");
   const [creation, setCreation] = useState(false);
@@ -453,14 +607,17 @@ function ChampDossiers({
           {ouvert && (
             <div className="mt-1.5 flex animate-dj-fade-in-rapide flex-col gap-1.5 rounded-lg border border-dj-bordure bg-dj-surface px-2.5 py-2">
               {ordonnes.map(({ dossier, profondeur }) => (
-                <label
-                  key={dossier.id}
-                  className="flex items-center gap-2 text-sm text-dj-texte"
-                  style={{ paddingLeft: profondeur * 16 }}
-                >
+                <div key={dossier.id} className="flex items-center gap-2 text-sm text-dj-texte" style={{ paddingLeft: profondeur * 16 }}>
                   <CaseACocher checked={idsActuels.includes(dossier.id)} onChange={() => basculer(dossier.id)} />
-                  <span className="min-w-0 truncate">{dossier.nom}</span>
-                </label>
+                  <button
+                    type="button"
+                    onClick={() => onOuvrir(dossier.id)}
+                    title="Ouvrir et modifier"
+                    className="min-w-0 flex-1 truncate text-left transition-colors hover:text-dj-accent-1-texte"
+                  >
+                    {dossier.nom}
+                  </button>
+                </div>
               ))}
             </div>
           )}
