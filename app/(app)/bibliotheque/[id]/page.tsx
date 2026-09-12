@@ -1,7 +1,8 @@
 import type { Metadata } from "next";
-import { Download, FileText } from "lucide-react";
+import { FileText } from "lucide-react";
 import { SectionPage } from "@/components/SectionPage";
 import { VisionneurPdf } from "@/components/VisionneurPdf";
+import { BoutonTelechargerFichier } from "@/components/BoutonTelechargerFichier";
 import { obtenirEntreeBibliothequePublique, type EntreeBibliothequePublique } from "@/lib/api";
 import { ErreurApi } from "@/lib/erreurs";
 
@@ -101,14 +102,7 @@ export default async function PageEntreeBibliothequePublique({ params }: { param
             <h2 className="font-display text-base font-semibold text-dj-texte">{entree.nom}</h2>
           </div>
           {entree.url_publique && (
-            <a
-              href={entree.url_publique}
-              download={entree.nom_fichier || entree.nom}
-              className="flex flex-shrink-0 items-center gap-1.5 rounded-cgpt-bouton bg-dj-accent-1 px-4 py-2 text-sm font-semibold text-[#1a0f06] transition-colors duration-200 ease-cgpt-doux hover:bg-dj-accent-2"
-            >
-              <Download size={15} />
-              Télécharger
-            </a>
+            <BoutonTelechargerFichier url={entree.url_publique} nom={entree.nom_fichier || entree.nom} />
           )}
         </div>
 

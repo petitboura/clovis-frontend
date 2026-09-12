@@ -15,7 +15,7 @@ import {
 import "pdfjs-dist/web/pdf_viewer.css";
 import { Download, ZoomIn as IconZoomIn, ZoomOut as IconZoomOut } from "lucide-react";
 import { Skeleton } from "./Skeleton";
-import { telecharger } from "./VisionneuseBibliotheque";
+import { telecharger } from "@/lib/telecharger";
 
 // 10/09, remplacement du lecteur PDF -- l'ancien (react-pdf/pdfjs custom,
 // avec bascule orientation/mode page-par-page codée à la main) posait trop

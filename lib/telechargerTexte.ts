@@ -1,17 +1,18 @@
+import { telechargerContenuLocal } from "@/lib/telecharger";
+
 // 25/08/2026, demande Bourama : "je veux que les skills soient
 // téléchargeables en fichier MD" -- pas d'appel réseau ici (le contenu
 // est déjà en mémoire côté client, contrairement à un fichier de la
 // bibliothèque qui vit dans Supabase Storage), juste un Blob local.
 // Générique (nomFichier + contenu + type MIME) pour rester réutilisable
 // au-delà des skills si un autre export texte est demandé plus tard.
+//
+// 12/09/2026, Bourama : délègue maintenant à lib/telecharger.ts pour un
+// vrai téléchargement système sur Android (MediaStore.Downloads +
+// notification, au lieu du <a download> web qui ne fait rien dans
+// l'appli) -- replis web/iOS inchangés.
 export function telechargerTexte(nomFichier: string, contenu: string, typeMime = "text/markdown;charset=utf-8") {
-  const blob = new Blob([contenu], { type: typeMime });
-  const url = URL.createObjectURL(blob);
-  const lien = document.createElement("a");
-  lien.href = url;
-  lien.download = nomFichier;
-  lien.click();
-  URL.revokeObjectURL(url);
+  telechargerContenuLocal(nomFichier, contenu, typeMime);
 }
 
 // Nom de fichier sûr à partir du nom d'affichage d'un skill (espaces ->
