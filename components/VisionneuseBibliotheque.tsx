@@ -97,7 +97,32 @@ type FichierBiblio = {
 // Téléchargement via fetch+blob (même raison que partout ailleurs dans
 // le chat : une URL cross-origin Supabase ignore souvent l'attribut
 // <a download>, le blob local force le vrai téléchargement).
+//
+// 12/09/2026, Bourama : dans l'appli Android, ce tour de passe-passe web
+// ne fait rien du tout (pas de gestionnaire de téléchargement branché à
+// la vue web). Dans l'appli, on écrit le fichier sur l'appareil puis on
+// ouvre le menu de partage natif, qui permet d'enregistrer/envoyer le
+// fichier. Le web garde son comportement d'origine, inchangé.
 export async function telecharger(href: string, nom: string) {
+  let estNatif = false;
+  try {
+    const { Capacitor } = await import("@capacitor/core");
+    estNatif = Capacitor.isNativePlatform();
+  } catch {
+    // @capacitor/core indisponible : on continue avec le téléchargement
+    // web classique ci-dessous, comme si on n'était pas dans l'appli.
+  }
+
+  if (estNatif) {
+    try {
+      await telechargerNatif(href, nom);
+      return;
+    } catch {
+      // Repli sur le comportement web si l'écriture/partage natif échoue,
+      // au cas où (mieux qu'une erreur silencieuse).
+    }
+  }
+
   try {
     const reponse = await fetch(href);
     const blob = await reponse.blob();
@@ -110,6 +135,33 @@ export async function telecharger(href: string, nom: string) {
   } catch {
     window.open(href, "_blank");
   }
+}
+
+async function telechargerNatif(href: string, nom: string) {
+  const [{ Filesystem, Directory }, { Share }] = await Promise.all([
+    import("@capacitor/filesystem"),
+    import("@capacitor/share"),
+  ]);
+
+  const reponse = await fetch(href);
+  const blob = await reponse.blob();
+  const base64 = await new Promise<string>((resolve, reject) => {
+    const lecteur = new FileReader();
+    lecteur.onloadend = () => {
+      const resultat = lecteur.result as string;
+      resolve(resultat.split(",")[1] ?? "");
+    };
+    lecteur.onerror = () => reject(lecteur.error);
+    lecteur.readAsDataURL(blob);
+  });
+
+  const { uri } = await Filesystem.writeFile({
+    path: nom,
+    data: base64,
+    directory: Directory.Cache,
+  });
+
+  await Share.share({ files: [uri], dialogTitle: nom });
 }
 
 // 25/08/2026, demande Bourama : "les truc comme du texte ou autre

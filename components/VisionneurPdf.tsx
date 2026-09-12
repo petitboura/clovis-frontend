@@ -64,22 +64,39 @@ export function VisionneurPdf({ url, page = 1 }: { url: string; page?: number })
   // Pré-vérification réseau : les échecs les plus courants (URL 404,
   // fichier supprimé côté Supabase, CORS) sont détectés tout de suite au
   // lieu d'attendre le timeout complet ci-dessous.
+  //
+  // 12/09/2026, Bourama (signalé cassé dans l'appli Android) : cette
+  // requête HEAD échoue à tort dans l'appli native alors que le PDF est
+  // en réalité valide, ce qui affichait l'erreur avant même d'essayer de
+  // l'afficher. Dans l'appli, on saute donc cette pré-vérification et on
+  // laisse VisionneurPdfCharge faire le vrai essai ; le timeout plus bas
+  // (DELAI_ERREUR_MS) reste le seul garde-fou pour un fichier réellement
+  // cassé, comme avant l'ajout de cette pré-vérification.
   useEffect(() => {
     let annule = false;
     setErreur(false);
     setPretAVerifier(false);
-    fetch(url, { method: "HEAD" })
-      .then((reponse) => {
-        if (annule) return;
-        if (!reponse.ok) {
-          setErreur(true);
-        } else {
-          setPretAVerifier(true);
-        }
-      })
-      .catch(() => {
-        if (!annule) setErreur(true);
-      });
+
+    import("@capacitor/core").then(({ Capacitor }) => {
+      if (annule) return;
+      if (Capacitor.isNativePlatform()) {
+        setPretAVerifier(true);
+        return;
+      }
+      fetch(url, { method: "HEAD" })
+        .then((reponse) => {
+          if (annule) return;
+          if (!reponse.ok) {
+            setErreur(true);
+          } else {
+            setPretAVerifier(true);
+          }
+        })
+        .catch(() => {
+          if (!annule) setErreur(true);
+        });
+    });
+
     return () => {
       annule = true;
     };
