@@ -56,6 +56,15 @@
             android:name=".notifications.RappelAlarmReceiver"
             android:exported="false" />
 
+        <!-- 09/09/2026 (Bourama, session de concentration basee sur une
+             duree) : recoit l'alarme AlarmManager declenchee par
+             ControleSessionPlugin.demarrerSession, restaure l'etat du
+             telephone a la fin de la duree meme app fermee, meme forme
+             que RappelAlarmReceiver ci-dessus. -->
+        <receiver
+            android:name=".controlesession.ControleSessionAlarmReceiver"
+            android:exported="false" />
+
         <service
             android:name=".notifications.ClovisFirebaseMessagingService"
             android:exported="false">
