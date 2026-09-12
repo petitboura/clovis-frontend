@@ -35,7 +35,14 @@ private const val BASE_URL = "https://clovis-backend-production.up.railway.app"
 data class ActionAppareil(
     val id: String,
     val type_action: String,
-    val parametres: JsonObject = JsonObject(emptyMap())
+    val parametres: JsonObject = JsonObject(emptyMap()),
+    // Ajoute cote serveur le 04/09/2026 (voir lire_actions_en_attente,
+    // clovis-backend) pour ne renvoyer une action ciblee qu'au bon
+    // appareil -- jamais reporte ici, ce qui faisait planter le decodage
+    // de CHAQUE reponse de /actions/en-attente depuis cette date (le
+    // decodeur JSON par defaut rejette tout champ inconnu). Corrige le
+    // 12/09/2026.
+    val appareil_id_cible: String? = null
 )
 
 @Serializable
@@ -80,7 +87,7 @@ data class ReponseRechercheNotion(val resultats: List<ResultatNotion>)
 class ClovisApiClient(private val context: Context) {
 
     private val http = HttpClient(Android) {
-        install(ContentNegotiation) { json() }
+        install(ContentNegotiation) { json(Json { ignoreUnknownKeys = true }) }
     }
 
     private fun avecAuth(builder: io.ktor.client.request.HttpRequestBuilder) {
