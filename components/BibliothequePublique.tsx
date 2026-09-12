@@ -5,7 +5,7 @@ import { useSearchParams } from "next/navigation";
 import {
   Search, Plus, Trash2, Paperclip, FileText, Image as IconImage, Music as IconAudio, Video as IconVideo,
   Flag, FolderPlus, Check, Link as IconLien, Upload, FolderX, X, Globe, Lock, Loader2, Download, ChevronLeft,
-  SlidersHorizontal, Move, FolderMinus, Bell, XCircle,
+  SlidersHorizontal, Move, FolderMinus, Bell, XCircle, CheckSquare, Share2,
 } from "lucide-react";
 import {
   listerBibliothequePublique,
@@ -42,6 +42,9 @@ import { VisionneuseBibliotheque } from "@/components/VisionneuseBibliotheque";
 import { SelectPersonnalise } from "@/components/SelectPersonnalise";
 import { Skeleton } from "./Skeleton";
 import { ButtonPartager, lienPartage } from "./ButtonPartager";
+import { CaseACocher } from "./CaseACocher";
+import { BarreActionsSelection, type ActionSelection } from "./BarreActionsSelection";
+import { useSelectionMultiple } from "@/lib/useSelectionMultiple";
 
 // 09/09/2026, demande Bourama ("confirmation contributeurs") : décrit
 // CE qu'on est en train de déplacer, le temps que la modale de choix de
@@ -967,6 +970,102 @@ export function BibliothequePublique() {
     }
   }
 
+  // 12/09/2026, sélection multiple (demande Bourama) : Partager et
+  // Supprimer restent valables quel que soit le mélange fichiers/dossiers
+  // coché. Copier chez moi (fichiers) et Attacher (dossiers) n'apparaissent
+  // que si la sélection ne contient que ce type-là. Déplacer en groupe
+  // volontairement pas proposé pour l'instant : le système de confirmation
+  // par le créateur (09/09/2026) rendrait le comportement ambigu dès que
+  // plusieurs créateurs différents sont concernés à la fois.
+  async function supprimerSelection() {
+    const total = idsDossiersSelectionnes.length + entreesSelectionnees.length;
+    if (total === 0) return;
+    if (!window.confirm(`Retirer ${total} élément${total > 1 ? "s" : ""} sélectionné${total > 1 ? "s" : ""} de la bibliothèque publique ?`))
+      return;
+    let demandesEnvoyees = 0;
+    try {
+      for (const dossierId of idsDossiersSelectionnes) {
+        const dossier = sousDossiersAffiches.find((d) => d.id === dossierId);
+        const resultat = await supprimerDossierCataloguePublic(dossierId);
+        if (resultat) {
+          demandesEnvoyees++;
+        } else if (dossier && pileDossiers.some((p) => p.id === dossier.id)) {
+          setPileDossiers((p) => p.slice(0, p.findIndex((x) => x.id === dossier.id)));
+        }
+      }
+      for (const e of entreesSelectionnees) {
+        await supprimerDeBibliothequePublique(e.id);
+      }
+      selectionMultiple.desactiver();
+      charger(recherche);
+      chargerDossiers();
+      if (demandesEnvoyees > 0) {
+        setMessageDemandeEnvoyee(
+          `${demandesEnvoyees} demande${demandesEnvoyees > 1 ? "s" : ""} envoyée${demandesEnvoyees > 1 ? "s" : ""} : en attente de confirmation du créateur concerné.`
+        );
+      }
+    } catch (e) {
+      window.alert(messageErreur(e));
+    }
+  }
+
+  async function partagerSelection() {
+    const liens = [
+      ...idsDossiersSelectionnes.map((id) => lienPartage("dossier-public", id)),
+      ...entreesSelectionnees.map((e) => lienPartage("fichier-public", e.id)),
+    ];
+    if (liens.length === 0) return;
+    if (liens.length === 1 && typeof navigator !== "undefined" && navigator.share) {
+      try {
+        await navigator.share({ url: liens[0] });
+        return;
+      } catch {
+        return;
+      }
+    }
+    try {
+      await navigator.clipboard.writeText(liens.join("\n"));
+      window.alert(`${liens.length} lien${liens.length > 1 ? "s" : ""} copié${liens.length > 1 ? "s" : ""}.`);
+    } catch {
+      window.prompt("Copie ces liens :", liens.join("\n"));
+    }
+  }
+
+  async function copierSelectionVersBiblioPerso() {
+    if (entreesSelectionnees.length === 0) return;
+    try {
+      for (const e of entreesSelectionnees) {
+        await copierVersBibliothequePersonnelle(e.id);
+      }
+      selectionMultiple.desactiver();
+    } catch (e) {
+      if (e instanceof ErreurApi && e.statusCode === 401) {
+        setCompteRequisPourCopie(true);
+      } else {
+        window.alert(messageErreur(e));
+      }
+    }
+  }
+
+  async function attacherSelection() {
+    if (idsDossiersSelectionnes.length === 0) return;
+    try {
+      for (const dossierId of idsDossiersSelectionnes) {
+        if (!dossiersAttachesIds.has(dossierId)) {
+          await attacherDossierPublic(dossierId);
+        }
+      }
+      setDossiersAttachesIds((s) => {
+        const suivant = new Set(s);
+        idsDossiersSelectionnes.forEach((id) => suivant.add(id));
+        return suivant;
+      });
+      selectionMultiple.desactiver();
+    } catch (e) {
+      window.alert(messageErreur(e));
+    }
+  }
+
   if (sansCompte) {
     return <CTACompteRequis texte="Crée un compte pour ajouter un document à la bibliothèque publique." />;
   }
@@ -1004,6 +1103,20 @@ export function BibliothequePublique() {
   // "Type" (qui n'a pas de sens pour un dossier) doit apparaître dans le
   // panneau.
   const listeFichiersVisible = ongletBiblioPublique === "tous" || !!dossierCourantId;
+
+  // 12/09/2026, demande Bourama : sélection multiple, même principe que
+  // EspaceBibliotheque.tsx -- idsElementsAffiches reflète ce qui est
+  // réellement visible (donc après filtre/recherche), condition pour que
+  // "Tout sélectionner" et la sélection par plage (Shift) restent justes.
+  const idsElementsAffiches = [
+    ...sousDossiersAffiches.map((d) => d.id),
+    ...(listeFichiersVisible ? (listeAffichee ?? []).map((e) => e.id) : []),
+  ];
+  const selectionMultiple = useSelectionMultiple(idsElementsAffiches);
+  const idsDossiersSelectionnes = sousDossiersAffiches
+    .filter((d) => selectionMultiple.selection.has(d.id))
+    .map((d) => d.id);
+  const entreesSelectionnees = (listeAffichee ?? []).filter((e) => selectionMultiple.selection.has(e.id));
   // 08/09/2026 : "Type" ne compte dans le badge que là où il s'applique réellement (voir listeFichiersVisible ci-dessus).
   const nombreFiltresActifs = [
     filtreType !== "tous" && listeFichiersVisible, !!filtrePays, !!filtreNiveau, !!filtreCategorie, !!filtreClasse, !!filtreSpecialite,
@@ -1282,11 +1395,30 @@ export function BibliothequePublique() {
 
           {dossiers !== undefined && sousDossiersAffiches.length > 0 && (
             <div className="flex flex-col gap-2">
-              {sousDossiersAffiches.map((d) => (
+              {sousDossiersAffiches.map((d) => {
+                const selectionne = selectionMultiple.estSelectionne(d.id);
+                return (
                 <div
                   key={d.id}
-                  className="flex items-center justify-between gap-3 rounded-xl border border-dj-bordure bg-dj-surface px-4 py-3 transition-colors"
+                  onClick={selectionMultiple.actif ? (e) => selectionMultiple.basculer(d.id, { shiftKey: e.shiftKey }) : undefined}
+                  className={`flex items-center justify-between gap-3 rounded-xl border px-4 py-3 transition-colors ${
+                    selectionMultiple.actif ? "cursor-pointer" : ""
+                  } ${selectionne ? "border-dj-accent-1 bg-dj-accent-1-conteneur" : "border-dj-bordure bg-dj-surface"}`}
                 >
+                  {selectionMultiple.actif && <CaseACocher checked={selectionne} onChange={() => {}} />}
+                  {selectionMultiple.actif ? (
+                    <span className="flex min-w-0 items-center gap-2 text-sm text-dj-texte">
+                      {d.statut === "contribution_libre" ? (
+                        <Globe size={16} className="flex-shrink-0 text-dj-texte-muet" />
+                      ) : (
+                        <Lock size={16} className="flex-shrink-0 text-dj-texte-muet" />
+                      )}
+                      <div className="min-w-0">
+                        <p className="truncate font-medium">{d.nom}</p>
+                        {d.description && <p className="truncate text-xs text-dj-texte-muet">{d.description}</p>}
+                      </div>
+                    </span>
+                  ) : (
                   <button
                     onClick={() => setPileDossiers((p) => [...p, { id: d.id, nom: d.nom }])}
                     title={d.statut === "contribution_libre" ? "Contribution libre : tout le monde peut y ajouter" : "Privé : seul le créateur peut y ajouter"}
@@ -1305,6 +1437,7 @@ export function BibliothequePublique() {
                       )}
                     </div>
                   </button>
+                  )}
                   {/* 08/09/2026 (correctif) : les deux boutons d'action
                       groupés dans un même conteneur -- avant, ils étaient
                       enfants directs de la carte en justify-between, qui
@@ -1312,6 +1445,7 @@ export function BibliothequePublique() {
                       garder collés à droite. Icône Download (au lieu de
                       FolderSync, jugée confuse) : "attacher" se lit
                       simplement comme "récupérer ce dossier chez moi". */}
+                  {!selectionMultiple.actif && (
                   <div className="flex flex-shrink-0 items-center gap-3">
                     <ButtonPartager lien={lienPartage("dossier-public", d.id)} titre={d.nom} variante="icone" />
                     <button
@@ -1339,8 +1473,10 @@ export function BibliothequePublique() {
                       <FolderX size={14} />
                     </button>
                   </div>
+                  )}
                 </div>
-              ))}
+              );
+              })}
             </div>
           )}
 
@@ -1478,11 +1614,27 @@ export function BibliothequePublique() {
             <div className="flex flex-col gap-2">
               {listeAffichee.map((entree) => {
             const Icone = iconePourType(entree.type_mime);
+            const selectionne = selectionMultiple.estSelectionne(entree.id);
             return (
               <div
                 key={entree.id}
-                className="flex items-center justify-between gap-3 rounded-xl border border-dj-bordure bg-dj-surface px-4 py-3"
+                onClick={selectionMultiple.actif ? (e) => selectionMultiple.basculer(entree.id, { shiftKey: e.shiftKey }) : undefined}
+                className={`flex items-center justify-between gap-3 rounded-xl border px-4 py-3 transition-colors ${
+                  selectionMultiple.actif ? "cursor-pointer" : ""
+                } ${selectionne ? "border-dj-accent-1 bg-dj-accent-1-conteneur" : "border-dj-bordure bg-dj-surface"}`}
               >
+                {selectionMultiple.actif && <CaseACocher checked={selectionne} onChange={() => {}} />}
+                {selectionMultiple.actif ? (
+                  <span className="flex min-w-0 flex-1 items-center gap-3 text-left">
+                    <Icone size={16} className="flex-shrink-0 text-dj-texte-muet" />
+                    <div className="min-w-0">
+                      <p className="truncate text-sm text-dj-texte">{entree.nom}</p>
+                      {entree.description && (
+                        <p className="truncate text-xs text-dj-texte-muet">{entree.description}</p>
+                      )}
+                    </div>
+                  </span>
+                ) : (
                 <button
                   onClick={() => entree.url_publique && setEntreeOuverte(entree)}
                   disabled={!entree.url_publique}
@@ -1496,6 +1648,8 @@ export function BibliothequePublique() {
                     )}
                   </div>
                 </button>
+                )}
+                {!selectionMultiple.actif && (
                 <div className="flex flex-shrink-0 items-center gap-3">
                   {(entree.statut_vectorisation === "en_attente" || entree.statut_vectorisation === "en_cours" || entree.statut_vectorisation === "echec") && (
                     <span className="relative flex-shrink-0">
@@ -1592,6 +1746,7 @@ export function BibliothequePublique() {
                     <Trash2 size={14} />
                   </button>
                 </div>
+                )}
               </div>
             );
           })}
@@ -1820,6 +1975,20 @@ export function BibliothequePublique() {
 
       {menuAjoutOuvert && (
         <div className="fixed bottom-[calc(8.25rem+var(--cap-native-navigation-bottom,0px))] right-5 z-40 flex animate-dj-fade-in-rapide flex-col items-end gap-2">
+          {/* 12/09/2026, demande Bourama : sélection multiple, même
+              principe que EspaceBibliotheque.tsx. */}
+          {idsElementsAffiches.length > 0 && (
+            <button
+              onClick={() => {
+                selectionMultiple.activer();
+                setMenuAjoutOuvert(false);
+              }}
+              className="flex items-center gap-2 rounded-cgpt-bouton border border-dj-bordure bg-dj-surface px-4 py-2 text-sm font-medium text-dj-texte shadow-lg transition-colors hover:border-dj-bordure-forte"
+            >
+              Sélectionner
+              <CheckSquare size={15} />
+            </button>
+          )}
           <button
             onClick={() => {
               setOngletBiblioPublique("dossiers");
@@ -1877,6 +2046,7 @@ export function BibliothequePublique() {
           </button>
         </div>
       )}
+      {!selectionMultiple.actif && (
       <button
         onClick={() => setMenuAjoutOuvert((v) => !v)}
         aria-label={menuAjoutOuvert ? "Fermer le menu d'ajout" : "Ajouter"}
@@ -1884,6 +2054,7 @@ export function BibliothequePublique() {
       >
         <Plus size={18} className={`transition-transform ${menuAjoutOuvert ? "rotate-45" : ""}`} />
       </button>
+      )}
 
       {modaleFichierOuverte && fichiers.length > 0 && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4" onClick={() => setModaleFichierOuverte(false)}>
@@ -2151,6 +2322,44 @@ export function BibliothequePublique() {
             </div>
           </div>
         </div>
+      )}
+
+      {selectionMultiple.actif && selectionMultiple.nombreSelectionne > 0 && (
+        <BarreActionsSelection
+          nombreSelectionne={selectionMultiple.nombreSelectionne}
+          toutEstSelectionne={selectionMultiple.toutEstSelectionne}
+          onToutSelectionner={selectionMultiple.toutSelectionner}
+          onToutDeselectionner={selectionMultiple.toutDeselectionner}
+          onFermer={selectionMultiple.desactiver}
+          actions={(() => {
+            const liste: ActionSelection[] = [];
+            liste.push({ cle: "partager", label: "Partager", icone: <Share2 size={14} />, onClick: partagerSelection });
+            if (entreesSelectionnees.length > 0 && idsDossiersSelectionnes.length === 0) {
+              liste.push({
+                cle: "copier",
+                label: "Copier dans ma bibliothèque",
+                icone: <Download size={14} />,
+                onClick: copierSelectionVersBiblioPerso,
+              });
+            }
+            if (idsDossiersSelectionnes.length > 0 && entreesSelectionnees.length === 0) {
+              liste.push({
+                cle: "attacher",
+                label: "Attacher à ma bibliothèque",
+                icone: <Download size={14} />,
+                onClick: attacherSelection,
+              });
+            }
+            liste.push({
+              cle: "supprimer",
+              label: "Retirer",
+              icone: <Trash2 size={14} />,
+              onClick: supprimerSelection,
+              destructif: true,
+            });
+            return liste;
+          })()}
+        />
       )}
     </div>
   );

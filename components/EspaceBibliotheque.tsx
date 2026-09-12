@@ -19,6 +19,9 @@ import {
   Plus,
   Loader2,
   X,
+  CheckSquare,
+  Trash2,
+  Share2,
 } from "lucide-react";
 import {
   appelerApi,
@@ -44,6 +47,8 @@ import { EspaceDossiers } from "./EspaceDossiers";
 import { OngletsSegment } from "./OngletsSegment";
 import { useInfoSection } from "./SectionPage";
 import { ButtonPartager, lienPartage } from "./ButtonPartager";
+import { BarreActionsSelection, type ActionSelection } from "./BarreActionsSelection";
+import { useSelectionMultiple } from "@/lib/useSelectionMultiple";
 
 // Onglet "Bibliothèque" de Mon espace, porté de
 // djiguigne-frontend/app/dashboard/espace/page.tsx (même logique,
@@ -459,6 +464,22 @@ export function EspaceBibliotheque() {
     return base.filter((f) => typeDe(f) === sousOnglet);
   }, [fichiers, dossiers, dossierCourantId, idsFichiersRanges, sousOnglet, origineOnglet]);
 
+  // 12/09/2026, demande Bourama : sélection multiple, disponible partout
+  // dans la Bibliothèque et après filtre/recherche -- idsElementsAffiches
+  // reflète toujours ce qui est réellement visible à l'écran (dossiers
+  // avant fichiers, même ordre que le rendu plus bas), condition pour que
+  // "Tout sélectionner" et la sélection par plage (Shift) restent correctes
+  // une fois un filtre ou une recherche appliqués.
+  const idsElementsAffiches = useMemo(
+    () => [...sousDossiersAffiches.map((d) => d.id), ...(fichiersAffiches ?? []).map((f) => f.id)],
+    [sousDossiersAffiches, fichiersAffiches]
+  );
+  const selectionMultiple = useSelectionMultiple(idsElementsAffiches);
+  const idsDossiersSelectionnes = sousDossiersAffiches
+    .filter((d) => selectionMultiple.selection.has(d.id))
+    .map((d) => d.id);
+  const fichiersSelectionnes = (fichiersAffiches ?? []).filter((f) => selectionMultiple.selection.has(f.id));
+
   // 25/08/2026, demande Bourama ("le dossier est juste là et point") :
 // tant qu'on est DANS un dossier, un ajout (fichier, texte, lien) doit y
 // atterrir directement -- avant ce correctif, ajouter() ignorait
@@ -685,6 +706,70 @@ async function envoyerFichiersDirect(fichiersChoisis: FileList | File[]) {
       } else {
         await rangerFichierDansDossier(dossierId, fichierARanger.id);
       }
+      chargerDossiers();
+    } catch (e) {
+      window.alert(messageErreur(e));
+    }
+  }
+
+  // 12/09/2026, sélection multiple (demande Bourama) : Supprimer et
+  // Partager restent valables quel que soit le mélange fichiers/dossiers
+  // coché, Ranger uniquement si des fichiers sont cochés (voir barre
+  // d'actions plus bas qui construit la liste selon ce qui est coché).
+  async function supprimerSelection() {
+    const total = idsDossiersSelectionnes.length + fichiersSelectionnes.length;
+    if (total === 0) return;
+    if (!window.confirm(`Supprimer ${total} élément${total > 1 ? "s" : ""} sélectionné${total > 1 ? "s" : ""} ?`)) return;
+    try {
+      for (const dossierId of idsDossiersSelectionnes) {
+        await supprimerDossierBibliotheque(dossierId);
+      }
+      for (const f of fichiersSelectionnes) {
+        await appelerApi(`/api/bibliotheque/${f.id}`, { method: "DELETE" });
+      }
+      selectionMultiple.desactiver();
+      chargerFichiers();
+      chargerDossiers();
+    } catch (e) {
+      window.alert(messageErreur(e));
+    }
+  }
+
+  async function partagerSelection() {
+    const liens = [
+      ...idsDossiersSelectionnes.map((id) => lienPartage("dossier-perso", id)),
+      ...fichiersSelectionnes.map((f) => lienPartage("fichier-perso", f.id)),
+    ];
+    if (liens.length === 0) return;
+    if (liens.length === 1 && typeof navigator !== "undefined" && navigator.share) {
+      try {
+        await navigator.share({ url: liens[0] });
+        return;
+      } catch {
+        return;
+      }
+    }
+    try {
+      await navigator.clipboard.writeText(liens.join("\n"));
+      window.alert(`${liens.length} lien${liens.length > 1 ? "s" : ""} copié${liens.length > 1 ? "s" : ""}.`);
+    } catch {
+      window.prompt("Copie ces liens :", liens.join("\n"));
+    }
+  }
+
+  // "Ranger" en groupe (12/09/2026) : à la différence du rangement d'un
+  // seul fichier (fichierARanger, cases à cocher par dossier), choisir un
+  // dossier ici l'ajoute pour TOUS les fichiers cochés d'un coup -- pas de
+  // retrait en groupe, la notion "déjà dans ce dossier" n'étant pas la
+  // même pour chaque fichier sélectionné.
+  const [rangerEnGroupeOuvert, setRangerEnGroupeOuvert] = useState(false);
+  async function rangerSelectionDans(dossierId: string) {
+    try {
+      for (const f of fichiersSelectionnes) {
+        await rangerFichierDansDossier(dossierId, f.id);
+      }
+      setRangerEnGroupeOuvert(false);
+      selectionMultiple.desactiver();
       chargerDossiers();
     } catch (e) {
       window.alert(messageErreur(e));
@@ -938,6 +1023,9 @@ async function envoyerFichiersDirect(fichiersChoisis: FileList | File[]) {
               deposerFichierDansDossier={deposerFichierDansDossier}
               renommerDossier={renommerDossier}
               supprimerDossier={supprimerDossier}
+              selectionActive={selectionMultiple.actif}
+              selectionne={selectionMultiple.estSelectionne(d.id)}
+              onToggleSelection={(e) => selectionMultiple.basculer(d.id, { shiftKey: e.shiftKey })}
             />
           ))}
         </div>
@@ -1044,6 +1132,21 @@ async function envoyerFichiersDirect(fichiersChoisis: FileList | File[]) {
       )}
       {menuAjoutOuvert && (
         <div className="fixed bottom-[calc(8.25rem+var(--cap-native-navigation-bottom,0px)+var(--dj-barre-onglets-web,0px))] right-5 z-40 flex animate-dj-fade-in-rapide flex-col items-end gap-2">
+          {/* 12/09/2026, demande Bourama : sélection multiple, entrée
+              placée en premier dans le même "+" flottant plutôt qu'un
+              deuxième bouton séparé. */}
+          {idsElementsAffiches.length > 0 && (
+            <button
+              onClick={() => {
+                selectionMultiple.activer();
+                setMenuAjoutOuvert(false);
+              }}
+              className="flex items-center gap-2 rounded-cgpt-bouton border border-dj-bordure bg-dj-surface px-4 py-2 text-sm font-medium text-dj-texte shadow-lg transition-colors hover:border-dj-bordure-forte"
+            >
+              Sélectionner
+              <CheckSquare size={15} />
+            </button>
+          )}
           {/* 03/09/2026, demande Bourama : les actions "Nouveau dossier"
               et "Ajouter des fichiers ici" (jusque-là dans un bouton
               texte séparé du fil d'ariane) fusionnées ici -- un seul "+"
@@ -1133,6 +1236,7 @@ async function envoyerFichiersDirect(fichiersChoisis: FileList | File[]) {
           </button>
         </div>
       )}
+      {!selectionMultiple.actif && (
       <button
         onClick={() => setMenuAjoutOuvert((v) => !v)}
         aria-label={menuAjoutOuvert ? "Fermer le menu d'ajout" : "Ajouter"}
@@ -1140,6 +1244,7 @@ async function envoyerFichiersDirect(fichiersChoisis: FileList | File[]) {
       >
         <Plus size={18} className={`transition-transform ${menuAjoutOuvert ? "rotate-45" : ""}`} />
       </button>
+      )}
 
       {modaleAjout && (
         <div
@@ -1222,25 +1327,42 @@ async function envoyerFichiersDirect(fichiersChoisis: FileList | File[]) {
               : type === "audio" ? IconAudio
               : type === "videos" ? IconVideo
               : Paperclip;
+            const selectionne = selectionMultiple.estSelectionne(f.id);
             return (
               <div
                 key={f.id}
-                draggable
+                draggable={!selectionMultiple.actif}
                 onDragStart={(e) => e.dataTransfer.setData("text/fichier-bibliotheque-id", f.id)}
-                className="flex items-center justify-between gap-3 rounded-xl border border-dj-bordure bg-dj-surface px-4 py-3 cursor-grab active:cursor-grabbing"
+                onClick={selectionMultiple.actif ? (e) => selectionMultiple.basculer(f.id, { shiftKey: e.shiftKey }) : undefined}
+                className={`flex items-center justify-between gap-3 rounded-xl border px-4 py-3 transition-colors ${
+                  selectionMultiple.actif ? "cursor-pointer" : "cursor-grab active:cursor-grabbing"
+                } ${
+                  selectionne ? "border-dj-accent-1 bg-dj-accent-1-conteneur" : "border-dj-bordure bg-dj-surface"
+                }`}
               >
-                <button
-                  onClick={() => setFichierOuvert(f)}
-                  className="flex min-w-0 items-center gap-2 text-sm text-dj-texte hover:underline"
-                >
-                  {/* Conteneur tonal (30/08/2026, tâche 3, Material 3
-                      Expressive) : même traitement que les dossiers
-                      juste au dessus et que EspacePlus.tsx. */}
-                  <span className="flex h-7 w-7 flex-shrink-0 items-center justify-center rounded-full bg-dj-accent-1-conteneur">
-                    <Icone size={14} className="text-dj-accent-1-texte" />
+                {selectionMultiple.actif && <CaseACocher checked={selectionne} onChange={() => {}} />}
+                {selectionMultiple.actif ? (
+                  <span className="flex min-w-0 items-center gap-2 text-sm text-dj-texte">
+                    <span className="flex h-7 w-7 flex-shrink-0 items-center justify-center rounded-full bg-dj-accent-1-conteneur">
+                      <Icone size={14} className="text-dj-accent-1-texte" />
+                    </span>
+                    <span className="truncate">{f.description || f.nom_fichier}</span>
                   </span>
-                  <span className="truncate">{f.description || f.nom_fichier}</span>
-                </button>
+                ) : (
+                  <button
+                    onClick={() => setFichierOuvert(f)}
+                    className="flex min-w-0 items-center gap-2 text-sm text-dj-texte hover:underline"
+                  >
+                    {/* Conteneur tonal (30/08/2026, tâche 3, Material 3
+                        Expressive) : même traitement que les dossiers
+                        juste au dessus et que EspacePlus.tsx. */}
+                    <span className="flex h-7 w-7 flex-shrink-0 items-center justify-center rounded-full bg-dj-accent-1-conteneur">
+                      <Icone size={14} className="text-dj-accent-1-texte" />
+                    </span>
+                    <span className="truncate">{f.description || f.nom_fichier}</span>
+                  </button>
+                )}
+                {!selectionMultiple.actif && (
                 <div className="flex flex-shrink-0 items-center gap-3 text-xs text-dj-texte-muet">
                   {(f.statut_vectorisation === "en_attente" || f.statut_vectorisation === "en_cours" || f.statut_vectorisation === "echec") && (
                     <span className="relative flex-shrink-0">
@@ -1306,6 +1428,7 @@ async function envoyerFichiersDirect(fichiersChoisis: FileList | File[]) {
                     Supprimer
                   </button>
                 </div>
+                )}
               </div>
             );
           })}
@@ -1349,6 +1472,42 @@ async function envoyerFichiersDirect(fichiersChoisis: FileList | File[]) {
                   </label>
                 );
               })}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {rangerEnGroupeOuvert && (
+        <div
+          className="fixed inset-0 z-50 flex items-start justify-center bg-black/40 p-4 animate-dj-fade-in-rapide sm:items-center"
+          onClick={() => setRangerEnGroupeOuvert(false)}
+        >
+          <div
+            onClick={(e) => e.stopPropagation()}
+            className="flex w-full max-w-sm flex-col gap-3 rounded-cgpt-carte border border-dj-bordure bg-dj-surface p-4"
+          >
+            <div className="flex items-center justify-between">
+              <p className="text-sm font-semibold text-dj-texte">
+                Ranger {fichiersSelectionnes.length} fichier{fichiersSelectionnes.length > 1 ? "s" : ""} dans…
+              </p>
+              <button onClick={() => setRangerEnGroupeOuvert(false)} className="text-dj-texte-muet hover:text-dj-texte">
+                <X size={16} />
+              </button>
+            </div>
+            {(dossiers ?? []).length === 0 && (
+              <p className="text-xs text-dj-texte-muet">Aucun dossier pour l&apos;instant. Crée-en un d&apos;abord.</p>
+            )}
+            <div className="flex max-h-64 flex-col gap-1 overflow-y-auto">
+              {(dossiers ?? []).map((d) => (
+                <button
+                  key={d.id}
+                  onClick={() => rangerSelectionDans(d.id)}
+                  className="flex items-center gap-2 rounded-cgpt-bouton px-2 py-1.5 text-left text-sm text-dj-texte hover:bg-dj-surface-haute"
+                >
+                  <IconDossier size={14} className="text-dj-texte-muet" />
+                  {d.nom}
+                </button>
+              ))}
             </div>
           </div>
         </div>
@@ -1469,6 +1628,50 @@ async function envoyerFichiersDirect(fichiersChoisis: FileList | File[]) {
       )}
         </>
       )}
+
+      {selectionMultiple.actif && selectionMultiple.nombreSelectionne > 0 && (
+        <BarreActionsSelection
+          nombreSelectionne={selectionMultiple.nombreSelectionne}
+          toutEstSelectionne={selectionMultiple.toutEstSelectionne}
+          onToutSelectionner={selectionMultiple.toutSelectionner}
+          onToutDeselectionner={selectionMultiple.toutDeselectionner}
+          onFermer={selectionMultiple.desactiver}
+          actions={(() => {
+            const liste: ActionSelection[] = [];
+            liste.push({ cle: "partager", label: "Partager", icone: <Share2 size={14} />, onClick: partagerSelection });
+            if (fichiersSelectionnes.length > 0) {
+              liste.push({
+                cle: "ranger",
+                label: "Ranger dans un dossier",
+                icone: <IconDossierOuvert size={14} />,
+                onClick: () => setRangerEnGroupeOuvert(true),
+              });
+            }
+            if (idsDossiersSelectionnes.length === 1 && fichiersSelectionnes.length === 0) {
+              const dossier = sousDossiersAffiches.find((d) => d.id === idsDossiersSelectionnes[0]);
+              if (dossier) {
+                liste.push({
+                  cle: "renommer",
+                  label: "Renommer",
+                  icone: <Pencil size={14} />,
+                  onClick: () => {
+                    setDossierEnRenommage(dossier.id);
+                    selectionMultiple.desactiver();
+                  },
+                });
+              }
+            }
+            liste.push({
+              cle: "supprimer",
+              label: "Supprimer",
+              icone: <Trash2 size={14} />,
+              onClick: supprimerSelection,
+              destructif: true,
+            });
+            return liste;
+          })()}
+        />
+      )}
     </div>
   );
 }
@@ -1487,6 +1690,9 @@ function CarteDossier({
   deposerFichierDansDossier,
   renommerDossier,
   supprimerDossier,
+  selectionActive,
+  selectionne,
+  onToggleSelection,
 }: {
   d: DossierBibliotheque;
   dossierSurvole: string | null;
@@ -1497,6 +1703,9 @@ function CarteDossier({
   deposerFichierDansDossier: (dossierId: string, fichierId: string) => void;
   renommerDossier: (dossierId: string, nouveauNom: string) => void;
   supprimerDossier: (dossierId: string, nom: string) => void;
+  selectionActive: boolean;
+  selectionne: boolean;
+  onToggleSelection: (e: React.MouseEvent) => void;
 }) {
   return (
     <div
@@ -1510,10 +1719,18 @@ function CarteDossier({
         const fichierId = e.dataTransfer.getData("text/fichier-bibliotheque-id");
         if (fichierId) deposerFichierDansDossier(d.id, fichierId);
       }}
+      onClick={selectionActive ? onToggleSelection : undefined}
       className={`flex items-center justify-between gap-3 rounded-xl border px-4 py-3 transition-colors ${
-        dossierSurvole === d.id ? "border-dj-accent-1 bg-dj-surface-haute" : "border-dj-bordure bg-dj-surface"
+        selectionActive ? "cursor-pointer" : ""
+      } ${
+        selectionne
+          ? "border-dj-accent-1 bg-dj-accent-1-conteneur"
+          : dossierSurvole === d.id
+          ? "border-dj-accent-1 bg-dj-surface-haute"
+          : "border-dj-bordure bg-dj-surface"
       }`}
     >
+      {selectionActive && <CaseACocher checked={selectionne} onChange={() => {}} />}
       {dossierEnRenommage === d.id ? (
         <input
           autoFocus
@@ -1523,6 +1740,16 @@ function CarteDossier({
           onBlur={(e) => renommerDossier(d.id, e.target.value)}
           className="flex-1 rounded-cgpt-bouton border border-dj-bordure bg-dj-fond px-2 py-1 text-sm text-dj-texte outline-none"
         />
+      ) : selectionActive ? (
+        <span className="flex min-w-0 items-center gap-2 text-sm text-dj-texte">
+          <span className="flex h-7 w-7 flex-shrink-0 items-center justify-center rounded-full bg-dj-accent-1-conteneur">
+            <IconDossier size={14} className="text-dj-accent-1-texte" />
+          </span>
+          <span className="flex min-w-0 flex-col items-start">
+            <span className="truncate font-medium">{d.nom}</span>
+            {d.recu_de && <span className="text-xs text-dj-texte-muet">Reçu de {d.recu_de}</span>}
+          </span>
+        </span>
       ) : (
         <button
           onClick={() => setPileDossiers((p) => [...p, { id: d.id, nom: d.nom }])}
@@ -1537,21 +1764,23 @@ function CarteDossier({
           </span>
         </button>
       )}
-      <div className="flex flex-shrink-0 items-center gap-3 text-xs text-dj-texte-muet">
-        {!d.recu_de && (
-          <ButtonPartager lien={lienPartage("dossier-perso", d.id)} titre={d.nom} variante="icone" />
-        )}
-        <button onClick={() => setDossierEnRenommage(d.id)} className="hover:text-dj-texte" title="Renommer">
-          <Pencil size={14} />
-        </button>
-        <button
-          onClick={() => supprimerDossier(d.id, d.nom)}
-          className="hover:text-[var(--dj-erreur)]"
-          title="Supprimer le dossier"
-        >
-          <FolderX size={14} />
-        </button>
-      </div>
+      {!selectionActive && (
+        <div className="flex flex-shrink-0 items-center gap-3 text-xs text-dj-texte-muet">
+          {!d.recu_de && (
+            <ButtonPartager lien={lienPartage("dossier-perso", d.id)} titre={d.nom} variante="icone" />
+          )}
+          <button onClick={() => setDossierEnRenommage(d.id)} className="hover:text-dj-texte" title="Renommer">
+            <Pencil size={14} />
+          </button>
+          <button
+            onClick={() => supprimerDossier(d.id, d.nom)}
+            className="hover:text-[var(--dj-erreur)]"
+            title="Supprimer le dossier"
+          >
+            <FolderX size={14} />
+          </button>
+        </div>
+      )}
     </div>
   );
 }

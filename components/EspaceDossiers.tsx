@@ -14,6 +14,7 @@ import {
   ChevronRight,
   Smartphone,
   Loader2,
+  CheckSquare,
 } from "lucide-react";
 import { usePluginNatif, messageErreurPlugin } from "@/lib/usePluginNatif";
 import { obtenirProgressionDossierDesigne } from "@/lib/api";
@@ -21,6 +22,9 @@ import { Skeleton } from "./Skeleton";
 import { PanneauFlottant } from "./PanneauFlottant";
 import { BoutonRetour } from "./BoutonRetour";
 import { useFermetureAnimee } from "@/lib/useFermetureAnimee";
+import { CaseACocher } from "./CaseACocher";
+import { BarreActionsSelection, type ActionSelection } from "./BarreActionsSelection";
+import { useSelectionMultiple } from "@/lib/useSelectionMultiple";
 
 /**
  * Écran autonome pour le plugin natif Dossiers (Lot 3B Partie 3 mobile,
@@ -242,6 +246,75 @@ export function EspaceDossiers() {
     }
   }
 
+  // 12/09/2026, demande Bourama : sélection multiple, ici avec un bouton
+  // "Sélectionner" à côté du bouton d'ajout en haut (racine : "Ajouter" ;
+  // dans un dossier : "Sous-dossier"/"Fichier") plutôt que dans un menu "+"
+  // flottant, ce composant n'en ayant pas. Deux listes distinctes : les
+  // dossiers désignés à la racine (une seule action possible, Retirer) et
+  // les éléments à l'intérieur d'un dossier (Renommer/Déplacer/Supprimer,
+  // identiques pour un fichier ou un sous-dossier ici, contrairement aux
+  // deux autres écrans de la Bibliothèque).
+  const idsDossiersDesignesAffiches = (dossiersDesignes ?? []).map((d) => d.uri);
+  const selectionDossiersDesignes = useSelectionMultiple(idsDossiersDesignesAffiches);
+  const idsElementsAffiches = (elements ?? []).map((e) => e.uri);
+  const selectionElements = useSelectionMultiple(idsElementsAffiches);
+  const elementsSelectionnes = (elements ?? []).filter((e) => selectionElements.estSelectionne(e.uri));
+  const [deplacementGroupeOuvert, setDeplacementGroupeOuvert] = useState(false);
+
+  async function retirerDossiersSelectionnes() {
+    if (!plugin || selectionDossiersDesignes.nombreSelectionne === 0) return;
+    setAction(true);
+    try {
+      for (const uri of selectionDossiersDesignes.selection) {
+        await plugin.retirerDossierDesigne({ uri });
+      }
+      selectionDossiersDesignes.desactiver();
+      rafraichir();
+    } catch (e) {
+      setErreur(messageErreurPlugin(e));
+    } finally {
+      setAction(false);
+    }
+  }
+
+  async function supprimerElementsSelectionnes() {
+    if (!plugin || elementsSelectionnes.length === 0) return;
+    setAction(true);
+    try {
+      for (const el of elementsSelectionnes) {
+        await plugin.supprimer({ elementUri: el.uri });
+      }
+      selectionElements.desactiver();
+      rafraichir();
+    } catch (e) {
+      setErreur(messageErreurPlugin(e));
+    } finally {
+      setAction(false);
+    }
+  }
+
+  async function deplacerElementsSelectionnesVers(cibleDossier: { uri: string }) {
+    if (!plugin || !dossierCourant || elementsSelectionnes.length === 0) return;
+    setAction(true);
+    setErreur(null);
+    try {
+      for (const el of elementsSelectionnes) {
+        await plugin.deplacer({
+          elementUri: el.uri,
+          ancienParentUri: dossierCourant.uri,
+          nouveauParentUri: cibleDossier.uri,
+        });
+      }
+      setDeplacementGroupeOuvert(false);
+      selectionElements.desactiver();
+      rafraichir();
+    } catch (e) {
+      setErreur(messageErreurPlugin(e));
+    } finally {
+      setAction(false);
+    }
+  }
+
   if (natif === null) {
     return (
       <div className="flex flex-col gap-3 p-4" aria-hidden>
@@ -287,15 +360,35 @@ export function EspaceDossiers() {
           </span>
         </div>
         {!dossierCourant ? (
-          <button
-            onClick={ajouterDossier}
-            className="flex flex-shrink-0 items-center gap-1.5 rounded-lg bg-dj-accent-1 px-3 py-1.5 text-xs font-bold text-[#1A0D02] transition-colors hover:bg-dj-accent-2"
-          >
-            <FolderPlus size={14} />
-            Ajouter
-          </button>
+          <div className="flex flex-shrink-0 items-center gap-2">
+            {(dossiersDesignes ?? []).length > 0 && (
+              <button
+                onClick={() => selectionDossiersDesignes.activer()}
+                className="flex items-center gap-1.5 rounded-lg bg-dj-surface-haute px-3 py-1.5 text-xs font-bold text-dj-texte transition-colors hover:bg-dj-bordure"
+              >
+                <CheckSquare size={14} />
+                Sélectionner
+              </button>
+            )}
+            <button
+              onClick={ajouterDossier}
+              className="flex items-center gap-1.5 rounded-lg bg-dj-accent-1 px-3 py-1.5 text-xs font-bold text-[#1A0D02] transition-colors hover:bg-dj-accent-2"
+            >
+              <FolderPlus size={14} />
+              Ajouter
+            </button>
+          </div>
         ) : (
-          <div className="flex flex-shrink-0 gap-2">
+          <div className="flex flex-shrink-0 items-center gap-2">
+            {(elements ?? []).length > 0 && (
+              <button
+                onClick={() => selectionElements.activer()}
+                className="flex items-center gap-1.5 rounded-lg bg-dj-surface-haute px-3 py-1.5 text-xs font-bold text-dj-texte transition-colors hover:bg-dj-bordure"
+              >
+                <CheckSquare size={14} />
+                Sélectionner
+              </button>
+            )}
             <button
               onClick={() => {
                 setDialogue("sous-dossier");
@@ -364,24 +457,45 @@ export function EspaceDossiers() {
             <div className="divide-y divide-dj-bordure">
               {(dossiersDesignes ?? []).map((d) => {
                 const progression = progressions[d.nom];
+                const selectionne = selectionDossiersDesignes.estSelectionne(d.uri);
                 return (
-                  <div key={d.uri} className="flex flex-col gap-1.5 px-4 py-3">
+                  <div
+                    key={d.uri}
+                    onClick={
+                      selectionDossiersDesignes.actif
+                        ? (e) => selectionDossiersDesignes.basculer(d.uri, { shiftKey: e.shiftKey })
+                        : undefined
+                    }
+                    className={`flex flex-col gap-1.5 px-4 py-3 ${selectionDossiersDesignes.actif ? "cursor-pointer" : ""} ${
+                      selectionne ? "bg-dj-accent-1-conteneur" : ""
+                    }`}
+                  >
                     <div className="flex items-center gap-2">
-                      <button
-                        onClick={() => setPile([{ uri: d.uri, nom: d.nom }])}
-                        className="flex flex-1 items-center gap-3 overflow-hidden text-left"
-                      >
-                        <IconDossier size={18} className="flex-shrink-0 text-dj-texte-muet" />
-                        <span className="truncate text-sm text-dj-texte">{d.nom}</span>
-                      </button>
-                      <button
-                        onClick={() => retirerDossier(d.uri)}
-                        disabled={action}
-                        aria-label="Retirer ce dossier"
-                        className="flex-shrink-0 rounded-lg p-1.5 text-dj-texte-muet transition-colors hover:bg-dj-surface-haute hover:text-[var(--dj-erreur)] disabled:opacity-50"
-                      >
-                        <FolderX size={16} />
-                      </button>
+                      {selectionDossiersDesignes.actif && <CaseACocher checked={selectionne} onChange={() => {}} />}
+                      {selectionDossiersDesignes.actif ? (
+                        <span className="flex flex-1 items-center gap-3 overflow-hidden">
+                          <IconDossier size={18} className="flex-shrink-0 text-dj-texte-muet" />
+                          <span className="truncate text-sm text-dj-texte">{d.nom}</span>
+                        </span>
+                      ) : (
+                        <button
+                          onClick={() => setPile([{ uri: d.uri, nom: d.nom }])}
+                          className="flex flex-1 items-center gap-3 overflow-hidden text-left"
+                        >
+                          <IconDossier size={18} className="flex-shrink-0 text-dj-texte-muet" />
+                          <span className="truncate text-sm text-dj-texte">{d.nom}</span>
+                        </button>
+                      )}
+                      {!selectionDossiersDesignes.actif && (
+                        <button
+                          onClick={() => retirerDossier(d.uri)}
+                          disabled={action}
+                          aria-label="Retirer ce dossier"
+                          className="flex-shrink-0 rounded-lg p-1.5 text-dj-texte-muet transition-colors hover:bg-dj-surface-haute hover:text-[var(--dj-erreur)] disabled:opacity-50"
+                        >
+                          <FolderX size={16} />
+                        </button>
+                      )}
                     </div>
                     {/* Ajoute le 04/09/2026 : disparaît d'elle-même (voir
                         l'useEffect de polling) dès que la vectorisation du
@@ -412,8 +526,32 @@ export function EspaceDossiers() {
       ) : (
         <div className="overflow-hidden rounded-cgpt-carte border border-dj-bordure bg-dj-surface">
           <div className="divide-y divide-dj-bordure">
-            {(elements ?? []).map((el) => (
-              <div key={el.uri} className="relative flex items-center gap-2 px-4 py-3">
+            {(elements ?? []).map((el) => {
+              const selectionne = selectionElements.estSelectionne(el.uri);
+              return (
+              <div
+                key={el.uri}
+                onClick={selectionElements.actif ? (e) => selectionElements.basculer(el.uri, { shiftKey: e.shiftKey }) : undefined}
+                className={`relative flex items-center gap-2 px-4 py-3 ${selectionElements.actif ? "cursor-pointer" : ""} ${
+                  selectionne ? "bg-dj-accent-1-conteneur" : ""
+                }`}
+              >
+                {selectionElements.actif && <CaseACocher checked={selectionne} onChange={() => {}} />}
+                {selectionElements.actif ? (
+                  <span className="flex flex-1 items-center gap-3 overflow-hidden text-left">
+                    {el.estDossier ? (
+                      <IconDossier size={18} className="flex-shrink-0 text-dj-texte-muet" />
+                    ) : (
+                      <IconFichier size={18} className="flex-shrink-0 text-dj-texte-muet" />
+                    )}
+                    <div className="flex min-w-0 flex-col">
+                      <span className="truncate text-sm text-dj-texte">{el.nom}</span>
+                      {!el.estDossier && (
+                        <span className="text-xs text-dj-texte-muet">{formaterTaille(el.tailleOctets)}</span>
+                      )}
+                    </div>
+                  </span>
+                ) : (
                 <button
                   onClick={() => el.estDossier && setPile((p) => [...p, { uri: el.uri, nom: el.nom }])}
                   className="flex flex-1 items-center gap-3 overflow-hidden text-left"
@@ -430,6 +568,8 @@ export function EspaceDossiers() {
                     )}
                   </div>
                 </button>
+                )}
+                {!selectionElements.actif && (
                 <button
                   onClick={() => setMenuOuvert(menuOuvert === el.uri ? null : el.uri)}
                   aria-label="Options"
@@ -437,7 +577,8 @@ export function EspaceDossiers() {
                 >
                   <MoreVertical size={16} />
                 </button>
-                {menuOuvert === el.uri && (
+                )}
+                {!selectionElements.actif && menuOuvert === el.uri && (
                   <div className="absolute right-4 top-11 z-10 w-40 overflow-hidden rounded-lg border border-dj-bordure bg-dj-surface shadow-lg">
                     <button
                       onClick={() => {
@@ -471,7 +612,8 @@ export function EspaceDossiers() {
                   </div>
                 )}
               </div>
-            ))}
+            );
+            })}
           </div>
         </div>
       )}
@@ -519,9 +661,61 @@ export function EspaceDossiers() {
       {dialoguePicker && (
         <PickerDeplacement
           plugin={plugin}
-          exclureUri={dialoguePicker.uri}
+          exclureUris={[dialoguePicker.uri]}
           onChoisir={deplacerVers}
           onFerme={() => setDialoguePicker(null)}
+        />
+      )}
+
+      {deplacementGroupeOuvert && (
+        <PickerDeplacement
+          plugin={plugin}
+          exclureUris={elementsSelectionnes.filter((e) => e.estDossier).map((e) => e.uri)}
+          onChoisir={deplacerElementsSelectionnesVers}
+          onFerme={() => setDeplacementGroupeOuvert(false)}
+        />
+      )}
+
+      {selectionDossiersDesignes.actif && selectionDossiersDesignes.nombreSelectionne > 0 && (
+        <BarreActionsSelection
+          nombreSelectionne={selectionDossiersDesignes.nombreSelectionne}
+          toutEstSelectionne={selectionDossiersDesignes.toutEstSelectionne}
+          onToutSelectionner={selectionDossiersDesignes.toutSelectionner}
+          onToutDeselectionner={selectionDossiersDesignes.toutDeselectionner}
+          onFermer={selectionDossiersDesignes.desactiver}
+          actions={[
+            { cle: "retirer", label: "Retirer", icone: <FolderX size={14} />, onClick: retirerDossiersSelectionnes, destructif: true },
+          ]}
+        />
+      )}
+
+      {selectionElements.actif && selectionElements.nombreSelectionne > 0 && (
+        <BarreActionsSelection
+          nombreSelectionne={selectionElements.nombreSelectionne}
+          toutEstSelectionne={selectionElements.toutEstSelectionne}
+          onToutSelectionner={selectionElements.toutSelectionner}
+          onToutDeselectionner={selectionElements.toutDeselectionner}
+          onFermer={selectionElements.desactiver}
+          actions={(() => {
+            const liste: ActionSelection[] = [];
+            if (elementsSelectionnes.length === 1) {
+              liste.push({
+                cle: "renommer",
+                label: "Renommer",
+                icone: <Pencil size={14} />,
+                onClick: () => {
+                  const el = elementsSelectionnes[0];
+                  setElementCible(el);
+                  setValeurSaisie(el.nom);
+                  setDialogue("renommer");
+                  selectionElements.desactiver();
+                },
+              });
+            }
+            liste.push({ cle: "deplacer", label: "Déplacer", icone: <Move size={14} />, onClick: () => setDeplacementGroupeOuvert(true) });
+            liste.push({ cle: "supprimer", label: "Supprimer", icone: <Trash2 size={14} />, onClick: supprimerElementsSelectionnes, destructif: true });
+            return liste;
+          })()}
         />
       )}
     </div>
@@ -533,12 +727,12 @@ export function EspaceDossiers() {
  * fichiers) comme destination. */
 function PickerDeplacement({
   plugin,
-  exclureUri,
+  exclureUris,
   onChoisir,
   onFerme,
 }: {
   plugin: PluginDossiers | null;
-  exclureUri: string;
+  exclureUris: string[];
   onChoisir: (cible: { uri: string; nom: string }) => void;
   onFerme: () => void;
 }) {
@@ -556,10 +750,10 @@ function PickerDeplacement({
     requete
       .then((r) => {
         const liste = "dossiers" in r ? r.dossiers : r.elements.filter((e) => e.estDossier);
-        setItems(liste.filter((d) => d.uri !== exclureUri));
+        setItems(liste.filter((d) => !exclureUris.includes(d.uri)));
       })
       .finally(() => setChargement(false));
-  }, [plugin, courant, exclureUri]);
+  }, [plugin, courant, exclureUris]);
 
   return (
     <PanneauFlottant enSortie={enSortie} onFerme={() => demarrerFermeture(onFerme)} entete={<h3 className="text-sm font-bold text-dj-texte">Déplacer vers…</h3>}>
