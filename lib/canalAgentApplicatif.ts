@@ -52,6 +52,19 @@ import { estVisibleEtActif, resoudreElementCliquable } from "./clicGenerique";
 
 const ATTRIBUT_AGENT_ID = "data-agent-id";
 
+// Désactivation temporaire (18/09/2026, demande Bourama : "elle gâte
+// absolument tout", le temps de tester le reste sans être interrompu à
+// chaque action) -- décision explicitement PAS définitive, à revoir
+// (voir la discussion sur une confirmation seulement pour les actions
+// destructrices/irréversibles). Remettre à `false` restaure la
+// confirmation systématique partout, sans autre changement de code.
+const CONFIRMATION_DESACTIVEE_TEMPORAIREMENT = true;
+
+async function confirmerOuPasserOutre(description: string): Promise<boolean> {
+  if (CONFIRMATION_DESACTIVEE_TEMPORAIREMENT) return true;
+  return demanderConfirmationDepuisAgent(description);
+}
+
 const API_URL = process.env.NEXT_PUBLIC_API_URL;
 
 let socket: WebSocket | null = null;
@@ -132,7 +145,7 @@ async function traiterDemandeAction(id: string, actionId: string) {
   // confirmation (pas transmise par le backend, qui ne connait
   // l'element que par son id genere) -- toujours a jour, jamais perimee
   // meme si le texte visible a change depuis le dernier scan.
-  const accepte = await demanderConfirmationDepuisAgent(decrireElement(element));
+  const accepte = await confirmerOuPasserOutre(decrireElement(element));
   if (!accepte) {
     envoyerReponse(id, { refuse: true });
     return;
@@ -181,7 +194,7 @@ async function traiterDemandeClicGenerique(id: string, selecteur: string, descri
     return;
   }
 
-  const accepte = await demanderConfirmationDepuisAgent(description);
+  const accepte = await confirmerOuPasserOutre(description);
   if (!accepte) {
     envoyerReponse(id, { refuse: true });
     return;
